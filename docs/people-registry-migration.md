@@ -28,7 +28,7 @@ numbers. Staff uses a separate `registration_no` field.
 | `admission_number`       | `admission_no`             | `registration_no`          |
 | `display_name`           | `name`                     | `first_name` + `last_name` |
 | `status`                 | 1 active, 2 inactive       | 1 active, 2 inactive       |
-| `gender`                 | 1 male, 2 female           | 1 male, 2 female           |
+| `gender`                 | `gender`: 1 male, 2 female | `sex`: 1 male, 2 female    |
 | `date_of_birth`          | `dob`                      | `dob`                      |
 | `admission_or_joined_on` | `admin_dt`                 | `date_of_joining`          |
 | `campus_or_location`     | `campus`                   | `place_allocated`          |
@@ -61,6 +61,34 @@ No R2 assets are required for the first read-only registry pass.
   addresses, phone numbers, or other personal data.
 - Compare source count, imported count, skipped count, and issue count before
   promoting a batch.
+
+## First aggregate dry run
+
+The aggregate-only report is committed at
+`reports/people-registry-dry-run.json`. It contains no selected row values or
+personal data. The prepared source was opened read-only and verified unchanged
+after analysis.
+
+| Gate                     | Result |
+| ------------------------ | -----: |
+| Expected core records    |  9,072 |
+| Observed core records    |  9,072 |
+| Identity-gate eligible   |  9,072 |
+| Blocked records          |      0 |
+| Blocking error instances |      0 |
+| Warning instances        | 10,231 |
+| Imported records         |      0 |
+
+The warnings are non-blocking and can overlap on the same record:
+
+- All 8,633 beneficiary `campus` values are blank, so location must remain
+  empty in the core pass and be derived from later home/academic history.
+- 1,379 beneficiary and 73 staff photo references are missing. R2 assets are
+  outside the core pass.
+- 74 beneficiary admission dates precede dates of birth. These dates must be
+  quarantined rather than coerced.
+- One beneficiary admission date is missing and one is before 1900.
+- 24 staff dates of birth and 46 staff joining dates are missing.
 
 ## Delivery order
 

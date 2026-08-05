@@ -345,7 +345,8 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
       }>(),
     runtime.DB.prepare(
       `SELECT id, source_system AS sourceSystem, mode, status,
-              source_count AS sourceCount, imported_count AS importedCount,
+              source_count AS sourceCount, eligible_count AS eligibleCount,
+              imported_count AS importedCount,
               skipped_count AS skippedCount, issue_count AS issueCount,
               created_at AS createdAt, finished_at AS finishedAt
        FROM person_import_batch WHERE organization_id = ?
@@ -358,6 +359,7 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
         mode: "dry_run" | "import";
         status: "pending" | "running" | "completed" | "failed";
         sourceCount: number;
+        eligibleCount: number;
         importedCount: number;
         skippedCount: number;
         issueCount: number;

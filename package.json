@@ -13,6 +13,7 @@
     "cf-typegen": "vp run @tsewa/web#cf-typegen",
     "db:migrate:local": "vp run @tsewa/web#db:migrate:local",
     "db:migrate:remote": "vp run @tsewa/web#db:migrate:remote",
+    "migration:people:dry-run": "node scripts/people-registry-dry-run.mjs",
     "setup:vp": "vp config"
   },
   "devDependencies": {

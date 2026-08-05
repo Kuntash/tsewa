@@ -66,6 +66,7 @@ type RegistryResponse = {
     mode: "dry_run" | "import";
     status: "pending" | "running" | "completed" | "failed";
     sourceCount: number;
+    eligibleCount: number;
     importedCount: number;
     skippedCount: number;
     issueCount: number;
@@ -209,7 +210,9 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
             </div>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">
               {data.latestImport
-                ? `${data.latestImport.importedCount.toLocaleString()} imported`
+                ? data.latestImport.mode === "dry_run"
+                  ? `${data.latestImport.eligibleCount.toLocaleString()} eligible · ${data.latestImport.skippedCount.toLocaleString()} blocked`
+                  : `${data.latestImport.importedCount.toLocaleString()} imported`
                 : "No import has run. The legacy source remains untouched."}
             </p>
           </div>
@@ -305,12 +308,16 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
                     <h2 className="mt-5 text-lg font-semibold">
                       {query || kind !== "all" || status !== "all"
                         ? "No matching people"
-                        : "Ready for the controlled import"}
+                        : data.latestImport?.mode === "dry_run"
+                          ? "Dry run complete"
+                          : "Ready for the controlled import"}
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {query || kind !== "all" || status !== "all"
                         ? "Try a different search or clear one of the filters."
-                        : "The registry schema is isolated in Tsewa’s new D1 database. No legacy records or R2 objects have been changed."}
+                        : data.latestImport?.mode === "dry_run"
+                          ? `${data.latestImport.sourceCount.toLocaleString()} source records reconciled; ${data.latestImport.skippedCount.toLocaleString()} blocked. No people or R2 objects have been imported.`
+                          : "The registry schema is isolated in Tsewa’s new D1 database. No legacy records or R2 objects have been changed."}
                     </p>
                   </div>
                 </div>

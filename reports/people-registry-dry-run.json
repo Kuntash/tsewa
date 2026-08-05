@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "mode": "dry_run",
+  "generatedAt": "2026-08-05T17:22:14.161Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "repositoryRelativeLocation": "../data-migration/d1/tibethomes-newer-d1.sqlite",
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "reconciliation": {
+    "expectedSourceCount": 9072,
+    "sourceCount": 9072,
+    "sourceCountMatches": true,
+    "eligibleCount": 9072,
+    "blockedCount": 0,
+    "errorCount": 0,
+    "warningCount": 10231,
+    "issueCount": 10231,
+    "importedCount": 0
+  },
+  "coreCounts": {
+    "child": 8064,
+    "elderly": 569,
+    "staff": 439
+  },
+  "sources": [
+    {
+      "table": "beneficiary",
+      "sourceCount": 8633,
+      "eligibleCount": 8633,
+      "blockedCount": 0,
+      "errorCount": 0,
+      "warningCount": 10088,
+      "issues": [
+        {
+          "code": "source_id_missing",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "source_id_duplicate",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "kind_invalid",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "status_invalid",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "primary_identifier_missing",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "primary_identifier_duplicate",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "display_name_missing",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "gender_unknown",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_missing",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_invalid",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_before_1900",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_in_future",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "admission_date_missing",
+          "severity": "warning",
+          "count": 1
+        },
+        {
+          "code": "admission_date_invalid",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "admission_date_before_1900",
+          "severity": "warning",
+          "count": 1
+        },
+        {
+          "code": "admission_date_in_future",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "admission_before_birth",
+          "severity": "warning",
+          "count": 74
+        },
+        {
+          "code": "location_missing",
+          "severity": "warning",
+          "count": 8633
+        },
+        {
+          "code": "photo_reference_missing",
+          "severity": "warning",
+          "count": 1379
+        }
+      ]
+    },
+    {
+      "table": "staff",
+      "sourceCount": 439,
+      "eligibleCount": 439,
+      "blockedCount": 0,
+      "errorCount": 0,
+      "warningCount": 143,
+      "issues": [
+        {
+          "code": "source_id_missing",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "source_id_duplicate",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "status_invalid",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "primary_identifier_missing",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "primary_identifier_duplicate",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "display_name_missing",
+          "severity": "error",
+          "count": 0
+        },
+        {
+          "code": "gender_unknown",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_missing",
+          "severity": "warning",
+          "count": 24
+        },
+        {
+          "code": "date_of_birth_invalid",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_before_1900",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "date_of_birth_in_future",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "joining_date_missing",
+          "severity": "warning",
+          "count": 46
+        },
+        {
+          "code": "joining_date_invalid",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "joining_date_before_1900",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "joining_date_in_future",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "joining_before_birth",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "location_missing",
+          "severity": "warning",
+          "count": 0
+        },
+        {
+          "code": "photo_reference_missing",
+          "severity": "warning",
+          "count": 73
+        }
+      ]
+    }
+  ]
+}

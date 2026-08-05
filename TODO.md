@@ -19,5 +19,5 @@
 
 - [x] Add the organization-scoped person and import-batch schema.
 - [x] Build the read-only list, search, and type/status filters.
-- [ ] Run a no-PII dry-run report for the 9,072 core legacy person records.
+- [x] Run a no-PII dry-run report for the 9,072 core legacy person records.
 - [ ] Import core records only after source/import/issue counts reconcile.
