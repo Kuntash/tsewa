@@ -38,6 +38,14 @@ const signUpInputSchema = z.object({
   email: z.email().transform((value) => value.trim().toLowerCase()),
 });
 
+const peopleQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  kind: z.enum(["all", "child", "elderly", "staff"]).default("all"),
+  status: z.enum(["all", "active", "inactive"]).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
 type SignUpPayload = {
   user?: {
     id?: string;
@@ -70,6 +78,10 @@ export default createServerEntry({
 
     if (url.pathname === "/api/platform") {
       return handlePlatformRequest(request);
+    }
+
+    if (url.pathname === "/api/people") {
+      return getPeopleRegistry(request);
     }
 
     if (url.pathname === "/api/invitations/preview") {
@@ -246,6 +258,126 @@ async function handlePlatformRequest(request: Request): Promise<Response> {
   }
 
   return methodNotAllowed("GET, POST");
+}
+
+async function getPeopleRegistry(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+
+  const url = new URL(request.url);
+  const parsed = peopleQuerySchema.safeParse({
+    q: url.searchParams.get("q") ?? "",
+    kind: url.searchParams.get("kind") ?? "all",
+    status: url.searchParams.get("status") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid People Registry filters" }, { status: 400 });
+  }
+
+  const { q, kind, status, page, pageSize } = parsed.data;
+  const conditions = ["organization_id = ?"];
+  const bindings: Array<string | number> = [context.organizationId];
+
+  if (kind !== "all") {
+    conditions.push("kind = ?");
+    bindings.push(kind);
+  }
+  if (status !== "all") {
+    conditions.push("status = ?");
+    bindings.push(status);
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(
+      `(lower(display_name) LIKE ? ESCAPE '\\' OR lower(primary_identifier) LIKE ? ESCAPE '\\')`,
+    );
+    bindings.push(search, search);
+  }
+
+  const where = conditions.join(" AND ");
+  const offset = (page - 1) * pageSize;
+  const runtime = getRuntimeEnv();
+  const [count, people, summary, latestImport] = await Promise.all([
+    runtime.DB.prepare(`SELECT COUNT(*) AS total FROM person WHERE ${where}`)
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DB.prepare(
+      `SELECT id, kind, status, identifier_kind AS identifierKind,
+              primary_identifier AS primaryIdentifier, display_name AS displayName,
+              gender, date_of_birth AS dateOfBirth,
+              admitted_or_joined_on AS admittedOrJoinedOn,
+              campus_or_location AS campusOrLocation,
+              source_system AS sourceSystem, source_table AS sourceTable,
+              source_id AS sourceId, imported_at AS importedAt
+       FROM person WHERE ${where}
+       ORDER BY display_name COLLATE NOCASE, primary_identifier
+       LIMIT ? OFFSET ?`,
+    )
+      .bind(...bindings, pageSize, offset)
+      .all<{
+        id: string;
+        kind: "child" | "elderly" | "staff";
+        status: "active" | "inactive";
+        identifierKind: "admission" | "staff";
+        primaryIdentifier: string;
+        displayName: string;
+        gender: "female" | "male" | "other" | "unknown" | null;
+        dateOfBirth: string | null;
+        admittedOrJoinedOn: string | null;
+        campusOrLocation: string | null;
+        sourceSystem: string;
+        sourceTable: string;
+        sourceId: string;
+        importedAt: string | null;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT kind, status, COUNT(*) AS count
+       FROM person WHERE organization_id = ? GROUP BY kind, status`,
+    )
+      .bind(context.organizationId)
+      .all<{
+        kind: "child" | "elderly" | "staff";
+        status: "active" | "inactive";
+        count: number;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT id, source_system AS sourceSystem, mode, status,
+              source_count AS sourceCount, imported_count AS importedCount,
+              skipped_count AS skippedCount, issue_count AS issueCount,
+              created_at AS createdAt, finished_at AS finishedAt
+       FROM person_import_batch WHERE organization_id = ?
+       ORDER BY created_at DESC LIMIT 1`,
+    )
+      .bind(context.organizationId)
+      .first<{
+        id: string;
+        sourceSystem: string;
+        mode: "dry_run" | "import";
+        status: "pending" | "running" | "completed" | "failed";
+        sourceCount: number;
+        importedCount: number;
+        skippedCount: number;
+        issueCount: number;
+        createdAt: string;
+        finishedAt: string | null;
+      }>(),
+  ]);
+
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    people: people.results,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    },
+    summary: summary.results,
+    latestImport,
+  });
 }
 
 async function getPlatformStatus(): Promise<Response> {
@@ -797,6 +929,10 @@ function isValidTimezone(timezone: string | undefined): boolean {
   } catch {
     return false;
   }
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
 }
 
 async function readJson(request: Request): Promise<unknown> {

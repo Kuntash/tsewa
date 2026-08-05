@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { AccountSettings } from "@/components/account-settings";
+import { PeopleRegistry } from "@/components/people-registry";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -384,12 +385,17 @@ function Brand() {
 }
 
 function Launchpad({ user }: { user: { name: string; email: string; emailVerified: boolean } }) {
+  const [view, setView] = useState<"home" | "people">("home");
   const modules = [
     [Users, "People Registry", "Identity, family, placement, and records"],
     [GraduationCap, "School Operations", "Classes, marks, results, and promotion"],
     [HeartPulse, "Dispensary", "Care episodes and health history"],
     [FileText, "Reports & Documents", "Secure files and reproducible reports"],
   ] as const;
+
+  if (view === "people") {
+    return <PeopleRegistry onBack={() => setView("home")} />;
+  }
 
   return (
     <main className="min-h-svh w-full max-w-none bg-muted/35">
@@ -417,25 +423,46 @@ function Launchpad({ user }: { user: { name: string; email: string; emailVerifie
           Your workspace is ready. Business modules arrive one vertical slice at a time.
         </p>
         <div className="mt-9 grid gap-4 md:grid-cols-2">
-          {modules.map(([Icon, title, description], index) => (
-            <Card className={index === 0 ? "border-primary/25" : "opacity-70"} key={title}>
-              <CardHeader className="flex-row items-start gap-4">
-                <div className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <Icon />
-                </div>
-                <div>
-                  <CardTitle>{title}</CardTitle>
-                  <CardDescription className="mt-1.5">{description}</CardDescription>
-                </div>
-                <Badge
-                  className="ml-auto rounded-full"
-                  variant={index === 0 ? "default" : "secondary"}
-                >
-                  {index === 0 ? "Next" : "Planned"}
-                </Badge>
-              </CardHeader>
-            </Card>
-          ))}
+          {modules.map(([Icon, title, description], index) => {
+            const card = (
+              <Card
+                className={
+                  index === 0
+                    ? "h-full border-primary/25 transition-colors group-hover:border-primary/50"
+                    : "opacity-70"
+                }
+              >
+                <CardHeader className="flex-row items-start gap-4 text-left">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                    <Icon />
+                  </div>
+                  <div>
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription className="mt-1.5">{description}</CardDescription>
+                  </div>
+                  <Badge
+                    className="ml-auto rounded-full"
+                    variant={index === 0 ? "default" : "secondary"}
+                  >
+                    {index === 0 ? "Open" : "Planned"}
+                  </Badge>
+                </CardHeader>
+              </Card>
+            );
+
+            return index === 0 ? (
+              <button
+                className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                key={title}
+                onClick={() => setView("people")}
+                type="button"
+              >
+                {card}
+              </button>
+            ) : (
+              <div key={title}>{card}</div>
+            );
+          })}
         </div>
         <AccountSettings user={user} />
         <AdministrationPanel />
