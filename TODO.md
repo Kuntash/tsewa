@@ -14,3 +14,10 @@
       verification, and password reset.
 - [ ] Replace immediate unverified email changes with the verified email-change
       flow after transactional email is available.
+
+## People Registry migration
+
+- [ ] Add the organization-scoped person and import-batch schema.
+- [ ] Build the read-only list, search, and type/status filters.
+- [ ] Run a no-PII dry-run report for the 9,072 core legacy person records.
+- [ ] Import core records only after source/import/issue counts reconcile.
