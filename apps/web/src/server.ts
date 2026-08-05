@@ -400,45 +400,67 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   }
 
   const runtime = getRuntimeEnv();
-  const person = await runtime.DB.prepare(
-    `SELECT id, kind, status, identifier_kind AS identifierKind,
-            primary_identifier AS primaryIdentifier, display_name AS displayName,
-            gender, date_of_birth AS dateOfBirth,
-            admitted_or_joined_on AS admittedOrJoinedOn,
-            campus_or_location AS campusOrLocation, nationality,
-            CASE WHEN photo_asset_key IS NULL THEN 0 ELSE 1 END AS photoReferencePresent,
-            source_system AS sourceSystem, source_table AS sourceTable,
-            source_id AS sourceId, imported_at AS importedAt,
-            CASE WHEN date_of_birth IS NULL THEN 1 ELSE 0 END AS dateOfBirthMissing,
-            CASE WHEN admitted_or_joined_on IS NULL THEN 1 ELSE 0 END AS eventDateMissing,
-            CASE WHEN date(admitted_or_joined_on) < '1900-01-01' THEN 1 ELSE 0 END AS eventDateBefore1900,
-            CASE WHEN date(admitted_or_joined_on) < date(date_of_birth) THEN 1 ELSE 0 END AS eventBeforeBirth
-     FROM person
-     WHERE id = ? AND organization_id = ?`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<{
-      id: string;
-      kind: "child" | "elderly" | "staff";
-      status: "active" | "inactive";
-      identifierKind: "admission" | "staff";
-      primaryIdentifier: string;
-      displayName: string;
-      gender: "female" | "male" | "other" | "unknown" | null;
-      dateOfBirth: string | null;
-      admittedOrJoinedOn: string | null;
-      campusOrLocation: string | null;
-      nationality: string | null;
-      photoReferencePresent: number;
-      sourceSystem: string;
-      sourceTable: string;
-      sourceId: string;
-      importedAt: string | null;
-      dateOfBirthMissing: number;
-      eventDateMissing: number;
-      eventDateBefore1900: number;
-      eventBeforeBirth: number;
-    }>();
+  const [person, placements] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id, kind, status, identifier_kind AS identifierKind,
+              primary_identifier AS primaryIdentifier, display_name AS displayName,
+              gender, date_of_birth AS dateOfBirth,
+              admitted_or_joined_on AS admittedOrJoinedOn,
+              campus_or_location AS campusOrLocation, nationality,
+              CASE WHEN photo_asset_key IS NULL THEN 0 ELSE 1 END AS photoReferencePresent,
+              source_system AS sourceSystem, source_table AS sourceTable,
+              source_id AS sourceId, imported_at AS importedAt,
+              CASE WHEN date_of_birth IS NULL THEN 1 ELSE 0 END AS dateOfBirthMissing,
+              CASE WHEN admitted_or_joined_on IS NULL THEN 1 ELSE 0 END AS eventDateMissing,
+              CASE WHEN date(admitted_or_joined_on) < '1900-01-01' THEN 1 ELSE 0 END AS eventDateBefore1900,
+              CASE WHEN date(admitted_or_joined_on) < date(date_of_birth) THEN 1 ELSE 0 END AS eventBeforeBirth
+       FROM person
+       WHERE id = ? AND organization_id = ?`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .first<{
+        id: string;
+        kind: "child" | "elderly" | "staff";
+        status: "active" | "inactive";
+        identifierKind: "admission" | "staff";
+        primaryIdentifier: string;
+        displayName: string;
+        gender: "female" | "male" | "other" | "unknown" | null;
+        dateOfBirth: string | null;
+        admittedOrJoinedOn: string | null;
+        campusOrLocation: string | null;
+        nationality: string | null;
+        photoReferencePresent: number;
+        sourceSystem: string;
+        sourceTable: string;
+        sourceId: string;
+        importedAt: string | null;
+        dateOfBirthMissing: number;
+        eventDateMissing: number;
+        eventDateBefore1900: number;
+        eventBeforeBirth: number;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT id, home_name AS homeName, location_name AS locationName,
+              placement_type AS placementType, started_on AS startedOn,
+              reason, remarks, is_current AS isCurrent, source_id AS sourceId
+       FROM person_placement
+       WHERE person_id = ? AND organization_id = ?
+       ORDER BY is_current DESC, date(started_on) DESC, CAST(source_id AS INTEGER) DESC`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        homeName: string;
+        locationName: string | null;
+        placementType: string | null;
+        startedOn: string;
+        reason: string | null;
+        remarks: string | null;
+        isCurrent: number;
+        sourceId: string;
+      }>(),
+  ]);
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
 
@@ -468,6 +490,17 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       sourceId: person.sourceId,
       importedAt: person.importedAt,
       reviewFlags,
+      placements: placements.results.map((placement) => ({
+        id: placement.id,
+        homeName: placement.homeName,
+        locationName: placement.locationName,
+        placementType: placement.placementType,
+        startedOn: placement.startedOn,
+        reason: placement.reason,
+        remarks: placement.remarks,
+        isCurrent: Boolean(placement.isCurrent),
+        sourceId: placement.sourceId,
+      })),
     },
   });
 }

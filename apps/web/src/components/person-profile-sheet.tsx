@@ -3,6 +3,8 @@ import {
   CalendarDays,
   Database,
   Fingerprint,
+  History,
+  Home,
   ImageOff,
   LoaderCircle,
   LockKeyhole,
@@ -33,6 +35,17 @@ type Profile = {
   sourceId: string;
   importedAt: string | null;
   reviewFlags: string[];
+  placements: Array<{
+    id: string;
+    homeName: string;
+    locationName: string | null;
+    placementType: string | null;
+    startedOn: string;
+    reason: string | null;
+    remarks: string | null;
+    isCurrent: boolean;
+    sourceId: string;
+  }>;
 };
 
 export function PersonProfileSheet({
@@ -112,6 +125,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
     [profile.kind, profile.reviewFlags],
   );
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
+  const currentPlacement = profile.placements.find((placement) => placement.isCurrent);
 
   return (
     <>
@@ -201,19 +215,106 @@ function ProfileContent({ profile }: { profile: Profile }) {
           <Separator />
 
           <ProfileSection icon={MapPin} label="Placement">
-            <div className="grid gap-x-7 gap-y-5 sm:grid-cols-2">
-              <ProfileField label="Campus / location" value={profile.campusOrLocation} />
+            {currentPlacement ? (
+              <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
+                <div className="flex items-start gap-3.5">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <Home className="size-4.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">{currentPlacement.homeName}</p>
+                      <Badge className="rounded-full" variant="secondary">
+                        Current
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {[currentPlacement.locationName, currentPlacement.placementType]
+                        .filter(Boolean)
+                        .join(" · ") || "Legacy home record"}
+                    </p>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Since {formatLegacyDate(currentPlacement.startedOn)}
+                    </p>
+                    {!currentPlacement.locationName ? (
+                      <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                        The legacy home is recorded, but its location lookup is unavailable.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : profile.kind === "staff" ? (
+              <div className="rounded-2xl border bg-card p-4">
+                <ProfileField label="Campus / work location" value={profile.campusOrLocation} />
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  Beneficiary placement history does not apply to staff records.
+                </p>
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
+                No placement history was recorded for this person in the legacy system.
+              </p>
+            )}
+
+            {profile.placements.length ? (
+              <div className="mt-7">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <History className="size-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold">Placement history</h4>
+                  </div>
+                  <Badge className="rounded-full tabular-nums" variant="outline">
+                    {profile.placements.length}
+                  </Badge>
+                </div>
+                <ol className="relative ml-2 border-l border-border pl-5">
+                  {profile.placements.map((placement) => (
+                    <li className="relative pb-6 last:pb-0" key={placement.id}>
+                      <span
+                        className={`absolute -left-[1.59rem] top-1.5 size-2.5 rounded-full border-2 border-background ${
+                          placement.isCurrent ? "bg-primary" : "bg-muted-foreground/40"
+                        }`}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-medium tabular-nums">
+                          {formatLegacyDate(placement.startedOn)}
+                        </p>
+                        {placement.isCurrent ? (
+                          <Badge className="rounded-full px-2 py-0 text-[10px]" variant="secondary">
+                            Current
+                          </Badge>
+                        ) : null}
+                        {isFutureSourceDate(placement.startedOn) ? (
+                          <Badge className="rounded-full px-2 py-0 text-[10px]" variant="outline">
+                            Future source date
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1.5 text-sm font-semibold">{placement.homeName}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {[placement.locationName, placement.placementType]
+                          .filter(Boolean)
+                          .join(" · ") || "Location not recorded"}
+                      </p>
+                      {placement.reason || placement.remarks ? (
+                        <div className="mt-2.5 rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-foreground/80">
+                          {placement.reason ? <p>{placement.reason}</p> : null}
+                          {placement.remarks ? <p>{placement.remarks}</p> : null}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+
+            <div className="mt-6">
               <ProfileField
                 label="Photo reference"
                 value={profile.photoReferencePresent ? "Available in legacy source" : null}
               />
             </div>
-            {!profile.campusOrLocation ? (
-              <p className="mt-4 rounded-xl bg-muted/60 px-3.5 py-3 text-xs leading-5 text-muted-foreground">
-                Placement will be derived from home and academic history in the next migration
-                slices.
-              </p>
-            ) : null}
           </ProfileSection>
 
           <Separator />
@@ -348,4 +449,9 @@ function formatTimestamp(value: string | null): string | null {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function isFutureSourceDate(value: string): boolean {
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date.getTime() > Date.now();
 }

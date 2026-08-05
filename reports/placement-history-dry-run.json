@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "mode": "dry_run",
+  "generatedAt": "2026-08-05T17:57:54.572Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "table": "beneficeary_home",
+    "repositoryRelativeLocation": "../data-migration/d1/tibethomes-newer-d1.sqlite",
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "reconciliation": {
+    "sourceRows": 18151,
+    "eligibleRows": 18151,
+    "blockedRows": 0,
+    "currentPlacementCount": 7703,
+    "peopleWithHistory": 7703,
+    "peopleWithoutHistory": 930,
+    "warningCount": 1122,
+    "importedRows": 0
+  },
+  "sourceKinds": {
+    "child": {
+      "historyRows": 18064,
+      "people": 7619
+    },
+    "elderly": {
+      "historyRows": 87,
+      "people": 84
+    }
+  },
+  "quality": {
+    "missingSourceIds": 0,
+    "duplicateSourceIds": 0,
+    "missingBeneficiaryIds": 0,
+    "missingHomeIds": 0,
+    "missingDates": 0,
+    "invalidDates": 0,
+    "pre1900Dates": 0,
+    "futureDates": 1,
+    "missingBeneficiaryLinks": 0,
+    "missingHomeLinks": 0,
+    "missingLocationLookups": 18,
+    "currentMissingLocationLookups": 18,
+    "currentFutureDated": 1,
+    "sameDayTieGroups": 95,
+    "historyBeforeAdmission": 78
+  },
+  "currentPlacementRule": "latest parsed source date, then greatest source row ID"
+}

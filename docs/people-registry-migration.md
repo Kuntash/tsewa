@@ -127,6 +127,44 @@ birth, 8,633 missing locations, and 1,452 missing photo references. No R2
 objects were copied, and the original D1, R2 bucket, and prepared SQLite source
 were not modified.
 
+## Placement-history dry run
+
+The aggregate-only placement report is committed at
+`reports/placement-history-dry-run.json`. The prepared source was opened in
+SQLite query-only mode and its SHA-256, size, and modification time were
+verified unchanged after analysis.
+
+| Gate                                      | Result |
+| ----------------------------------------- | -----: |
+| Legacy home-history rows                  | 18,151 |
+| Eligible rows                             | 18,151 |
+| Blocked rows                              |      0 |
+| Beneficiaries with history                |  7,703 |
+| Beneficiaries without history             |    930 |
+| Derived current placements                |  7,703 |
+| History rows with missing location lookup |     18 |
+
+Current placement is derived deterministically from the latest parsed legacy
+date, breaking same-date ties with the greatest source row ID. The home name is
+retained as a readable fallback for the 18 rows whose legacy location lookup is
+missing. All legacy dates remain authoritative: the single future-dated row and
+78 rows predating admission are imported unchanged and surfaced for later
+organizational review. The 95 same-person, same-date groups are retained in
+full rather than collapsed.
+
+## Placement import policy
+
+- Import every `beneficeary_home` row into organization-scoped placement
+  history with deterministic IDs and source provenance.
+- Enforce at most one current placement for each organization/person pair.
+- Update a beneficiary's registry location from the current placement,
+  preferring the legacy location lookup and falling back to the home name.
+- Keep staff placement history empty; staff work allocation remains on the core
+  person record.
+- Use idempotent upserts so a rerun produces the same 18,151 history rows and
+  7,703 current placements.
+- Do not copy or modify any R2 objects in this slice.
+
 ## Delivery order
 
 1. Organization-scoped person and import-batch schema.
@@ -135,4 +173,5 @@ were not modified.
 4. Controlled core-record import. **Completed.**
 5. Read-only core profile drawer with source provenance and date-review flags.
    **Completed.**
-6. Academic, home, sibling, staff-detail, document, and R2 asset migrations.
+6. Beneficiary home and placement-history migration.
+7. Academic, sibling, staff-detail, document, and R2 asset migrations.
