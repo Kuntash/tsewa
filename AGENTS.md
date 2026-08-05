@@ -22,3 +22,5 @@ installation, validation, development, builds, tests, and workspace tasks.
 - Domain tables must be scoped by `organization_id`.
 - Keep Cloudflare bindings and the custom domain in `apps/web/wrangler.jsonc`.
 - Never commit `.dev.vars`, `.env`, or production secrets.
+- This repository currently has one contributor. Commit validated changes directly
+  to `main`; do not create pull requests unless the user changes this preference.

@@ -8,10 +8,56 @@ const preferenceSchema = z.object({
   academicSessionId: z.string().uuid(),
 });
 
+const organizationSettingsSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  timezone: z.string().trim().min(1).max(64),
+  locale: z
+    .string()
+    .trim()
+    .regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/),
+});
+
+const memberRoleSchema = z.object({
+  role: z.enum(["admin", "staff", "viewer"]),
+});
+
+const invitationSchema = z.object({
+  email: z.email().transform((value) => value.trim().toLowerCase()),
+  role: z.enum(["admin", "staff", "viewer"]),
+});
+
+const invitationTokenSchema = z.object({
+  token: z.string().min(32).max(256),
+});
+
+const transferOwnershipSchema = z.object({
+  targetMemberId: z.string().uuid(),
+});
+
+const signUpInputSchema = z.object({
+  email: z.email().transform((value) => value.trim().toLowerCase()),
+});
+
 type SignUpPayload = {
   user?: {
     id?: string;
   };
+};
+
+type MembershipContext = {
+  memberId: string;
+  organizationId: string;
+  role: "owner" | "admin" | "staff" | "viewer";
+  userId: string;
+};
+
+type Invitation = {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  email: string;
+  role: "admin" | "staff" | "viewer";
+  expiresAt: string;
 };
 
 export default createServerEntry({
@@ -26,6 +72,36 @@ export default createServerEntry({
       return handlePlatformRequest(request);
     }
 
+    if (url.pathname === "/api/invitations/preview") {
+      return previewInvitation(request);
+    }
+
+    if (url.pathname === "/api/invitations/accept") {
+      return acceptInvitationForCurrentUser(request);
+    }
+
+    if (url.pathname === "/api/organization") {
+      return handleOrganizationRequest(request);
+    }
+
+    if (url.pathname === "/api/organization/invitations") {
+      return createOrganizationInvitation(request);
+    }
+
+    if (url.pathname === "/api/organization/transfer") {
+      return transferOrganizationOwnership(request);
+    }
+
+    const memberMatch = url.pathname.match(/^\/api\/organization\/members\/([^/]+)$/);
+    if (memberMatch) {
+      return updateOrganizationMember(request, memberMatch[1]);
+    }
+
+    const invitationMatch = url.pathname.match(/^\/api\/organization\/invitations\/([^/]+)$/);
+    if (invitationMatch) {
+      return revokeOrganizationInvitation(request, invitationMatch[1]);
+    }
+
     return handler.fetch(request);
   },
 });
@@ -34,30 +110,51 @@ async function handleAuthRequest(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const url = new URL(request.url);
   const isEmailSignUp = url.pathname.endsWith("/sign-up/email");
+  const signUpInput = isEmailSignUp ? await readSignUpInput(request.clone()) : null;
+  const invitationToken = isEmailSignUp ? request.headers.get("x-tsewa-invitation") : null;
+  const invitation = invitationToken
+    ? await findInvitation(runtime.DB, invitationToken, signUpInput?.email)
+    : null;
   const userCount = isEmailSignUp
     ? await runtime.DB.prepare('SELECT COUNT(*) AS count FROM "user"').first<{
         count: number;
       }>()
     : null;
   const isFirstUser = isEmailSignUp && Number(userCount?.count ?? 0) === 0;
-  const auth = createAuth({
-    database: runtime.DB,
-    secret: runtime.BETTER_AUTH_SECRET,
-    baseURL: url.origin,
-    allowSignUp: isFirstUser,
-  });
+  const auth = createRequestAuth(request, isFirstUser || Boolean(invitation));
   const response = await auth.handler(request);
 
-  if (isFirstUser && response.ok) {
+  if (isEmailSignUp && response.ok) {
     const payload = (await response.clone().json()) as SignUpPayload;
     const userId = payload.user?.id;
 
-    if (userId) {
+    if (userId && isFirstUser) {
       await bootstrapFirstOrganization(runtime.DB, userId);
+    } else if (userId && invitation) {
+      await acceptInvitation(runtime.DB, invitation, userId);
     }
   }
 
   return response;
+}
+
+async function readSignUpInput(request: { json(): Promise<unknown> }) {
+  try {
+    const parsed = signUpInputSchema.safeParse(await request.json());
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function createRequestAuth(request: Request, allowSignUp: boolean) {
+  const runtime = getRuntimeEnv();
+  return createAuth({
+    database: runtime.DB,
+    secret: runtime.BETTER_AUTH_SECRET,
+    baseURL: new URL(request.url).origin,
+    allowSignUp,
+  });
 }
 
 async function bootstrapFirstOrganization(database: D1Database, userId: string): Promise<void> {
@@ -109,10 +206,7 @@ async function handlePlatformRequest(request: Request): Promise<Response> {
     return savePlatformPreference(request);
   }
 
-  return new Response(null, {
-    status: 405,
-    headers: { Allow: "GET, POST" },
-  });
+  return methodNotAllowed("GET, POST");
 }
 
 async function getPlatformStatus(): Promise<Response> {
@@ -140,21 +234,14 @@ async function getPlatformStatus(): Promise<Response> {
 }
 
 async function savePlatformPreference(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+
   const runtime = getRuntimeEnv();
-  const url = new URL(request.url);
-  const auth = createAuth({
-    database: runtime.DB,
-    secret: runtime.BETTER_AUTH_SECRET,
-    baseURL: url.origin,
-    allowSignUp: false,
-  });
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getSession(request);
+  if (!session?.user.id) return unauthorized();
 
-  if (!session?.user.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const parsed = preferenceSchema.safeParse(await request.json());
+  const body = await readJson(request);
+  const parsed = preferenceSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Invalid academic session" }, { status: 400 });
   }
@@ -168,9 +255,7 @@ async function savePlatformPreference(request: Request): Promise<Response> {
     .bind(session.user.id, parsed.data.academicSessionId)
     .first<{ organizationId: string }>();
 
-  if (!membership) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!membership) return forbidden();
 
   await runtime.DB.prepare(
     `INSERT INTO user_preference
@@ -185,4 +270,517 @@ async function savePlatformPreference(request: Request): Promise<Response> {
     .run();
 
   return Response.json({ ok: true });
+}
+
+async function handleOrganizationRequest(request: Request): Promise<Response> {
+  if (request.method === "GET") return getOrganization(request);
+  if (request.method === "PATCH") return updateOrganization(request);
+  return methodNotAllowed("GET, PATCH");
+}
+
+async function getOrganization(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+
+  const runtime = getRuntimeEnv();
+  const [organization, members, invitations] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id, name, slug, timezone, locale
+       FROM organization WHERE id = ?`,
+    )
+      .bind(context.organizationId)
+      .first<{
+        id: string;
+        name: string;
+        slug: string;
+        timezone: string;
+        locale: string;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT om.id, om.role, om.created_at AS joinedAt,
+              u.id AS userId, u.name, u.email, u."emailVerified" AS emailVerified
+       FROM organization_member om
+       JOIN "user" u ON u.id = om.user_id
+       WHERE om.organization_id = ?
+       ORDER BY CASE om.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END,
+                lower(u.name)`,
+    )
+      .bind(context.organizationId)
+      .all<{
+        id: string;
+        role: MembershipContext["role"];
+        joinedAt: string;
+        userId: string;
+        name: string;
+        email: string;
+        emailVerified: number;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT id, email, role, expires_at AS expiresAt, created_at AS createdAt
+       FROM organization_invitation
+       WHERE organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL
+         AND unixepoch(expires_at) > unixepoch()
+       ORDER BY created_at DESC`,
+    )
+      .bind(context.organizationId)
+      .all<{
+        id: string;
+        email: string;
+        role: "admin" | "staff" | "viewer";
+        expiresAt: string;
+        createdAt: string;
+      }>(),
+  ]);
+
+  if (!organization) return Response.json({ error: "Organization not found" }, { status: 404 });
+
+  return Response.json({
+    organization,
+    currentMember: { id: context.memberId, role: context.role },
+    members: members.results.map((member) => ({
+      ...member,
+      emailVerified: Boolean(member.emailVerified),
+    })),
+    invitations: invitations.results,
+  });
+}
+
+async function updateOrganization(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (context.role !== "owner" && context.role !== "admin") return forbidden();
+
+  const parsed = organizationSettingsSchema.safeParse(await readJson(request));
+  if (!parsed.success || !isValidTimezone(parsed.data?.timezone)) {
+    return Response.json(
+      { error: "Check the organization settings and try again." },
+      { status: 400 },
+    );
+  }
+
+  const runtime = getRuntimeEnv();
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE organization SET name = ?, timezone = ?, locale = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+    ).bind(parsed.data.name, parsed.data.timezone, parsed.data.locale, context.organizationId),
+    auditStatement(
+      runtime.DB,
+      context,
+      "organization.updated",
+      "organization",
+      context.organizationId,
+      {
+        name: parsed.data.name,
+        timezone: parsed.data.timezone,
+        locale: parsed.data.locale,
+      },
+    ),
+  ]);
+
+  return Response.json({ ok: true });
+}
+
+async function createOrganizationInvitation(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (context.role !== "owner" && context.role !== "admin") return forbidden();
+
+  const parsed = invitationSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Enter a valid email address and role." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const existingUser = await runtime.DB.prepare(
+    `SELECT id, name FROM "user" WHERE lower(email) = ?`,
+  )
+    .bind(parsed.data.email)
+    .first<{ id: string; name: string }>();
+
+  if (existingUser) {
+    const existingMember = await runtime.DB.prepare(
+      `SELECT id FROM organization_member WHERE organization_id = ? AND user_id = ?`,
+    )
+      .bind(context.organizationId, existingUser.id)
+      .first<{ id: string }>();
+    if (existingMember) {
+      return Response.json({ error: "That person is already a member." }, { status: 409 });
+    }
+
+    const memberId = crypto.randomUUID();
+    await runtime.DB.batch([
+      runtime.DB.prepare(
+        `INSERT INTO organization_member (id, organization_id, user_id, role)
+         VALUES (?, ?, ?, ?)`,
+      ).bind(memberId, context.organizationId, existingUser.id, parsed.data.role),
+      auditStatement(runtime.DB, context, "member.added", "organization_member", memberId, {
+        email: parsed.data.email,
+        role: parsed.data.role,
+      }),
+    ]);
+    return Response.json({ added: true, memberName: existingUser.name });
+  }
+
+  const token = createInvitationToken();
+  const tokenHash = await hashInvitationToken(token);
+  const invitationId = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE organization_invitation SET revoked_at = CURRENT_TIMESTAMP
+       WHERE organization_id = ? AND email = ?
+         AND accepted_at IS NULL AND revoked_at IS NULL`,
+    ).bind(context.organizationId, parsed.data.email),
+    runtime.DB.prepare(
+      `INSERT INTO organization_invitation
+        (id, organization_id, email, role, token_hash, invited_by_user_id, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      invitationId,
+      context.organizationId,
+      parsed.data.email,
+      parsed.data.role,
+      tokenHash,
+      context.userId,
+      expiresAt,
+    ),
+    auditStatement(
+      runtime.DB,
+      context,
+      "invitation.created",
+      "organization_invitation",
+      invitationId,
+      {
+        email: parsed.data.email,
+        role: parsed.data.role,
+      },
+    ),
+  ]);
+
+  const invitationUrl = new URL(request.url);
+  invitationUrl.pathname = "/";
+  invitationUrl.search = new URLSearchParams({ invite: token }).toString();
+
+  return Response.json({ invitationUrl: invitationUrl.toString(), expiresAt });
+}
+
+async function previewInvitation(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const token = new URL(request.url).searchParams.get("token");
+  if (!token) return Response.json({ error: "Invitation not found" }, { status: 404 });
+
+  const invitation = await findInvitation(getRuntimeEnv().DB, token);
+  if (!invitation)
+    return Response.json({ error: "This invitation is invalid or expired." }, { status: 404 });
+
+  return Response.json({
+    organizationName: invitation.organizationName,
+    email: invitation.email,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt,
+  });
+}
+
+async function acceptInvitationForCurrentUser(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const session = await getSession(request);
+  if (!session?.user.id || !session.user.email) return unauthorized();
+
+  const parsed = invitationTokenSchema.safeParse(await readJson(request));
+  if (!parsed.success) return Response.json({ error: "Invalid invitation" }, { status: 400 });
+
+  const runtime = getRuntimeEnv();
+  const invitation = await findInvitation(runtime.DB, parsed.data.token, session.user.email);
+  if (!invitation) {
+    return Response.json({ error: "This invitation is invalid or expired." }, { status: 404 });
+  }
+
+  await acceptInvitation(runtime.DB, invitation, session.user.id);
+  return Response.json({ ok: true });
+}
+
+async function updateOrganizationMember(request: Request, memberId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (context.role !== "owner") return forbidden();
+  if (context.memberId === memberId) {
+    return Response.json(
+      { error: "Use ownership transfer to change your own role." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = memberRoleSchema.safeParse(await readJson(request));
+  if (!parsed.success) return Response.json({ error: "Invalid role" }, { status: 400 });
+
+  const runtime = getRuntimeEnv();
+  const target = await runtime.DB.prepare(
+    `SELECT id, role FROM organization_member WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(memberId, context.organizationId)
+    .first<{ id: string; role: MembershipContext["role"] }>();
+  if (!target) return Response.json({ error: "Member not found" }, { status: 404 });
+  if (target.role === "owner") {
+    return Response.json(
+      { error: "Transfer ownership before changing an owner role." },
+      { status: 400 },
+    );
+  }
+
+  await runtime.DB.batch([
+    runtime.DB.prepare(`UPDATE organization_member SET role = ? WHERE id = ?`).bind(
+      parsed.data.role,
+      target.id,
+    ),
+    auditStatement(runtime.DB, context, "member.role_changed", "organization_member", target.id, {
+      from: target.role,
+      to: parsed.data.role,
+    }),
+  ]);
+
+  return Response.json({ ok: true });
+}
+
+async function transferOrganizationOwnership(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (context.role !== "owner") return forbidden();
+
+  const parsed = transferOwnershipSchema.safeParse(await readJson(request));
+  if (!parsed.success || parsed.data.targetMemberId === context.memberId) {
+    return Response.json({ error: "Choose another organization member." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const target = await runtime.DB.prepare(
+    `SELECT id, user_id AS userId, role
+     FROM organization_member WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsed.data.targetMemberId, context.organizationId)
+    .first<{ id: string; userId: string; role: MembershipContext["role"] }>();
+  if (!target) return Response.json({ error: "Member not found" }, { status: 404 });
+
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE organization_member SET role = 'owner'
+       WHERE id = ? AND organization_id = ?`,
+    ).bind(target.id, context.organizationId),
+    runtime.DB.prepare(
+      `UPDATE organization_member SET role = 'admin'
+       WHERE id = ? AND organization_id = ? AND role = 'owner'`,
+    ).bind(context.memberId, context.organizationId),
+    auditStatement(runtime.DB, context, "ownership.transferred", "organization_member", target.id, {
+      previousOwnerMemberId: context.memberId,
+      newOwnerUserId: target.userId,
+    }),
+  ]);
+
+  return Response.json({ ok: true });
+}
+
+async function revokeOrganizationInvitation(
+  request: Request,
+  invitationId: string,
+): Promise<Response> {
+  if (request.method !== "DELETE") return methodNotAllowed("DELETE");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (context.role !== "owner" && context.role !== "admin") return forbidden();
+
+  const runtime = getRuntimeEnv();
+  const invitation = await runtime.DB.prepare(
+    `SELECT id FROM organization_invitation
+     WHERE id = ? AND organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL`,
+  )
+    .bind(invitationId, context.organizationId)
+    .first<{ id: string }>();
+  if (!invitation) return Response.json({ error: "Invitation not found" }, { status: 404 });
+
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE organization_invitation SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    ).bind(invitation.id),
+    auditStatement(
+      runtime.DB,
+      context,
+      "invitation.revoked",
+      "organization_invitation",
+      invitation.id,
+    ),
+  ]);
+
+  return Response.json({ ok: true });
+}
+
+async function getSession(request: Request) {
+  return createRequestAuth(request, false).api.getSession({ headers: request.headers });
+}
+
+async function getMembershipContext(request: Request): Promise<MembershipContext | null> {
+  const session = await getSession(request);
+  if (!session?.user.id) return null;
+
+  const runtime = getRuntimeEnv();
+  const membership = await runtime.DB.prepare(
+    `SELECT om.id AS memberId, om.organization_id AS organizationId, om.role
+     FROM organization_member om
+     LEFT JOIN user_preference up ON up.user_id = om.user_id
+     WHERE om.user_id = ?
+     ORDER BY CASE WHEN up.active_organization_id = om.organization_id THEN 0 ELSE 1 END,
+              om.created_at
+     LIMIT 1`,
+  )
+    .bind(session.user.id)
+    .first<Omit<MembershipContext, "userId">>();
+
+  return membership ? { ...membership, userId: session.user.id } : null;
+}
+
+async function findInvitation(
+  database: D1Database,
+  token: string,
+  expectedEmail?: string,
+): Promise<Invitation | null> {
+  if (token.length < 32 || token.length > 256) return null;
+  const tokenHash = await hashInvitationToken(token);
+  const invitation = await database
+    .prepare(
+      `SELECT i.id, i.organization_id AS organizationId, o.name AS organizationName,
+              i.email, i.role, i.expires_at AS expiresAt
+       FROM organization_invitation i
+       JOIN organization o ON o.id = i.organization_id
+       WHERE i.token_hash = ? AND i.accepted_at IS NULL AND i.revoked_at IS NULL
+         AND unixepoch(i.expires_at) > unixepoch()`,
+    )
+    .bind(tokenHash)
+    .first<Invitation>();
+
+  if (!invitation) return null;
+  if (expectedEmail && invitation.email !== expectedEmail.trim().toLowerCase()) return null;
+  return invitation;
+}
+
+async function acceptInvitation(
+  database: D1Database,
+  invitation: Invitation,
+  userId: string,
+): Promise<void> {
+  const memberId = crypto.randomUUID();
+  const auditId = crypto.randomUUID();
+
+  await database.batch([
+    database
+      .prepare(
+        `INSERT OR IGNORE INTO organization_member (id, organization_id, user_id, role)
+         SELECT ?, organization_id, ?, role FROM organization_invitation
+         WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL
+           AND unixepoch(expires_at) > unixepoch()`,
+      )
+      .bind(memberId, userId, invitation.id),
+    database
+      .prepare(
+        `UPDATE organization_invitation
+         SET accepted_at = CURRENT_TIMESTAMP, accepted_by_user_id = ?
+         WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL`,
+      )
+      .bind(userId, invitation.id),
+    database
+      .prepare(
+        `INSERT INTO audit_event
+          (id, organization_id, actor_user_id, action, entity_type, entity_id, metadata_json)
+         VALUES (?, ?, ?, 'invitation.accepted', 'organization_invitation', ?, ?)`,
+      )
+      .bind(
+        auditId,
+        invitation.organizationId,
+        userId,
+        invitation.id,
+        JSON.stringify({ email: invitation.email, role: invitation.role }),
+      ),
+  ]);
+}
+
+function auditStatement(
+  database: D1Database,
+  context: MembershipContext,
+  action: string,
+  entityType: string,
+  entityId: string,
+  metadata?: Record<string, string>,
+): D1PreparedStatement {
+  return database
+    .prepare(
+      `INSERT INTO audit_event
+        (id, organization_id, actor_user_id, action, entity_type, entity_id, metadata_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      context.organizationId,
+      context.userId,
+      action,
+      entityType,
+      entityId,
+      metadata ? JSON.stringify(metadata) : null,
+    );
+}
+
+function createInvitationToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+}
+
+async function hashInvitationToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function isValidTimezone(timezone: string | undefined): boolean {
+  if (!timezone) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: timezone }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
+
+function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  return !origin || origin === new URL(request.url).origin;
+}
+
+function unauthorized(): Response {
+  return Response.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function forbidden(): Response {
+  return Response.json({ error: "Forbidden" }, { status: 403 });
+}
+
+function methodNotAllowed(allow: string): Response {
+  return new Response(null, { status: 405, headers: { Allow: allow } });
 }
