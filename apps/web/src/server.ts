@@ -122,6 +122,10 @@ async function handleAuthRequest(request: Request): Promise<Response> {
     : null;
   const isFirstUser = isEmailSignUp && Number(userCount?.count ?? 0) === 0;
   const auth = createRequestAuth(request, isFirstUser || Boolean(invitation));
+  const accountAuditAction = getAccountAuditAction(url.pathname);
+  const actorSession = accountAuditAction
+    ? await auth.api.getSession({ headers: request.headers })
+    : null;
   const response = await auth.handler(request);
 
   if (isEmailSignUp && response.ok) {
@@ -133,6 +137,10 @@ async function handleAuthRequest(request: Request): Promise<Response> {
     } else if (userId && invitation) {
       await acceptInvitation(runtime.DB, invitation, userId);
     }
+  }
+
+  if (response.ok && accountAuditAction && actorSession?.user.id) {
+    await auditAccountAction(runtime.DB, actorSession.user.id, accountAuditAction);
   }
 
   return response;
@@ -155,6 +163,37 @@ function createRequestAuth(request: Request, allowSignUp: boolean) {
     baseURL: new URL(request.url).origin,
     allowSignUp,
   });
+}
+
+function getAccountAuditAction(pathname: string): string | null {
+  if (pathname.endsWith("/update-user")) return "account.profile_updated";
+  if (pathname.endsWith("/change-email")) return "account.email_changed";
+  if (pathname.endsWith("/change-password")) return "account.password_changed";
+  return null;
+}
+
+async function auditAccountAction(
+  database: D1Database,
+  userId: string,
+  action: string,
+): Promise<void> {
+  const membership = await database
+    .prepare(
+      `SELECT organization_id AS organizationId
+       FROM organization_member WHERE user_id = ? ORDER BY created_at LIMIT 1`,
+    )
+    .bind(userId)
+    .first<{ organizationId: string }>();
+  if (!membership) return;
+
+  await database
+    .prepare(
+      `INSERT INTO audit_event
+        (id, organization_id, actor_user_id, action, entity_type, entity_id)
+       VALUES (?, ?, ?, ?, 'user', ?)`,
+    )
+    .bind(crypto.randomUUID(), membership.organizationId, userId, action, userId)
+    .run();
 }
 
 async function bootstrapFirstOrganization(database: D1Database, userId: string): Promise<void> {

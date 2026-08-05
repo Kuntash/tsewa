@@ -21,6 +21,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { AccountSettings } from "@/components/account-settings";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,7 +119,15 @@ function Home() {
   }
 
   if (session.data?.user) {
-    return <Launchpad name={session.data.user.name} />;
+    return (
+      <Launchpad
+        user={{
+          name: session.data.user.name,
+          email: session.data.user.email,
+          emailVerified: session.data.user.emailVerified,
+        }}
+      />
+    );
   }
 
   return <AccessScreen inviteToken={inviteToken} platform={platform} />;
@@ -374,7 +383,7 @@ function Brand() {
   );
 }
 
-function Launchpad({ name }: { name: string }) {
+function Launchpad({ user }: { user: { name: string; email: string; emailVerified: boolean } }) {
   const modules = [
     [Users, "People Registry", "Identity, family, placement, and records"],
     [GraduationCap, "School Operations", "Classes, marks, results, and promotion"],
@@ -402,7 +411,7 @@ function Launchpad({ name }: { name: string }) {
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
         <p className="text-sm font-medium text-primary">Operational console</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] md:text-4xl">
-          Welcome back, {name.split(" ")[0]}
+          Welcome back, {user.name.split(" ")[0]}
         </h1>
         <p className="mt-3 text-muted-foreground">
           Your workspace is ready. Business modules arrive one vertical slice at a time.
@@ -428,6 +437,7 @@ function Launchpad({ name }: { name: string }) {
             </Card>
           ))}
         </div>
+        <AccountSettings user={user} />
         <AdministrationPanel />
       </div>
     </main>
