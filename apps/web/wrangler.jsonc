@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tsewa-self-hosted",
+  "compatibility_date": "2026-08-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server.ts",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "ths.kunga.dev",
+      "custom_domain": true,
+    },
+  ],
+  "secrets": {
+    "required": ["BETTER_AUTH_SECRET"],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 },
+  },
+  "vars": {
+    "APP_NAME": "Tsewa",
+    "DEFAULT_ORGANIZATION_SLUG": "tibetan-homes-foundation",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tsewa-self-hosted-db",
+      "database_id": "f6dc8a9f-5eb3-4ae7-b9f1-88645634a608",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "tsewa-self-hosted-files",
+    },
+  ],
+}

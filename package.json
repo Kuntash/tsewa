@@ -1,0 +1,24 @@
+{
+  "name": "tsewa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ready": "vp check && vp run @tsewa/web#build",
+    "dev": "vp run @tsewa/web#dev",
+    "build": "vp run @tsewa/web#build",
+    "deploy": "vp run @tsewa/web#deploy",
+    "typecheck": "vp run @tsewa/web#typecheck",
+    "cf-typegen": "vp run @tsewa/web#cf-typegen",
+    "db:migrate:local": "vp run @tsewa/web#db:migrate:local",
+    "db:migrate:remote": "vp run @tsewa/web#db:migrate:remote",
+    "setup:vp": "vp config"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.0.9"
+}
