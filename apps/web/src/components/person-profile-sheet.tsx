@@ -3,6 +3,7 @@ import {
   CalendarDays,
   Database,
   Fingerprint,
+  GraduationCap,
   History,
   Home,
   ImageOff,
@@ -44,6 +45,23 @@ type Profile = {
     reason: string | null;
     remarks: string | null;
     isCurrent: boolean;
+    sourceId: string;
+  }>;
+  academicRecords: Array<{
+    id: string;
+    className: string;
+    classLevel: number | null;
+    classSection: string | null;
+    classTitle: string | null;
+    schoolName: string | null;
+    houseName: string | null;
+    academicSession: string;
+    recordedOn: string;
+    result: string | null;
+    rollNumber: string | null;
+    boardRegistrationNumber: string | null;
+    description: string | null;
+    isLatest: boolean;
     sourceId: string;
   }>;
 };
@@ -126,6 +144,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
   );
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
   const currentPlacement = profile.placements.find((placement) => placement.isCurrent);
+  const latestAcademicRecord = profile.academicRecords.find((record) => record.isLatest);
 
   return (
     <>
@@ -315,6 +334,112 @@ function ProfileContent({ profile }: { profile: Profile }) {
                 value={profile.photoReferencePresent ? "Available in legacy source" : null}
               />
             </div>
+          </ProfileSection>
+
+          <Separator />
+
+          <ProfileSection icon={GraduationCap} label="Academic history">
+            {latestAcademicRecord ? (
+              <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
+                <div className="flex items-start gap-3.5">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <GraduationCap className="size-4.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">{latestAcademicRecord.className}</p>
+                      <Badge className="rounded-full" variant="secondary">
+                        Latest
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {latestAcademicRecord.schoolName || "School not recorded"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>{latestAcademicRecord.academicSession}</span>
+                      {latestAcademicRecord.houseName ? (
+                        <span>{latestAcademicRecord.houseName} house</span>
+                      ) : null}
+                      <span>{formatLegacyDate(latestAcademicRecord.recordedOn)}</span>
+                    </div>
+                    {!latestAcademicRecord.schoolName ? (
+                      <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                        The class record is intact, but its legacy school lookup is unavailable.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : profile.kind === "staff" ? (
+              <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
+                Beneficiary academic history does not apply to staff records.
+              </p>
+            ) : (
+              <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
+                No academic history was recorded for this person in the legacy system.
+              </p>
+            )}
+
+            {profile.academicRecords.length ? (
+              <div className="mt-7">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <History className="size-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold">Academic timeline</h4>
+                  </div>
+                  <Badge className="rounded-full tabular-nums" variant="outline">
+                    {profile.academicRecords.length}
+                  </Badge>
+                </div>
+                <ol className="relative ml-2 border-l border-border pl-5">
+                  {profile.academicRecords.map((record) => (
+                    <li className="relative pb-6 last:pb-0" key={record.id}>
+                      <span
+                        className={`absolute -left-[1.59rem] top-1.5 size-2.5 rounded-full border-2 border-background ${
+                          record.isLatest ? "bg-primary" : "bg-muted-foreground/40"
+                        }`}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-medium tabular-nums">{record.academicSession}</p>
+                        {record.isLatest ? (
+                          <Badge className="rounded-full px-2 py-0 text-[10px]" variant="secondary">
+                            Latest
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1.5 text-sm font-semibold">{record.className}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {[record.schoolName, record.houseName ? `${record.houseName} house` : null]
+                          .filter(Boolean)
+                          .join(" · ") || "School and house not recorded"}
+                      </p>
+                      <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                        Source date · {record.recordedOn}
+                      </p>
+                      {record.classTitle || record.classSection ? (
+                        <p className="mt-2 text-xs text-foreground/75">
+                          {[record.classTitle, record.classSection].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
+                      {record.result || record.description ? (
+                        <div className="mt-2.5 rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-foreground/80">
+                          {record.result ? <p>{record.result}</p> : null}
+                          {record.description ? <p>{record.description}</p> : null}
+                        </div>
+                      ) : null}
+                      {record.rollNumber || record.boardRegistrationNumber ? (
+                        <div className="mt-2 grid gap-1 text-[10px] text-muted-foreground sm:grid-cols-2">
+                          {record.rollNumber ? <p>Roll · {record.rollNumber}</p> : null}
+                          {record.boardRegistrationNumber ? (
+                            <p>Board registration · {record.boardRegistrationNumber}</p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
           </ProfileSection>
 
           <Separator />

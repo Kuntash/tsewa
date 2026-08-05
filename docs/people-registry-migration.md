@@ -187,6 +187,43 @@ row exactly as supplied. No R2 objects were copied. Post-import checks confirmed
 that the original D1 had zero writes, the original R2 remained at 46,941
 objects, and the prepared SQLite source fingerprint was unchanged.
 
+## Academic-history dry run
+
+The aggregate-only academic report is committed at
+`reports/academic-history-dry-run.json`. The prepared source was opened in
+SQLite query-only mode and verified unchanged after analysis.
+
+| Gate                           | Result |
+| ------------------------------ | -----: |
+| Legacy academic-history rows   | 25,427 |
+| Eligible rows                  | 25,427 |
+| Blocked rows                   |      0 |
+| Beneficiaries with history     |  7,982 |
+| Beneficiaries without history  |    651 |
+| Derived latest records         |  7,982 |
+| Missing school lookups         |      1 |
+| Maximum records for one person |     13 |
+
+The latest academic record is derived deterministically from the latest parsed
+legacy date, breaking same-date ties with the greatest source row ID. All 52
+same-person, same-date groups and the 9 rows predating admission are retained in
+full. The source contains 5,466 historical rows where the `school_house`
+association no longer matches the row's school; the school and house lookups
+are therefore preserved independently instead of rewriting either value.
+
+## Academic import policy
+
+- Import every `beneficiary_class` row with deterministic IDs, organization
+  scope, and source provenance.
+- Preserve class, school, house, academic session, source date, result,
+  roll/board identifiers, and description exactly where supplied.
+- Enforce at most one latest academic record for each organization/person pair.
+- Keep the single missing school lookup nullable while retaining the rest of
+  that academic row.
+- Keep staff academic history empty because this legacy table is
+  beneficiary-specific.
+- Use idempotent upserts and do not copy or modify any R2 objects.
+
 ## Delivery order
 
 1. Organization-scoped person and import-batch schema.
@@ -196,4 +233,5 @@ objects, and the prepared SQLite source fingerprint was unchanged.
 5. Read-only core profile drawer with source provenance and date-review flags.
    **Completed.**
 6. Beneficiary home and placement-history migration. **Completed.**
-7. Academic, sibling, staff-detail, document, and R2 asset migrations.
+7. Beneficiary academic-history migration.
+8. Sibling, staff-detail, document, and R2 asset migrations.

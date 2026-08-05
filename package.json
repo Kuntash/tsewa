@@ -17,6 +17,8 @@
     "migration:people:import": "node scripts/import-people-registry.mjs",
     "migration:placement:dry-run": "node scripts/placement-history-dry-run.mjs",
     "migration:placement:import": "node scripts/import-placement-history.mjs",
+    "migration:academic:dry-run": "node scripts/academic-history-dry-run.mjs",
+    "migration:academic:import": "node scripts/import-academic-history.mjs",
     "setup:vp": "vp config"
   },
   "devDependencies": {

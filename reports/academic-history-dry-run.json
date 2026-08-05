@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "mode": "dry_run",
+  "generatedAt": "2026-08-05T18:43:19.160Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "table": "beneficiary_class",
+    "repositoryRelativeLocation": "../data-migration/d1/tibethomes-newer-d1.sqlite",
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "reconciliation": {
+    "sourceRows": 25427,
+    "eligibleRows": 25427,
+    "blockedRows": 0,
+    "latestAcademicRecordCount": 7982,
+    "peopleWithHistory": 7982,
+    "peopleWithoutHistory": 651,
+    "warningCount": 6179,
+    "importedRows": 0
+  },
+  "sourceKinds": {
+    "child": {
+      "historyRows": 25425,
+      "people": 7980
+    },
+    "elderly": {
+      "historyRows": 2,
+      "people": 2
+    }
+  },
+  "quality": {
+    "missingSourceIds": 0,
+    "duplicateSourceIds": 0,
+    "missingBeneficiaryIds": 0,
+    "missingClassIds": 0,
+    "missingSessionIds": 0,
+    "missingDates": 0,
+    "invalidDates": 0,
+    "pre1900Dates": 0,
+    "futureDates": 0,
+    "missingBeneficiaryLinks": 0,
+    "missingClassLinks": 0,
+    "missingSessionLinks": 0,
+    "missingSchoolLookups": 1,
+    "missingHouseLookups": 0,
+    "schoolHouseAssociationMismatches": 5466,
+    "sameDayTieGroups": 52,
+    "historyBeforeAdmission": 9,
+    "missingResults": 25425,
+    "missingRollNumbers": 25427,
+    "missingBoardRegistrationNumbers": 25427,
+    "missingDescriptions": 25425,
+    "latestMissingSchoolLookups": 1,
+    "latestFutureDated": 0,
+    "maximumHistoryRowsPerPerson": 13
+  },
+  "latestRecordRule": "latest parsed source date, then greatest source row ID"
+}

@@ -400,7 +400,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   }
 
   const runtime = getRuntimeEnv();
-  const [person, placements] = await Promise.all([
+  const [person, placements, academicRecords] = await Promise.all([
     runtime.DB.prepare(
       `SELECT id, kind, status, identifier_kind AS identifierKind,
               primary_identifier AS primaryIdentifier, display_name AS displayName,
@@ -460,6 +460,36 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         isCurrent: number;
         sourceId: string;
       }>(),
+    runtime.DB.prepare(
+      `SELECT id, class_name AS className, class_level AS classLevel,
+              class_section AS classSection, class_title AS classTitle,
+              school_name AS schoolName, house_name AS houseName,
+              academic_session AS academicSession, recorded_on AS recordedOn,
+              result, roll_number AS rollNumber,
+              board_registration_number AS boardRegistrationNumber,
+              description, is_latest AS isLatest, source_id AS sourceId
+       FROM person_academic_record
+       WHERE person_id = ? AND organization_id = ?
+       ORDER BY is_latest DESC, date(recorded_on) DESC, CAST(source_id AS INTEGER) DESC`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        className: string;
+        classLevel: number | null;
+        classSection: string | null;
+        classTitle: string | null;
+        schoolName: string | null;
+        houseName: string | null;
+        academicSession: string;
+        recordedOn: string;
+        result: string | null;
+        rollNumber: string | null;
+        boardRegistrationNumber: string | null;
+        description: string | null;
+        isLatest: number;
+        sourceId: string;
+      }>(),
   ]);
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
@@ -500,6 +530,23 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         remarks: placement.remarks,
         isCurrent: Boolean(placement.isCurrent),
         sourceId: placement.sourceId,
+      })),
+      academicRecords: academicRecords.results.map((record) => ({
+        id: record.id,
+        className: record.className,
+        classLevel: record.classLevel,
+        classSection: record.classSection,
+        classTitle: record.classTitle,
+        schoolName: record.schoolName,
+        houseName: record.houseName,
+        academicSession: record.academicSession,
+        recordedOn: record.recordedOn,
+        result: record.result,
+        rollNumber: record.rollNumber,
+        boardRegistrationNumber: record.boardRegistrationNumber,
+        description: record.description,
+        isLatest: Boolean(record.isLatest),
+        sourceId: record.sourceId,
       })),
     },
   });
