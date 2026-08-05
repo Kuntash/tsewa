@@ -23,4 +23,4 @@
 - [x] Import core records only after source/import/issue counts reconcile.
 - [x] Add the read-only core profile drawer and source-value review flags.
 - [x] Migrate beneficiary home and placement history.
-- [ ] Migrate academic history after placement reconciliation.
+- [x] Migrate academic history after placement reconciliation.

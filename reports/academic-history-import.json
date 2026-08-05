@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "mode": "import",
+  "generatedAt": "2026-08-05T18:49:58Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "target": {
+    "database": "tsewa-self-hosted-db",
+    "databaseId": "f6dc8a9f-5eb3-4ae7-b9f1-88645634a608",
+    "organizationSlug": "tibetan-homes-foundation"
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "table": "beneficiary_class",
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "unchanged": true
+  },
+  "reconciliation": {
+    "sourceRows": 25427,
+    "importedRows": 25427,
+    "uniqueSourceLinks": 25427,
+    "skippedRows": 0,
+    "peopleWithHistory": 7982,
+    "latestAcademicRecords": 7982,
+    "orphanedRecords": 0,
+    "maximumHistoryRowsPerPerson": 13
+  },
+  "retainedSourceQuality": {
+    "missingSchoolLookups": 1,
+    "futureDatedRows": 0,
+    "populatedResults": 2,
+    "populatedDescriptions": 2,
+    "populatedRollNumbers": 0,
+    "populatedBoardRegistrationNumbers": 0
+  },
+  "storage": {
+    "objectsCopied": 0,
+    "targetR2ObjectCount": 0,
+    "originalD1Modified": false,
+    "originalR2Modified": false
+  },
+  "batch": {
+    "id": "academic-import-7738b8e4eebad446-v1",
+    "status": "completed"
+  }
+}

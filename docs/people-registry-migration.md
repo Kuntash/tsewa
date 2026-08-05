@@ -224,6 +224,29 @@ are therefore preserved independently instead of rewriting either value.
   beneficiary-specific.
 - Use idempotent upserts and do not copy or modify any R2 objects.
 
+## Academic import result
+
+The controlled academic-history import completed on 2026-08-06 local time.
+Its aggregate-only reconciliation is committed at
+`reports/academic-history-import.json`.
+
+| Reconciliation gate        | Result |
+| -------------------------- | -----: |
+| Source rows                | 25,427 |
+| Imported rows              | 25,427 |
+| Unique source links        | 25,427 |
+| Skipped rows               |      0 |
+| People with history        |  7,982 |
+| Latest academic records    |  7,982 |
+| Orphaned academic records  |      0 |
+| Maximum records per person |     13 |
+
+The target retained the one missing school lookup, both populated result
+values, and both populated descriptions exactly as supplied. The empty legacy
+roll and board-registration fields remain empty. No R2 objects were copied;
+the original D1, original R2, and prepared SQLite fingerprint were unchanged
+after import.
+
 ## Delivery order
 
 1. Organization-scoped person and import-batch schema.
@@ -233,5 +256,5 @@ are therefore preserved independently instead of rewriting either value.
 5. Read-only core profile drawer with source provenance and date-review flags.
    **Completed.**
 6. Beneficiary home and placement-history migration. **Completed.**
-7. Beneficiary academic-history migration.
+7. Beneficiary academic-history migration. **Completed.**
 8. Sibling, staff-detail, document, and R2 asset migrations.
