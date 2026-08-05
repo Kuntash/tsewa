@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  ArrowUpRight,
   BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -91,6 +93,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<RegistryResponse>(emptyRegistry);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -298,6 +301,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
                     setPage((current) => Math.max(1, current - 1));
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
+                  onSelectPerson={setSelectedPersonId}
                 />
               ) : (
                 <div className="grid min-h-80 place-items-center px-6 py-12 text-center">
@@ -326,6 +330,12 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
           </Card>
         </section>
       </div>
+      <PersonProfileSheet
+        onOpenChange={(open) => {
+          if (!open) setSelectedPersonId(null);
+        }}
+        personId={selectedPersonId}
+      />
     </main>
   );
 }
@@ -364,10 +374,12 @@ function PeopleResults({
   data,
   onNext,
   onPrevious,
+  onSelectPerson,
 }: {
   data: RegistryResponse;
   onNext: () => void;
   onPrevious: () => void;
+  onSelectPerson: (personId: string) => void;
 }) {
   return (
     <>
@@ -382,6 +394,9 @@ function PeopleResults({
               <th className="px-5 py-3 font-medium">Date of birth</th>
               <th className="px-5 py-3 font-medium">Campus / location</th>
               <th className="px-5 py-3 font-medium">Status</th>
+              <th className="w-12 px-3 py-3 font-medium">
+                <span className="sr-only">Open profile</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -390,7 +405,15 @@ function PeopleResults({
                 <td className="px-5 py-4 font-mono text-xs text-muted-foreground">
                   {person.primaryIdentifier}
                 </td>
-                <td className="px-5 py-4 font-semibold">{person.displayName}</td>
+                <td className="px-5 py-4 font-semibold">
+                  <button
+                    className="text-left underline-offset-4 hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => onSelectPerson(person.id)}
+                    type="button"
+                  >
+                    {person.displayName}
+                  </button>
+                </td>
                 <td className="px-5 py-4">
                   <KindBadge kind={person.kind} />
                 </td>
@@ -406,6 +429,16 @@ function PeopleResults({
                 <td className="px-5 py-4">
                   <StatusBadge status={person.status} />
                 </td>
+                <td className="px-3 py-4">
+                  <Button
+                    aria-label={`Open profile for ${person.displayName}`}
+                    onClick={() => onSelectPerson(person.id)}
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <ArrowUpRight />
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -414,7 +447,12 @@ function PeopleResults({
 
       <div className="divide-y md:hidden">
         {data.people.map((person) => (
-          <div className="p-4" key={person.id}>
+          <button
+            className="w-full p-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            key={person.id}
+            onClick={() => onSelectPerson(person.id)}
+            type="button"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-semibold">{person.displayName}</p>
@@ -431,7 +469,7 @@ function PeopleResults({
               <span>{formatDate(person.dateOfBirth)}</span>
               {person.campusOrLocation ? <span>· {person.campusOrLocation}</span> : null}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 

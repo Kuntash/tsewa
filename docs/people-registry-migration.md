@@ -133,5 +133,6 @@ were not modified.
 2. Read-only People Registry list, search, and filters.
 3. Dry-run importer for the 9,072 core records.
 4. Controlled core-record import. **Completed.**
-5. Profile drawer and type-specific details.
+5. Read-only core profile drawer with source provenance and date-review flags.
+   **Completed.**
 6. Academic, home, sibling, staff-detail, document, and R2 asset migrations.

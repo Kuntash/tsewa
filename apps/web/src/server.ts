@@ -46,6 +46,8 @@ const peopleQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
 
+const personIdSchema = z.uuid();
+
 type SignUpPayload = {
   user?: {
     id?: string;
@@ -82,6 +84,11 @@ export default createServerEntry({
 
     if (url.pathname === "/api/people") {
       return getPeopleRegistry(request);
+    }
+
+    const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
+    if (personMatch) {
+      return getPersonProfile(request, personMatch[1]);
     }
 
     if (url.pathname === "/api/invitations/preview") {
@@ -379,6 +386,89 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
     },
     summary: summary.results,
     latestImport,
+  });
+}
+
+async function getPersonProfile(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+
+  const parsedId = personIdSchema.safeParse(personId);
+  if (!parsedId.success) {
+    return Response.json({ error: "Invalid person ID" }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const person = await runtime.DB.prepare(
+    `SELECT id, kind, status, identifier_kind AS identifierKind,
+            primary_identifier AS primaryIdentifier, display_name AS displayName,
+            gender, date_of_birth AS dateOfBirth,
+            admitted_or_joined_on AS admittedOrJoinedOn,
+            campus_or_location AS campusOrLocation, nationality,
+            CASE WHEN photo_asset_key IS NULL THEN 0 ELSE 1 END AS photoReferencePresent,
+            source_system AS sourceSystem, source_table AS sourceTable,
+            source_id AS sourceId, imported_at AS importedAt,
+            CASE WHEN date_of_birth IS NULL THEN 1 ELSE 0 END AS dateOfBirthMissing,
+            CASE WHEN admitted_or_joined_on IS NULL THEN 1 ELSE 0 END AS eventDateMissing,
+            CASE WHEN date(admitted_or_joined_on) < '1900-01-01' THEN 1 ELSE 0 END AS eventDateBefore1900,
+            CASE WHEN date(admitted_or_joined_on) < date(date_of_birth) THEN 1 ELSE 0 END AS eventBeforeBirth
+     FROM person
+     WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<{
+      id: string;
+      kind: "child" | "elderly" | "staff";
+      status: "active" | "inactive";
+      identifierKind: "admission" | "staff";
+      primaryIdentifier: string;
+      displayName: string;
+      gender: "female" | "male" | "other" | "unknown" | null;
+      dateOfBirth: string | null;
+      admittedOrJoinedOn: string | null;
+      campusOrLocation: string | null;
+      nationality: string | null;
+      photoReferencePresent: number;
+      sourceSystem: string;
+      sourceTable: string;
+      sourceId: string;
+      importedAt: string | null;
+      dateOfBirthMissing: number;
+      eventDateMissing: number;
+      eventDateBefore1900: number;
+      eventBeforeBirth: number;
+    }>();
+
+  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+
+  const reviewFlags = [
+    person.dateOfBirthMissing ? "date_of_birth_missing" : null,
+    person.eventDateMissing ? "event_date_missing" : null,
+    person.eventDateBefore1900 ? "event_date_before_1900" : null,
+    person.eventBeforeBirth ? "event_before_birth" : null,
+  ].filter((flag): flag is string => Boolean(flag));
+
+  return Response.json({
+    person: {
+      id: person.id,
+      kind: person.kind,
+      status: person.status,
+      identifierKind: person.identifierKind,
+      primaryIdentifier: person.primaryIdentifier,
+      displayName: person.displayName,
+      gender: person.gender,
+      dateOfBirth: person.dateOfBirth,
+      admittedOrJoinedOn: person.admittedOrJoinedOn,
+      campusOrLocation: person.campusOrLocation,
+      nationality: person.nationality,
+      photoReferencePresent: Boolean(person.photoReferencePresent),
+      sourceSystem: person.sourceSystem,
+      sourceTable: person.sourceTable,
+      sourceId: person.sourceId,
+      importedAt: person.importedAt,
+      reviewFlags,
+    },
   });
 }
 
