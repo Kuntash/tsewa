@@ -52,8 +52,9 @@ No R2 assets are required for the first read-only registry pass.
 
 ## Data-quality gates
 
-- Quarantine dates outside an agreed range rather than coercing them. The legacy
-  admission data contains at least one `1899-12-30` sentinel value.
+- Treat legacy dates as authoritative during migration, including suspicious or
+  pre-1900 values. Preserve them exactly and surface them for correction in
+  Tsewa instead of rewriting or dropping them during import.
 - Preserve original values and IDs for reconciliation.
 - Use idempotent upserts keyed by organization, source system, source table, and
   source ID.
@@ -85,10 +86,25 @@ The warnings are non-blocking and can overlap on the same record:
   empty in the core pass and be derived from later home/academic history.
 - 1,379 beneficiary and 73 staff photo references are missing. R2 assets are
   outside the core pass.
-- 74 beneficiary admission dates precede dates of birth. These dates must be
-  quarantined rather than coerced.
+- 74 beneficiary admission dates precede dates of birth. These values are
+  retained as supplied so the organization can review and correct them later.
 - One beneficiary admission date is missing and one is before 1900.
 - 24 staff dates of birth and 46 staff joining dates are missing.
+
+## Core import policy
+
+- Import all 9,072 eligible core people into the Tsewa D1 only.
+- Use deterministic person IDs and idempotent upserts keyed by organization,
+  source system, source table, and source ID.
+- Preserve legacy date text exactly. The legacy dataset remains the source of
+  truth until an authorized user corrects a value in a later editable workflow.
+- Resolve beneficiary nationality through the legacy `nationality` lookup.
+- Leave unavailable campus/location and staff nationality values empty.
+- Retain legacy photo asset references, but do not copy or modify R2 objects in
+  this slice.
+- Generate import SQL only in a permission-restricted temporary directory and
+  remove it immediately after execution. Personal data must not be committed to
+  this repository.
 
 ## Delivery order
 
