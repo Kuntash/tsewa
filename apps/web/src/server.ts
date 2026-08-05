@@ -400,7 +400,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   }
 
   const runtime = getRuntimeEnv();
-  const [person, placements, academicRecords] = await Promise.all([
+  const [person, placements, academicRecords, familyProfile, relationships] = await Promise.all([
     runtime.DB.prepare(
       `SELECT id, kind, status, identifier_kind AS identifierKind,
               primary_identifier AS primaryIdentifier, display_name AS displayName,
@@ -490,6 +490,77 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         isLatest: number;
         sourceId: string;
       }>(),
+    runtime.DB.prepare(
+      `SELECT parentage_status AS parentageStatus,
+              mother_name AS motherName, father_name AS fatherName,
+              mother_occupation AS motherOccupation,
+              father_occupation AS fatherOccupation,
+              parents_phone AS parentsPhone,
+              parents_permanent_address AS parentsPermanentAddress,
+              guardian_1_name AS guardian1Name,
+              guardian_1_address AS guardian1Address,
+              guardian_1_email AS guardian1Email,
+              guardian_1_phone AS guardian1Phone,
+              guardian_1_mobile AS guardian1Mobile,
+              guardian_2_name AS guardian2Name,
+              guardian_2_address AS guardian2Address,
+              guardian_2_email AS guardian2Email,
+              guardian_2_phone AS guardian2Phone,
+              guardian_2_mobile AS guardian2Mobile,
+              marital_status AS maritalStatus, spouse_name AS spouseName,
+              number_of_children AS numberOfChildren
+       FROM person_family_profile
+       WHERE person_id = ? AND organization_id = ?`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .first<{
+        parentageStatus: string | null;
+        motherName: string | null;
+        fatherName: string | null;
+        motherOccupation: string | null;
+        fatherOccupation: string | null;
+        parentsPhone: string | null;
+        parentsPermanentAddress: string | null;
+        guardian1Name: string | null;
+        guardian1Address: string | null;
+        guardian1Email: string | null;
+        guardian1Phone: string | null;
+        guardian1Mobile: string | null;
+        guardian2Name: string | null;
+        guardian2Address: string | null;
+        guardian2Email: string | null;
+        guardian2Phone: string | null;
+        guardian2Mobile: string | null;
+        maritalStatus: string | null;
+        spouseName: string | null;
+        numberOfChildren: string | null;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT relationship.id, relationship.relationship_type AS relationshipType,
+              relationship.review_flag AS reviewFlag,
+              related.id AS personId, related.display_name AS displayName,
+              related.primary_identifier AS primaryIdentifier,
+              related.identifier_kind AS identifierKind,
+              related.kind, related.status
+       FROM person_relationship AS relationship
+       JOIN person AS related
+         ON related.id = relationship.related_person_id
+        AND related.organization_id = relationship.organization_id
+       WHERE relationship.person_id = ? AND relationship.organization_id = ?
+       ORDER BY related.display_name COLLATE NOCASE, relationship.source_id`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        relationshipType: "sibling";
+        reviewFlag: "self_reference" | "duplicate_source_link" | null;
+        personId: string;
+        displayName: string;
+        primaryIdentifier: string;
+        identifierKind: "admission" | "staff";
+        kind: "child" | "elderly" | "staff";
+        status: "active" | "inactive";
+      }>(),
   ]);
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
@@ -548,6 +619,8 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         isLatest: Boolean(record.isLatest),
         sourceId: record.sourceId,
       })),
+      family: familyProfile ?? null,
+      relationships: relationships.results,
     },
   });
 }

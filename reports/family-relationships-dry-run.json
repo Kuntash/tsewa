@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "mode": "dry_run",
+  "generatedAt": "2026-08-05T19:34:25.197Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": ["beneficiary", "parantage", "sibling_details"],
+    "repositoryRelativeLocation": "../data-migration/d1/tibethomes-newer-d1.sqlite",
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "reconciliation": {
+    "beneficiaryRows": 8633,
+    "eligibleProfiles": 8593,
+    "sourceRelationshipRows": 1105,
+    "eligibleRelationshipRows": 1105,
+    "blockedRelationshipRows": 0,
+    "peopleWithRelationships": 896,
+    "importedProfiles": 0,
+    "importedRelationships": 0
+  },
+  "quality": {
+    "populatedParentage": 6335,
+    "populatedParentNames": 8002,
+    "populatedGuardians": 189,
+    "populatedOwnFamily": 569,
+    "missingSourceIds": 0,
+    "duplicateSourceIds": 0,
+    "missingPersonIds": 0,
+    "missingRelatedPersonIds": 0,
+    "missingPersonLinks": 0,
+    "missingRelatedPersonLinks": 0,
+    "selfReferences": 10,
+    "duplicateDirectionalGroups": 1,
+    "duplicateDirectionalRows": 2,
+    "reciprocalRows": 967,
+    "reviewRows": 12
+  },
+  "preservationRule": "All source relationships are retained; self-references and duplicate directional links are flagged for review."
+}

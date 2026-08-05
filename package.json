@@ -19,6 +19,8 @@
     "migration:placement:import": "node scripts/import-placement-history.mjs",
     "migration:academic:dry-run": "node scripts/academic-history-dry-run.mjs",
     "migration:academic:import": "node scripts/import-academic-history.mjs",
+    "migration:family:dry-run": "node scripts/family-relationships-dry-run.mjs",
+    "migration:family:import": "node scripts/import-family-relationships.mjs",
     "setup:vp": "vp config"
   },
   "devDependencies": {

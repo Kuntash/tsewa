@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "mode": "import",
+  "generatedAt": "2026-08-05T19:40:19Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "target": {
+    "database": "tsewa-self-hosted-db",
+    "databaseId": "f6dc8a9f-5eb3-4ae7-b9f1-88645634a608",
+    "organizationSlug": "tibetan-homes-foundation"
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": ["beneficiary", "parantage", "sibling_details"],
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "unchanged": true
+  },
+  "reconciliation": {
+    "beneficiaryRows": 8633,
+    "importedProfiles": 8593,
+    "sourceRelationshipRows": 1105,
+    "importedRelationships": 1105,
+    "skippedRelationshipRows": 0,
+    "peopleWithRelationships": 896,
+    "orphanedRelationships": 0
+  },
+  "retainedSourceQuality": {
+    "selfReferences": 10,
+    "duplicateDirectionalGroups": 1,
+    "duplicateDirectionalRows": 2,
+    "reviewRows": 12
+  },
+  "storage": {
+    "objectsCopied": 0,
+    "targetR2Modified": false,
+    "originalD1Modified": false,
+    "originalR2Modified": false
+  },
+  "batch": {
+    "id": "family-import-7738b8e4eebad446-v1",
+    "status": "completed"
+  },
+  "deployment": {
+    "worker": "tsewa-self-hosted",
+    "versionId": "57aaffbb-8a11-4aed-91e4-9950af63686b",
+    "customDomain": "ths.kunga.dev"
+  }
+}

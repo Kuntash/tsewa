@@ -4,13 +4,18 @@ import {
   Database,
   Fingerprint,
   GraduationCap,
+  HeartHandshake,
   History,
   Home,
   ImageOff,
   LoaderCircle,
   LockKeyhole,
+  Mail,
+  MapPinned,
   MapPin,
+  Phone,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -63,6 +68,39 @@ type Profile = {
     description: string | null;
     isLatest: boolean;
     sourceId: string;
+  }>;
+  family: {
+    parentageStatus: string | null;
+    motherName: string | null;
+    fatherName: string | null;
+    motherOccupation: string | null;
+    fatherOccupation: string | null;
+    parentsPhone: string | null;
+    parentsPermanentAddress: string | null;
+    guardian1Name: string | null;
+    guardian1Address: string | null;
+    guardian1Email: string | null;
+    guardian1Phone: string | null;
+    guardian1Mobile: string | null;
+    guardian2Name: string | null;
+    guardian2Address: string | null;
+    guardian2Email: string | null;
+    guardian2Phone: string | null;
+    guardian2Mobile: string | null;
+    maritalStatus: string | null;
+    spouseName: string | null;
+    numberOfChildren: string | null;
+  } | null;
+  relationships: Array<{
+    id: string;
+    relationshipType: "sibling";
+    reviewFlag: "self_reference" | "duplicate_source_link" | null;
+    personId: string;
+    displayName: string;
+    primaryIdentifier: string;
+    identifierKind: "admission" | "staff";
+    kind: "child" | "elderly" | "staff";
+    status: "active" | "inactive";
   }>;
 };
 
@@ -230,6 +268,10 @@ function ProfileContent({ profile }: { profile: Profile }) {
               <SourceDate label={eventLabel} value={profile.admittedOrJoinedOn} />
             </div>
           </ProfileSection>
+
+          <Separator />
+
+          <FamilyProfileSection profile={profile} />
 
           <Separator />
 
@@ -467,6 +509,217 @@ function ProfileContent({ profile }: { profile: Profile }) {
         Read-only profile · Source values cannot be edited in this slice
       </footer>
     </>
+  );
+}
+
+function FamilyProfileSection({ profile }: { profile: Profile }) {
+  const family = profile.family;
+  const guardians = family
+    ? [
+        {
+          label: "Primary guardian",
+          name: family.guardian1Name,
+          address: family.guardian1Address,
+          email: family.guardian1Email,
+          phone: family.guardian1Mobile || family.guardian1Phone,
+          alternatePhone: family.guardian1Mobile ? family.guardian1Phone : null,
+        },
+        {
+          label: "Secondary guardian",
+          name: family.guardian2Name,
+          address: family.guardian2Address,
+          email: family.guardian2Email,
+          phone: family.guardian2Mobile || family.guardian2Phone,
+          alternatePhone: family.guardian2Mobile ? family.guardian2Phone : null,
+        },
+      ].filter((guardian) =>
+        [guardian.name, guardian.address, guardian.email, guardian.phone].some(Boolean),
+      )
+    : [];
+  const hasParents = Boolean(
+    family &&
+    [family.motherName, family.fatherName, family.motherOccupation, family.fatherOccupation].some(
+      Boolean,
+    ),
+  );
+  const hasHouseholdContext = Boolean(
+    family &&
+    [family.parentageStatus, family.maritalStatus, family.spouseName, family.numberOfChildren].some(
+      Boolean,
+    ),
+  );
+
+  return (
+    <ProfileSection icon={UsersRound} label="Family & relationships">
+      {!family && !profile.relationships.length ? (
+        <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
+          {profile.kind === "staff"
+            ? "Family details are not part of the current staff migration slice."
+            : "No family or sibling relationships were recorded in the legacy system."}
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {hasHouseholdContext ? (
+            <div className="grid gap-4 rounded-2xl border bg-card p-4 shadow-xs sm:grid-cols-2 sm:p-5">
+              <ProfileField label="Parentage" value={family?.parentageStatus ?? null} />
+              <ProfileField label="Marital status" value={family?.maritalStatus ?? null} />
+              <ProfileField label="Spouse" value={family?.spouseName ?? null} />
+              <ProfileField label="Number of children" value={family?.numberOfChildren ?? null} />
+            </div>
+          ) : null}
+
+          {hasParents ? (
+            <div>
+              <h4 className="mb-3 text-sm font-semibold">Parents</h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FamilyPersonCard
+                  label="Mother"
+                  name={family?.motherName ?? null}
+                  supportingValue={family?.motherOccupation ?? null}
+                />
+                <FamilyPersonCard
+                  label="Father"
+                  name={family?.fatherName ?? null}
+                  supportingValue={family?.fatherOccupation ?? null}
+                />
+              </div>
+              {family?.parentsPhone || family?.parentsPermanentAddress ? (
+                <div className="mt-3 space-y-2 rounded-xl bg-muted/45 px-4 py-3">
+                  <ContactLine icon={Phone} label="Family phone" value={family.parentsPhone} />
+                  <ContactLine
+                    icon={MapPinned}
+                    label="Permanent address"
+                    value={family.parentsPermanentAddress}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {guardians.length ? (
+            <div>
+              <h4 className="mb-3 text-sm font-semibold">Guardians</h4>
+              <div className="space-y-3">
+                {guardians.map((guardian) => (
+                  <div className="rounded-2xl border bg-card p-4" key={guardian.label}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      {guardian.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold">
+                      {guardian.name || "Name not recorded"}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <ContactLine icon={Phone} label="Phone" value={guardian.phone} />
+                      <ContactLine
+                        icon={Phone}
+                        label="Alternate phone"
+                        value={guardian.alternatePhone}
+                      />
+                      <ContactLine icon={Mail} label="Email" value={guardian.email} />
+                      <ContactLine icon={MapPinned} label="Address" value={guardian.address} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {profile.relationships.length ? (
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold">Siblings</h4>
+                <Badge className="rounded-full tabular-nums" variant="outline">
+                  {profile.relationships.length}
+                </Badge>
+              </div>
+              <div className="overflow-hidden rounded-2xl border bg-card">
+                {profile.relationships.map((relationship, index) => (
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3.5 ${index ? "border-t" : ""}`}
+                    key={relationship.id}
+                  >
+                    <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
+                      {initials(relationship.displayName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{relationship.displayName}</p>
+                        {relationship.reviewFlag ? (
+                          <Badge className="rounded-full px-2 py-0 text-[10px]" variant="outline">
+                            Review source link
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                        {relationship.identifierKind === "staff" ? "Staff" : "Admission"} ·{" "}
+                        {relationship.primaryIdentifier}
+                      </p>
+                    </div>
+                    <Badge className="shrink-0 rounded-full capitalize" variant="secondary">
+                      {relationship.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              {profile.relationships.some((relationship) => relationship.reviewFlag) ? (
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  Review badges preserve self-references or duplicate links exactly as recorded in
+                  the legacy source.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </ProfileSection>
+  );
+}
+
+function FamilyPersonCard({
+  label,
+  name,
+  supportingValue,
+}: {
+  label: string;
+  name: string | null;
+  supportingValue: string | null;
+}) {
+  return (
+    <div className="rounded-2xl border bg-card p-4">
+      <div className="flex items-start gap-3">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <HeartHandshake className="size-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {label}
+          </p>
+          <p className="mt-1 text-sm font-semibold">{name || "Name not recorded"}</p>
+          {supportingValue ? (
+            <p className="mt-1 text-xs text-muted-foreground">{supportingValue}</p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactLine({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Phone;
+  label: string;
+  value: string | null;
+}) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-2 text-xs leading-5 text-foreground/80">
+      <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+      <span className="sr-only">{label}: </span>
+      <span className="break-words">{value}</span>
+    </div>
   );
 }
 

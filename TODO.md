@@ -24,3 +24,9 @@
 - [x] Add the read-only core profile drawer and source-value review flags.
 - [x] Migrate beneficiary home and placement history.
 - [x] Migrate academic history after placement reconciliation.
+- [x] Add read-only parents, guardians, household context, and sibling relationships.
+
+## Documents and media migration
+
+- [ ] Re-extract legacy document and photo blobs only when R2 migration work resumes.
+- [ ] Add authenticated document delivery after object hashes and D1 metadata reconcile.
