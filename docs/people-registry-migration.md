@@ -165,6 +165,28 @@ full rather than collapsed.
   7,703 current placements.
 - Do not copy or modify any R2 objects in this slice.
 
+## Placement import result
+
+The controlled placement import completed on 2026-08-05. Its aggregate-only
+reconciliation is committed at `reports/placement-history-import.json`.
+
+| Reconciliation gate             | Result |
+| ------------------------------- | -----: |
+| Source rows                     | 18,151 |
+| Imported rows                   | 18,151 |
+| Unique source links             | 18,151 |
+| Skipped rows                    |      0 |
+| People with history             |  7,703 |
+| Current placements              |  7,703 |
+| Orphaned placements             |      0 |
+| Unreadable current placements   |      0 |
+| Populated beneficiary locations |  7,703 |
+
+The target retained all 18 missing location lookups and the single future-dated
+row exactly as supplied. No R2 objects were copied. Post-import checks confirmed
+that the original D1 had zero writes, the original R2 remained at 46,941
+objects, and the prepared SQLite source fingerprint was unchanged.
+
 ## Delivery order
 
 1. Organization-scoped person and import-batch schema.
@@ -173,5 +195,5 @@ full rather than collapsed.
 4. Controlled core-record import. **Completed.**
 5. Read-only core profile drawer with source provenance and date-review flags.
    **Completed.**
-6. Beneficiary home and placement-history migration.
+6. Beneficiary home and placement-history migration. **Completed.**
 7. Academic, sibling, staff-detail, document, and R2 asset migrations.

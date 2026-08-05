@@ -22,5 +22,5 @@
 - [x] Run a no-PII dry-run report for the 9,072 core legacy person records.
 - [x] Import core records only after source/import/issue counts reconcile.
 - [x] Add the read-only core profile drawer and source-value review flags.
-- [ ] Migrate beneficiary home and placement history.
+- [x] Migrate beneficiary home and placement history.
 - [ ] Migrate academic history after placement reconciliation.
