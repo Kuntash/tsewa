@@ -42,3 +42,7 @@ vp run db:migrate:remote
 ```
 
 `BETTER_AUTH_SECRET` is never committed. Add it locally in `.dev.vars`, and set it for a deployed Worker with `wrangler secret put BETTER_AUTH_SECRET`.
+
+## License
+
+Tsewa is open-source software licensed under the [MIT License](./LICENSE).
