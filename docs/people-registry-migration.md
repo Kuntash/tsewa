@@ -106,11 +106,32 @@ The warnings are non-blocking and can overlap on the same record:
   remove it immediately after execution. Personal data must not be committed to
   this repository.
 
+## Core import result
+
+The controlled core import completed on 2026-08-05. Its aggregate-only
+reconciliation report is committed at `reports/people-registry-import.json`.
+
+| Reconciliation gate | Result |
+| ------------------- | -----: |
+| Source records      |  9,072 |
+| Imported records    |  9,072 |
+| Unique source links |  9,072 |
+| Skipped records     |      0 |
+| Children            |  8,064 |
+| Elderly residents   |    569 |
+| Staff               |    439 |
+
+The target retained the source-quality aggregates exactly: 24 missing dates of
+birth, 47 missing admission/joining dates, one pre-1900 date, 74 dates before
+birth, 8,633 missing locations, and 1,452 missing photo references. No R2
+objects were copied, and the original D1, R2 bucket, and prepared SQLite source
+were not modified.
+
 ## Delivery order
 
 1. Organization-scoped person and import-batch schema.
 2. Read-only People Registry list, search, and filters.
 3. Dry-run importer for the 9,072 core records.
-4. Controlled core-record import.
+4. Controlled core-record import. **Completed.**
 5. Profile drawer and type-specific details.
 6. Academic, home, sibling, staff-detail, document, and R2 asset migrations.

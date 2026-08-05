@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "mode": "import",
+  "completedAt": "2026-08-05T17:36:26.930Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "openedReadOnly": true,
+    "unchangedAfterImport": true
+  },
+  "target": {
+    "database": "tsewa-self-hosted-db",
+    "databaseId": "f6dc8a9f-5eb3-4ae7-b9f1-88645634a608",
+    "importBatchId": "import-7738b8e4eebad446-v1"
+  },
+  "reconciliation": {
+    "sourceCount": 9072,
+    "importedCount": 9072,
+    "uniqueSourceMappings": 9072,
+    "skippedCount": 0,
+    "countsMatch": true
+  },
+  "coreCounts": {
+    "child": 8064,
+    "elderly": 569,
+    "staff": 439,
+    "active": 2647,
+    "inactive": 6425
+  },
+  "sourceValueParity": {
+    "missingDatesOfBirth": 24,
+    "missingAdmissionOrJoiningDates": 47,
+    "pre1900AdmissionOrJoiningDates": 1,
+    "admissionOrJoiningBeforeBirth": 74,
+    "missingLocations": 8633,
+    "missingPhotoReferences": 1452,
+    "missingBeneficiaryNationalities": 0,
+    "legacyDatesPreservedAsAuthoritative": true
+  },
+  "files": {
+    "r2ObjectsCopied": 0,
+    "temporaryImportSqlRemoved": true
+  }
+}
