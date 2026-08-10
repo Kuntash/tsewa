@@ -48,6 +48,33 @@ The local and production pilots completed on 10 August 2026 with one person,
 11 files, and 3,468,686 bytes. All source and target object hashes matched. The
 aggregate-only record is stored in `reports/person-files-pilot-import.json`.
 
+## Resumable bulk import
+
+After approving the pilot, migrate all remaining records with the reviewed
+aggregate counts as explicit safety gates:
+
+```bash
+vp run migration:files:bulk -- \
+  --target remote \
+  --scope all \
+  --expected-file-count 46938 \
+  --expected-byte-count 17397012993 \
+  --expected-people-count 7680 \
+  --organization-slug tibetan-homes-foundation \
+  --confirm-database-id f6dc8a9f-5eb3-4ae7-b9f1-88645634a608 \
+  --source-bucket tibetan-homes \
+  --target-bucket tsewa-self-hosted-files \
+  --concurrency 4 \
+  --chunk-size 50
+```
+
+The importer reads completed source asset IDs and hashes from the target D1
+before starting. Matching completed records are skipped, while any metadata
+mismatch stops the run. Each chunk is recorded in D1 only after every object in
+that chunk has passed source and target SHA-256 and byte-size verification. An
+interrupted run can therefore be resumed with the same command. Progress is
+written to `reports/person-files-bulk-import.json` using aggregate counts only.
+
 ## Access control
 
 Files are served only through `/api/files/:id`. The Worker verifies the current

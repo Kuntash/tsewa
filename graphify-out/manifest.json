@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786393621.8004808,
-    "ast_hash": "7e9dcbeb202ba678d9c4ec3081076c9f",
+    "mtime": 1786394866.4588091,
+    "ast_hash": "e198a5c2deba2ffb56331588c49a4970",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "scripts/import-person-files.mjs": {
-    "mtime": 1786393752.2837746,
-    "ast_hash": "790335655ef432c62a6ef3a1f6f18555",
+    "mtime": 1786394889.2571163,
+    "ast_hash": "ac489838d582b28f1ccee6d95db1aed4",
     "semantic_hash": ""
   },
   "scripts/install-git-hooks.sh": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "docs/person-files-migration.md": {
-    "mtime": 1786394140.749852,
-    "ast_hash": "3c5379075105cd7092432bb04692f447",
+    "mtime": 1786394866.4590435,
+    "ast_hash": "fa5474c7c951afa2f1ed28b0aff66cfa",
     "semantic_hash": ""
   }
 }

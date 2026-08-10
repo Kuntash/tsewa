@@ -21,20 +21,45 @@ const webRoot = resolve(repositoryRoot, "apps/web");
 const options = parseArguments(process.argv.slice(2));
 const sourcePath = resolve(repositoryRoot, options.source ?? DEFAULT_SOURCE_DATABASE);
 const reportPath = resolve(repositoryRoot, options.report ?? "reports/person-files-dry-run.json");
+const progressReportPath = resolve(
+  repositoryRoot,
+  options["progress-report"] ?? "reports/person-files-bulk-import.json",
+);
 const target = requiredOption(options, "target");
-const identifier = requiredOption(options, "identifier");
+const bulkMode = options.scope === "all";
+if (options.scope && !bulkMode) throw new Error("--scope only supports the value all.");
+const identifier = bulkMode ? null : requiredOption(options, "identifier");
 const organizationSlug = requiredOption(options, "organization-slug");
 const confirmedDatabaseId = requiredOption(options, "confirm-database-id");
 const sourceBucket = requiredOption(options, "source-bucket");
 const targetBucket = requiredOption(options, "target-bucket");
 const expectedFileCount = Number(requiredOption(options, "expected-file-count"));
+const expectedByteCount = bulkMode ? Number(requiredOption(options, "expected-byte-count")) : null;
+const expectedPeopleCount = bulkMode ? Number(requiredOption(options, "expected-people-count")) : 1;
+const concurrency = Number(options.concurrency ?? (bulkMode ? 4 : 1));
+const chunkSize = Number(options["chunk-size"] ?? (bulkMode ? 50 : expectedFileCount));
+const planOnly = options["plan-only"] === "true";
 
 if (!Number.isInteger(expectedFileCount) || expectedFileCount < 1) {
   throw new Error("--expected-file-count must be a positive integer.");
 }
+if (
+  (bulkMode && (!Number.isSafeInteger(expectedByteCount) || expectedByteCount < 1)) ||
+  !Number.isInteger(expectedPeopleCount) ||
+  expectedPeopleCount < 1
+) {
+  throw new Error("Bulk mode requires positive expected byte and people counts.");
+}
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16) {
+  throw new Error("--concurrency must be an integer from 1 to 16.");
+}
+if (!Number.isInteger(chunkSize) || chunkSize < 1 || chunkSize > 100) {
+  throw new Error("--chunk-size must be an integer from 1 to 100.");
+}
 if (target !== "local" && target !== "remote") {
   throw new Error("--target must be either local or remote.");
 }
+if (planOnly && !bulkMode) throw new Error("--plan-only is available only with --scope all.");
 
 await assertTargetBindings({ confirmedDatabaseId, target, targetBucket });
 const report = JSON.parse(await readFile(reportPath, "utf8"));
@@ -57,46 +82,129 @@ try {
       `The selected record produced ${files.length} files; expected ${expectedFileCount}.`,
     );
   }
-  if (new Set(files.map((file) => file.personId)).size !== 1) {
+  const selectedPeople = new Set(files.map((file) => file.personId)).size;
+  const selectedBytes = files.reduce((total, file) => total + file.byteSize, 0);
+  if (selectedPeople !== expectedPeopleCount) {
+    throw new Error(
+      `The selected records produced ${selectedPeople} people; expected ${expectedPeopleCount}.`,
+    );
+  }
+  if (bulkMode && selectedBytes !== expectedByteCount) {
+    throw new Error(
+      `The selected records produced ${selectedBytes} bytes; expected ${expectedByteCount}.`,
+    );
+  }
+  if (!bulkMode && selectedPeople !== 1) {
     throw new Error("The pilot selector must resolve to exactly one person.");
   }
 
-  let copiedBytes = 0;
+  const importedFiles = bulkMode ? readImportedFiles({ organizationSlug, target }) : new Map();
+  const alreadyImported = [];
+  const pendingFiles = [];
   for (const file of files) {
-    const copied = await relayObject({ file, sourceBucket, targetBucket, target });
-    copiedBytes += copied.byteSize;
+    const imported = importedFiles.get(file.sourceAssetId);
+    if (!imported) {
+      pendingFiles.push(file);
+      continue;
+    }
+    if (
+      imported.sha256 !== file.sha256 ||
+      imported.byteSize !== file.byteSize ||
+      imported.objectKey !== file.targetObjectKey
+    ) {
+      throw new Error(
+        "Existing target metadata differs from the reviewed source; refusing to overwrite it.",
+      );
+    }
+    alreadyImported.push(file);
   }
 
-  const importedAt = new Date().toISOString();
-  const batchId = `file-import-${sourceFingerprint.slice(0, 16)}-${files[0].personSourceTable}-${files[0].personSourceId}-v1`;
-  const sql = buildImportSql({
-    batchId,
-    files,
-    importedAt,
-    organizationSlug,
-    sourceFingerprint,
-  });
+  let copiedFiles = 0;
+  let copiedBytes = 0;
+  for (let offset = 0; !planOnly && offset < pendingFiles.length; offset += chunkSize) {
+    const chunk = pendingFiles.slice(offset, offset + chunkSize);
+    const copied = await mapWithConcurrency(chunk, concurrency, (file) =>
+      relayObject({ file, sourceBucket, targetBucket, target }),
+    );
+    const chunkBytes = copied.reduce((total, item) => total + item.byteSize, 0);
+    const importedAt = new Date().toISOString();
+    const batchHash = createHash("sha256")
+      .update(chunk.map((file) => file.sourceAssetId).join("\n"))
+      .digest("hex")
+      .slice(0, 16);
+    const batchId = bulkMode
+      ? `file-import-${sourceFingerprint.slice(0, 16)}-bulk-${batchHash}-v1`
+      : `file-import-${sourceFingerprint.slice(0, 16)}-${files[0].personSourceTable}-${files[0].personSourceId}-v1`;
+    const sql = buildImportSql({
+      batchId,
+      files: chunk,
+      importedAt,
+      organizationSlug,
+      sourceFingerprint,
+    });
+    const sourceDuringImport = await stat(sourcePath);
+    if (
+      sourceDuringImport.size !== sourceBefore.size ||
+      sourceDuringImport.mtimeMs !== sourceBefore.mtimeMs
+    ) {
+      throw new Error("The legacy source changed while person files were being imported.");
+    }
+
+    workspace = await mkdtemp(join(tmpdir(), "tsewa-file-import-"));
+    const sqlPath = join(workspace, "person-files-import.sql");
+    await writeFile(sqlPath, sql, { encoding: "utf8", mode: 0o600 });
+    executeD1Import(sqlPath, target);
+    await rm(workspace, { recursive: true, force: true });
+    workspace = undefined;
+
+    copiedFiles += chunk.length;
+    copiedBytes += chunkBytes;
+    if (bulkMode) {
+      await writeProgressReport({
+        alreadyImported,
+        copiedBytes,
+        copiedFiles,
+        expectedByteCount,
+        expectedFileCount,
+        expectedPeopleCount,
+        pendingFiles,
+        sourceFingerprint,
+        target,
+      });
+      console.log(
+        JSON.stringify({
+          mode: "bulk",
+          completedFiles: alreadyImported.length + copiedFiles,
+          totalFiles: expectedFileCount,
+          completedBytes:
+            alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes,
+          totalBytes: expectedByteCount,
+        }),
+      );
+    }
+  }
+
   const sourceAfter = await stat(sourcePath);
   if (
     sourceAfter.size !== sourceBefore.size ||
     sourceAfter.mtimeMs !== sourceBefore.mtimeMs ||
     (await sha256File(sourcePath)) !== sourceFingerprint
   ) {
-    throw new Error("The legacy source changed while the person-file pilot was being prepared.");
+    throw new Error("The legacy source changed while person files were being imported.");
   }
 
-  workspace = await mkdtemp(join(tmpdir(), "tsewa-file-import-"));
-  const sqlPath = join(workspace, "person-files-import.sql");
-  await writeFile(sqlPath, sql, { encoding: "utf8", mode: 0o600 });
-  executeD1Import(sqlPath, target);
-
   outcome = {
+    mode: bulkMode ? "bulk" : "single-person",
     target,
     databaseId: confirmedDatabaseId,
-    selectedPeople: 1,
-    importedFiles: files.length,
-    importedBytes: copiedBytes,
-    batchId,
+    selectedPeople,
+    planOnly,
+    alreadyImportedFiles: alreadyImported.length,
+    pendingFiles: pendingFiles.length,
+    copiedFiles,
+    copiedBytes,
+    completedFiles: alreadyImported.length + copiedFiles,
+    completedBytes: alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes,
     sourceUnchanged: true,
   };
 } finally {
@@ -105,6 +213,56 @@ try {
 }
 
 console.log(JSON.stringify({ ...outcome, temporaryPersonalDataRemoved: true }));
+
+async function mapWithConcurrency(items, limit, operation) {
+  const results = Array.from({ length: items.length });
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await operation(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
+async function writeProgressReport({
+  alreadyImported,
+  copiedBytes,
+  copiedFiles,
+  expectedByteCount,
+  expectedFileCount,
+  expectedPeopleCount,
+  pendingFiles,
+  sourceFingerprint,
+  target,
+}) {
+  const completedBytes =
+    alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes;
+  const report = {
+    schemaVersion: 1,
+    mode: "bulk_import",
+    updatedAt: new Date().toISOString(),
+    privacy: { classification: "aggregate-only", containsPersonalData: false },
+    source: { sha256: sourceFingerprint, openedReadOnly: true, unchanged: true },
+    target,
+    expected: {
+      files: expectedFileCount,
+      bytes: expectedByteCount,
+      people: expectedPeopleCount,
+    },
+    progress: {
+      files: alreadyImported.length + copiedFiles,
+      bytes: completedBytes,
+      filesRemaining: pendingFiles.length - copiedFiles,
+      bytesRemaining: expectedByteCount - completedBytes,
+    },
+    policy: { genericImageDetectionApplied: false },
+  };
+  await writeFile(progressReportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
 
 async function relayObject({ file, sourceBucket, targetBucket, target }) {
   const hash = createHash("sha256");
@@ -194,6 +352,7 @@ function buildImportSql({ batchId, files, importedAt, organizationSlug, sourceFi
     `(SELECT id FROM organization WHERE slug = ${sqlLiteral(organizationSlug)})`,
   );
   const sourceBytes = files.reduce((total, file) => total + file.byteSize, 0);
+  const selectedPeople = new Set(files.map((file) => file.personId)).size;
   const statements = [
     "PRAGMA foreign_keys = ON",
     `INSERT INTO person_file_import_batch (
@@ -203,10 +362,10 @@ function buildImportSql({ batchId, files, importedAt, organizationSlug, sourceFi
     ) VALUES (
       ${sqlLiteral(batchId)}, ${sqlLiteral(organizationId)}, ${sqlLiteral(SOURCE_SYSTEM)},
       'tibethomes-newer-d1.sqlite', ${sqlLiteral(sourceFingerprint)},
-      'running', 1, ${files.length}, 0, ${sourceBytes}, 0,
+      'running', ${selectedPeople}, ${files.length}, 0, ${sourceBytes}, 0,
       ${sqlLiteral(importedAt)}, NULL
     ) ON CONFLICT(id) DO UPDATE SET
-      status = 'running', selected_person_count = 1,
+      status = 'running', selected_person_count = ${selectedPeople},
       source_file_count = excluded.source_file_count,
       imported_file_count = 0, source_byte_count = excluded.source_byte_count,
       imported_byte_count = 0, started_at = excluded.started_at, finished_at = NULL`,
@@ -268,6 +427,46 @@ function buildImportSql({ batchId, files, importedAt, organizationSlug, sourceFi
     WHERE id = ${sqlLiteral(batchId)}`);
 
   return `${statements.join(";\n\n")};\n`;
+}
+
+function readImportedFiles({ organizationSlug, target }) {
+  const command = `SELECT source_asset_id AS sourceAssetId,
+      sha256, byte_size AS byteSize, r2_object_key AS objectKey
+    FROM person_file
+    WHERE organization_id = (
+      SELECT id FROM organization WHERE slug = ${sqlLiteral(organizationSlug)}
+    ) AND source_system = ${sqlLiteral(SOURCE_SYSTEM)}`;
+  const result = spawnSync(
+    "pnpm",
+    ["exec", "wrangler", "d1", "execute", "DB", `--${target}`, "--command", command, "--json"],
+    {
+      cwd: webRoot,
+      encoding: "utf8",
+      maxBuffer: 50 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error("Wrangler could not read the target person-file checkpoint.");
+  }
+
+  let response;
+  try {
+    response = JSON.parse(result.stdout);
+  } catch {
+    throw new Error("Wrangler returned an invalid person-file checkpoint response.");
+  }
+  const rows = response.flatMap((entry) => entry.results ?? []);
+  return new Map(
+    rows.map((row) => [
+      String(row.sourceAssetId),
+      {
+        sha256: String(row.sha256),
+        byteSize: Number(row.byteSize),
+        objectKey: String(row.objectKey),
+      },
+    ]),
+  );
 }
 
 function executeD1Import(sqlPath, target) {
