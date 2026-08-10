@@ -4,7 +4,6 @@ import {
   BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
-  Database,
   HeartHandshake,
   LoaderCircle,
   Search,
@@ -111,14 +110,14 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
       .then(async (response) => {
         if (!response.ok) {
           const payload = (await response.json()) as { error?: string };
-          throw new Error(payload.error ?? "People Registry could not be loaded.");
+          throw new Error(payload.error ?? "People could not be loaded.");
         }
         return response.json() as Promise<RegistryResponse>;
       })
       .then(setData)
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setError(reason instanceof Error ? reason.message : "People Registry could not be loaded.");
+        setError(reason instanceof Error ? reason.message : "People could not be loaded.");
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -148,12 +147,12 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
           </div>
           <div className="text-left">
             <div className="text-sm font-semibold tracking-tight">Tsewa</div>
-            <div className="text-[11px] text-muted-foreground">People Registry</div>
+            <div className="text-[11px] text-muted-foreground">People</div>
           </div>
         </button>
         <div className="ml-auto flex items-center gap-2">
           <Badge className="hidden gap-1.5 rounded-full sm:inline-flex" variant="outline">
-            <ShieldCheck className="size-3.5" /> Read-only
+            <ShieldCheck className="size-3.5" /> View only
           </Badge>
           <ThemeToggle />
           <Button
@@ -169,7 +168,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
       <div className="mx-auto grid max-w-[1500px] md:grid-cols-[230px_minmax(0,1fr)]">
         <aside className="hidden min-h-[calc(100svh-4rem)] border-r bg-background/70 p-4 md:block">
           <Button className="mb-5 w-full justify-start" onClick={onBack} variant="ghost">
-            <ArrowLeft /> Modules
+            <ArrowLeft /> Home
           </Button>
           <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Records
@@ -179,7 +178,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
               active={kind === "all"}
               count={counts.all}
               icon={Search}
-              label="People search"
+              label="All people"
               onClick={() => setKind("all")}
             />
             <RegistryNavItem
@@ -204,33 +203,18 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
               onClick={() => setKind("staff")}
             />
           </nav>
-          <p className="mt-7 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Migration
-          </p>
-          <div className="mt-3 rounded-2xl border bg-card p-3.5">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <Database className="size-4 text-primary" /> Tsewa D1
-            </div>
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              {data.latestImport
-                ? data.latestImport.mode === "dry_run"
-                  ? `${data.latestImport.eligibleCount.toLocaleString()} eligible · ${data.latestImport.skippedCount.toLocaleString()} blocked`
-                  : `${data.latestImport.importedCount.toLocaleString()} imported`
-                : "No import has run. The legacy source remains untouched."}
-            </p>
-          </div>
         </aside>
 
         <section className="min-w-0 px-4 py-7 md:px-7 lg:px-10 lg:py-10">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <Button className="-ml-3 mb-3 md:hidden" onClick={onBack} size="sm" variant="ghost">
-                <ArrowLeft /> Modules
+                <ArrowLeft /> Home
               </Button>
-              <p className="text-sm font-medium text-primary">Records</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em]">People search</h1>
+              <p className="text-sm font-medium text-primary">People</p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em]">Find a person</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                One organization-scoped registry for children, elderly residents, and staff.
+                Search children, elderly residents, and staff.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -287,7 +271,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
                 <div className="grid min-h-72 place-items-center">
                   <div className="text-center">
                     <LoaderCircle className="mx-auto size-5 animate-spin text-primary" />
-                    <p className="mt-3 text-sm text-muted-foreground">Loading registry…</p>
+                    <p className="mt-3 text-sm text-muted-foreground">Loading people…</p>
                   </div>
                 </div>
               ) : data.people.length ? (
@@ -312,16 +296,12 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
                     <h2 className="mt-5 text-lg font-semibold">
                       {query || kind !== "all" || status !== "all"
                         ? "No matching people"
-                        : data.latestImport?.mode === "dry_run"
-                          ? "Dry run complete"
-                          : "Ready for the controlled import"}
+                        : "No people have been added yet"}
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {query || kind !== "all" || status !== "all"
                         ? "Try a different search or clear one of the filters."
-                        : data.latestImport?.mode === "dry_run"
-                          ? `${data.latestImport.sourceCount.toLocaleString()} source records reconciled; ${data.latestImport.skippedCount.toLocaleString()} blocked. No people or R2 objects have been imported.`
-                          : "The registry schema is isolated in Tsewa’s new D1 database. No legacy records or R2 objects have been changed."}
+                        : "Import people before using this page."}
                     </p>
                   </div>
                 </div>
@@ -475,7 +455,7 @@ function PeopleResults({
 
       <div className="flex flex-col gap-3 border-t bg-muted/20 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground">
-          {data.pagination.total.toLocaleString()} records · page {data.pagination.page} of{" "}
+          {data.pagination.total.toLocaleString()} people · page {data.pagination.page} of{" "}
           {Math.max(data.pagination.totalPages, 1)}
         </p>
         <div className="flex gap-2">

@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   CalendarDays,
-  Database,
   ExternalLink,
   FileText,
   Fingerprint,
@@ -9,7 +8,6 @@ import {
   HeartHandshake,
   History,
   Home,
-  ImageOff,
   LoaderCircle,
   LockKeyhole,
   Mail,
@@ -166,9 +164,7 @@ export function PersonProfileSheet({
     <Sheet open={Boolean(personId)} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetTitle className="sr-only">Person profile</SheetTitle>
-        <SheetDescription className="sr-only">
-          Read-only identity and migration record.
-        </SheetDescription>
+        <SheetDescription className="sr-only">Personal details and history.</SheetDescription>
 
         {loading ? (
           <div className="grid flex-1 place-items-center">
@@ -205,9 +201,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
   return (
     <>
       <div className="relative overflow-hidden border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_60%)] px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-          Longitudinal record · Overview
-        </p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Profile</p>
         <div className="mt-8 flex items-start gap-4 sm:gap-5">
           {profilePhoto ? (
             <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-2xl border bg-muted shadow-sm sm:w-20">
@@ -255,10 +249,9 @@ function ProfileContent({ profile }: { profile: Profile }) {
                   <AlertTriangle className="size-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold">Review suggested</h3>
+                  <h3 className="text-sm font-semibold">Check these details</h3>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    The legacy values are shown unchanged and remain authoritative until the
-                    organization corrects them.
+                    These details may need to be corrected.
                   </p>
                   <ul className="mt-3 space-y-1.5 text-xs text-foreground/80">
                     {reviewItems.map((item) => (
@@ -324,14 +317,14 @@ function ProfileContent({ profile }: { profile: Profile }) {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {[currentPlacement.locationName, currentPlacement.placementType]
                         .filter(Boolean)
-                        .join(" · ") || "Legacy home record"}
+                        .join(" · ") || "Home recorded"}
                     </p>
                     <p className="mt-3 text-xs text-muted-foreground">
-                      Since {formatLegacyDate(currentPlacement.startedOn)}
+                      Since {formatDate(currentPlacement.startedOn)}
                     </p>
                     {!currentPlacement.locationName ? (
                       <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                        The legacy home is recorded, but its location lookup is unavailable.
+                        A home is recorded, but its location is missing.
                       </p>
                     ) : null}
                   </div>
@@ -341,12 +334,12 @@ function ProfileContent({ profile }: { profile: Profile }) {
               <div className="rounded-2xl border bg-card p-4">
                 <ProfileField label="Campus / work location" value={profile.campusOrLocation} />
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  Beneficiary placement history does not apply to staff records.
+                  Placement history is not used for staff.
                 </p>
               </div>
             ) : (
               <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
-                No placement history was recorded for this person in the legacy system.
+                No placement history is available.
               </p>
             )}
 
@@ -371,7 +364,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
                       />
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-xs font-medium tabular-nums">
-                          {formatLegacyDate(placement.startedOn)}
+                          {formatDate(placement.startedOn)}
                         </p>
                         {placement.isCurrent ? (
                           <Badge className="rounded-full px-2 py-0 text-[10px]" variant="secondary">
@@ -380,7 +373,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
                         ) : null}
                         {isFutureSourceDate(placement.startedOn) ? (
                           <Badge className="rounded-full px-2 py-0 text-[10px]" variant="outline">
-                            Future source date
+                            Check date
                           </Badge>
                         ) : null}
                       </div>
@@ -401,13 +394,6 @@ function ProfileContent({ profile }: { profile: Profile }) {
                 </ol>
               </div>
             ) : null}
-
-            <div className="mt-6">
-              <ProfileField
-                label="Photo reference"
-                value={profile.photoReferencePresent ? "Available in legacy source" : null}
-              />
-            </div>
           </ProfileSection>
 
           <Separator />
@@ -434,11 +420,11 @@ function ProfileContent({ profile }: { profile: Profile }) {
                       {latestAcademicRecord.houseName ? (
                         <span>{latestAcademicRecord.houseName} house</span>
                       ) : null}
-                      <span>{formatLegacyDate(latestAcademicRecord.recordedOn)}</span>
+                      <span>{formatDate(latestAcademicRecord.recordedOn)}</span>
                     </div>
                     {!latestAcademicRecord.schoolName ? (
                       <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                        The class record is intact, but its legacy school lookup is unavailable.
+                        The school is missing from this class record.
                       </p>
                     ) : null}
                   </div>
@@ -446,11 +432,11 @@ function ProfileContent({ profile }: { profile: Profile }) {
               </div>
             ) : profile.kind === "staff" ? (
               <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
-                Beneficiary academic history does not apply to staff records.
+                School history is not used for staff.
               </p>
             ) : (
               <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
-                No academic history was recorded for this person in the legacy system.
+                No school history is available.
               </p>
             )}
 
@@ -459,7 +445,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <History className="size-4 text-muted-foreground" />
-                    <h4 className="text-sm font-semibold">Academic timeline</h4>
+                    <h4 className="text-sm font-semibold">School history</h4>
                   </div>
                   <Badge className="rounded-full tabular-nums" variant="outline">
                     {profile.academicRecords.length}
@@ -487,8 +473,8 @@ function ProfileContent({ profile }: { profile: Profile }) {
                           .filter(Boolean)
                           .join(" · ") || "School and house not recorded"}
                       </p>
-                      <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                        Source date · {record.recordedOn}
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Recorded on {formatDate(record.recordedOn)}
                       </p>
                       {record.classTitle || record.classSection ? (
                         <p className="mt-2 text-xs text-foreground/75">
@@ -515,30 +501,12 @@ function ProfileContent({ profile }: { profile: Profile }) {
               </div>
             ) : null}
           </ProfileSection>
-
-          <Separator />
-
-          <ProfileSection icon={Database} label="Migration provenance">
-            <div className="grid gap-x-7 gap-y-5 sm:grid-cols-2">
-              <ProfileField label="Source system" value={profile.sourceSystem} />
-              <ProfileField label="Legacy table" mono value={profile.sourceTable} />
-              <ProfileField label="Legacy record ID" mono value={profile.sourceId} />
-              <ProfileField label="Imported on" value={formatTimestamp(profile.importedAt)} />
-            </div>
-          </ProfileSection>
-
-          {!profile.photoReferencePresent ? (
-            <div className="flex items-center gap-3 rounded-xl border border-dashed px-4 py-3 text-xs text-muted-foreground">
-              <ImageOff className="size-4 shrink-0" />
-              No photo reference is present in the legacy record.
-            </div>
-          ) : null}
         </div>
       </div>
 
       <footer className="flex items-center gap-3 border-t bg-background/95 px-5 py-4 text-xs text-muted-foreground sm:px-8">
         <LockKeyhole className="size-4 text-primary" />
-        Read-only profile · Source values cannot be edited in this slice
+        View only · Editing is not available yet
       </footer>
     </>
   );
@@ -554,7 +522,7 @@ function PersonFilesSection({ profile }: { profile: Profile }) {
     <ProfileSection icon={FileText} label="Media & documents">
       {!profile.files.length ? (
         <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
-          No files have been migrated into this self-hosted instance yet.
+          No photos or documents are available.
         </p>
       ) : (
         <div className="space-y-7">
@@ -673,8 +641,8 @@ function FamilyProfileSection({ profile }: { profile: Profile }) {
       {!family && !profile.relationships.length ? (
         <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
           {profile.kind === "staff"
-            ? "Family details are not part of the current staff migration slice."
-            : "No family or sibling relationships were recorded in the legacy system."}
+            ? "Family details are not available for staff."
+            : "No family or sibling details are available."}
         </p>
       ) : (
         <div className="space-y-6">
@@ -765,7 +733,7 @@ function FamilyProfileSection({ profile }: { profile: Profile }) {
                         <p className="truncate text-sm font-semibold">{relationship.displayName}</p>
                         {relationship.reviewFlag ? (
                           <Badge className="rounded-full px-2 py-0 text-[10px]" variant="outline">
-                            Review source link
+                            Check link
                           </Badge>
                         ) : null}
                       </div>
@@ -782,8 +750,7 @@ function FamilyProfileSection({ profile }: { profile: Profile }) {
               </div>
               {profile.relationships.some((relationship) => relationship.reviewFlag) ? (
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  Review badges preserve self-references or duplicate links exactly as recorded in
-                  the legacy source.
+                  Some sibling links may be duplicated or point back to the same person.
                 </p>
               ) : null}
             </div>
@@ -887,12 +854,7 @@ function SourceDate({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="rounded-2xl border bg-card p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-2 text-base font-semibold">
-        {value ? formatLegacyDate(value) : "Not recorded"}
-      </p>
-      {value ? (
-        <p className="mt-2 font-mono text-[10px] text-muted-foreground">Source value · {value}</p>
-      ) : null}
+      <p className="mt-2 text-base font-semibold">{value ? formatDate(value) : "Not recorded"}</p>
     </div>
   );
 }
@@ -912,7 +874,7 @@ function reviewLabel(flag: string, kind: Profile["kind"]): string {
       ? "Joining date is earlier than date of birth."
       : "Admission date is earlier than date of birth.";
   }
-  return "A legacy date value requires review.";
+  return "This date needs to be checked.";
 }
 
 function initials(name: string): string {
@@ -934,23 +896,13 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatLegacyDate(value: string): string {
+function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(date);
-}
-
-function formatTimestamp(value: string | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
   }).format(date);
 }
 

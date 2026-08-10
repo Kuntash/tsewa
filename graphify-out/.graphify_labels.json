@@ -110,7 +110,7 @@
   "108": "WebSocketRequestResponsePair",
   "109": "Workflow",
   "110": "WorkflowEntrypoint",
-  "111": "badge.tsx",
+  "111": "class-master-dry-run.mjs",
   "112": "AgentMemoryNamespace",
   "113": "BasicImageTransformations",
   "114": "BrowserRun",
@@ -198,5 +198,10 @@
   "196": "student-enrollment-dry-run.mjs",
   "197": "button.tsx",
   "198": "Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?",
-  "199": "Q: Okay whats next?"
+  "199": "Q: Okay whats next?",
+  "200": "Q: what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?",
+  "201": "Q: How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?",
+  "202": "Q: why is the media transfer process so slow? second can't we merge the class data and reconcile? because class data is supposed to be master data no? also do the product-copy sweep across the entire application.",
+  "203": "Product language",
+  "204": "class-master-reconciliation.md"
 }

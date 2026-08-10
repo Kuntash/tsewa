@@ -28,6 +28,7 @@
     "migration:school:import": "node scripts/import-school-operations.mjs",
     "migration:enrollment:dry-run": "node scripts/student-enrollment-dry-run.mjs",
     "migration:enrollment:import": "node scripts/import-student-enrollments.mjs",
+    "migration:classes:dry-run": "node scripts/class-master-dry-run.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

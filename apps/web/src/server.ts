@@ -70,6 +70,16 @@ const schoolRostersQuerySchema = z.object({
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
 
+function classDisplayName(alias: "class" | "offering_class"): string {
+  return `CASE
+    WHEN lower(trim(coalesce(${alias}.section, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
+      AND lower(replace(replace(trim(coalesce(nullif(${alias}.title, ''), ${alias}.name)), '''', ''), '"', ''))
+        NOT LIKE '% ' || lower(trim(${alias}.section))
+    THEN trim(coalesce(nullif(${alias}.title, ''), ${alias}.name)) || ' ' || trim(${alias}.section)
+    ELSE trim(coalesce(nullif(${alias}.title, ''), ${alias}.name))
+  END`;
+}
+
 type SignUpPayload = {
   user?: {
     id?: string;
@@ -330,12 +340,15 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
               SUM(CASE WHEN person.status = 'active' THEN 1 ELSE 0 END) AS activeStudents,
               SUM(CASE WHEN person.status = 'inactive' THEN 1 ELSE 0 END) AS inactiveStudents,
               COUNT(DISTINCT enrollment.school_id) AS schools,
-              COUNT(DISTINCT enrollment.school_class_offering_id) AS classes,
+              COUNT(DISTINCT coalesce(enrollment.school_id, 'unmapped') || '|' ||
+                ${classDisplayName("class")}) AS classes,
               COUNT(DISTINCT enrollment.house_id) AS houses,
               SUM(CASE WHEN enrollment.school_id IS NULL THEN 1 ELSE 0 END) AS unmappedSchools
        FROM student_enrollment enrollment
        JOIN person ON person.id = enrollment.person_id
          AND person.organization_id = enrollment.organization_id
+       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
+         AND class.organization_id = enrollment.organization_id
        WHERE enrollment.organization_id = ? AND enrollment.academic_session_id = ?`,
     )
       .bind(...bindings)
@@ -350,7 +363,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       }>(),
     runtime.DB.prepare(
       `SELECT coalesce(school.id, 'unmapped') AS id,
-              coalesce(school.name, 'Unmapped school') AS name, COUNT(*) AS count
+              coalesce(school.name, 'School not set') AS name, COUNT(*) AS count
        FROM student_enrollment enrollment
        LEFT JOIN school_master school ON school.id = enrollment.school_id
          AND school.organization_id = enrollment.organization_id
@@ -361,18 +374,18 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       .bind(...bindings)
       .all<{ id: string; name: string; count: number }>(),
     runtime.DB.prepare(
-      `SELECT class.id, class.source_id AS reference,
-              coalesce(nullif(class.title, ''), class.name) AS name,
+      `SELECT ${classDisplayName("class")} AS id,
+              ${classDisplayName("class")} AS name,
               COUNT(*) AS count
        FROM student_enrollment enrollment
        JOIN academic_class_master class ON class.id = enrollment.academic_class_id
          AND class.organization_id = enrollment.organization_id
        WHERE enrollment.organization_id = ? AND enrollment.academic_session_id = ?
-       GROUP BY class.id, class.title, class.name
-       ORDER BY coalesce(class.level, 999), name COLLATE NOCASE`,
+       GROUP BY ${classDisplayName("class")}
+       ORDER BY coalesce(max(class.level), 999), name COLLATE NOCASE`,
     )
       .bind(...bindings)
-      .all<{ id: string; reference: string; name: string; count: number }>(),
+      .all<{ id: string; name: string; count: number }>(),
     runtime.DB.prepare(
       `SELECT coalesce(house.id, 'none') AS id,
               coalesce(house.name, 'No house') AS name, COUNT(*) AS count
@@ -420,7 +433,7 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
     pageSize: url.searchParams.get("pageSize") ?? "25",
   });
   if (!parsed.success) {
-    return Response.json({ error: "Invalid School Operations filters." }, { status: 400 });
+    return Response.json({ error: "Check the filters and try again." }, { status: 400 });
   }
 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
@@ -452,7 +465,7 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
     }
   }
   if (className !== "all") {
-    conditions.push("class.id = ?");
+    conditions.push(`${classDisplayName("class")} = ?`);
     filterBindings.push(className);
   }
   if (house !== "all") {
@@ -490,12 +503,10 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
       `SELECT person.id AS personId, person.display_name AS displayName,
               person.primary_identifier AS primaryIdentifier, person.status, person.gender,
               school.name AS schoolName, class.name AS className,
-              class.section AS classSection, class.title AS classTitle,
+              class.section AS classSection, ${classDisplayName("class")} AS classTitle,
               house.name AS houseName, enrollment.roll_number AS rollNumber,
               enrollment.board_registration_number AS boardRegistrationNumber,
-              enrollment.result, enrollment.source_recorded_on AS recordedOn,
-              enrollment.status AS enrollmentStatus,
-              enrollment.status_source AS enrollmentStatusSource
+              enrollment.result
        FROM student_enrollment enrollment
        JOIN person ON person.id = enrollment.person_id
          AND person.organization_id = enrollment.organization_id
@@ -524,9 +535,6 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
         rollNumber: string | null;
         boardRegistrationNumber: string | null;
         result: string | null;
-        recordedOn: string;
-        enrollmentStatus: string;
-        enrollmentStatusSource: string;
       }>(),
   ]);
   const total = Number(count?.total ?? 0);
@@ -563,13 +571,16 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
             COUNT(DISTINCT enrollment.id) AS students,
             COUNT(DISTINCT CASE WHEN person.status = 'active' THEN enrollment.person_id END)
               AS currentActiveStudents,
-            COUNT(DISTINCT offering.academic_class_id) AS classes,
+            COUNT(DISTINCT ${classDisplayName("offering_class")}) AS classes,
             COUNT(DISTINCT school_house.house_id) AS houses
      FROM school_master school
      LEFT JOIN session_enrollments enrollment ON enrollment.school_id = school.id
      LEFT JOIN person ON person.id = enrollment.person_id
        AND person.organization_id = enrollment.organization_id
      LEFT JOIN session_offerings offering ON offering.school_id = school.id
+     LEFT JOIN academic_class_master offering_class
+       ON offering_class.id = offering.academic_class_id
+      AND offering_class.organization_id = school.organization_id
      LEFT JOIN school_house_master school_house ON school_house.school_id = school.id
        AND school_house.organization_id = school.organization_id
      WHERE school.organization_id = ?
@@ -610,7 +621,7 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
     school: url.searchParams.get("school") ?? "all",
   });
   if (!parsed.success) {
-    return Response.json({ error: "Invalid class-roster filters." }, { status: 400 });
+    return Response.json({ error: "Check the class filters." }, { status: 400 });
   }
 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
@@ -624,17 +635,17 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
   if (parsed.data.q) {
     const search = `%${escapeLikePattern(parsed.data.q.toLowerCase())}%`;
     conditions.push(
-      `(lower(school.name) LIKE ? ESCAPE '\\' OR lower(coalesce(nullif(class.title, ''), class.name)) LIKE ? ESCAPE '\\')`,
+      `(lower(school.name) LIKE ? ESCAPE '\\' OR lower(${classDisplayName("class")}) LIKE ? ESCAPE '\\')`,
     );
     bindings.push(search, search);
   }
 
   const runtime = getRuntimeEnv();
   const rosters = await runtime.DB.prepare(
-    `SELECT offering.id, school.id AS schoolId, school.name AS schoolName,
-            class.id AS classId, class.source_id AS classSourceId,
-            coalesce(nullif(class.title, ''), class.name) AS className,
-            class.level AS classLevel, class.section AS classSection,
+    `SELECT min(offering.id) AS id, school.id AS schoolId, school.name AS schoolName,
+            ${classDisplayName("class")} AS classId,
+            ${classDisplayName("class")} AS className,
+            max(class.level) AS classLevel, max(class.section) AS classSection,
             COUNT(DISTINCT enrollment.id) AS students,
             COUNT(DISTINCT CASE WHEN person.status = 'active' THEN enrollment.person_id END)
               AS currentActiveStudents,
@@ -654,9 +665,9 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
      LEFT JOIN person ON person.id = enrollment.person_id
        AND person.organization_id = enrollment.organization_id
      WHERE ${conditions.join(" AND ")}
-     GROUP BY offering.id
-     ORDER BY school.name COLLATE NOCASE, coalesce(class.sort_order, 999),
-              coalesce(class.level, 999), class.name COLLATE NOCASE`,
+     GROUP BY school.id, school.name, ${classDisplayName("class")}
+     ORDER BY school.name COLLATE NOCASE, coalesce(min(class.sort_order), 999),
+              coalesce(max(class.level), 999), className COLLATE NOCASE`,
   )
     .bind(...bindings)
     .all<{
@@ -664,7 +675,6 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
       schoolId: string;
       schoolName: string;
       classId: string;
-      classSourceId: string;
       className: string;
       classLevel: number | null;
       classSection: string | null;
@@ -705,7 +715,7 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
     pageSize: url.searchParams.get("pageSize") ?? "25",
   });
   if (!parsed.success) {
-    return Response.json({ error: "Invalid People Registry filters" }, { status: 400 });
+    return Response.json({ error: "Check the people filters." }, { status: 400 });
   }
 
   const { q, kind, status, page, pageSize } = parsed.data;

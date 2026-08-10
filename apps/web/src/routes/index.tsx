@@ -213,11 +213,10 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
         <section className="hidden max-w-lg lg:block">
           <Brand />
           <h1 className="mt-14 text-balance text-5xl font-semibold tracking-[-0.045em] text-foreground">
-            One calm place for the work that holds a community together.
+            One place for people, school, care, and records.
           </h1>
           <p className="mt-6 max-w-md text-base leading-7 text-muted-foreground">
-            People, education, care, sponsorship, and administration—connected around a single
-            longitudinal record.
+            Find a person and see their details, family, school history, care, and documents.
           </p>
           <div className="mt-10 flex flex-wrap gap-2">
             {[
@@ -263,8 +262,8 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                 {isInvitation
                   ? `You have been invited as ${platform.invitation?.role}. Use ${platform.invitation?.email}.`
                   : mode === "setup"
-                    ? "This one-time step creates your organization, owner membership, and first academic session."
-                    : "Sign in to your organization’s operational console."}
+                    ? "Create your organization and its first owner account."
+                    : "Sign in to your organization."}
               </CardDescription>
             </CardHeader>
             <CardContent className="px-7 pb-7">
@@ -345,7 +344,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                   type="submit"
                 >
                   {submitting ? <LoaderCircle className="animate-spin" /> : null}
-                  {mode === "setup" ? "Create workspace" : "Sign in"}
+                  {mode === "setup" ? "Create account" : "Sign in"}
                   {!submitting ? <ArrowRight /> : null}
                 </Button>
               </form>
@@ -365,7 +364,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
             </CardContent>
           </Card>
           <p className="mt-5 text-center text-xs text-muted-foreground">
-            Self-hosted on Cloudflare · Your organization owns its data
+            Self-hosted on Cloudflare · Your data stays with your organization
           </p>
         </section>
       </div>
@@ -399,10 +398,10 @@ function Launchpad({
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
   );
   const modules = [
-    [Users, "People Registry", "Identity, family, placement, and records"],
-    [GraduationCap, "School Operations", "Classes, marks, results, and promotion"],
-    [HeartPulse, "Dispensary", "Care episodes and health history"],
-    [FileText, "Reports & Documents", "Secure files and reproducible reports"],
+    [Users, "People", "Personal details, family, placement, and documents"],
+    [GraduationCap, "School", "Students, classes, marks, and results"],
+    [HeartPulse, "Health", "Visits, treatment, and health history"],
+    [FileText, "Reports and documents", "Documents and reports"],
   ] as const;
 
   if (view === "people") {
@@ -465,13 +464,11 @@ function Launchpad({
         </div>
       </header>
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
-        <p className="text-sm font-medium text-primary">Operational console</p>
+        <p className="text-sm font-medium text-primary">Home</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] md:text-4xl">
           Welcome back, {user.name.split(" ")[0]}
         </h1>
-        <p className="mt-3 text-muted-foreground">
-          Your workspace is ready. Business modules arrive one vertical slice at a time.
-        </p>
+        <p className="mt-3 text-muted-foreground">Choose an area to continue.</p>
         <div className="mt-9 grid gap-4 md:grid-cols-2">
           {modules.map(([Icon, title, description], index) => {
             const card = (
@@ -667,10 +664,11 @@ function AdministrationPanel() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-primary">Administration</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">Organization & access</h2>
+          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">
+            Organization and access
+          </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Keep institutional details current and hand access to named people—never shared
-            accounts.
+            Update organization details and manage who can sign in.
           </p>
         </div>
         <Badge className="w-fit gap-1.5 rounded-full" variant="outline">
@@ -697,9 +695,7 @@ function AdministrationPanel() {
               <Building2 className="size-5" />
             </div>
             <CardTitle>Organization profile</CardTitle>
-            <CardDescription>
-              Used throughout records, dates, and generated documents.
-            </CardDescription>
+            <CardDescription>These details are shown throughout Tsewa.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={saveSettings}>

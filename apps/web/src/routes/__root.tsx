@@ -17,7 +17,7 @@ export const Route = createRootRoute({
       },
       {
         name: "description",
-        content: "Open-source operations for schools and care communities.",
+        content: "People, school, care, and records in one place.",
       },
     ],
     links: [

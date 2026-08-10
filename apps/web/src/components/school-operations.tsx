@@ -39,7 +39,7 @@ type AcademicSession = {
   endsOn: string;
 };
 
-type CountOption = { id?: string; name: string; count: number; reference?: string };
+type CountOption = { id?: string; name: string; count: number };
 
 type OverviewResponse = {
   session: AcademicSession;
@@ -73,15 +73,6 @@ type StudentRow = {
   rollNumber: string | null;
   boardRegistrationNumber: string | null;
   result: string | null;
-  recordedOn: string;
-  enrollmentStatus:
-    | "recorded"
-    | "enrolled"
-    | "transferred"
-    | "withdrawn"
-    | "completed"
-    | "graduated";
-  enrollmentStatusSource: "legacy_allocation" | "explicit";
 };
 
 type StudentsResponse = {
@@ -106,7 +97,6 @@ type RosterRow = {
   schoolId: string;
   schoolName: string;
   classId: string;
-  classSourceId: string;
   className: string;
   classLevel: number | null;
   classSection: string | null;
@@ -187,10 +177,7 @@ export function SchoolOperations({
       ),
       fetch(`/api/school-operations/rosters?${parameters}`, { signal: controller.signal }).then(
         (response) =>
-          parseResponse<{ rosters: RosterRow[] }>(
-            response,
-            "The class rosters could not be loaded.",
-          ),
+          parseResponse<{ rosters: RosterRow[] }>(response, "Classes could not be loaded."),
       ),
     ])
       .then(([schoolResponse, rosterResponse]) => {
@@ -220,7 +207,7 @@ export function SchoolOperations({
     setError("");
     void fetch(`/api/school-operations/students?${parameters}`, { signal: controller.signal })
       .then((response) =>
-        parseResponse<StudentsResponse>(response, "Student allocations could not be loaded."),
+        parseResponse<StudentsResponse>(response, "Students could not be loaded."),
       )
       .then(setStudents)
       .catch((reason: unknown) => handleLoadError(reason, controller, setError))
@@ -240,20 +227,18 @@ export function SchoolOperations({
   const sectionCopy = {
     students: {
       eyebrow: selectedSession?.name ?? "Academic session",
-      title: "Student allocations",
-      description:
-        "One reconciled allocation per student for the selected session, linked to the longitudinal profile.",
+      title: "Students",
+      description: "Students and their classes for this session.",
     },
     schools: {
       eyebrow: `${selectedSession?.name ?? "Session"} directory`,
       title: "Schools",
-      description: "School master records with observed class rosters and assigned houses.",
+      description: "Schools, students, classes, and houses.",
     },
     rosters: {
-      eyebrow: `${selectedSession?.name ?? "Session"} structure`,
-      title: "Class rosters",
-      description:
-        "Observed school and class combinations reconstructed from the legacy allocations.",
+      eyebrow: selectedSession?.name ?? "Academic session",
+      title: "Classes",
+      description: "Classes and student numbers for this session.",
     },
   }[section];
 
@@ -285,7 +270,7 @@ export function SchoolOperations({
           </div>
           <div className="text-left">
             <div className="text-sm font-semibold tracking-tight">Tsewa</div>
-            <div className="text-[11px] text-muted-foreground">School Operations</div>
+            <div className="text-[11px] text-muted-foreground">School</div>
           </div>
         </button>
         <div className="ml-auto flex items-center gap-2">
@@ -311,7 +296,7 @@ export function SchoolOperations({
             </SelectContent>
           </Select>
           <Badge className="hidden gap-1.5 rounded-full lg:inline-flex" variant="outline">
-            <ShieldCheck className="size-3.5" /> Read-only
+            <ShieldCheck className="size-3.5" /> View only
           </Badge>
           <ThemeToggle />
           <Button
@@ -327,7 +312,7 @@ export function SchoolOperations({
       <div className="mx-auto grid max-w-[1560px] md:grid-cols-[230px_minmax(0,1fr)]">
         <aside className="hidden min-h-[calc(100svh-4rem)] border-r bg-background/70 p-4 md:block">
           <Button className="mb-5 w-full justify-start" onClick={onBack} variant="ghost">
-            <ArrowLeft /> Modules
+            <ArrowLeft /> Home
           </Button>
           <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Academics
@@ -348,20 +333,20 @@ export function SchoolOperations({
             <SideItem
               active={section === "rosters"}
               icon={Layers3}
-              label="Class rosters"
+              label="Classes"
               onClick={() => setSection("rosters")}
             />
-            <SideItem icon={BookOpenText} label="Marks & results" planned />
+            <SideItem icon={BookOpenText} label="Marks and results" planned />
           </nav>
           <div className="mt-7 rounded-2xl border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Working session
+              Session
             </p>
             <p className="mt-2 text-lg font-semibold tracking-tight">
               {selectedSession?.name ?? "—"}
             </p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Your choice is saved privately and scopes School Operations only.
+              School pages use this session.
             </p>
           </div>
         </aside>
@@ -370,7 +355,7 @@ export function SchoolOperations({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <Button className="-ml-3 mb-3 md:hidden" onClick={onBack} size="sm" variant="ghost">
-                <ArrowLeft /> Modules
+                <ArrowLeft /> Home
               </Button>
               <p className="text-sm font-medium text-primary">{sectionCopy.eyebrow}</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em] md:text-4xl">
@@ -381,7 +366,7 @@ export function SchoolOperations({
               </p>
             </div>
             <Badge className="w-fit rounded-full" variant="secondary">
-              Legacy source · read-only
+              View only
             </Badge>
           </div>
 
@@ -398,7 +383,7 @@ export function SchoolOperations({
             />
             <MobileSectionButton
               active={section === "rosters"}
-              label="Class rosters"
+              label="Classes"
               onClick={() => setSection("rosters")}
             />
           </div>
@@ -449,16 +434,13 @@ export function SchoolOperations({
                         onValueChange={(value) => setStatus(value as typeof status)}
                         value={status}
                       >
-                        <SelectTrigger
-                          aria-label="Current registry status"
-                          className="w-full rounded-full"
-                        >
+                        <SelectTrigger aria-label="Current status" className="w-full rounded-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All registry statuses</SelectItem>
-                          <SelectItem value="active">Currently active</SelectItem>
-                          <SelectItem value="inactive">Currently inactive</SelectItem>
+                          <SelectItem value="all">All statuses</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -468,7 +450,7 @@ export function SchoolOperations({
                     <div className="grid min-h-72 place-items-center">
                       <div className="text-center">
                         <LoaderCircle className="mx-auto size-5 animate-spin text-primary" />
-                        <p className="mt-3 text-sm text-muted-foreground">Loading allocations…</p>
+                        <p className="mt-3 text-sm text-muted-foreground">Loading students…</p>
                       </div>
                     </div>
                   ) : students.students.length ? (
@@ -484,7 +466,7 @@ export function SchoolOperations({
                         <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
                           <UserRoundSearch className="size-6" />
                         </div>
-                        <h2 className="mt-5 text-lg font-semibold">No matching allocations</h2>
+                        <h2 className="mt-5 text-lg font-semibold">No students found</h2>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
                           Try another search, filter, or academic session.
                         </p>
@@ -565,7 +547,7 @@ function SchoolsDirectory({
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                 <MiniMetric label="Students" value={school.students} />
-                <MiniMetric label="Rosters" value={school.classes} />
+                <MiniMetric label="Classes" value={school.classes} />
                 <MiniMetric label="Houses" value={school.houses} />
               </div>
             </button>
@@ -578,9 +560,9 @@ function SchoolsDirectory({
                 <th className="px-5 py-3 font-semibold">School</th>
                 <th className="px-4 py-3 font-semibold">Affiliation</th>
                 <th className="px-4 py-3 font-semibold">Students</th>
-                <th className="px-4 py-3 font-semibold">Class rosters</th>
+                <th className="px-4 py-3 font-semibold">Classes</th>
                 <th className="px-4 py-3 font-semibold">Houses</th>
-                <th className="px-5 py-3 text-right font-semibold">Roster</th>
+                <th className="px-5 py-3 text-right font-semibold">Open</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -642,7 +624,7 @@ function RosterDirectory({
     );
   }, [query, rosters, school]);
 
-  if (loading) return <DirectoryLoading label="Reconstructing class rosters…" />;
+  if (loading) return <DirectoryLoading label="Loading classes…" />;
   return (
     <div className="mt-7">
       <Card>
@@ -650,7 +632,7 @@ function RosterDirectory({
           <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              aria-label="Search class rosters"
+              aria-label="Search classes"
               className="pl-10"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search school or class"
@@ -672,9 +654,6 @@ function RosterDirectory({
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-primary">{roster.schoolName}</p>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight">{roster.className}</h2>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Legacy class {roster.classSourceId}
-                </p>
               </div>
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                 <Layers3 className="size-5" />
@@ -686,8 +665,8 @@ function RosterDirectory({
               <MiniMetric label="Male" value={roster.maleStudents} />
             </div>
             <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-              <span>{roster.currentActiveStudents} currently active</span>
-              <span className="font-medium text-primary">Open roster</span>
+              <span>{roster.currentActiveStudents} active</span>
+              <span className="font-medium text-primary">View students</span>
             </div>
           </button>
         ))}
@@ -695,7 +674,7 @@ function RosterDirectory({
       {!filtered.length ? (
         <Card className="mt-4">
           <CardContent className="grid min-h-52 place-items-center text-center text-sm text-muted-foreground">
-            No class rosters match these filters.
+            No classes match these filters.
           </CardContent>
         </Card>
       ) : null}
@@ -737,7 +716,7 @@ function SummaryCards({
       icon: Users,
       label: "Students",
       value: overview?.summary.students ?? 0,
-      detail: `${(overview?.summary.activeStudents ?? 0).toLocaleString()} currently active`,
+      detail: `${(overview?.summary.activeStudents ?? 0).toLocaleString()} active`,
     },
     {
       icon: Building2,
@@ -745,11 +724,11 @@ function SummaryCards({
       value: overview?.summary.schools ?? 0,
       detail: overview?.summary.unmappedSchools
         ? `${overview.summary.unmappedSchools} needs review`
-        : "All mapped",
+        : "All students have a school",
     },
     {
       icon: GraduationCap,
-      label: "Class rosters",
+      label: "Classes",
       value: overview?.summary.classes ?? 0,
       detail: "In this session",
     },
@@ -757,7 +736,7 @@ function SummaryCards({
       icon: Home,
       label: "Houses",
       value: overview?.summary.houses ?? 0,
-      detail: "Assigned groups",
+      detail: "Used in this session",
     },
   ];
   return (
@@ -812,22 +791,19 @@ function StudentResults({
                   {student.rollNumber ? `Roll ${student.rollNumber}` : "No roll number"}
                 </p>
               </div>
-              <EnrollmentStatusBadge status={student.enrollmentStatus} />
+              <RegistryStatusBadge status={student.status} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-              <Detail label="School" value={student.schoolName ?? "Unmapped"} />
+              <Detail label="School" value={student.schoolName ?? "School not set"} />
               <Detail label="Class" value={student.classTitle ?? student.className} />
               <Detail label="House" value={student.houseName ?? "No house"} />
-              <Detail
-                label="Registry status"
-                value={student.status === "active" ? "Currently active" : "Currently inactive"}
-              />
+              <Detail label="Status" value={student.status === "active" ? "Active" : "Inactive"} />
             </div>
           </button>
         ))}
       </div>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[920px] text-sm">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="bg-muted/45 text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
               <th className="px-5 py-3 font-semibold">Student</th>
@@ -835,8 +811,7 @@ function StudentResults({
               <th className="px-4 py-3 font-semibold">Class</th>
               <th className="px-4 py-3 font-semibold">House</th>
               <th className="px-4 py-3 font-semibold">Roll</th>
-              <th className="px-4 py-3 font-semibold">Enrollment</th>
-              <th className="px-4 py-3 font-semibold">Registry</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-5 py-3 text-right font-semibold">Profile</th>
             </tr>
           </thead>
@@ -850,14 +825,11 @@ function StudentResults({
                   </p>
                 </td>
                 <td className="max-w-48 px-4 py-3.5">
-                  <p className="truncate">{student.schoolName ?? "Unmapped"}</p>
+                  <p className="truncate">{student.schoolName ?? "School not set"}</p>
                 </td>
                 <td className="px-4 py-3.5">{student.classTitle ?? student.className}</td>
                 <td className="px-4 py-3.5">{student.houseName ?? "No house"}</td>
                 <td className="px-4 py-3.5 text-muted-foreground">{student.rollNumber ?? "—"}</td>
-                <td className="px-4 py-3.5">
-                  <EnrollmentStatusBadge status={student.enrollmentStatus} />
-                </td>
                 <td className="px-4 py-3.5">
                   <RegistryStatusBadge status={student.status} />
                 </td>
@@ -888,7 +860,7 @@ function Pagination({
   return (
     <div className="flex flex-col gap-3 border-t px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <p className="text-xs text-muted-foreground">
-        {data.pagination.total.toLocaleString()} allocations · page {data.pagination.page} of{" "}
+        {data.pagination.total.toLocaleString()} students · page {data.pagination.page} of{" "}
         {Math.max(data.pagination.totalPages, 1)}
       </p>
       <div className="flex gap-2">
@@ -933,9 +905,7 @@ function FilterSelect({
         <SelectItem value="all">{label}</SelectItem>
         {options.map((option) => (
           <SelectItem key={option.id ?? option.name} value={option.id ?? option.name}>
-            {option.name}
-            {option.reference ? ` · legacy ${option.reference}` : ""} ·{" "}
-            {Number(option.count).toLocaleString()}
+            {option.name} · {Number(option.count).toLocaleString()}
           </SelectItem>
         ))}
       </SelectContent>
@@ -998,17 +968,7 @@ function MobileSectionButton({
 function RegistryStatusBadge({ status }: { status: "active" | "inactive" }) {
   return (
     <Badge className="rounded-full" variant="outline">
-      {status === "active" ? "Active now" : "Inactive now"}
-    </Badge>
-  );
-}
-
-function EnrollmentStatusBadge({ status }: { status: StudentRow["enrollmentStatus"] }) {
-  const label =
-    status === "recorded" ? "Legacy recorded" : `${status[0].toUpperCase()}${status.slice(1)}`;
-  return (
-    <Badge className="rounded-full" variant={status === "enrolled" ? "default" : "secondary"}>
-      {label}
+      {status === "active" ? "Active" : "Inactive"}
     </Badge>
   );
 }
@@ -1037,5 +997,5 @@ function handleLoadError(
 ) {
   if (controller.signal.aborted || (reason instanceof DOMException && reason.name === "AbortError"))
     return;
-  setError(reason instanceof Error ? reason.message : "School Operations could not be loaded.");
+  setError(reason instanceof Error ? reason.message : "School pages could not be loaded.");
 }

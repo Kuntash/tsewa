@@ -265,6 +265,21 @@ async function writeProgressReport({
 }
 
 async function relayObject({ file, sourceBucket, targetBucket, target }) {
+  const maximumAttempts = 4;
+  let lastError;
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    try {
+      return await relayObjectOnce({ file, sourceBucket, targetBucket, target });
+    } catch (error) {
+      lastError = error;
+      if (attempt === maximumAttempts) break;
+      await delay(500 * 2 ** (attempt - 1));
+    }
+  }
+  throw lastError;
+}
+
+async function relayObjectOnce({ file, sourceBucket, targetBucket, target }) {
   const hash = createHash("sha256");
   let byteSize = 0;
   const source = spawnWrangler([
@@ -311,6 +326,10 @@ async function relayObject({ file, sourceBucket, targetBucket, target }) {
     throw new Error("A target R2 object did not pass the post-upload size and SHA-256 check.");
   }
   return verified;
+}
+
+function delay(milliseconds) {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 }
 
 async function hashR2Object(bucket, objectKey, target) {

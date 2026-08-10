@@ -10,18 +10,18 @@
     "semantic_hash": "8ce9de37fdd776243332ac590488aea2"
   },
   "apps/web/src/components/account-settings.tsx": {
-    "mtime": 1785948673.7614303,
-    "ast_hash": "fecf7ee8cd944ecc881b2a1cfd6c6e02",
-    "semantic_hash": "fecf7ee8cd944ecc881b2a1cfd6c6e02"
+    "mtime": 1786400954.7050793,
+    "ast_hash": "4c42c447d992e53419150d7a5e8ea1e7",
+    "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1785951915.7364972,
-    "ast_hash": "51917b9f4fe3e52e36ba8dd87135646d",
-    "semantic_hash": "51917b9f4fe3e52e36ba8dd87135646d"
+    "mtime": 1786401001.555542,
+    "ast_hash": "42db7c89f60b266aeb02a2d9200d754c",
+    "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786393747.9319305,
-    "ast_hash": "cc1edf0ae996e41dae3578f133c2bc6e",
+    "mtime": 1786401172.78377,
+    "ast_hash": "9a6125853fe58f64b3ceb5db8c6a69d0",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -110,18 +110,18 @@
     "semantic_hash": "2c551ba62c324b2cdfaf8131878084a5"
   },
   "apps/web/src/routes/__root.tsx": {
-    "mtime": 1785946383.2360742,
-    "ast_hash": "a9eafc8c66068735fc27e8f3f9795f71",
-    "semantic_hash": "a9eafc8c66068735fc27e8f3f9795f71"
+    "mtime": 1786401404.3493917,
+    "ast_hash": "85e32c6c9f71ec15d990c384d5124bfa",
+    "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1786396425.193544,
-    "ast_hash": "0d86baa297a5e7e6b8e0fe3781ccaf0f",
+    "mtime": 1786401404.3497064,
+    "ast_hash": "7367536f05f7a319906fa2dde4c1e265",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786399496.0940826,
-    "ast_hash": "46b04ff621538b127e5138741f893b79",
+    "mtime": 1786401404.35078,
+    "ast_hash": "6aa6d224f641f14eb492d2d132e2f3b1",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786398481.463002,
-    "ast_hash": "dd3a0fdd6ecee0da08e5d4a721064d30",
+    "mtime": 1786401278.8521364,
+    "ast_hash": "a934da1fcf2b96a1b6076294c0203e14",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "scripts/import-person-files.mjs": {
-    "mtime": 1786394889.2571163,
-    "ast_hash": "ac489838d582b28f1ccee6d95db1aed4",
+    "mtime": 1786401467.2172844,
+    "ast_hash": "ba76f518d9f2e654410dc18f359e931a",
     "semantic_hash": ""
   },
   "scripts/install-git-hooks.sh": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786399154.4336257,
-    "ast_hash": "12a185a885c1a83496aed7e9f6c41aa2",
+    "mtime": 1786401404.3500025,
+    "ast_hash": "28d407b839b01af0525329eddbb302d7",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -342,6 +342,36 @@
   "graphify-out/memory/query_20260810_214232_okay_whats_next.md": {
     "mtime": 1786398152.4711215,
     "ast_hash": "9c3f20e8ccdc7a93bd83552833458264",
+    "semantic_hash": ""
+  },
+  "scripts/class-master-dry-run.mjs": {
+    "mtime": 1786401473.237588,
+    "ast_hash": "ec70f08e2b2efe14437a2744aaccfb56",
+    "semantic_hash": ""
+  },
+  "docs/class-master-reconciliation.md": {
+    "mtime": 1786401404.35116,
+    "ast_hash": "c55665d13418ff51b939464cf7c1f156",
+    "semantic_hash": ""
+  },
+  "docs/product-language.md": {
+    "mtime": 1786401172.8683684,
+    "ast_hash": "892aa77d0fef06a357cd645533e1a902",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_221406_what_do_you_mean_by_legacy_enrollment_state__and_i.md": {
+    "mtime": 1786400046.8707638,
+    "ast_hash": "3047d0f1ce00a5f96c182ef07b4e2146",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_222300_how_can_i_view_media_transfer_progress__why_do_cla.md": {
+    "mtime": 1786400580.5449424,
+    "ast_hash": "49127cbdc52361e11781486bb74de5e0",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_224220_why_is_the_media_transfer_process_so_slow__second.md": {
+    "mtime": 1786401740.141575,
+    "ast_hash": "6917c31ba9d066de3c53eee051f399c7",
     "semantic_hash": ""
   }
 }

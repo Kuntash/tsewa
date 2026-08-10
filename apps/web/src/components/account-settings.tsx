@@ -99,9 +99,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
         <div>
           <p className="text-sm font-medium text-primary">Personal settings</p>
           <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">Your account</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Your identity is separate from organization ownership and can move with you.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Update your sign-in details.</p>
         </div>
         <Badge className="w-fit gap-1.5 rounded-full" variant="outline">
           {user.emailVerified ? (
@@ -130,8 +128,8 @@ export function AccountSettings({ user }: AccountSettingsProps) {
             <div className="mb-2 grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
               <UserRound className="size-5" />
             </div>
-            <CardTitle>Identity</CardTitle>
-            <CardDescription>Update the name and email used for your own sign-in.</CardDescription>
+            <CardTitle>Name and email</CardTitle>
+            <CardDescription>Update the details you use to sign in.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <form className="space-y-3" onSubmit={updateName}>

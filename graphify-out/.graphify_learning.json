@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T21:42:10.937941+00:00",
+  "generated_at": "2026-08-10T22:21:42.635956+00:00",
   "nodes": {
     "apps_web_migrations_0003_people_registry_person": {
       "code_fingerprint": "babb25a09ef819f61f357020f37af6a3df9a42d8227a8beaa1f56f427eab75b6",
@@ -12,7 +12,7 @@
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 0.999977272,
+      "score": 0.999343253,
       "source_file": "apps/web/migrations/0003_people_registry.sql",
       "status": "tentative",
       "uses": 1
@@ -20,16 +20,106 @@
     "apps_web_migrations_0006_person_academic_history_person_academic_record": {
       "code_fingerprint": "8aab8ac7fcf0cd1f596dc60508ffd031462024226c935321a7ec6a8d1ff8d22c",
       "label": "person_academic_record",
-      "last": "2026-08-10T21:40:45.944752+00:00",
+      "last": "2026-08-10T22:14:06.870388+00:00",
       "provenance": [
+        {
+          "date": "2026-08-10T22:14:06.870388+00:00",
+          "outcome": "useful",
+          "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
+        },
+        {
+          "date": "2026-08-10T21:42:32.470861+00:00",
+          "outcome": "useful",
+          "q": "Okay whats next?"
+        },
         {
           "date": "2026-08-10T21:40:45.944752+00:00",
           "outcome": "useful",
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 0.999977272,
+      "score": 2.998593101,
       "source_file": "apps/web/migrations/0006_person_academic_history.sql",
+      "status": "preferred",
+      "uses": 3
+    },
+    "apps_web_migrations_0009_school_operations_foundation_school_operations_import_batch": {
+      "code_fingerprint": "51e53b5a6709ec8ab5a8bb2569e44592ad95c8ab5ba10173477e3789fcbf5214",
+      "label": "school_operations_import_batch",
+      "last": "2026-08-10T21:42:32.470861+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T21:42:32.470861+00:00",
+          "outcome": "useful",
+          "q": "Okay whats next?"
+        }
+      ],
+      "score": 0.999371721,
+      "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_migrations_0010_student_enrollment_rosters_student_enrollment": {
+      "code_fingerprint": "d683f68688ca4556c35fbe75fc20bb8cf12fe181679d5f95198b3949eef573c5",
+      "label": "student_enrollment",
+      "last": "2026-08-10T22:14:06.870388+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T22:14:06.870388+00:00",
+          "outcome": "useful",
+          "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
+        }
+      ],
+      "score": 0.999878128,
+      "source_file": "apps/web/migrations/0010_student_enrollment_rosters.sql",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_components_school_operations": {
+      "code_fingerprint": "15f27150432755e923058ea7eee70db072266d47332bdb92fcc415f9d5cefca2",
+      "label": "school-operations.tsx",
+      "last": "2026-08-10T21:42:32.470861+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T21:42:32.470861+00:00",
+          "outcome": "useful",
+          "q": "Okay whats next?"
+        }
+      ],
+      "score": 0.999371721,
+      "source_file": "apps/web/src/components/school-operations.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "scripts_student_enrollment_dry_run": {
+      "code_fingerprint": "84ee91bf3d034f525c8726f3d8e324a521627d16ac5f5ea1500eab8d92f0605f",
+      "label": "student-enrollment-dry-run.mjs",
+      "last": "2026-08-10T22:14:06.870388+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T22:14:06.870388+00:00",
+          "outcome": "useful",
+          "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
+        }
+      ],
+      "score": 0.999878128,
+      "source_file": "scripts/student-enrollment-dry-run.mjs",
+      "status": "tentative",
+      "uses": 1
+    },
+    "todo": {
+      "code_fingerprint": "44c138857d697db7be8e00e30d4fd096dd3596a4cf616a5a54f54de9c5cbfab2",
+      "label": "TODO.md",
+      "last": "2026-08-10T21:42:32.470861+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T21:42:32.470861+00:00",
+          "outcome": "useful",
+          "q": "Okay whats next?"
+        }
+      ],
+      "score": 0.999371721,
+      "source_file": "TODO.md",
       "status": "tentative",
       "uses": 1
     }

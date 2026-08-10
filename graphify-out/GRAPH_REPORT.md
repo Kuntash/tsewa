@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 86 files · ~108,076 words
+- 93 files · ~109,550 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2514 nodes · 3023 edges · 200 communities (50 shown, 150 thin omitted)
+- 2549 nodes · 3066 edges · 205 communities (55 shown, 150 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.6)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a37155b0`
+- Built from commit: `03305635`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -126,7 +126,7 @@
 - WebSocketRequestResponsePair
 - Workflow
 - WorkflowEntrypoint
-- badge.tsx
+- class-master-dry-run.mjs
 - AgentMemoryNamespace
 - BasicImageTransformations
 - BrowserRun
@@ -214,10 +214,15 @@
 - button.tsx
 - Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?
 - Q: Okay whats next?
+- Q: what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?
+- Q: How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?
+- Q: why is the media transfer process so slow? second can't we merge the class data and reconcile? because class data is supposed to be master data no? also do the product-copy sweep across the entire application.
+- Product language
+- class-master-reconciliation.md
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `scripts` - 27 edges
+2. `scripts` - 28 edges
 3. `organization` - 25 edges
 4. `Event` - 25 edges
 5. `getRuntimeEnv()` - 23 edges
@@ -232,17 +237,17 @@
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
 - `CardFooter()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
-- `SheetOverlay()` --calls--> `cn()`  [EXTRACTED]
-  apps/web/src/components/ui/sheet.tsx → apps/web/src/lib/utils.ts
-- `person_import_issue_summary` --references--> `person_import_batch`  [EXTRACTED]
-  apps/web/migrations/0004_people_registry_dry_run.sql → apps/web/migrations/0003_people_registry.sql
-- `SummaryCards()` --indirect_call--> `Home()`  [INFERRED]
-  apps/web/src/components/school-operations.tsx → apps/web/src/routes/index.tsx
+- `SelectGroup()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SelectLabel()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SelectSeparator()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (200 total, 150 thin omitted)
+## Communities (205 total, 150 thin omitted)
 
 ### Community 0 - "worker-configuration.d.ts"
 Cohesion: 0.00
@@ -250,7 +255,7 @@ Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentM
 
 ### Community 1 - "server.ts"
 Cohesion: 0.10
-Nodes (62): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), auditAccountAction(), auditStatement() (+54 more)
+Nodes (63): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), auditAccountAction(), auditStatement() (+55 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -262,15 +267,15 @@ Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEv
 
 ### Community 4 - "index.tsx"
 Cohesion: 0.12
-Nodes (21): AccountSettings(), AccountSettingsProps, PeopleRegistry(), Card(), CardAction(), CardContent(), CardDescription(), CardFooter() (+13 more)
+Nodes (22): AccountSettings(), AccountSettingsProps, SummaryCards(), Badge(), badgeVariants, Card(), CardAction(), CardContent() (+14 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
-Nodes (38): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+30 more)
+Nodes (39): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+31 more)
 
 ### Community 6 - "cn"
-Cohesion: 0.10
-Nodes (22): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+14 more)
+Cohesion: 0.12
+Nodes (18): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+10 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -297,16 +302,16 @@ Cohesion: 0.10
 Nodes (18): buildImportSql(), confirmedDatabaseId, database, optionalText(), options, organizationSlug, rawSql(), readPlacements() (+10 more)
 
 ### Community 13 - "people-registry.tsx"
-Cohesion: 0.16
-Nodes (12): emptyRegistry, formatDate(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse, Select() (+4 more)
+Cohesion: 0.11
+Nodes (19): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse (+11 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
 Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.12
-Nodes (18): capitalize(), FamilyProfileSection(), formatBytes(), formatLegacyDate(), formatTimestamp(), initials(), isFutureSourceDate(), PersonFilesSection() (+10 more)
+Cohesion: 0.13
+Nodes (16): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), PersonFilesSection(), Profile (+8 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -353,12 +358,16 @@ Cohesion: 0.22
 Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
 
 ### Community 54 - "school-operations.tsx"
-Cohesion: 0.08
-Nodes (14): AcademicSession, CountOption, emptyStudents, handleLoadError(), OverviewResponse, parseResponse(), RosterRow, SchoolOperations() (+6 more)
+Cohesion: 0.09
+Nodes (13): AcademicSession, CountOption, emptyStudents, handleLoadError(), OverviewResponse, parseResponse(), RosterRow, SchoolOperations() (+5 more)
 
 ### Community 60 - "Tsewa"
 Cohesion: 0.29
 Nodes (6): Cloudflare resources, License, Local development, THF deployment, Tsewa, Workspace
+
+### Community 111 - "class-master-dry-run.mjs"
+Cohesion: 0.22
+Nodes (12): candidateScore(), canonicalName(), clean(), cleanSection(), compareCandidates(), database, options, outputPath (+4 more)
 
 ### Community 113 - "BasicImageTransformations"
 Cohesion: 0.67
@@ -378,7 +387,7 @@ Nodes (6): Account and email follow-ups, Documents and media migration, Invitati
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
-Nodes (20): chunkSize, concurrency, confirmedDatabaseId, database, expectedFileCount, hashR2Object(), options, organizationSlug (+12 more)
+Nodes (22): chunkSize, concurrency, confirmedDatabaseId, database, delay(), expectedFileCount, hashR2Object(), options (+14 more)
 
 ### Community 178 - "organization"
 Cohesion: 0.12
@@ -397,8 +406,8 @@ Cohesion: 0.29
 Nodes (6): Access control, Dry run, One-person pilot, Person files migration, Preservation policy, Resumable bulk import
 
 ### Community 182 - "school-operations-dry-run.mjs"
-Cohesion: 0.17
-Nodes (8): DEFAULT_SOURCE_DATABASE, assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+Cohesion: 0.18
+Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 189 - "person-files.mjs"
 Cohesion: 0.43
@@ -406,7 +415,7 @@ Nodes (7): objectExtension(), optionalText(), readPersonFiles(), requiredOption(
 
 ### Community 190 - "person-files-dry-run.mjs"
 Cohesion: 0.22
-Nodes (8): parseArguments(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+Nodes (8): DEFAULT_SOURCE_DATABASE, assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 191 - "School Operations vertical slice"
 Cohesion: 0.29
@@ -426,7 +435,7 @@ Nodes (17): confirmedDatabaseId, database, offeringId(), optionalText(), options
 
 ### Community 196 - "student-enrollment-dry-run.mjs"
 Cohesion: 0.18
-Nodes (8): sha256File(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+Nodes (8): parseArguments(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 197 - "button.tsx"
 Cohesion: 0.43
@@ -440,25 +449,46 @@ Nodes (4): Answer, Outcome, Q: So how does a session work? Like if I select 2026
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Okay whats next?, Source Nodes
 
+### Community 200 - "Q: what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?, Source Nodes
+
+### Community 201 - "Q: How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?, Source Nodes
+
+### Community 202 - "Q: why is the media transfer process so slow? second can't we merge the class data and reconcile? because class data is supposed to be master data no? also do the product-copy sweep across the entire application."
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: why is the media transfer process so slow? second can't we merge the class data and reconcile? because class data is supposed to be master data no? also do the product-copy sweep across the entire application., Source Nodes
+
+### Community 203 - "Product language"
+Cohesion: 0.50
+Nodes (3): Preferred words, Product language, Rules
+
 ## Knowledge Gaps
-- **1172 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1167 more)
+- **1190 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1185 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+
+## Work-memory lessons
+
+**Preferred sources** — corroborated by past sessions; start here.
+- `person_academic_record` (3× useful, score=2.998593101)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Console` connect `Console` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
 - **Why does `SubtleCrypto` connect `SubtleCrypto` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `Container` connect `Container` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1172 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1190 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.09663461538461539 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09603729603729604 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

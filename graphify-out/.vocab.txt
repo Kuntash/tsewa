@@ -32,6 +32,7 @@ analytics
 analyze
 and
 animate
+answer
 any
 api
 append
@@ -243,6 +244,7 @@ distance
 doctype
 document
 documents
+does
 dom
 done
 down
@@ -278,6 +280,8 @@ end
 engine
 engines
 enqueue
+enrollment
+enrollments
 enter
 enterprise
 entries
@@ -387,6 +391,7 @@ host
 hosted
 hostname
 house
+how
 href
 html
 http
@@ -488,6 +493,7 @@ literal
 llama
 load
 loader
+loading
 local
 locals
 location
@@ -530,10 +536,12 @@ metrics
 microtask
 migrate
 migration
+mini
 minify
 mistral
 mistralai
 mjs
+mobile
 mode
 model
 models
@@ -553,6 +561,7 @@ nemotron
 new
 next
 node
+nodes
 non
 normalize
 not
@@ -562,6 +571,9 @@ number
 nvidia
 object
 objects
+offering
+offerings
+okay
 onabort
 one
 onerror
@@ -698,6 +710,7 @@ redirect
 refusal
 reg
 register
+registered
 registries
 registry
 reject
@@ -743,6 +756,8 @@ rfc
 role
 rollback
 root
+roster
+rosters
 route
 router
 routes
@@ -768,6 +783,7 @@ scheduler
 schema
 schnell
 school
+schools
 scope
 scoped
 scored
@@ -804,6 +820,7 @@ sheet
 shield
 short
 shortcut
+show
 side
 sign
 signal
@@ -880,9 +897,11 @@ template
 terminate
 test
 text
+that
 theme
 thf
 thinking
+this
 through
 throw
 time
@@ -983,10 +1002,13 @@ water
 watermark
 watermarks
 web
+whats
 while
 whisper
+will
 with
 without
+work
 worker
 workerd
 workers
@@ -1001,5 +1023,6 @@ write
 writer
 written
 xor
+year
 zai
 zod
