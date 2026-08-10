@@ -193,5 +193,10 @@
   "191": "School Operations vertical slice",
   "192": "import-school-operations.mjs",
   "193": "sqlLiteral",
-  "194": "@fontsource-variable/dm-sans"
+  "194": "@fontsource-variable/dm-sans",
+  "195": "import-student-enrollments.mjs",
+  "196": "student-enrollment-dry-run.mjs",
+  "197": "button.tsx",
+  "198": "Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?",
+  "199": "Q: Okay whats next?"
 }

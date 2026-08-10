@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786396777.2846162,
-    "ast_hash": "da2b275a16167f83d83b189987cd782d",
+    "mtime": 1786399496.0940826,
+    "ast_hash": "46b04ff621538b127e5138741f893b79",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786396170.635806,
-    "ast_hash": "9e636a01c4a2c39c897cfd3a4d782d87",
+    "mtime": 1786398481.463002,
+    "ast_hash": "dd3a0fdd6ecee0da08e5d4a721064d30",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786396752.1569571,
-    "ast_hash": "c07f9c97e117bad860990f376048a768",
+    "mtime": 1786399467.7313042,
+    "ast_hash": "4a1d1603b8edd65e4419e943919af9d6",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -300,8 +300,8 @@
     "semantic_hash": ""
   },
   "docs/school-operations-slice.md": {
-    "mtime": 1786396752.1567163,
-    "ast_hash": "cf24d7cbf31ecc17df9b9d864332ff9c",
+    "mtime": 1786399639.8765733,
+    "ast_hash": "0418f2f64ca2ffa8a293d717986e50cb",
     "semantic_hash": ""
   },
   "apps/web/migrations/0009_school_operations_foundation.sql": {
@@ -310,13 +310,38 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786396425.1972156,
-    "ast_hash": "698aadabf55d20dc63f7e0f1134ff943",
+    "mtime": 1786399154.4336257,
+    "ast_hash": "12a185a885c1a83496aed7e9f6c41aa2",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
     "mtime": 1786396180.5166137,
     "ast_hash": "accf40ab365af676882609b0a02dc772",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0010_student_enrollment_rosters.sql": {
+    "mtime": 1786398610.3115537,
+    "ast_hash": "6af286f9fc6cf8f66f7cfdaee876c8f3",
+    "semantic_hash": ""
+  },
+  "scripts/import-student-enrollments.mjs": {
+    "mtime": 1786398974.5155163,
+    "ast_hash": "da80865fb405e1f1ffcdf5d149318379",
+    "semantic_hash": ""
+  },
+  "scripts/student-enrollment-dry-run.mjs": {
+    "mtime": 1786398491.772302,
+    "ast_hash": "90a4403d4e932c121860b696fe253eb9",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_214045_so_how_does_a_session_work__like_if_i_select_2026.md": {
+    "mtime": 1786398045.9450314,
+    "ast_hash": "b6f68f05df58cb7cd28db92d59f0199f",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_214232_okay_whats_next.md": {
+    "mtime": 1786398152.4711215,
+    "ast_hash": "9c3f20e8ccdc7a93bd83552833458264",
     "semantic_hash": ""
   }
 }

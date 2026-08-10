@@ -7,7 +7,9 @@ import {
   ChevronRight,
   GraduationCap,
   Home,
+  Layers3,
   LoaderCircle,
+  MapPin,
   Search,
   ShieldCheck,
   UserRoundSearch,
@@ -37,7 +39,7 @@ type AcademicSession = {
   endsOn: string;
 };
 
-type CountOption = { name: string; count: number };
+type CountOption = { id?: string; name: string; count: number; reference?: string };
 
 type OverviewResponse = {
   session: AcademicSession;
@@ -72,12 +74,50 @@ type StudentRow = {
   boardRegistrationNumber: string | null;
   result: string | null;
   recordedOn: string;
+  enrollmentStatus:
+    | "recorded"
+    | "enrolled"
+    | "transferred"
+    | "withdrawn"
+    | "completed"
+    | "graduated";
+  enrollmentStatusSource: "legacy_allocation" | "explicit";
 };
 
 type StudentsResponse = {
   students: StudentRow[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 };
+
+type SchoolRow = {
+  id: string;
+  name: string;
+  locationName: string | null;
+  affiliationNumber: string | null;
+  isActive: boolean;
+  students: number;
+  currentActiveStudents: number;
+  classes: number;
+  houses: number;
+};
+
+type RosterRow = {
+  id: string;
+  schoolId: string;
+  schoolName: string;
+  classId: string;
+  classSourceId: string;
+  className: string;
+  classLevel: number | null;
+  classSection: string | null;
+  students: number;
+  currentActiveStudents: number;
+  femaleStudents: number;
+  maleStudents: number;
+  houses: number;
+};
+
+type SchoolSection = "students" | "schools" | "rosters";
 
 const emptyStudents: StudentsResponse = {
   students: [],
@@ -109,6 +149,10 @@ export function SchoolOperations({
   const [switchingSession, setSwitchingSession] = useState(false);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [section, setSection] = useState<SchoolSection>("students");
+  const [schools, setSchools] = useState<SchoolRow[]>([]);
+  const [rosters, setRosters] = useState<RosterRow[]>([]);
+  const [loadingDirectories, setLoadingDirectories] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,6 +169,37 @@ export function SchoolOperations({
       .catch((reason: unknown) => handleLoadError(reason, controller, setError))
       .finally(() => {
         if (!controller.signal.aborted) setLoadingOverview(false);
+      });
+    return () => controller.abort();
+  }, [activeSessionId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoadingDirectories(true);
+    const parameters = new URLSearchParams({ sessionId: activeSessionId });
+    void Promise.all([
+      fetch(`/api/school-operations/schools?${parameters}`, { signal: controller.signal }).then(
+        (response) =>
+          parseResponse<{ schools: SchoolRow[] }>(
+            response,
+            "The school directory could not be loaded.",
+          ),
+      ),
+      fetch(`/api/school-operations/rosters?${parameters}`, { signal: controller.signal }).then(
+        (response) =>
+          parseResponse<{ rosters: RosterRow[] }>(
+            response,
+            "The class rosters could not be loaded.",
+          ),
+      ),
+    ])
+      .then(([schoolResponse, rosterResponse]) => {
+        setSchools(schoolResponse.schools);
+        setRosters(rosterResponse.rosters);
+      })
+      .catch((reason: unknown) => handleLoadError(reason, controller, setError))
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingDirectories(false);
       });
     return () => controller.abort();
   }, [activeSessionId]);
@@ -161,6 +236,26 @@ export function SchoolOperations({
     () => sessions.find((session) => session.id === activeSessionId),
     [activeSessionId, sessions],
   );
+
+  const sectionCopy = {
+    students: {
+      eyebrow: selectedSession?.name ?? "Academic session",
+      title: "Student allocations",
+      description:
+        "One reconciled allocation per student for the selected session, linked to the longitudinal profile.",
+    },
+    schools: {
+      eyebrow: `${selectedSession?.name ?? "Session"} directory`,
+      title: "Schools",
+      description: "School master records with observed class rosters and assigned houses.",
+    },
+    rosters: {
+      eyebrow: `${selectedSession?.name ?? "Session"} structure`,
+      title: "Class rosters",
+      description:
+        "Observed school and class combinations reconstructed from the legacy allocations.",
+    },
+  }[section];
 
   async function changeSession(sessionId: string) {
     setSwitchingSession(true);
@@ -238,8 +333,24 @@ export function SchoolOperations({
             Academics
           </p>
           <nav className="mt-2 space-y-1">
-            <SideItem active icon={GraduationCap} label="Students" />
-            <SideItem icon={Building2} label="Schools" planned />
+            <SideItem
+              active={section === "students"}
+              icon={GraduationCap}
+              label="Students"
+              onClick={() => setSection("students")}
+            />
+            <SideItem
+              active={section === "schools"}
+              icon={Building2}
+              label="Schools"
+              onClick={() => setSection("schools")}
+            />
+            <SideItem
+              active={section === "rosters"}
+              icon={Layers3}
+              label="Class rosters"
+              onClick={() => setSection("rosters")}
+            />
             <SideItem icon={BookOpenText} label="Marks & results" planned />
           </nav>
           <div className="mt-7 rounded-2xl border bg-card p-4">
@@ -261,19 +372,35 @@ export function SchoolOperations({
               <Button className="-ml-3 mb-3 md:hidden" onClick={onBack} size="sm" variant="ghost">
                 <ArrowLeft /> Modules
               </Button>
-              <p className="text-sm font-medium text-primary">
-                {selectedSession?.name ?? "Academic session"}
-              </p>
+              <p className="text-sm font-medium text-primary">{sectionCopy.eyebrow}</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em] md:text-4xl">
-                Student allocations
+                {sectionCopy.title}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                A reconciled, session-scoped view of school, class, house, and roll assignments.
+                {sectionCopy.description}
               </p>
             </div>
             <Badge className="w-fit rounded-full" variant="secondary">
               Legacy source · read-only
             </Badge>
+          </div>
+
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1 md:hidden">
+            <MobileSectionButton
+              active={section === "students"}
+              label="Students"
+              onClick={() => setSection("students")}
+            />
+            <MobileSectionButton
+              active={section === "schools"}
+              label="Schools"
+              onClick={() => setSection("schools")}
+            />
+            <MobileSectionButton
+              active={section === "rosters"}
+              label="Class rosters"
+              onClick={() => setSection("rosters")}
+            />
           </div>
 
           {error ? (
@@ -282,85 +409,115 @@ export function SchoolOperations({
             </div>
           ) : null}
 
-          <SummaryCards loading={loadingOverview} overview={overview} />
+          {section === "students" ? (
+            <>
+              <SummaryCards loading={loadingOverview} overview={overview} />
 
-          <Card className="mt-6 overflow-hidden">
-            <CardContent className="p-0">
-              <div className="border-b bg-card p-4">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    aria-label="Search students"
-                    className="pl-10"
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search student, admission number, or roll number"
-                    value={query}
-                  />
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-                  <FilterSelect
-                    label="All schools"
-                    onChange={setSchool}
-                    options={overview?.filters.schools ?? []}
-                    value={school}
-                  />
-                  <FilterSelect
-                    label="All classes"
-                    onChange={setClassName}
-                    options={overview?.filters.classes ?? []}
-                    value={className}
-                  />
-                  <FilterSelect
-                    label="All houses"
-                    onChange={setHouse}
-                    options={overview?.filters.houses ?? []}
-                    value={house}
-                  />
-                  <Select
-                    onValueChange={(value) => setStatus(value as typeof status)}
-                    value={status}
-                  >
-                    <SelectTrigger aria-label="Student status" className="w-full rounded-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All statuses</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {loadingStudents ? (
-                <div className="grid min-h-72 place-items-center">
-                  <div className="text-center">
-                    <LoaderCircle className="mx-auto size-5 animate-spin text-primary" />
-                    <p className="mt-3 text-sm text-muted-foreground">Loading allocations…</p>
-                  </div>
-                </div>
-              ) : students.students.length ? (
-                <StudentResults
-                  data={students}
-                  onNext={() => setPage((value) => value + 1)}
-                  onPrevious={() => setPage((value) => Math.max(1, value - 1))}
-                  onSelect={setSelectedPersonId}
-                />
-              ) : (
-                <div className="grid min-h-72 place-items-center px-6 py-12 text-center">
-                  <div className="max-w-sm">
-                    <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
-                      <UserRoundSearch className="size-6" />
+              <Card className="mt-6 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="border-b bg-card p-4">
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        aria-label="Search students"
+                        className="pl-10"
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder="Search student, admission number, or roll number"
+                        value={query}
+                      />
                     </div>
-                    <h2 className="mt-5 text-lg font-semibold">No matching allocations</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Try another search, filter, or academic session.
-                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                      <FilterSelect
+                        label="All schools"
+                        onChange={setSchool}
+                        options={overview?.filters.schools ?? []}
+                        value={school}
+                      />
+                      <FilterSelect
+                        label="All classes"
+                        onChange={setClassName}
+                        options={overview?.filters.classes ?? []}
+                        value={className}
+                      />
+                      <FilterSelect
+                        label="All houses"
+                        onChange={setHouse}
+                        options={overview?.filters.houses ?? []}
+                        value={house}
+                      />
+                      <Select
+                        onValueChange={(value) => setStatus(value as typeof status)}
+                        value={status}
+                      >
+                        <SelectTrigger
+                          aria-label="Current registry status"
+                          className="w-full rounded-full"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All registry statuses</SelectItem>
+                          <SelectItem value="active">Currently active</SelectItem>
+                          <SelectItem value="inactive">Currently inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
+                  {loadingStudents ? (
+                    <div className="grid min-h-72 place-items-center">
+                      <div className="text-center">
+                        <LoaderCircle className="mx-auto size-5 animate-spin text-primary" />
+                        <p className="mt-3 text-sm text-muted-foreground">Loading allocations…</p>
+                      </div>
+                    </div>
+                  ) : students.students.length ? (
+                    <StudentResults
+                      data={students}
+                      onNext={() => setPage((value) => value + 1)}
+                      onPrevious={() => setPage((value) => Math.max(1, value - 1))}
+                      onSelect={setSelectedPersonId}
+                    />
+                  ) : (
+                    <div className="grid min-h-72 place-items-center px-6 py-12 text-center">
+                      <div className="max-w-sm">
+                        <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
+                          <UserRoundSearch className="size-6" />
+                        </div>
+                        <h2 className="mt-5 text-lg font-semibold">No matching allocations</h2>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          Try another search, filter, or academic session.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : section === "schools" ? (
+            <SchoolsDirectory
+              loading={loadingDirectories}
+              onOpenRoster={(schoolId) => {
+                setSchool(schoolId);
+                setClassName("all");
+                setPage(1);
+                setSection("students");
+              }}
+              schools={schools}
+            />
+          ) : (
+            <RosterDirectory
+              loading={loadingDirectories}
+              onOpenRoster={(schoolId, selectedClassId) => {
+                setSchool(schoolId);
+                setClassName(selectedClassId);
+                setPage(1);
+                setSection("students");
+              }}
+              rosters={rosters}
+              schools={overview?.filters.schools ?? []}
+            />
+          )}
         </section>
       </div>
 
@@ -371,6 +528,200 @@ export function SchoolOperations({
         personId={selectedPersonId}
       />
     </main>
+  );
+}
+
+function SchoolsDirectory({
+  loading,
+  onOpenRoster,
+  schools,
+}: {
+  loading: boolean;
+  onOpenRoster: (schoolId: string) => void;
+  schools: SchoolRow[];
+}) {
+  if (loading) return <DirectoryLoading label="Loading school directory…" />;
+  return (
+    <Card className="mt-7 overflow-hidden">
+      <CardContent className="p-0">
+        <div className="grid gap-3 p-4 md:hidden">
+          {schools.map((school) => (
+            <button
+              className="rounded-2xl border bg-background p-4 text-left transition-colors hover:border-primary/40"
+              key={school.id}
+              onClick={() => onOpenRoster(school.id)}
+              type="button"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{school.name}</p>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="size-3" /> {school.locationName ?? "Location not recorded"}
+                  </p>
+                </div>
+                <Badge className="rounded-full" variant={school.isActive ? "default" : "secondary"}>
+                  {school.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <MiniMetric label="Students" value={school.students} />
+                <MiniMetric label="Rosters" value={school.classes} />
+                <MiniMetric label="Houses" value={school.houses} />
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[820px] text-sm">
+            <thead className="bg-muted/45 text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3 font-semibold">School</th>
+                <th className="px-4 py-3 font-semibold">Affiliation</th>
+                <th className="px-4 py-3 font-semibold">Students</th>
+                <th className="px-4 py-3 font-semibold">Class rosters</th>
+                <th className="px-4 py-3 font-semibold">Houses</th>
+                <th className="px-5 py-3 text-right font-semibold">Roster</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {schools.map((school) => (
+                <tr className="transition-colors hover:bg-muted/35" key={school.id}>
+                  <td className="px-5 py-4">
+                    <p className="font-medium">{school.name}</p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="size-3" /> {school.locationName ?? "Not recorded"}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 text-muted-foreground">
+                    {school.affiliationNumber ?? "—"}
+                  </td>
+                  <td className="px-4 py-4 tabular-nums">
+                    {Number(school.students).toLocaleString()}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {Number(school.currentActiveStudents).toLocaleString()} active now
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 tabular-nums">{school.classes}</td>
+                  <td className="px-4 py-4 tabular-nums">{school.houses}</td>
+                  <td className="px-5 py-4 text-right">
+                    <Button onClick={() => onOpenRoster(school.id)} size="sm" variant="ghost">
+                      View students
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RosterDirectory({
+  loading,
+  onOpenRoster,
+  rosters,
+  schools,
+}: {
+  loading: boolean;
+  onOpenRoster: (schoolId: string, classId: string) => void;
+  rosters: RosterRow[];
+  schools: CountOption[];
+}) {
+  const [query, setQuery] = useState("");
+  const [school, setSchool] = useState("all");
+  const filtered = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return rosters.filter(
+      (roster) =>
+        (school === "all" || roster.schoolId === school) &&
+        (!search ||
+          roster.className.toLowerCase().includes(search) ||
+          roster.schoolName.toLowerCase().includes(search)),
+    );
+  }, [query, rosters, school]);
+
+  if (loading) return <DirectoryLoading label="Reconstructing class rosters…" />;
+  return (
+    <div className="mt-7">
+      <Card>
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_240px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search class rosters"
+              className="pl-10"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search school or class"
+              value={query}
+            />
+          </div>
+          <FilterSelect label="All schools" onChange={setSchool} options={schools} value={school} />
+        </CardContent>
+      </Card>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((roster) => (
+          <button
+            className="group rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary/40"
+            key={roster.id}
+            onClick={() => onOpenRoster(roster.schoolId, roster.classId)}
+            type="button"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-primary">{roster.schoolName}</p>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight">{roster.className}</h2>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Legacy class {roster.classSourceId}
+                </p>
+              </div>
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Layers3 className="size-5" />
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              <MiniMetric label="Students" value={roster.students} />
+              <MiniMetric label="Female" value={roster.femaleStudents} />
+              <MiniMetric label="Male" value={roster.maleStudents} />
+            </div>
+            <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+              <span>{roster.currentActiveStudents} currently active</span>
+              <span className="font-medium text-primary">Open roster</span>
+            </div>
+          </button>
+        ))}
+      </div>
+      {!filtered.length ? (
+        <Card className="mt-4">
+          <CardContent className="grid min-h-52 place-items-center text-center text-sm text-muted-foreground">
+            No class rosters match these filters.
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+function DirectoryLoading({ label }: { label: string }) {
+  return (
+    <Card className="mt-7">
+      <CardContent className="grid min-h-64 place-items-center text-center">
+        <div>
+          <LoaderCircle className="mx-auto size-5 animate-spin text-primary" />
+          <p className="mt-3 text-sm text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-muted/60 px-2 py-2.5">
+      <p className="text-base font-semibold tabular-nums">{Number(value).toLocaleString()}</p>
+      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+    </div>
   );
 }
 
@@ -386,7 +737,7 @@ function SummaryCards({
       icon: Users,
       label: "Students",
       value: overview?.summary.students ?? 0,
-      detail: `${(overview?.summary.activeStudents ?? 0).toLocaleString()} active`,
+      detail: `${(overview?.summary.activeStudents ?? 0).toLocaleString()} currently active`,
     },
     {
       icon: Building2,
@@ -398,7 +749,7 @@ function SummaryCards({
     },
     {
       icon: GraduationCap,
-      label: "Classes",
+      label: "Class rosters",
       value: overview?.summary.classes ?? 0,
       detail: "In this session",
     },
@@ -461,13 +812,16 @@ function StudentResults({
                   {student.rollNumber ? `Roll ${student.rollNumber}` : "No roll number"}
                 </p>
               </div>
-              <StatusBadge status={student.status} />
+              <EnrollmentStatusBadge status={student.enrollmentStatus} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <Detail label="School" value={student.schoolName ?? "Unmapped"} />
               <Detail label="Class" value={student.classTitle ?? student.className} />
               <Detail label="House" value={student.houseName ?? "No house"} />
-              <Detail label="Result" value={student.result ?? "—"} />
+              <Detail
+                label="Registry status"
+                value={student.status === "active" ? "Currently active" : "Currently inactive"}
+              />
             </div>
           </button>
         ))}
@@ -481,7 +835,8 @@ function StudentResults({
               <th className="px-4 py-3 font-semibold">Class</th>
               <th className="px-4 py-3 font-semibold">House</th>
               <th className="px-4 py-3 font-semibold">Roll</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Enrollment</th>
+              <th className="px-4 py-3 font-semibold">Registry</th>
               <th className="px-5 py-3 text-right font-semibold">Profile</th>
             </tr>
           </thead>
@@ -501,7 +856,10 @@ function StudentResults({
                 <td className="px-4 py-3.5">{student.houseName ?? "No house"}</td>
                 <td className="px-4 py-3.5 text-muted-foreground">{student.rollNumber ?? "—"}</td>
                 <td className="px-4 py-3.5">
-                  <StatusBadge status={student.status} />
+                  <EnrollmentStatusBadge status={student.enrollmentStatus} />
+                </td>
+                <td className="px-4 py-3.5">
+                  <RegistryStatusBadge status={student.status} />
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <Button onClick={() => onSelect(student.personId)} size="sm" variant="ghost">
@@ -574,8 +932,10 @@ function FilterSelect({
       <SelectContent>
         <SelectItem value="all">{label}</SelectItem>
         {options.map((option) => (
-          <SelectItem key={option.name} value={option.name}>
-            {option.name} · {Number(option.count).toLocaleString()}
+          <SelectItem key={option.id ?? option.name} value={option.id ?? option.name}>
+            {option.name}
+            {option.reference ? ` · legacy ${option.reference}` : ""} ·{" "}
+            {Number(option.count).toLocaleString()}
           </SelectItem>
         ))}
       </SelectContent>
@@ -587,16 +947,21 @@ function SideItem({
   active = false,
   icon: Icon,
   label,
+  onClick,
   planned = false,
 }: {
   active?: boolean;
   icon: typeof GraduationCap;
   label: string;
+  onClick?: () => void;
   planned?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground"}`}
+    <button
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${active ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground"}`}
+      disabled={planned}
+      onClick={onClick}
+      type="button"
     >
       <Icon className="size-4" />
       <span className="flex-1">{label}</span>
@@ -605,14 +970,45 @@ function SideItem({
           Later
         </Badge>
       ) : null}
-    </div>
+    </button>
   );
 }
 
-function StatusBadge({ status }: { status: "active" | "inactive" }) {
+function MobileSectionButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
   return (
-    <Badge className="rounded-full" variant={status === "active" ? "default" : "secondary"}>
-      {status === "active" ? "Active" : "Inactive"}
+    <Button
+      className="shrink-0 rounded-full"
+      onClick={onClick}
+      size="sm"
+      variant={active ? "default" : "outline"}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function RegistryStatusBadge({ status }: { status: "active" | "inactive" }) {
+  return (
+    <Badge className="rounded-full" variant="outline">
+      {status === "active" ? "Active now" : "Inactive now"}
+    </Badge>
+  );
+}
+
+function EnrollmentStatusBadge({ status }: { status: StudentRow["enrollmentStatus"] }) {
+  const label =
+    status === "recorded" ? "Legacy recorded" : `${status[0].toUpperCase()}${status.slice(1)}`;
+  return (
+    <Badge className="rounded-full" variant={status === "enrolled" ? "default" : "secondary"}>
+      {label}
     </Badge>
   );
 }

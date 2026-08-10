@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-08-10T21:42:10.937941+00:00",
+  "nodes": {
+    "apps_web_migrations_0003_people_registry_person": {
+      "code_fingerprint": "babb25a09ef819f61f357020f37af6a3df9a42d8227a8beaa1f56f427eab75b6",
+      "label": "person",
+      "last": "2026-08-10T21:40:45.944752+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T21:40:45.944752+00:00",
+          "outcome": "useful",
+          "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
+        }
+      ],
+      "score": 0.999977272,
+      "source_file": "apps/web/migrations/0003_people_registry.sql",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_migrations_0006_person_academic_history_person_academic_record": {
+      "code_fingerprint": "8aab8ac7fcf0cd1f596dc60508ffd031462024226c935321a7ec6a8d1ff8d22c",
+      "label": "person_academic_record",
+      "last": "2026-08-10T21:40:45.944752+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T21:40:45.944752+00:00",
+          "outcome": "useful",
+          "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
+        }
+      ],
+      "score": 0.999977272,
+      "source_file": "apps/web/migrations/0006_person_academic_history.sql",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
+  "version": 1
+}

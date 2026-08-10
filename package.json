@@ -26,6 +26,8 @@
     "migration:files:bulk": "node scripts/import-person-files.mjs",
     "migration:school:dry-run": "node scripts/school-operations-dry-run.mjs",
     "migration:school:import": "node scripts/import-school-operations.mjs",
+    "migration:enrollment:dry-run": "node scripts/student-enrollment-dry-run.mjs",
+    "migration:enrollment:import": "node scripts/import-student-enrollments.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

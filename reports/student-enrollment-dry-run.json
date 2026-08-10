@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "mode": "student_enrollment_dry_run",
+  "generatedAt": "2026-08-10T21:50:19.298Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": [
+      "beneficiary_class",
+      "beneficiary",
+      "session",
+      "school",
+      "class",
+      "school_house"
+    ],
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "inventory": {
+    "sourceRows": 25427,
+    "selectedEnrollments": 23384,
+    "supersededRows": 2043,
+    "multirowStudentSessions": 1889,
+    "changedSchool": 750,
+    "changedClass": 1757,
+    "changedHouse": 440,
+    "changedRoll": 0,
+    "sameDateDuplicates": 33,
+    "observedOfferings": 1026
+  },
+  "completeness": {
+    "enrollments": 23384,
+    "missingPeople": 0,
+    "missingSessions": 0,
+    "missingClasses": 0,
+    "missingSchools": 0,
+    "missingSchoolHouses": 0,
+    "unmappedSchool": 1,
+    "missingRoll": 23384,
+    "missingResult": 23383,
+    "missingBoardRegistration": 23384
+  },
+  "dateReview": {
+    "beforeSession": 0,
+    "afterSession": 6343
+  },
+  "sessions": [
+    {
+      "name": "2011",
+      "enrollments": 4547,
+      "schools": 5,
+      "classes": 60,
+      "offerings": 102,
+      "unmappedSchool": 1
+    },
+    {
+      "name": "2012",
+      "enrollments": 2143,
+      "schools": 4,
+      "classes": 64,
+      "offerings": 89,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2013",
+      "enrollments": 2068,
+      "schools": 4,
+      "classes": 53,
+      "offerings": 95,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2014",
+      "enrollments": 2128,
+      "schools": 4,
+      "classes": 56,
+      "offerings": 91,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2015",
+      "enrollments": 2298,
+      "schools": 4,
+      "classes": 58,
+      "offerings": 94,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2016",
+      "enrollments": 185,
+      "schools": 1,
+      "classes": 6,
+      "offerings": 6,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2017",
+      "enrollments": 1,
+      "schools": 1,
+      "classes": 1,
+      "offerings": 1,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2018",
+      "enrollments": 0,
+      "schools": 0,
+      "classes": 0,
+      "offerings": 0,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2019",
+      "enrollments": 0,
+      "schools": 0,
+      "classes": 0,
+      "offerings": 0,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2020",
+      "enrollments": 1496,
+      "schools": 5,
+      "classes": 47,
+      "offerings": 77,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2021",
+      "enrollments": 1526,
+      "schools": 5,
+      "classes": 47,
+      "offerings": 80,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2022",
+      "enrollments": 1519,
+      "schools": 4,
+      "classes": 44,
+      "offerings": 76,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2023",
+      "enrollments": 1641,
+      "schools": 5,
+      "classes": 56,
+      "offerings": 98,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2024",
+      "enrollments": 1335,
+      "schools": 4,
+      "classes": 43,
+      "offerings": 74,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2025",
+      "enrollments": 1258,
+      "schools": 4,
+      "classes": 38,
+      "offerings": 73,
+      "unmappedSchool": 0
+    },
+    {
+      "name": "2026",
+      "enrollments": 1239,
+      "schools": 5,
+      "classes": 36,
+      "offerings": 70,
+      "unmappedSchool": 0
+    }
+  ],
+  "proposedPolicy": {
+    "selectionRule": "One record per person and session: latest source date, breaking same-date ties with greatest source row ID.",
+    "importedStatus": "recorded",
+    "importedStatusMeaning": "The legacy source records an allocation but does not provide an enrollment lifecycle status.",
+    "suspiciousDates": "Preserve as source-authoritative and expose for later cleanup.",
+    "sourceRowsRemainInAcademicHistory": true
+  }
+}

@@ -41,3 +41,10 @@
 - [x] Add the persisted inline academic-session switcher to the application header.
 - [x] Build the read-only session overview and student allocation list.
 - [x] Link student allocations back to the existing People Registry profile.
+- [x] Reconcile one canonical student enrollment per person and session without
+      discarding the superseded source rows.
+- [x] Add read-only school directories and observed class rosters.
+- [ ] Confirm enrollment lifecycle meanings with THS before enabling create,
+      transfer, withdrawal, completion, or promotion workflows.
+- [ ] Add attendance after the enrollment lifecycle has been confirmed.
+- [ ] Add assessments, marks, results, and promotion.

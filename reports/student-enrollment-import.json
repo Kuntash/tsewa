@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "mode": "import",
+  "completedAt": "2026-08-10T22:07:06Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false
+  },
+  "source": {
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "openedReadOnly": true,
+    "unchanged": true
+  },
+  "target": {
+    "type": "remote",
+    "databaseId": "f6dc8a9f-5eb3-4ae7-b9f1-88645634a608",
+    "organizationSlug": "tibetan-homes-foundation"
+  },
+  "result": {
+    "enrollments": 23384,
+    "offerings": 1026,
+    "legacyRecorded": 23384,
+    "enrollments2026": 1239,
+    "rosters2026": 70,
+    "batchId": "student-enrollment-import-7738b8e4eebad446-v1"
+  },
+  "temporaryPersonalDataRemoved": true
+}
