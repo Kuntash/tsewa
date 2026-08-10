@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "mode": "dry_run",
+  "generatedAt": "2026-08-10T21:01:21.796Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": ["session", "school", "class", "house", "school_house", "beneficiary_class"],
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "inventory": {
+    "academicRows": 25427,
+    "peopleWithAcademicHistory": 7982,
+    "referencedSessions": 14,
+    "referencedSchools": 6,
+    "referencedClasses": 76,
+    "referencedSchoolHouses": 29,
+    "masterCounts": {
+      "sessions": 16,
+      "schools": 9,
+      "classes": 88,
+      "houses": 6,
+      "schoolHouseLinks": 40
+    },
+    "sessions": [
+      {
+        "sourceSessionId": 1,
+        "name": "2011",
+        "startsOn": "2010-01-01",
+        "endsOn": "2011-01-01",
+        "academicRows": 6200,
+        "people": 4547
+      },
+      {
+        "sourceSessionId": 2,
+        "name": "2012",
+        "startsOn": "2012-01-01",
+        "endsOn": "2012-12-31",
+        "academicRows": 2176,
+        "people": 2143
+      },
+      {
+        "sourceSessionId": 3,
+        "name": "2013",
+        "startsOn": "2013-01-01",
+        "endsOn": "2013-12-31",
+        "academicRows": 2116,
+        "people": 2068
+      },
+      {
+        "sourceSessionId": 4,
+        "name": "2014",
+        "startsOn": "2014-01-01",
+        "endsOn": "2014-12-31",
+        "academicRows": 2178,
+        "people": 2128
+      },
+      {
+        "sourceSessionId": 5,
+        "name": "2015",
+        "startsOn": "2015-01-01",
+        "endsOn": "2015-12-31",
+        "academicRows": 2415,
+        "people": 2298
+      },
+      {
+        "sourceSessionId": 6,
+        "name": "2016",
+        "startsOn": "2016-01-01",
+        "endsOn": "2016-12-31",
+        "academicRows": 185,
+        "people": 185
+      },
+      {
+        "sourceSessionId": 7,
+        "name": "2017",
+        "startsOn": "2017-01-01",
+        "endsOn": "2017-12-31",
+        "academicRows": 1,
+        "people": 1
+      },
+      {
+        "sourceSessionId": 8,
+        "name": "2018",
+        "startsOn": "2018-01-01",
+        "endsOn": "2018-12-31",
+        "academicRows": 0,
+        "people": 0
+      },
+      {
+        "sourceSessionId": 9,
+        "name": "2019",
+        "startsOn": "2019-01-01",
+        "endsOn": "2019-12-31",
+        "academicRows": 0,
+        "people": 0
+      },
+      {
+        "sourceSessionId": 10,
+        "name": "2020",
+        "startsOn": "2020-01-01",
+        "endsOn": "2020-12-31",
+        "academicRows": 1498,
+        "people": 1496
+      },
+      {
+        "sourceSessionId": 11,
+        "name": "2021",
+        "startsOn": "2021-01-01",
+        "endsOn": "2021-12-31",
+        "academicRows": 1536,
+        "people": 1526
+      },
+      {
+        "sourceSessionId": 12,
+        "name": "2022",
+        "startsOn": "2022-01-01",
+        "endsOn": "2022-12-31",
+        "academicRows": 1552,
+        "people": 1519
+      },
+      {
+        "sourceSessionId": 13,
+        "name": "2023",
+        "startsOn": "2023-01-01",
+        "endsOn": "2023-12-31",
+        "academicRows": 1651,
+        "people": 1641
+      },
+      {
+        "sourceSessionId": 14,
+        "name": "2024",
+        "startsOn": "2024-01-01",
+        "endsOn": "2024-12-31",
+        "academicRows": 1367,
+        "people": 1335
+      },
+      {
+        "sourceSessionId": 15,
+        "name": "2025",
+        "startsOn": "2025-01-01",
+        "endsOn": "2025-12-31",
+        "academicRows": 1302,
+        "people": 1258
+      },
+      {
+        "sourceSessionId": 1015,
+        "name": "2026",
+        "startsOn": "2026-01-02",
+        "endsOn": "2026-12-31",
+        "academicRows": 1250,
+        "people": 1239
+      }
+    ],
+    "latestSession": {
+      "name": "2026",
+      "startsOn": "2026-01-02",
+      "endsOn": "2026-12-31",
+      "academicRows": 1250,
+      "students": 1239,
+      "schools": 5,
+      "classes": 36,
+      "schoolHouses": 19,
+      "supersededSameSessionRows": 11
+    }
+  },
+  "reconciliation": {
+    "missingPeople": 0,
+    "missingClasses": 0,
+    "missingSessions": 0,
+    "missingSchools": 1,
+    "missingSchoolHouses": 0
+  },
+  "proposedPolicy": {
+    "sessionIsSecurityBoundary": false,
+    "organizationIsSecurityBoundary": true,
+    "peopleRegistrySessionScoped": false,
+    "schoolOperationsSessionScoped": true,
+    "latestRecordRule": "Latest source date, breaking same-date ties with greatest source row ID."
+  }
+}

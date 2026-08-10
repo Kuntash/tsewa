@@ -32,3 +32,11 @@
 - [x] Add authenticated, streamed document and photo delivery.
 - [x] Run a one-person D1/R2 pilot before bulk migration.
 - [ ] Review the pilot in production before migrating the remaining files.
+
+## School Operations
+
+- [x] Reconcile legacy sessions, school/class/house masters, and academic allocations.
+- [ ] Import the THS calendar-year session catalog and correct the seeded 2026 session.
+- [ ] Add the persisted inline academic-session switcher to the application header.
+- [ ] Build the read-only session overview and student allocation list.
+- [ ] Link student allocations back to the existing People Registry profile.

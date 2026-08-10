@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 71 files · ~96,213 words
+- 75 files · ~97,833 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2378 nodes · 2769 edges · 189 communities (39 shown, 150 thin omitted)
+- 2398 nodes · 2791 edges · 194 communities (44 shown, 150 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `20222144`
+- Built from commit: `653eea31`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -196,18 +196,23 @@
 - scripts
 - web/package.json
 - Person files migration
-- @fontsource-variable/dm-sans
+- school-operations-dry-run.mjs
 - @hugeicons/core-free-icons
 - @hugeicons/react
 - react-dom
 - tailwind-merge
 - pre-commit
 - install-git-hooks.sh
+- person-files.mjs
+- person-files-dry-run.mjs
+- School Operations vertical slice
+- hashR2Object
+- better-auth
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
 2. `Event` - 25 edges
-3. `scripts` - 23 edges
+3. `scripts` - 24 edges
 4. `Console` - 21 edges
 5. `getRuntimeEnv()` - 18 edges
 6. `organization` - 17 edges
@@ -231,7 +236,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (189 total, 150 thin omitted)
+## Communities (194 total, 150 thin omitted)
 
 ### Community 0 - "worker-configuration.d.ts"
 Cohesion: 0.00
@@ -255,7 +260,7 @@ Nodes (20): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardC
 
 ### Community 5 - "scripts"
 Cohesion: 0.06
-Nodes (34): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+26 more)
+Nodes (35): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+27 more)
 
 ### Community 6 - "cn"
 Cohesion: 0.13
@@ -291,7 +296,7 @@ Nodes (19): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), Pers
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.12
@@ -362,12 +367,12 @@ Cohesion: 0.33
 Nodes (5): Deployment record, Family and relationship migration, Local workflow, Remote gate, Source tables
 
 ### Community 139 - "Tsewa TODO"
-Cohesion: 0.33
-Nodes (5): Account and email follow-ups, Documents and media migration, Invitation UX follow-ups, People Registry migration, Tsewa TODO
+Cohesion: 0.29
+Nodes (6): Account and email follow-ups, Documents and media migration, Invitation UX follow-ups, People Registry migration, School Operations, Tsewa TODO
 
 ### Community 142 - "import-person-files.mjs"
-Cohesion: 0.06
-Nodes (43): buildImportSql(), chunkSize, concurrency, confirmedDatabaseId, database, expectedFileCount, hashR2Object(), options (+35 more)
+Cohesion: 0.09
+Nodes (20): buildImportSql(), chunkSize, concurrency, confirmedDatabaseId, database, expectedFileCount, options, organizationSlug (+12 more)
 
 ### Community 178 - "organization"
 Cohesion: 0.13
@@ -385,8 +390,28 @@ Nodes (5): imports, license, name, private, type
 Cohesion: 0.29
 Nodes (6): Access control, Dry run, One-person pilot, Person files migration, Preservation policy, Resumable bulk import
 
+### Community 182 - "school-operations-dry-run.mjs"
+Cohesion: 0.18
+Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+
+### Community 189 - "person-files.mjs"
+Cohesion: 0.33
+Nodes (10): objectExtension(), optionalText(), readPersonFiles(), requiredOption(), requiredText(), sha256File(), SOURCE_SYSTEM, stablePersonId() (+2 more)
+
+### Community 190 - "person-files-dry-run.mjs"
+Cohesion: 0.20
+Nodes (9): DEFAULT_SOURCE_DATABASE, parseArguments(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath (+1 more)
+
+### Community 191 - "School Operations vertical slice"
+Cohesion: 0.33
+Nodes (5): Academic-session behavior, API boundary, Migration sequencing, School Operations vertical slice, Slice 1: read-only students
+
+### Community 192 - "hashR2Object"
+Cohesion: 0.83
+Nodes (4): hashR2Object(), relayObject(), spawnWrangler(), waitForProcess()
+
 ## Knowledge Gaps
-- **1114 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1109 more)
+- **1125 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1120 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -400,7 +425,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Table` connect `Table` to `worker-configuration.d.ts`?**
   _High betweenness centrality (0.016) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1114 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1125 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**

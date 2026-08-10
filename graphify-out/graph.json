@@ -810,8 +810,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "apps_web_package_dependencies_fontsource_variable_dm_sans",
-      "community": 182,
-      "community_name": "@fontsource-variable/dm-sans",
+      "community": 14,
+      "community_name": "dependencies",
       "norm_label": "@fontsource-variable/dm-sans"
     },
     {
@@ -821,8 +821,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "fontsource_variable_dm_sans",
-      "community": 182,
-      "community_name": "@fontsource-variable/dm-sans",
+      "community": 14,
+      "community_name": "dependencies",
       "norm_label": "@fontsource-variable/dm-sans"
     },
     {
@@ -942,8 +942,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "apps_web_package_dependencies_better_auth",
-      "community": 14,
-      "community_name": "dependencies",
+      "community": 193,
+      "community_name": "better-auth",
       "norm_label": "better-auth"
     },
     {
@@ -953,8 +953,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "better_auth",
-      "community": 14,
-      "community_name": "dependencies",
+      "community": 193,
+      "community_name": "better-auth",
       "norm_label": "better-auth"
     },
     {
@@ -26041,10 +26041,21 @@
       "norm_label": "migration:files:bulk"
     },
     {
-      "label": "graph:update",
+      "label": "migration:school:dry-run",
       "file_type": "code",
       "source_file": "package.json",
       "source_location": "L27",
+      "_origin": "ast",
+      "id": "package_scripts_migration_school_dry_run",
+      "community": 5,
+      "community_name": "scripts",
+      "norm_label": "migration:school:dry-run"
+    },
+    {
+      "label": "graph:update",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "package_scripts_graph_update",
       "community": 5,
@@ -26055,7 +26066,7 @@
       "label": "setup:hooks",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L28",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "package_scripts_setup_hooks",
       "community": 5,
@@ -26066,7 +26077,7 @@
       "label": "setup:vp",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "package_scripts_setup_vp",
       "community": 5,
@@ -26077,7 +26088,7 @@
       "label": "devDependencies",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L31",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "package_devdependencies",
       "community": 5,
@@ -26088,7 +26099,7 @@
       "label": "vite-plus",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "package_devdependencies_vite_plus",
       "community": 5,
@@ -26099,7 +26110,7 @@
       "label": "vite-plus",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "vite_plus",
       "community": 5,
@@ -26110,7 +26121,7 @@
       "label": "engines",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L34",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "package_engines",
       "community": 5,
@@ -26121,7 +26132,7 @@
       "label": "node",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L35",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "package_engines_node",
       "community": 5,
@@ -26132,7 +26143,7 @@
       "label": "packageManager",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L37",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "package_packagemanager",
       "community": 5,
@@ -27585,8 +27596,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_import_person_files_relayobject",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 192,
+      "community_name": "hashR2Object",
       "norm_label": "relayobject()"
     },
     {
@@ -27597,8 +27608,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_import_person_files_hashr2object",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 192,
+      "community_name": "hashR2Object",
       "norm_label": "hashr2object()"
     },
     {
@@ -27609,8 +27620,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_import_person_files_spawnwrangler",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 192,
+      "community_name": "hashR2Object",
       "norm_label": "spawnwrangler()"
     },
     {
@@ -27621,8 +27632,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_import_person_files_waitforprocess",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 192,
+      "community_name": "hashR2Object",
       "norm_label": "waitforprocess()"
     },
     {
@@ -28011,8 +28022,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_lib_person_files",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "person-files.mjs"
     },
     {
@@ -28022,8 +28033,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "scripts_lib_person_files_source_system",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "source_system"
     },
     {
@@ -28033,8 +28044,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "scripts_lib_person_files_default_source_database",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "default_source_database"
     },
     {
@@ -28045,8 +28056,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_readpersonfiles",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "readpersonfiles()"
     },
     {
@@ -28057,8 +28068,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_stablepersonid",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "stablepersonid()"
     },
     {
@@ -28069,8 +28080,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_stableuuid",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "stableuuid()"
     },
     {
@@ -28081,8 +28092,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_parsearguments",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "parsearguments()"
     },
     {
@@ -28093,8 +28104,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_requiredoption",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "requiredoption()"
     },
     {
@@ -28129,8 +28140,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_sha256file",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "sha256file()"
     },
     {
@@ -28141,8 +28152,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_objectextension",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "objectextension()"
     },
     {
@@ -28153,8 +28164,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_withextension",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "withextension()"
     },
     {
@@ -28165,8 +28176,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_requiredtext",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "requiredtext()"
     },
     {
@@ -28177,8 +28188,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_lib_person_files_optionaltext",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 189,
+      "community_name": "person-files.mjs",
       "norm_label": "optionaltext()"
     },
     {
@@ -28409,8 +28420,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_person_files_dry_run",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "person-files-dry-run.mjs"
     },
     {
@@ -28420,8 +28431,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_repositoryroot",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "repositoryroot"
     },
     {
@@ -28431,8 +28442,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_options",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "options"
     },
     {
@@ -28442,8 +28453,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_sourcepath",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "sourcepath"
     },
     {
@@ -28453,8 +28464,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_outputpath",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "outputpath"
     },
     {
@@ -28464,8 +28475,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_database",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "database"
     },
     {
@@ -28476,8 +28487,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_assertaggregateonly",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "assertaggregateonly()"
     },
     {
@@ -28488,8 +28499,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_visit",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "visit()"
     },
     {
@@ -28500,8 +28511,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "scripts_person_files_dry_run_sha256",
-      "community": 142,
-      "community_name": "import-person-files.mjs",
+      "community": 190,
+      "community_name": "person-files-dry-run.mjs",
       "norm_label": "sha256()"
     },
     {
@@ -28664,6 +28675,144 @@
       "id": "scripts_placement_history_dry_run_sha256",
       "community": 30,
       "community_name": "placement-history-dry-run.mjs",
+      "norm_label": "sha256()"
+    },
+    {
+      "label": "school-operations-dry-run.mjs",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "school-operations-dry-run.mjs"
+    },
+    {
+      "label": "repositoryRoot",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_repositoryroot",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "repositoryroot"
+    },
+    {
+      "label": "options",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_options",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "options"
+    },
+    {
+      "label": "sourcePath",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_sourcepath",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "sourcepath"
+    },
+    {
+      "label": "outputPath",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_outputpath",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "outputpath"
+    },
+    {
+      "label": "database",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_database",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "database"
+    },
+    {
+      "label": "rows()",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L174",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_rows",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "rows()"
+    },
+    {
+      "label": "row()",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L178",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_row",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "row()"
+    },
+    {
+      "label": "numberValues()",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L182",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_numbervalues",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "numbervalues()"
+    },
+    {
+      "label": "assertAggregateOnly()",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L186",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_assertaggregateonly",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "assertaggregateonly()"
+    },
+    {
+      "label": "visit()",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L201",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_visit",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
+      "norm_label": "visit()"
+    },
+    {
+      "label": "sha256()",
+      "file_type": "code",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L213",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "scripts_school_operations_dry_run_sha256",
+      "community": 182,
+      "community_name": "school-operations-dry-run.mjs",
       "norm_label": "sha256()"
     },
     {
@@ -28852,6 +29001,17 @@
       "community": 139,
       "community_name": "Tsewa TODO",
       "norm_label": "documents and media migration"
+    },
+    {
+      "label": "School Operations",
+      "file_type": "document",
+      "source_file": "TODO.md",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "todo_school_operations",
+      "community": 139,
+      "community_name": "Tsewa TODO",
+      "norm_label": "school operations"
     },
     {
       "label": "web/README.md",
@@ -29215,6 +29375,72 @@
       "community": 181,
       "community_name": "Person files migration",
       "norm_label": "access control"
+    },
+    {
+      "label": "school-operations-slice.md",
+      "file_type": "document",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_school_operations_slice",
+      "community": 191,
+      "community_name": "School Operations vertical slice",
+      "norm_label": "school-operations-slice.md"
+    },
+    {
+      "label": "School Operations vertical slice",
+      "file_type": "document",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_school_operations_slice_school_operations_vertical_slice",
+      "community": 191,
+      "community_name": "School Operations vertical slice",
+      "norm_label": "school operations vertical slice"
+    },
+    {
+      "label": "Academic-session behavior",
+      "file_type": "document",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "docs_school_operations_slice_academic_session_behavior",
+      "community": 191,
+      "community_name": "School Operations vertical slice",
+      "norm_label": "academic-session behavior"
+    },
+    {
+      "label": "Slice 1: read-only students",
+      "file_type": "document",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "docs_school_operations_slice_slice_1_read_only_students",
+      "community": 191,
+      "community_name": "School Operations vertical slice",
+      "norm_label": "slice 1: read-only students"
+    },
+    {
+      "label": "API boundary",
+      "file_type": "document",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "docs_school_operations_slice_api_boundary",
+      "community": 191,
+      "community_name": "School Operations vertical slice",
+      "norm_label": "api boundary"
+    },
+    {
+      "label": "Migration sequencing",
+      "file_type": "document",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L63",
+      "_origin": "ast",
+      "id": "docs_school_operations_slice_migration_sequencing",
+      "community": 191,
+      "community_name": "School Operations vertical slice",
+      "norm_label": "migration sequencing"
     }
   ],
   "links": [
@@ -56111,7 +56337,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package",
@@ -56122,7 +56348,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package",
@@ -56155,7 +56381,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package",
@@ -56276,7 +56502,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L27",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -56408,6 +56634,17 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "package_scripts",
+      "target": "package_scripts_migration_school_dry_run",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
       "source_location": "L8",
       "weight": 1.0,
       "_origin": "ast",
@@ -56419,7 +56656,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -56430,7 +56667,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_scripts",
@@ -56452,7 +56689,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_devdependencies",
@@ -56463,7 +56700,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -56475,7 +56712,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_engines",
@@ -58968,6 +59205,18 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_lib_person_files",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -58976,6 +59225,18 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_person_files_dry_run",
+      "target": "scripts_lib_person_files_default_source_database",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
       "target": "scripts_lib_person_files_default_source_database",
       "confidence_score": 1.0
     },
@@ -59084,6 +59345,18 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "scripts_person_files_dry_run",
+      "target": "scripts_lib_person_files_parsearguments",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
       "target": "scripts_lib_person_files_parsearguments",
       "confidence_score": 1.0
     },
@@ -59663,6 +59936,139 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L186",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_assertaggregateonly",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_database",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L182",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_numbervalues",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_options",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_outputpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_repositoryroot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L178",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_row",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L174",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_rows",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L213",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_sha256",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_sourcepath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L201",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run",
+      "target": "scripts_school_operations_dry_run_visit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/school-operations-dry-run.mjs",
+      "source_location": "L196",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_school_operations_dry_run_assertaggregateonly",
+      "target": "scripts_school_operations_dry_run_visit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
       "source_location": "L3",
       "weight": 1.0,
@@ -59801,6 +60207,17 @@
       "_origin": "ast",
       "source": "todo_tsewa_todo",
       "target": "todo_people_registry_migration",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "TODO.md",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "todo_tsewa_todo",
+      "target": "todo_school_operations",
       "confidence_score": 1.0
     },
     {
@@ -60121,8 +60538,63 @@
       "source": "docs_person_files_migration_person_files_migration",
       "target": "docs_person_files_migration_resumable_bulk_import",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_school_operations_slice",
+      "target": "docs_school_operations_slice_school_operations_vertical_slice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_school_operations_slice_school_operations_vertical_slice",
+      "target": "docs_school_operations_slice_academic_session_behavior",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L52",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_school_operations_slice_school_operations_vertical_slice",
+      "target": "docs_school_operations_slice_api_boundary",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L63",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_school_operations_slice_school_operations_vertical_slice",
+      "target": "docs_school_operations_slice_migration_sequencing",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/school-operations-slice.md",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_school_operations_slice_school_operations_vertical_slice",
+      "target": "docs_school_operations_slice_slice_1_read_only_students",
+      "confidence_score": 1.0
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "20222144c829c338d95c2d65bca260e3227ef206"
+  "built_at_commit": "653eea318d8b1a94be1c6f46acd06e83632511dc"
 }

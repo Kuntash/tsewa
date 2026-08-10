@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786394866.4588091,
-    "ast_hash": "e198a5c2deba2ffb56331588c49a4970",
+    "mtime": 1786395673.0692322,
+    "ast_hash": "7b42a9944cb8566e49cfaf9069c51654",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786393941.6875908,
-    "ast_hash": "bf757b12a51f876a7b1eff4e568172ae",
+    "mtime": 1786395700.086996,
+    "ast_hash": "b9da1572d88e61b462b65358aff54a13",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -292,6 +292,16 @@
   "docs/person-files-migration.md": {
     "mtime": 1786394866.4590435,
     "ast_hash": "fa5474c7c951afa2f1ed28b0aff66cfa",
+    "semantic_hash": ""
+  },
+  "scripts/school-operations-dry-run.mjs": {
+    "mtime": 1786395679.7077923,
+    "ast_hash": "0c05b59d6629a8769795224419e26f10",
+    "semantic_hash": ""
+  },
+  "docs/school-operations-slice.md": {
+    "mtime": 1786395673.0693476,
+    "ast_hash": "ec23fa39dc2489edcbb22b3d46699ccc",
     "semantic_hash": ""
   }
 }

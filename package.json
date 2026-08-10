@@ -24,6 +24,7 @@
     "migration:files:dry-run": "node scripts/person-files-dry-run.mjs",
     "migration:files:import": "node scripts/import-person-files.mjs",
     "migration:files:bulk": "node scripts/import-person-files.mjs",
+    "migration:school:dry-run": "node scripts/school-operations-dry-run.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"
