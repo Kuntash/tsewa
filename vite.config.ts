@@ -5,7 +5,11 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   fmt: {
-    ignorePatterns: ["apps/web/src/routeTree.gen.ts", "apps/web/worker-configuration.d.ts"],
+    ignorePatterns: [
+      "apps/web/src/routeTree.gen.ts",
+      "apps/web/worker-configuration.d.ts",
+      "graphify-out/**",
+    ],
   },
   lint: {
     options: {

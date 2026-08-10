@@ -15,9 +15,13 @@ Open-source operations software for schools and care communities. This repositor
 ```bash
 vp install
 cp apps/web/.dev.vars.example apps/web/.dev.vars
+vp run setup:hooks
 vp run db:migrate:local
 vp run dev
 ```
+
+The tracked pre-commit hook refreshes and stages the Tsewa-only knowledge graph
+in `graphify-out/` so each commit carries the graph for the code it contains.
 
 The local app runs at `http://localhost:3000`.
 

@@ -28,5 +28,7 @@
 
 ## Documents and media migration
 
-- [ ] Re-extract legacy document and photo blobs only when R2 migration work resumes.
-- [ ] Add authenticated document delivery after object hashes and D1 metadata reconcile.
+- [x] Reconcile all legacy document and photo metadata without generic-image filtering.
+- [x] Add authenticated, streamed document and photo delivery.
+- [x] Run a one-person D1/R2 pilot before bulk migration.
+- [ ] Review the pilot in production before migrating the remaining files.

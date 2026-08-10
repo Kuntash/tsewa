@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "mode": "dry_run",
+  "generatedAt": "2026-08-10T20:29:22.321Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false,
+    "selectedRowValues": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": ["asset", "beneficiary", "document", "staff"],
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "reconciliation": {
+    "eligibleFileRows": 46938,
+    "eligibleByteCount": 17397012993,
+    "peopleWithFiles": 7680,
+    "missingAssetReferences": 0,
+    "documentRowsWithoutAssets": 1,
+    "categoryCounts": {
+      "profile_photo": 7620,
+      "parents_photo": 6919,
+      "guardian_1_photo": 7085,
+      "guardian_2_photo": 6479,
+      "document": 18835
+    },
+    "categoryBytes": {
+      "profile_photo": 605725671,
+      "parents_photo": 14714238,
+      "guardian_1_photo": 306155264,
+      "guardian_2_photo": 214155509,
+      "document": 16256262311
+    }
+  },
+  "policy": {
+    "genericImageDetectionApplied": false,
+    "preservationRule": "Every referenced asset is retained without placeholder classification."
+  }
+}

@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+if ! command -v graphify >/dev/null 2>&1; then
+  echo "graphify is required to refresh graphify-out before committing." >&2
+  echo "Install it, then retry the commit." >&2
+  exit 1
+fi
+
+echo "Refreshing the Tsewa code graph..."
+graphify update "$repository_root"
+git add graphify-out
+

@@ -2,6 +2,8 @@ import {
   AlertTriangle,
   CalendarDays,
   Database,
+  ExternalLink,
+  FileText,
   Fingerprint,
   GraduationCap,
   HeartHandshake,
@@ -102,6 +104,21 @@ type Profile = {
     kind: "child" | "elderly" | "staff";
     status: "active" | "inactive";
   }>;
+  files: Array<{
+    id: string;
+    category:
+      | "profile_photo"
+      | "parents_photo"
+      | "guardian_1_photo"
+      | "guardian_2_photo"
+      | "document";
+    label: string;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+    isPrimary: boolean;
+    url: string;
+  }>;
 };
 
 export function PersonProfileSheet({
@@ -183,6 +200,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
   const currentPlacement = profile.placements.find((placement) => placement.isCurrent);
   const latestAcademicRecord = profile.academicRecords.find((record) => record.isLatest);
+  const profilePhoto = profile.files.find((file) => file.category === "profile_photo");
 
   return (
     <>
@@ -191,9 +209,19 @@ function ProfileContent({ profile }: { profile: Profile }) {
           Longitudinal record · Overview
         </p>
         <div className="mt-8 flex items-start gap-4 sm:gap-5">
-          <div className="grid size-16 shrink-0 place-items-center rounded-2xl border bg-background/90 text-lg font-semibold text-primary shadow-sm sm:size-20 sm:text-xl">
-            {initials(profile.displayName)}
-          </div>
+          {profilePhoto ? (
+            <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-2xl border bg-muted shadow-sm sm:w-20">
+              <img
+                alt={`${profile.displayName} profile`}
+                className="size-full object-cover"
+                src={profilePhoto.url}
+              />
+            </div>
+          ) : (
+            <div className="grid size-16 shrink-0 place-items-center rounded-2xl border bg-background/90 text-lg font-semibold text-primary shadow-sm sm:size-20 sm:text-xl">
+              {initials(profile.displayName)}
+            </div>
+          )}
           <div className="min-w-0 pt-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="rounded-full capitalize" variant="outline">
@@ -272,6 +300,10 @@ function ProfileContent({ profile }: { profile: Profile }) {
           <Separator />
 
           <FamilyProfileSection profile={profile} />
+
+          <Separator />
+
+          <PersonFilesSection profile={profile} />
 
           <Separator />
 
@@ -509,6 +541,93 @@ function ProfileContent({ profile }: { profile: Profile }) {
         Read-only profile · Source values cannot be edited in this slice
       </footer>
     </>
+  );
+}
+
+function PersonFilesSection({ profile }: { profile: Profile }) {
+  const relatedImages = profile.files.filter(
+    (file) => file.category !== "profile_photo" && file.category !== "document",
+  );
+  const documents = profile.files.filter((file) => file.category === "document");
+
+  return (
+    <ProfileSection icon={FileText} label="Media & documents">
+      {!profile.files.length ? (
+        <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
+          No files have been migrated into this self-hosted instance yet.
+        </p>
+      ) : (
+        <div className="space-y-7">
+          {relatedImages.length ? (
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold">Related photos</h4>
+                <Badge className="rounded-full tabular-nums" variant="outline">
+                  {relatedImages.length}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {relatedImages.map((file) => (
+                  <a
+                    className="group overflow-hidden rounded-2xl border bg-card shadow-xs transition-colors hover:border-primary/35"
+                    href={file.url}
+                    key={file.id}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <div className="aspect-[4/3] overflow-hidden bg-muted/60">
+                      <img
+                        alt={file.label}
+                        className="size-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                        loading="lazy"
+                        src={file.url}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+                      <p className="truncate text-xs font-medium">{file.label}</p>
+                      <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {documents.length ? (
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold">Documents</h4>
+                <Badge className="rounded-full tabular-nums" variant="outline">
+                  {documents.length}
+                </Badge>
+              </div>
+              <div className="overflow-hidden rounded-2xl border bg-card">
+                {documents.map((file, index) => (
+                  <a
+                    className={`flex min-h-16 items-center gap-3 px-3.5 py-3 transition-colors hover:bg-muted/45 sm:px-4 ${index ? "border-t" : ""}`}
+                    href={file.url}
+                    key={file.id}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                      <FileText className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{file.label}</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {file.contentType} · {formatBytes(file.byteSize)}
+                      </p>
+                    </div>
+                    <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </ProfileSection>
   );
 }
 
@@ -807,6 +926,12 @@ function initials(name: string): string {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatLegacyDate(value: string): string {

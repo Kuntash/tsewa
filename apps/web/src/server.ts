@@ -47,6 +47,7 @@ const peopleQuerySchema = z.object({
 });
 
 const personIdSchema = z.uuid();
+const fileIdSchema = z.uuid();
 
 type SignUpPayload = {
   user?: {
@@ -89,6 +90,11 @@ export default createServerEntry({
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
     if (personMatch) {
       return getPersonProfile(request, personMatch[1]);
+    }
+
+    const fileMatch = url.pathname.match(/^\/api\/files\/([^/]+)$/);
+    if (fileMatch) {
+      return getPersonFile(request, fileMatch[1]);
     }
 
     if (url.pathname === "/api/invitations/preview") {
@@ -400,9 +406,10 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   }
 
   const runtime = getRuntimeEnv();
-  const [person, placements, academicRecords, familyProfile, relationships] = await Promise.all([
-    runtime.DB.prepare(
-      `SELECT id, kind, status, identifier_kind AS identifierKind,
+  const [person, placements, academicRecords, familyProfile, relationships, files] =
+    await Promise.all([
+      runtime.DB.prepare(
+        `SELECT id, kind, status, identifier_kind AS identifierKind,
               primary_identifier AS primaryIdentifier, display_name AS displayName,
               gender, date_of_birth AS dateOfBirth,
               admitted_or_joined_on AS admittedOrJoinedOn,
@@ -416,52 +423,52 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
               CASE WHEN date(admitted_or_joined_on) < date(date_of_birth) THEN 1 ELSE 0 END AS eventBeforeBirth
        FROM person
        WHERE id = ? AND organization_id = ?`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{
-        id: string;
-        kind: "child" | "elderly" | "staff";
-        status: "active" | "inactive";
-        identifierKind: "admission" | "staff";
-        primaryIdentifier: string;
-        displayName: string;
-        gender: "female" | "male" | "other" | "unknown" | null;
-        dateOfBirth: string | null;
-        admittedOrJoinedOn: string | null;
-        campusOrLocation: string | null;
-        nationality: string | null;
-        photoReferencePresent: number;
-        sourceSystem: string;
-        sourceTable: string;
-        sourceId: string;
-        importedAt: string | null;
-        dateOfBirthMissing: number;
-        eventDateMissing: number;
-        eventDateBefore1900: number;
-        eventBeforeBirth: number;
-      }>(),
-    runtime.DB.prepare(
-      `SELECT id, home_name AS homeName, location_name AS locationName,
+      )
+        .bind(parsedId.data, context.organizationId)
+        .first<{
+          id: string;
+          kind: "child" | "elderly" | "staff";
+          status: "active" | "inactive";
+          identifierKind: "admission" | "staff";
+          primaryIdentifier: string;
+          displayName: string;
+          gender: "female" | "male" | "other" | "unknown" | null;
+          dateOfBirth: string | null;
+          admittedOrJoinedOn: string | null;
+          campusOrLocation: string | null;
+          nationality: string | null;
+          photoReferencePresent: number;
+          sourceSystem: string;
+          sourceTable: string;
+          sourceId: string;
+          importedAt: string | null;
+          dateOfBirthMissing: number;
+          eventDateMissing: number;
+          eventDateBefore1900: number;
+          eventBeforeBirth: number;
+        }>(),
+      runtime.DB.prepare(
+        `SELECT id, home_name AS homeName, location_name AS locationName,
               placement_type AS placementType, started_on AS startedOn,
               reason, remarks, is_current AS isCurrent, source_id AS sourceId
        FROM person_placement
        WHERE person_id = ? AND organization_id = ?
        ORDER BY is_current DESC, date(started_on) DESC, CAST(source_id AS INTEGER) DESC`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        homeName: string;
-        locationName: string | null;
-        placementType: string | null;
-        startedOn: string;
-        reason: string | null;
-        remarks: string | null;
-        isCurrent: number;
-        sourceId: string;
-      }>(),
-    runtime.DB.prepare(
-      `SELECT id, class_name AS className, class_level AS classLevel,
+      )
+        .bind(parsedId.data, context.organizationId)
+        .all<{
+          id: string;
+          homeName: string;
+          locationName: string | null;
+          placementType: string | null;
+          startedOn: string;
+          reason: string | null;
+          remarks: string | null;
+          isCurrent: number;
+          sourceId: string;
+        }>(),
+      runtime.DB.prepare(
+        `SELECT id, class_name AS className, class_level AS classLevel,
               class_section AS classSection, class_title AS classTitle,
               school_name AS schoolName, house_name AS houseName,
               academic_session AS academicSession, recorded_on AS recordedOn,
@@ -471,27 +478,27 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
        FROM person_academic_record
        WHERE person_id = ? AND organization_id = ?
        ORDER BY is_latest DESC, date(recorded_on) DESC, CAST(source_id AS INTEGER) DESC`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        className: string;
-        classLevel: number | null;
-        classSection: string | null;
-        classTitle: string | null;
-        schoolName: string | null;
-        houseName: string | null;
-        academicSession: string;
-        recordedOn: string;
-        result: string | null;
-        rollNumber: string | null;
-        boardRegistrationNumber: string | null;
-        description: string | null;
-        isLatest: number;
-        sourceId: string;
-      }>(),
-    runtime.DB.prepare(
-      `SELECT parentage_status AS parentageStatus,
+      )
+        .bind(parsedId.data, context.organizationId)
+        .all<{
+          id: string;
+          className: string;
+          classLevel: number | null;
+          classSection: string | null;
+          classTitle: string | null;
+          schoolName: string | null;
+          houseName: string | null;
+          academicSession: string;
+          recordedOn: string;
+          result: string | null;
+          rollNumber: string | null;
+          boardRegistrationNumber: string | null;
+          description: string | null;
+          isLatest: number;
+          sourceId: string;
+        }>(),
+      runtime.DB.prepare(
+        `SELECT parentage_status AS parentageStatus,
               mother_name AS motherName, father_name AS fatherName,
               mother_occupation AS motherOccupation,
               father_occupation AS fatherOccupation,
@@ -511,57 +518,108 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
               number_of_children AS numberOfChildren
        FROM person_family_profile
        WHERE person_id = ? AND organization_id = ?`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{
-        parentageStatus: string | null;
-        motherName: string | null;
-        fatherName: string | null;
-        motherOccupation: string | null;
-        fatherOccupation: string | null;
-        parentsPhone: string | null;
-        parentsPermanentAddress: string | null;
-        guardian1Name: string | null;
-        guardian1Address: string | null;
-        guardian1Email: string | null;
-        guardian1Phone: string | null;
-        guardian1Mobile: string | null;
-        guardian2Name: string | null;
-        guardian2Address: string | null;
-        guardian2Email: string | null;
-        guardian2Phone: string | null;
-        guardian2Mobile: string | null;
-        maritalStatus: string | null;
-        spouseName: string | null;
-        numberOfChildren: string | null;
-      }>(),
-    runtime.DB.prepare(
-      `SELECT relationship.id, relationship.relationship_type AS relationshipType,
+      )
+        .bind(parsedId.data, context.organizationId)
+        .first<{
+          parentageStatus: string | null;
+          motherName: string | null;
+          fatherName: string | null;
+          motherOccupation: string | null;
+          fatherOccupation: string | null;
+          parentsPhone: string | null;
+          parentsPermanentAddress: string | null;
+          guardian1Name: string | null;
+          guardian1Address: string | null;
+          guardian1Email: string | null;
+          guardian1Phone: string | null;
+          guardian1Mobile: string | null;
+          guardian2Name: string | null;
+          guardian2Address: string | null;
+          guardian2Email: string | null;
+          guardian2Phone: string | null;
+          guardian2Mobile: string | null;
+          maritalStatus: string | null;
+          spouseName: string | null;
+          numberOfChildren: string | null;
+        }>(),
+      runtime.DB.prepare(
+        `WITH reciprocal_relationships AS (
+         SELECT relationship.*,
+                CASE
+                  WHEN relationship.person_id = ? THEN relationship.related_person_id
+                  ELSE relationship.person_id
+                END AS counterpart_id
+         FROM person_relationship AS relationship
+         WHERE relationship.organization_id = ?
+           AND relationship.relationship_type = 'sibling'
+           AND (relationship.person_id = ? OR relationship.related_person_id = ?)
+       ), ranked_relationships AS (
+         SELECT reciprocal_relationships.*,
+                ROW_NUMBER() OVER (
+                  PARTITION BY counterpart_id
+                  ORDER BY
+                    CASE WHEN review_flag IS NULL THEN 1 ELSE 0 END,
+                    CAST(source_id AS INTEGER), id
+                ) AS relationship_rank
+         FROM reciprocal_relationships
+       )
+       SELECT relationship.id, relationship.relationship_type AS relationshipType,
               relationship.review_flag AS reviewFlag,
               related.id AS personId, related.display_name AS displayName,
               related.primary_identifier AS primaryIdentifier,
               related.identifier_kind AS identifierKind,
               related.kind, related.status
-       FROM person_relationship AS relationship
+       FROM ranked_relationships AS relationship
        JOIN person AS related
-         ON related.id = relationship.related_person_id
+         ON related.id = relationship.counterpart_id
         AND related.organization_id = relationship.organization_id
-       WHERE relationship.person_id = ? AND relationship.organization_id = ?
+       WHERE relationship.relationship_rank = 1
        ORDER BY related.display_name COLLATE NOCASE, relationship.source_id`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        relationshipType: "sibling";
-        reviewFlag: "self_reference" | "duplicate_source_link" | null;
-        personId: string;
-        displayName: string;
-        primaryIdentifier: string;
-        identifierKind: "admission" | "staff";
-        kind: "child" | "elderly" | "staff";
-        status: "active" | "inactive";
-      }>(),
-  ]);
+      )
+        .bind(parsedId.data, context.organizationId, parsedId.data, parsedId.data)
+        .all<{
+          id: string;
+          relationshipType: "sibling";
+          reviewFlag: "self_reference" | "duplicate_source_link" | null;
+          personId: string;
+          displayName: string;
+          primaryIdentifier: string;
+          identifierKind: "admission" | "staff";
+          kind: "child" | "elderly" | "staff";
+          status: "active" | "inactive";
+        }>(),
+      runtime.DB.prepare(
+        `SELECT id, category, label, file_name AS fileName,
+              content_type AS contentType, byte_size AS byteSize,
+              is_primary AS isPrimary
+       FROM person_file
+       WHERE person_id = ? AND organization_id = ?
+       ORDER BY
+         CASE category
+           WHEN 'profile_photo' THEN 0
+           WHEN 'parents_photo' THEN 1
+           WHEN 'guardian_1_photo' THEN 2
+           WHEN 'guardian_2_photo' THEN 3
+           ELSE 4
+         END,
+         label COLLATE NOCASE, source_id`,
+      )
+        .bind(parsedId.data, context.organizationId)
+        .all<{
+          id: string;
+          category:
+            | "profile_photo"
+            | "parents_photo"
+            | "guardian_1_photo"
+            | "guardian_2_photo"
+            | "document";
+          label: string;
+          fileName: string;
+          contentType: string;
+          byteSize: number;
+          isPrimary: number;
+        }>(),
+    ]);
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
 
@@ -621,8 +679,59 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       })),
       family: familyProfile ?? null,
       relationships: relationships.results,
+      files: files.results.map((file) => ({
+        ...file,
+        isPrimary: Boolean(file.isPrimary),
+        url: `/api/files/${file.id}`,
+      })),
     },
   });
+}
+
+async function getPersonFile(request: Request, fileId: string): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+
+  const parsedId = fileIdSchema.safeParse(fileId);
+  if (!parsedId.success) {
+    return Response.json({ error: "Invalid file ID" }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const file = await runtime.DB.prepare(
+    `SELECT r2_object_key AS r2ObjectKey, file_name AS fileName,
+            content_type AS contentType, byte_size AS byteSize
+     FROM person_file
+     WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<{
+      r2ObjectKey: string;
+      fileName: string;
+      contentType: string;
+      byteSize: number;
+    }>();
+  if (!file) return Response.json({ error: "File not found" }, { status: 404 });
+
+  const object = await runtime.FILES.get(file.r2ObjectKey);
+  if (!object) return Response.json({ error: "Stored file not found" }, { status: 404 });
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("Content-Type", file.contentType);
+  headers.set("Content-Length", String(object.size));
+  headers.set("Content-Disposition", inlineContentDisposition(file.fileName));
+  headers.set("Cache-Control", "private, max-age=300");
+  headers.set("ETag", object.httpEtag);
+  headers.set("X-Content-Type-Options", "nosniff");
+
+  return new Response(object.body, { headers });
+}
+
+function inlineContentDisposition(fileName: string): string {
+  const fallback = fileName.replaceAll(/[\r\n"\\]/g, "_").replaceAll(/[^\x20-\x7e]/g, "_");
+  return `inline; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
 async function getPlatformStatus(): Promise<Response> {
