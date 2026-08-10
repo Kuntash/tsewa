@@ -53,7 +53,7 @@
   "51": "R2Bucket",
   "52": "SqlStorageCursor",
   "53": "Vectorize",
-  "54": "button.tsx",
+  "54": "school-operations.tsx",
   "55": "Ai",
   "56": "AiSearchNamespace",
   "57": "ReadableStreamBYOBReader",
@@ -191,6 +191,7 @@
   "189": "person-files.mjs",
   "190": "person-files-dry-run.mjs",
   "191": "School Operations vertical slice",
-  "192": "hashR2Object",
-  "193": "better-auth"
+  "192": "import-school-operations.mjs",
+  "193": "sqlLiteral",
+  "194": "@fontsource-variable/dm-sans"
 }

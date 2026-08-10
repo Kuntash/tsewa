@@ -15,9 +15,9 @@ It should not hide or change People Registry identity, family, placement history
 files, organization administration, or account settings. Those records belong to
 the organization across sessions.
 
-Today the login selection only writes `user_preference.active_academic_session_id`.
-No People Registry query reads it, and the launchpad header is hard-coded. Setup
-creates one `2026–27` session, which is why the selector has one option.
+The login selection writes `user_preference.active_academic_session_id`. People
+Registry remains organization-wide, while School Operations reads the preference
+as its initial working session. The same preference can now be changed inline.
 
 The THS legacy source uses calendar-year sessions. It contains session masters
 from 2011 through 2026 with January-to-December boundaries. Before enabling School
@@ -60,9 +60,15 @@ The session ID is explicit in each request. The server must verify that it belon
 to the current member's organization; it must not trust the stored preference as
 authorization. Responses remain read-only and organization scoped.
 
-## Migration sequencing
+## Import result
 
-Preparation and local validation can happen while the person-file transfer runs.
-Do not apply the School Operations D1 migration remotely until that transfer has
-finished, so two production migration processes do not compete for the same D1
-database. The source inspection is read-only and aggregate-only.
+The production import completed on 2026-08-11 after pausing the resumable
+person-file transfer at a committed checkpoint. It imported 16 sessions, 9
+schools, 88 class masters, 6 houses, and 40 school-house links. All 25,427
+academic-history rows were retained. The seeded session was corrected in place,
+so saved user preferences remained valid.
+
+The source was opened read-only and its SHA-256 was verified before and after the
+import. The aggregate-only result is recorded in
+`reports/school-operations-import.json`. The person-file transfer was resumed
+after the D1 migration and application deployment.

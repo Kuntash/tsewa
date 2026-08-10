@@ -46,6 +46,21 @@ const peopleQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
 
+const schoolOverviewQuerySchema = z.object({
+  sessionId: z.uuid(),
+});
+
+const schoolStudentsQuerySchema = z.object({
+  sessionId: z.uuid(),
+  q: z.string().trim().max(100).default(""),
+  school: z.string().trim().max(160).default("all"),
+  className: z.string().trim().max(100).default("all"),
+  house: z.string().trim().max(100).default("all"),
+  status: z.enum(["all", "active", "inactive"]).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
 
@@ -85,6 +100,14 @@ export default createServerEntry({
 
     if (url.pathname === "/api/people") {
       return getPeopleRegistry(request);
+    }
+
+    if (url.pathname === "/api/school-operations/overview") {
+      return getSchoolOperationsOverview(request);
+    }
+
+    if (url.pathname === "/api/school-operations/students") {
+      return getSchoolOperationsStudents(request);
     }
 
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
@@ -263,7 +286,7 @@ async function bootstrapFirstOrganization(database: D1Database, userId: string):
 
 async function handlePlatformRequest(request: Request): Promise<Response> {
   if (request.method === "GET") {
-    return getPlatformStatus();
+    return getPlatformStatus(request);
   }
 
   if (request.method === "POST") {
@@ -271,6 +294,218 @@ async function handlePlatformRequest(request: Request): Promise<Response> {
   }
 
   return methodNotAllowed("GET, POST");
+}
+
+const schoolAllocationCte = `WITH ranked_allocations AS (
+  SELECT academic.*, ROW_NUMBER() OVER (
+    PARTITION BY academic.person_id
+    ORDER BY date(academic.recorded_on) DESC, CAST(academic.source_id AS INTEGER) DESC
+  ) AS session_rank
+  FROM person_academic_record AS academic
+  WHERE academic.organization_id = ? AND academic.academic_session = ?
+), selected_allocations AS (
+  SELECT * FROM ranked_allocations WHERE session_rank = 1
+)`;
+
+async function getSchoolOperationsOverview(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const url = new URL(request.url);
+  const parsed = schoolOverviewQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId"),
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Select a valid academic session." }, { status: 400 });
+  }
+
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  const runtime = getRuntimeEnv();
+  const bindings = [scope.organizationId, scope.session.name];
+  const [summary, schools, classes, houses] = await Promise.all([
+    runtime.DB.prepare(
+      `${schoolAllocationCte}
+       SELECT COUNT(*) AS students,
+              SUM(CASE WHEN person.status = 'active' THEN 1 ELSE 0 END) AS activeStudents,
+              SUM(CASE WHEN person.status = 'inactive' THEN 1 ELSE 0 END) AS inactiveStudents,
+              COUNT(DISTINCT selected_allocations.school_name) AS schools,
+              COUNT(DISTINCT coalesce(nullif(selected_allocations.class_title, ''), selected_allocations.class_name)) AS classes,
+              COUNT(DISTINCT selected_allocations.house_name) AS houses,
+              SUM(CASE WHEN selected_allocations.school_name IS NULL THEN 1 ELSE 0 END) AS unmappedSchools
+       FROM selected_allocations
+       JOIN person ON person.id = selected_allocations.person_id
+         AND person.organization_id = ?`,
+    )
+      .bind(...bindings, scope.organizationId)
+      .first<{
+        students: number;
+        activeStudents: number;
+        inactiveStudents: number;
+        schools: number;
+        classes: number;
+        houses: number;
+        unmappedSchools: number;
+      }>(),
+    runtime.DB.prepare(
+      `${schoolAllocationCte}
+       SELECT coalesce(school_name, 'Unmapped school') AS name, COUNT(*) AS count
+       FROM selected_allocations GROUP BY school_name
+       ORDER BY count DESC, name COLLATE NOCASE`,
+    )
+      .bind(...bindings)
+      .all<{ name: string; count: number }>(),
+    runtime.DB.prepare(
+      `${schoolAllocationCte}
+       SELECT coalesce(nullif(class_title, ''), class_name) AS name, COUNT(*) AS count
+       FROM selected_allocations
+       GROUP BY coalesce(nullif(class_title, ''), class_name)
+       ORDER BY coalesce(class_level, 999), name COLLATE NOCASE`,
+    )
+      .bind(...bindings)
+      .all<{ name: string; count: number }>(),
+    runtime.DB.prepare(
+      `${schoolAllocationCte}
+       SELECT coalesce(house_name, 'No house') AS name, COUNT(*) AS count
+       FROM selected_allocations GROUP BY house_name
+       ORDER BY count DESC, name COLLATE NOCASE`,
+    )
+      .bind(...bindings)
+      .all<{ name: string; count: number }>(),
+  ]);
+
+  return Response.json({
+    session: scope.session,
+    summary: {
+      students: Number(summary?.students ?? 0),
+      activeStudents: Number(summary?.activeStudents ?? 0),
+      inactiveStudents: Number(summary?.inactiveStudents ?? 0),
+      schools: Number(summary?.schools ?? 0),
+      classes: Number(summary?.classes ?? 0),
+      houses: Number(summary?.houses ?? 0),
+      unmappedSchools: Number(summary?.unmappedSchools ?? 0),
+    },
+    filters: {
+      schools: schools.results,
+      classes: classes.results,
+      houses: houses.results,
+    },
+  });
+}
+
+async function getSchoolOperationsStudents(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const url = new URL(request.url);
+  const parsed = schoolStudentsQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId"),
+    q: url.searchParams.get("q") ?? "",
+    school: url.searchParams.get("school") ?? "all",
+    className: url.searchParams.get("class") ?? "all",
+    house: url.searchParams.get("house") ?? "all",
+    status: url.searchParams.get("status") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid School Operations filters." }, { status: 400 });
+  }
+
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  const { q, school, className, house, status, page, pageSize } = parsed.data;
+  const conditions = ["person.organization_id = ?"];
+  const filterBindings: Array<string | number> = [scope.organizationId];
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(
+      `(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\' OR lower(coalesce(selected_allocations.roll_number, '')) LIKE ? ESCAPE '\\')`,
+    );
+    filterBindings.push(search, search, search);
+  }
+  if (school !== "all") {
+    conditions.push("coalesce(selected_allocations.school_name, 'Unmapped school') = ?");
+    filterBindings.push(school);
+  }
+  if (className !== "all") {
+    conditions.push(
+      "coalesce(nullif(selected_allocations.class_title, ''), selected_allocations.class_name) = ?",
+    );
+    filterBindings.push(className);
+  }
+  if (house !== "all") {
+    conditions.push("coalesce(selected_allocations.house_name, 'No house') = ?");
+    filterBindings.push(house);
+  }
+  if (status !== "all") {
+    conditions.push("person.status = ?");
+    filterBindings.push(status);
+  }
+
+  const where = conditions.join(" AND ");
+  const baseBindings: Array<string | number> = [scope.organizationId, scope.session.name];
+  const runtime = getRuntimeEnv();
+  const offset = (page - 1) * pageSize;
+  const [count, students] = await Promise.all([
+    runtime.DB.prepare(
+      `${schoolAllocationCte}
+       SELECT COUNT(*) AS total FROM selected_allocations
+       JOIN person ON person.id = selected_allocations.person_id
+       WHERE ${where}`,
+    )
+      .bind(...baseBindings, ...filterBindings)
+      .first<{ total: number }>(),
+    runtime.DB.prepare(
+      `${schoolAllocationCte}
+       SELECT person.id AS personId, person.display_name AS displayName,
+              person.primary_identifier AS primaryIdentifier, person.status, person.gender,
+              selected_allocations.school_name AS schoolName,
+              selected_allocations.class_name AS className,
+              selected_allocations.class_section AS classSection,
+              selected_allocations.class_title AS classTitle,
+              selected_allocations.house_name AS houseName,
+              selected_allocations.roll_number AS rollNumber,
+              selected_allocations.board_registration_number AS boardRegistrationNumber,
+              selected_allocations.result, selected_allocations.recorded_on AS recordedOn
+       FROM selected_allocations
+       JOIN person ON person.id = selected_allocations.person_id
+       WHERE ${where}
+       ORDER BY person.display_name COLLATE NOCASE, person.primary_identifier
+       LIMIT ? OFFSET ?`,
+    )
+      .bind(...baseBindings, ...filterBindings, pageSize, offset)
+      .all<{
+        personId: string;
+        displayName: string;
+        primaryIdentifier: string;
+        status: "active" | "inactive";
+        gender: "female" | "male" | "other" | "unknown" | null;
+        schoolName: string | null;
+        className: string;
+        classSection: string | null;
+        classTitle: string | null;
+        houseName: string | null;
+        rollNumber: string | null;
+        boardRegistrationNumber: string | null;
+        result: string | null;
+        recordedOn: string;
+      }>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    students: students.results,
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+async function getSchoolSessionScope(request: Request, sessionId: string) {
+  const context = await getMembershipContext(request);
+  if (!context) return null;
+  const runtime = getRuntimeEnv();
+  const session = await runtime.DB.prepare(
+    `SELECT id, name, starts_on AS startsOn, ends_on AS endsOn
+     FROM academic_session WHERE id = ? AND organization_id = ? AND is_active = 1`,
+  )
+    .bind(sessionId, context.organizationId)
+    .first<{ id: string; name: string; startsOn: string; endsOn: string }>();
+  return session ? { ...context, session } : null;
 }
 
 async function getPeopleRegistry(request: Request): Promise<Response> {
@@ -734,27 +969,44 @@ function inlineContentDisposition(fileName: string): string {
   return `inline; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
-async function getPlatformStatus(): Promise<Response> {
+async function getPlatformStatus(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
-  const [userCount, sessions] = await Promise.all([
+  const context = await getMembershipContext(request);
+  const [userCount, sessions, preference] = await Promise.all([
     runtime.DB.prepare('SELECT COUNT(*) AS count FROM "user"').first<{
       count: number;
     }>(),
     runtime.DB.prepare(
       `SELECT id, name, starts_on AS startsOn, ends_on AS endsOn
-       FROM academic_session WHERE is_active = 1
+       FROM academic_session
+       WHERE is_active = 1
+         AND organization_id = coalesce(
+           ?,
+           (SELECT id FROM organization WHERE slug = ? LIMIT 1)
+         )
        ORDER BY starts_on DESC`,
-    ).all<{
-      id: string;
-      name: string;
-      startsOn: string;
-      endsOn: string;
-    }>(),
+    )
+      .bind(context?.organizationId ?? null, runtime.DEFAULT_ORGANIZATION_SLUG)
+      .all<{
+        id: string;
+        name: string;
+        startsOn: string;
+        endsOn: string;
+      }>(),
+    context
+      ? runtime.DB.prepare(
+          `SELECT active_academic_session_id AS activeSessionId
+           FROM user_preference WHERE user_id = ? AND active_organization_id = ?`,
+        )
+          .bind(context.userId, context.organizationId)
+          .first<{ activeSessionId: string | null }>()
+      : Promise.resolve(null),
   ]);
 
   return Response.json({
     needsSetup: Number(userCount?.count ?? 0) === 0,
     sessions: sessions.results,
+    activeSessionId: preference?.activeSessionId ?? sessions.results[0]?.id ?? null,
   });
 }
 

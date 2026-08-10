@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "mode": "school_operations_import",
+  "completedAt": "2026-08-10T21:18:52Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false
+  },
+  "source": {
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "openedReadOnly": true,
+    "unchanged": true
+  },
+  "target": {
+    "kind": "remote",
+    "databaseId": "f6dc8a9f-5eb3-4ae7-b9f1-88645634a608",
+    "organizationSlug": "tibetan-homes-foundation"
+  },
+  "imported": {
+    "sessions": 16,
+    "schools": 9,
+    "classes": 88,
+    "houses": 6,
+    "schoolHouses": 40
+  },
+  "preserved": {
+    "academicRecords": 25427,
+    "invalidSessionPreferences": 0
+  },
+  "batchId": "school-operations-import-7738b8e4eebad446-v1"
+}

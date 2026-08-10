@@ -115,13 +115,13 @@
     "semantic_hash": "a9eafc8c66068735fc27e8f3f9795f71"
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1785949831.8641028,
-    "ast_hash": "ba61ba4a191ae70234577502c75f4815",
-    "semantic_hash": "ba61ba4a191ae70234577502c75f4815"
+    "mtime": 1786396425.193544,
+    "ast_hash": "0d86baa297a5e7e6b8e0fe3781ccaf0f",
+    "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786393752.2824862,
-    "ast_hash": "403597955473cf6774d576644f03ffe8",
+    "mtime": 1786396777.2846162,
+    "ast_hash": "da2b275a16167f83d83b189987cd782d",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786395673.0692322,
-    "ast_hash": "7b42a9944cb8566e49cfaf9069c51654",
+    "mtime": 1786396170.635806,
+    "ast_hash": "9e636a01c4a2c39c897cfd3a4d782d87",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786395700.086996,
-    "ast_hash": "b9da1572d88e61b462b65358aff54a13",
+    "mtime": 1786396752.1569571,
+    "ast_hash": "c07f9c97e117bad860990f376048a768",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -300,8 +300,23 @@
     "semantic_hash": ""
   },
   "docs/school-operations-slice.md": {
-    "mtime": 1786395673.0693476,
-    "ast_hash": "ec23fa39dc2489edcbb22b3d46699ccc",
+    "mtime": 1786396752.1567163,
+    "ast_hash": "cf24d7cbf31ecc17df9b9d864332ff9c",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0009_school_operations_foundation.sql": {
+    "mtime": 1786396170.6353958,
+    "ast_hash": "747b3598b66be6ca5be5a64e9da94b5d",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/school-operations.tsx": {
+    "mtime": 1786396425.1972156,
+    "ast_hash": "698aadabf55d20dc63f7e0f1134ff943",
+    "semantic_hash": ""
+  },
+  "scripts/import-school-operations.mjs": {
+    "mtime": 1786396180.5166137,
+    "ast_hash": "accf40ab365af676882609b0a02dc772",
     "semantic_hash": ""
   }
 }

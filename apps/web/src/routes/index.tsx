@@ -23,6 +23,7 @@ import type { FormEvent } from "react";
 
 import { AccountSettings } from "@/components/account-settings";
 import { PeopleRegistry } from "@/components/people-registry";
+import { SchoolOperations } from "@/components/school-operations";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ type AcademicSession = {
 type PlatformState = {
   needsSetup: boolean;
   sessions: AcademicSession[];
+  activeSessionId?: string | null;
   invitation?: InvitationPreview;
 };
 
@@ -122,6 +124,7 @@ function Home() {
   if (session.data?.user) {
     return (
       <Launchpad
+        platform={platform}
         user={{
           name: session.data.user.name,
           email: session.data.user.email,
@@ -384,8 +387,17 @@ function Brand() {
   );
 }
 
-function Launchpad({ user }: { user: { name: string; email: string; emailVerified: boolean } }) {
-  const [view, setView] = useState<"home" | "people">("home");
+function Launchpad({
+  platform,
+  user,
+}: {
+  platform: PlatformState;
+  user: { name: string; email: string; emailVerified: boolean };
+}) {
+  const [view, setView] = useState<"home" | "people" | "school">("home");
+  const [activeSessionId, setActiveSessionId] = useState(
+    platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
+  );
   const modules = [
     [Users, "People Registry", "Identity, family, placement, and records"],
     [GraduationCap, "School Operations", "Classes, marks, results, and promotion"],
@@ -397,14 +409,52 @@ function Launchpad({ user }: { user: { name: string; email: string; emailVerifie
     return <PeopleRegistry onBack={() => setView("home")} />;
   }
 
+  async function changeSession(sessionId: string) {
+    const previous = activeSessionId;
+    setActiveSessionId(sessionId);
+    const response = await fetch("/api/platform", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ academicSessionId: sessionId }),
+    });
+    if (!response.ok) {
+      setActiveSessionId(previous);
+      throw new Error("The academic session could not be changed.");
+    }
+  }
+
+  if (view === "school") {
+    return (
+      <SchoolOperations
+        activeSessionId={activeSessionId}
+        onBack={() => setView("home")}
+        onSessionChange={changeSession}
+        sessions={platform.sessions}
+      />
+    );
+  }
+
   return (
     <main className="min-h-svh w-full max-w-none bg-muted/35">
       <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-background/95 px-5 backdrop-blur md:px-8">
         <Brand />
         <div className="ml-auto flex items-center gap-3">
-          <Badge className="hidden rounded-full sm:inline-flex" variant="outline">
-            Session 2026–27
-          </Badge>
+          <Select onValueChange={(value) => void changeSession(value)} value={activeSessionId}>
+            <SelectTrigger
+              aria-label="Academic session"
+              className="hidden w-36 rounded-full sm:flex"
+            >
+              <CalendarDays className="size-4" />
+              <SelectValue placeholder="Session" />
+            </SelectTrigger>
+            <SelectContent>
+              {platform.sessions.map((session) => (
+                <SelectItem key={session.id} value={session.id}>
+                  {session.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <ThemeToggle />
           <Button
             onClick={() => void authClient.signOut().then(() => window.location.reload())}
@@ -427,7 +477,7 @@ function Launchpad({ user }: { user: { name: string; email: string; emailVerifie
             const card = (
               <Card
                 className={
-                  index === 0
+                  index < 2
                     ? "h-full border-primary/25 transition-colors group-hover:border-primary/50"
                     : "opacity-70"
                 }
@@ -442,19 +492,19 @@ function Launchpad({ user }: { user: { name: string; email: string; emailVerifie
                   </div>
                   <Badge
                     className="ml-auto rounded-full"
-                    variant={index === 0 ? "default" : "secondary"}
+                    variant={index < 2 ? "default" : "secondary"}
                   >
-                    {index === 0 ? "Open" : "Planned"}
+                    {index < 2 ? "Open" : "Planned"}
                   </Badge>
                 </CardHeader>
               </Card>
             );
 
-            return index === 0 ? (
+            return index < 2 ? (
               <button
                 className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 key={title}
-                onClick={() => setView("people")}
+                onClick={() => setView(index === 0 ? "people" : "school")}
                 type="button"
               >
                 {card}

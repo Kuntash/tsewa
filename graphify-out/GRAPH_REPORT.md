@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 75 files · ~97,833 words
+- 79 files · ~102,671 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2398 nodes · 2791 edges · 194 communities (44 shown, 150 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
+- 2451 nodes · 2910 edges · 195 communities (45 shown, 150 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.6)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `653eea31`
+- Built from commit: `c4c17e87`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -69,7 +69,7 @@
 - R2Bucket
 - SqlStorageCursor
 - Vectorize
-- button.tsx
+- school-operations.tsx
 - Ai
 - AiSearchNamespace
 - ReadableStreamBYOBReader
@@ -206,20 +206,21 @@
 - person-files.mjs
 - person-files-dry-run.mjs
 - School Operations vertical slice
-- hashR2Object
-- better-auth
+- import-school-operations.mjs
+- sqlLiteral
+- @fontsource-variable/dm-sans
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
 2. `Event` - 25 edges
-3. `scripts` - 24 edges
-4. `Console` - 21 edges
-5. `getRuntimeEnv()` - 18 edges
-6. `organization` - 17 edges
+3. `scripts` - 25 edges
+4. `organization` - 22 edges
+5. `getRuntimeEnv()` - 21 edges
+6. `Console` - 21 edges
 7. `compilerOptions` - 17 edges
 8. `URLSearchParams` - 16 edges
 9. `People Registry migration map` - 16 edges
-10. `DurableObjectStorage` - 15 edges
+10. `fetch()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `CardAction()` --calls--> `cn()`  [EXTRACTED]
@@ -236,15 +237,15 @@
 ## Import Cycles
 - None detected.
 
-## Communities (194 total, 150 thin omitted)
+## Communities (195 total, 150 thin omitted)
 
 ### Community 0 - "worker-configuration.d.ts"
 Cohesion: 0.00
 Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentMemoryIncomingMemory, AgentMemoryIngestOptions, AgentMemoryListMemoriesOptions, AgentMemoryListMemoriesResult, AgentMemoryMemory, AgentMemoryMemoryListEntry (+839 more)
 
 ### Community 1 - "server.ts"
-Cohesion: 0.11
-Nodes (54): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), auditAccountAction(), auditStatement() (+46 more)
+Cohesion: 0.10
+Nodes (59): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), auditAccountAction(), auditStatement() (+51 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -255,12 +256,12 @@ Cohesion: 0.04
 Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEvent, FetchEvent, MessageEvent (+4 more)
 
 ### Community 4 - "index.tsx"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (20): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+12 more)
 
 ### Community 5 - "scripts"
-Cohesion: 0.06
-Nodes (35): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+27 more)
+Cohesion: 0.05
+Nodes (36): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+28 more)
 
 ### Community 6 - "cn"
 Cohesion: 0.13
@@ -296,7 +297,7 @@ Nodes (19): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), Pers
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.12
@@ -346,9 +347,9 @@ Nodes (16): Academic-history dry run, Academic import policy, Academic import re
 Cohesion: 0.22
 Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
 
-### Community 54 - "button.tsx"
-Cohesion: 0.43
-Nodes (5): readTheme(), Theme, ThemeToggle(), Button(), buttonVariants
+### Community 54 - "school-operations.tsx"
+Cohesion: 0.11
+Nodes (16): AcademicSession, CountOption, emptyStudents, handleLoadError(), OverviewResponse, parseResponse(), SchoolOperations(), StudentRow (+8 more)
 
 ### Community 60 - "Tsewa"
 Cohesion: 0.29
@@ -372,11 +373,11 @@ Nodes (6): Account and email follow-ups, Documents and media migration, Invitati
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
-Nodes (20): buildImportSql(), chunkSize, concurrency, confirmedDatabaseId, database, expectedFileCount, options, organizationSlug (+12 more)
+Nodes (20): chunkSize, concurrency, confirmedDatabaseId, database, expectedFileCount, hashR2Object(), options, organizationSlug (+12 more)
 
 ### Community 178 - "organization"
-Cohesion: 0.13
-Nodes (23): academic_session, "account", audit_event, organization, organization_member, "session", "user", user_preference (+15 more)
+Cohesion: 0.12
+Nodes (28): academic_session, "account", audit_event, organization, organization_member, "session", "user", user_preference (+20 more)
 
 ### Community 179 - "scripts"
 Cohesion: 0.20
@@ -391,44 +392,48 @@ Cohesion: 0.29
 Nodes (6): Access control, Dry run, One-person pilot, Person files migration, Preservation policy, Resumable bulk import
 
 ### Community 182 - "school-operations-dry-run.mjs"
-Cohesion: 0.18
-Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+Cohesion: 0.17
+Nodes (8): parseArguments(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 189 - "person-files.mjs"
-Cohesion: 0.33
-Nodes (10): objectExtension(), optionalText(), readPersonFiles(), requiredOption(), requiredText(), sha256File(), SOURCE_SYSTEM, stablePersonId() (+2 more)
+Cohesion: 0.38
+Nodes (9): objectExtension(), optionalText(), readPersonFiles(), requiredText(), sha256File(), SOURCE_SYSTEM, stablePersonId(), stableUuid() (+1 more)
 
 ### Community 190 - "person-files-dry-run.mjs"
-Cohesion: 0.20
-Nodes (9): DEFAULT_SOURCE_DATABASE, parseArguments(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath (+1 more)
+Cohesion: 0.22
+Nodes (8): DEFAULT_SOURCE_DATABASE, assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 191 - "School Operations vertical slice"
 Cohesion: 0.33
-Nodes (5): Academic-session behavior, API boundary, Migration sequencing, School Operations vertical slice, Slice 1: read-only students
+Nodes (5): Academic-session behavior, API boundary, Import result, School Operations vertical slice, Slice 1: read-only students
 
-### Community 192 - "hashR2Object"
-Cohesion: 0.83
-Nodes (4): hashR2Object(), relayObject(), spawnWrangler(), waitForProcess()
+### Community 192 - "import-school-operations.mjs"
+Cohesion: 0.12
+Nodes (15): confirmedDatabaseId, database, optionalInteger(), optionalText(), options, organizationSlug, readCatalog(), report (+7 more)
+
+### Community 193 - "sqlLiteral"
+Cohesion: 0.25
+Nodes (9): buildImportSql(), readImportedFiles(), buildImportSql(), buildUpsert(), chunkedUpserts(), rawSql(), sqlValue(), rawSql() (+1 more)
 
 ## Knowledge Gaps
-- **1125 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1120 more)
+- **1144 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1139 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `URLSearchParams` connect `URLSearchParams` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `Container` connect `Container` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Why does `Table` connect `Table` to `worker-configuration.d.ts`?**
+- **Why does `SqlStorageCursor` connect `SqlStorageCursor` to `worker-configuration.d.ts`?**
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `MessagePort` connect `ServiceWorkerGlobalScope` to `worker-configuration.d.ts`?**
   _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `TransformStream` connect `TransformStream` to `worker-configuration.d.ts`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1125 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1144 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.10526315789473684 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09888947646747752 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

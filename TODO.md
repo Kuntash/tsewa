@@ -31,12 +31,13 @@
 - [x] Reconcile all legacy document and photo metadata without generic-image filtering.
 - [x] Add authenticated, streamed document and photo delivery.
 - [x] Run a one-person D1/R2 pilot before bulk migration.
-- [ ] Review the pilot in production before migrating the remaining files.
+- [x] Review the pilot in production before migrating the remaining files.
+- [ ] Complete and reconcile the resumable bulk file migration.
 
 ## School Operations
 
 - [x] Reconcile legacy sessions, school/class/house masters, and academic allocations.
-- [ ] Import the THS calendar-year session catalog and correct the seeded 2026 session.
-- [ ] Add the persisted inline academic-session switcher to the application header.
-- [ ] Build the read-only session overview and student allocation list.
-- [ ] Link student allocations back to the existing People Registry profile.
+- [x] Import the THS calendar-year session catalog and correct the seeded 2026 session.
+- [x] Add the persisted inline academic-session switcher to the application header.
+- [x] Build the read-only session overview and student allocation list.
+- [x] Link student allocations back to the existing People Registry profile.
