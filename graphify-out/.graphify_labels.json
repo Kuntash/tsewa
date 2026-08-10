@@ -205,5 +205,8 @@
   "203": "Product language",
   "204": "class-master-reconciliation.md",
   "205": "Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.",
-  "206": "badge.tsx"
+  "206": "historical-results.tsx",
+  "207": "import-historical-results.mjs",
+  "208": "Q: whats next slice? while the migration is ongoing?",
+  "209": "Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that."
 }

@@ -29,6 +29,8 @@
     "migration:enrollment:dry-run": "node scripts/student-enrollment-dry-run.mjs",
     "migration:enrollment:import": "node scripts/import-student-enrollments.mjs",
     "migration:classes:dry-run": "node scripts/class-master-dry-run.mjs",
+    "migration:results:dry-run": "node scripts/historical-results-dry-run.mjs",
+    "migration:results:import": "node scripts/import-historical-results.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

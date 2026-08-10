@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786401404.35078,
-    "ast_hash": "6aa6d224f641f14eb492d2d132e2f3b1",
+    "mtime": 1786403544.8457825,
+    "ast_hash": "73725aadfa975fae5b8127c7373c4959",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786401278.8521364,
-    "ast_hash": "a934da1fcf2b96a1b6076294c0203e14",
+    "mtime": 1786403125.250726,
+    "ast_hash": "d192dc04e1d1efe1920c48d7cdffa7f4",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786402253.417863,
-    "ast_hash": "f67a22c8abfaf7bf2113d106ce43d305",
+    "mtime": 1786403386.8987145,
+    "ast_hash": "9456791989bd6a9020250c6cc964a7c6",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -382,6 +382,36 @@
   "graphify-out/memory/query_20260810_225405_can_t_we_make_the_media_transfer_faster__like_no_n.md": {
     "mtime": 1786402445.576975,
     "ast_hash": "351e9638dec9df1c66da1fbc58653d1e",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0011_historical_results.sql": {
+    "mtime": 1786403095.053428,
+    "ast_hash": "dad10c53b29628ae700a54a134a1f285",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/historical-results.tsx": {
+    "mtime": 1786403544.852331,
+    "ast_hash": "37162e47fbaade3855e29a03fbc0f020",
+    "semantic_hash": ""
+  },
+  "scripts/historical-results-dry-run.mjs": {
+    "mtime": 1786403544.8359652,
+    "ast_hash": "f0d5f5834adc02e311705c83edf531d4",
+    "semantic_hash": ""
+  },
+  "scripts/import-historical-results.mjs": {
+    "mtime": 1786403544.8302922,
+    "ast_hash": "f7740086480ff7832eb3a4ca3542fbc5",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_225927_whats_next_slice__while_the_migration_is_ongoing.md": {
+    "mtime": 1786402767.9917622,
+    "ast_hash": "7fb0c487a5942290e80e7720997f3355",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_231608_okay__why_only_2011_and_2012_data__anyways__lets_c.md": {
+    "mtime": 1786403768.1340616,
+    "ast_hash": "54972f1560e5b8a3a7906bd1b4dc7e22",
     "semantic_hash": ""
   }
 }

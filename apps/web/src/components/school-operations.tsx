@@ -18,6 +18,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
+import { HistoricalResults } from "@/components/historical-results";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,7 +109,7 @@ type RosterRow = {
   houses: number;
 };
 
-type SchoolSection = "students" | "schools" | "rosters";
+type SchoolSection = "students" | "schools" | "rosters" | "results";
 
 const emptyStudents: StudentsResponse = {
   students: [],
@@ -241,6 +242,11 @@ export function SchoolOperations({
       title: "Classes",
       description: "Classes and student numbers for this session.",
     },
+    results: {
+      eyebrow: "Old school records",
+      title: "Marks and results",
+      description: "Find the marks saved in the old system.",
+    },
   }[section];
 
   async function changeSession(sessionId: string) {
@@ -337,7 +343,12 @@ export function SchoolOperations({
               label="Classes"
               onClick={() => setSection("rosters")}
             />
-            <SideItem icon={BookOpenText} label="Marks and results" planned />
+            <SideItem
+              active={section === "results"}
+              icon={BookOpenText}
+              label="Marks and results"
+              onClick={() => setSection("results")}
+            />
           </nav>
           <div className="mt-7 rounded-2xl border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -386,6 +397,11 @@ export function SchoolOperations({
               active={section === "rosters"}
               label="Classes"
               onClick={() => setSection("rosters")}
+            />
+            <MobileSectionButton
+              active={section === "results"}
+              label="Results"
+              onClick={() => setSection("results")}
             />
           </div>
 
@@ -491,7 +507,7 @@ export function SchoolOperations({
               }}
               schools={schools}
             />
-          ) : (
+          ) : section === "rosters" ? (
             <RosterDirectory
               loading={loadingDirectories}
               onOpenRoster={(schoolId, selectedClassId) => {
@@ -503,6 +519,8 @@ export function SchoolOperations({
               rosters={rosters}
               schools={overview?.filters.schools ?? []}
             />
+          ) : (
+            <HistoricalResults onSelectPerson={setSelectedPersonId} />
           )}
         </section>
       </div>

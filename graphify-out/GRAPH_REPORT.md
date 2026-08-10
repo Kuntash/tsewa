@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 95 files · ~109,999 words
+- 102 files · ~114,422 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2557 nodes · 3078 edges · 207 communities (56 shown, 151 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.6)
+- 2624 nodes · 3225 edges · 210 communities (60 shown, 150 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `592b1880`
+- Built from commit: `23b64faf`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -220,19 +220,22 @@
 - Product language
 - class-master-reconciliation.md
 - Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.
-- badge.tsx
+- historical-results.tsx
+- import-historical-results.mjs
+- Q: whats next slice? while the migration is ongoing?
+- Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `scripts` - 28 edges
-3. `organization` - 25 edges
-4. `Event` - 25 edges
-5. `getRuntimeEnv()` - 23 edges
+2. `organization` - 31 edges
+3. `scripts` - 30 edges
+4. `getRuntimeEnv()` - 25 edges
+5. `Event` - 25 edges
 6. `Console` - 21 edges
-7. `fetch()` - 17 edges
-8. `compilerOptions` - 17 edges
-9. `methodNotAllowed()` - 16 edges
-10. `URLSearchParams` - 16 edges
+7. `fetch()` - 19 edges
+8. `methodNotAllowed()` - 18 edges
+9. `compilerOptions` - 17 edges
+10. `getMembershipContext()` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `CardAction()` --calls--> `cn()`  [EXTRACTED]
@@ -249,15 +252,15 @@
 ## Import Cycles
 - None detected.
 
-## Communities (207 total, 151 thin omitted)
+## Communities (210 total, 150 thin omitted)
 
 ### Community 0 - "worker-configuration.d.ts"
 Cohesion: 0.00
 Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentMemoryIncomingMemory, AgentMemoryIngestOptions, AgentMemoryListMemoriesOptions, AgentMemoryListMemoriesResult, AgentMemoryMemory, AgentMemoryMemoryListEntry (+839 more)
 
 ### Community 1 - "server.ts"
-Cohesion: 0.10
-Nodes (63): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), auditAccountAction(), auditStatement() (+55 more)
+Cohesion: 0.09
+Nodes (68): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), auditAccountAction(), auditStatement() (+60 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -273,7 +276,7 @@ Nodes (20): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardC
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
-Nodes (39): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+31 more)
+Nodes (41): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+33 more)
 
 ### Community 6 - "cn"
 Cohesion: 0.13
@@ -304,8 +307,8 @@ Cohesion: 0.10
 Nodes (18): buildImportSql(), confirmedDatabaseId, database, optionalText(), options, organizationSlug, rawSql(), readPlacements() (+10 more)
 
 ### Community 13 - "people-registry.tsx"
-Cohesion: 0.11
-Nodes (19): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse (+11 more)
+Cohesion: 0.15
+Nodes (11): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse (+3 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
@@ -368,8 +371,8 @@ Cohesion: 0.29
 Nodes (6): Cloudflare resources, License, Local development, THF deployment, Tsewa, Workspace
 
 ### Community 111 - "class-master-dry-run.mjs"
-Cohesion: 0.22
-Nodes (12): candidateScore(), canonicalName(), clean(), cleanSection(), compareCandidates(), database, options, outputPath (+4 more)
+Cohesion: 0.24
+Nodes (11): candidateScore(), canonicalName(), clean(), cleanSection(), compareCandidates(), database, options, outputPath (+3 more)
 
 ### Community 113 - "BasicImageTransformations"
 Cohesion: 0.67
@@ -389,11 +392,11 @@ Nodes (7): Account and email follow-ups, Documents and media migration, Invitati
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
-Nodes (22): chunkSize, concurrency, confirmedDatabaseId, database, delay(), expectedFileCount, hashR2Object(), options (+14 more)
+Nodes (23): chunkSize, concurrency, confirmedDatabaseId, database, delay(), expectedFileCount, hashR2Object(), options (+15 more)
 
 ### Community 178 - "organization"
-Cohesion: 0.12
-Nodes (31): academic_session, "account", audit_event, organization, organization_member, "session", "user", user_preference (+23 more)
+Cohesion: 0.11
+Nodes (37): academic_session, "account", audit_event, organization, organization_member, "session", "user", user_preference (+29 more)
 
 ### Community 179 - "scripts"
 Cohesion: 0.20
@@ -412,12 +415,12 @@ Cohesion: 0.18
 Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 189 - "person-files.mjs"
-Cohesion: 0.43
-Nodes (7): objectExtension(), optionalText(), readPersonFiles(), requiredOption(), requiredText(), SOURCE_SYSTEM, withExtension()
+Cohesion: 0.54
+Nodes (7): objectExtension(), optionalText(), readPersonFiles(), requiredText(), stablePersonId(), stableUuid(), withExtension()
 
 ### Community 190 - "person-files-dry-run.mjs"
-Cohesion: 0.22
-Nodes (8): DEFAULT_SOURCE_DATABASE, assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+Cohesion: 0.12
+Nodes (14): database, options, outputPath, repositoryRoot, sourcePath, DEFAULT_SOURCE_DATABASE, parseArguments(), assertAggregateOnly() (+6 more)
 
 ### Community 191 - "School Operations vertical slice"
 Cohesion: 0.29
@@ -425,19 +428,19 @@ Nodes (6): Academic-session behavior, API boundary, Import result, School Operat
 
 ### Community 192 - "import-school-operations.mjs"
 Cohesion: 0.11
-Nodes (19): buildImportSql(), buildUpsert(), chunkedUpserts(), confirmedDatabaseId, database, optionalInteger(), optionalText(), options (+11 more)
+Nodes (20): buildImportSql(), buildUpsert(), chunkedUpserts(), confirmedDatabaseId, database, optionalInteger(), optionalText(), options (+12 more)
 
 ### Community 193 - "sqlLiteral"
-Cohesion: 0.38
-Nodes (7): buildImportSql(), readImportedFiles(), buildImportSql(), buildUpsert(), chunkedUpserts(), rawSql(), sqlLiteral()
+Cohesion: 0.29
+Nodes (10): add(), buildSql(), sqlValue(), buildImportSql(), readImportedFiles(), buildImportSql(), buildUpsert(), chunkedUpserts() (+2 more)
 
 ### Community 195 - "import-student-enrollments.mjs"
-Cohesion: 0.14
-Nodes (17): confirmedDatabaseId, database, offeringId(), optionalText(), options, organizationSlug, readEnrollments(), readOfferings() (+9 more)
+Cohesion: 0.13
+Nodes (15): confirmedDatabaseId, database, offeringId(), optionalText(), options, organizationSlug, readEnrollments(), readOfferings() (+7 more)
 
 ### Community 196 - "student-enrollment-dry-run.mjs"
 Cohesion: 0.18
-Nodes (8): parseArguments(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+Nodes (8): sha256File(), assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
 ### Community 197 - "button.tsx"
 Cohesion: 0.43
@@ -471,32 +474,51 @@ Nodes (3): Preferred words, Product language, Rules
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely., Source Nodes
 
+### Community 206 - "historical-results.tsx"
+Cohesion: 0.12
+Nodes (18): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+10 more)
+
+### Community 207 - "import-historical-results.mjs"
+Cohesion: 0.12
+Nodes (16): confirmedDatabaseId, database, id(), optionalNumber(), optionalText(), options, organizationSlug, readData() (+8 more)
+
+### Community 208 - "Q: whats next slice? while the migration is ongoing?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: whats next slice? while the migration is ongoing?, Source Nodes
+
+### Community 209 - "Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that."
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that., Source Nodes
+
 ## Knowledge Gaps
-- **1194 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1189 more)
+- **1223 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1218 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **151 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `student_enrollment` (3× useful, score=2.998984652)
-- `person_academic_record` (3× useful, score=2.997348485)
-- `academic_class_master` (2× useful, score=1.99952154)
+- `student_enrollment` (3× useful, score=2.998470292)
+- `person_academic_record` (3× useful, score=2.996834406)
+- `progressReportPath` (2× useful, score=1.999367216)
+- `academic_class_master` (2× useful, score=1.9991786)
+- `school-operations.tsx` (2× useful, score=1.998718483) _(code changed — re-verify)_
+- `TODO.md` (2× useful, score=1.998718483)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Console` connect `Console` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `SubtleCrypto` connect `SubtleCrypto` to `worker-configuration.d.ts`?**
+- **Why does `URLPattern` connect `URLPattern` to `worker-configuration.d.ts`?**
   _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `Container` connect `Container` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `R2ObjectBody` connect `R2ObjectBody` to `worker-configuration.d.ts`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `ReadableStreamBYOBRequest` connect `ReadableStreamBYOBRequest` to `worker-configuration.d.ts`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1194 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1223 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.09603729603729604 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0909456740442656 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

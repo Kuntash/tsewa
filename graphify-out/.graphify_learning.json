@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T22:47:35.086330+00:00",
+  "generated_at": "2026-08-10T22:58:16.501727+00:00",
   "nodes": {
     "apps_web_migrations_0003_people_registry_person": {
       "code_fingerprint": "babb25a09ef819f61f357020f37af6a3df9a42d8227a8beaa1f56f427eab75b6",
@@ -12,7 +12,7 @@
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 0.998928458,
+      "score": 0.998757131,
       "source_file": "apps/web/migrations/0003_people_registry.sql",
       "status": "tentative",
       "uses": 1
@@ -38,7 +38,7 @@
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 2.997348485,
+      "score": 2.996834406,
       "source_file": "apps/web/migrations/0006_person_academic_history.sql",
       "status": "preferred",
       "uses": 3
@@ -59,7 +59,7 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 1.99952154,
+      "score": 1.9991786,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "preferred",
       "uses": 2
@@ -75,7 +75,7 @@
           "q": "Okay whats next?"
         }
       ],
-      "score": 0.998956915,
+      "score": 0.998785583,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -101,29 +101,50 @@
           "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
         }
       ],
-      "score": 2.998984652,
+      "score": 2.998470292,
       "source_file": "apps/web/migrations/0010_student_enrollment_rosters.sql",
       "status": "preferred",
       "uses": 3
     },
-    "apps_web_src_components_school_operations": {
-      "code_fingerprint": "480f9de8d54ef06693b26b82e63c06aeac5916e5c831d0ff15edfe9fe84297e5",
-      "label": "school-operations.tsx",
-      "last": "2026-08-10T21:42:32.470861+00:00",
+    "apps_web_src_components_people_registry": {
+      "code_fingerprint": "f85a626c4d2a396ada0bc693d7c77804f596c1619e028a12a20dd21e9c1ccee9",
+      "label": "people-registry.tsx",
+      "last": "2026-08-10T22:54:05.576586+00:00",
       "provenance": [
+        {
+          "date": "2026-08-10T22:54:05.576586+00:00",
+          "outcome": "useful",
+          "q": "can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
+        }
+      ],
+      "score": 0.9999329,
+      "source_file": "apps/web/src/components/people-registry.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_components_school_operations": {
+      "code_fingerprint": "038a982847d0221bbae4babc9a0c5270174bb25f3e938c3bfd105f1c92a6a7fe",
+      "label": "school-operations.tsx",
+      "last": "2026-08-10T22:54:05.576586+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-10T22:54:05.576586+00:00",
+          "outcome": "useful",
+          "q": "can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
+        },
         {
           "date": "2026-08-10T21:42:32.470861+00:00",
           "outcome": "useful",
           "q": "Okay whats next?"
         }
       ],
-      "score": 0.998956915,
+      "score": 1.998718483,
       "source_file": "apps/web/src/components/school-operations.tsx",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "apps_web_src_components_school_operations_rosterrow": {
-      "code_fingerprint": "480f9de8d54ef06693b26b82e63c06aeac5916e5c831d0ff15edfe9fe84297e5",
+      "code_fingerprint": "038a982847d0221bbae4babc9a0c5270174bb25f3e938c3bfd105f1c92a6a7fe",
       "label": "RosterRow",
       "last": "2026-08-10T22:23:00.544592+00:00",
       "provenance": [
@@ -133,26 +154,31 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 0.999605759,
+      "score": 0.999434315,
       "source_file": "apps/web/src/components/school-operations.tsx",
       "status": "tentative",
       "uses": 1
     },
     "scripts_import_person_files_progressreportpath": {
-      "code_fingerprint": "96bd6fa1472112eb004b250a0abeaf737d939ab58cd38ec9ab4a98b07ec9b489",
+      "code_fingerprint": "09a329e00cbab68a75dd3d9eb8ab1788de80cff822ef1fb3592214a8aad9eac2",
       "label": "progressReportPath",
-      "last": "2026-08-10T22:23:00.544592+00:00",
+      "last": "2026-08-10T22:54:05.576586+00:00",
       "provenance": [
+        {
+          "date": "2026-08-10T22:54:05.576586+00:00",
+          "outcome": "useful",
+          "q": "can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
+        },
         {
           "date": "2026-08-10T22:23:00.544592+00:00",
           "outcome": "useful",
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 0.999605759,
+      "score": 1.999367216,
       "source_file": "scripts/import-person-files.mjs",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "scripts_student_enrollment_dry_run": {
       "code_fingerprint": "84ee91bf3d034f525c8726f3d8e324a521627d16ac5f5ea1500eab8d92f0605f",
@@ -165,26 +191,31 @@
           "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
         }
       ],
-      "score": 0.999463111,
+      "score": 0.999291692,
       "source_file": "scripts/student-enrollment-dry-run.mjs",
       "status": "tentative",
       "uses": 1
     },
     "todo": {
-      "code_fingerprint": "44c138857d697db7be8e00e30d4fd096dd3596a4cf616a5a54f54de9c5cbfab2",
+      "code_fingerprint": "f4b024f47cead496c45923c670a0254c050b597929f5ab01b512e7d7f8e57dbc",
       "label": "TODO.md",
-      "last": "2026-08-10T21:42:32.470861+00:00",
+      "last": "2026-08-10T22:54:05.576586+00:00",
       "provenance": [
+        {
+          "date": "2026-08-10T22:54:05.576586+00:00",
+          "outcome": "useful",
+          "q": "can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
+        },
         {
           "date": "2026-08-10T21:42:32.470861+00:00",
           "outcome": "useful",
           "q": "Okay whats next?"
         }
       ],
-      "score": 0.998956915,
+      "score": 1.998718483,
       "source_file": "TODO.md",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     }
   },
   "version": 1

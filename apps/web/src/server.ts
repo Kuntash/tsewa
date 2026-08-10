@@ -67,6 +67,21 @@ const schoolRostersQuerySchema = z.object({
   school: z.string().trim().max(160).default("all"),
 });
 
+const historicalResultsOverviewQuerySchema = z.object({
+  sessionId: z.uuid().optional(),
+});
+
+const historicalResultsQuerySchema = z.object({
+  sessionId: z.uuid(),
+  q: z.string().trim().max(100).default(""),
+  school: z.string().trim().max(160).default("all"),
+  className: z.string().trim().max(160).default("all"),
+  subject: z.string().trim().max(160).default("all"),
+  term: z.string().trim().max(160).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
 
@@ -132,6 +147,14 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/rosters") {
       return getSchoolOperationsRosters(request);
+    }
+
+    if (url.pathname === "/api/school-operations/results/overview") {
+      return getHistoricalResultsOverview(request);
+    }
+
+    if (url.pathname === "/api/school-operations/results") {
+      return getHistoricalResults(request);
     }
 
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
@@ -686,6 +709,193 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
     }>();
 
   return Response.json({ session: scope.session, rosters: rosters.results });
+}
+
+async function getHistoricalResultsOverview(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const url = new URL(request.url);
+  const parsed = historicalResultsOverviewQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId") || undefined,
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Select a valid result year." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  const sessions = await runtime.DB.prepare(
+    `SELECT session.id, session.name, COUNT(DISTINCT sheet.id) AS markSheets,
+            COUNT(mark.id) AS results
+     FROM academic_session session
+     JOIN mark_sheet sheet ON sheet.academic_session_id = session.id
+       AND sheet.organization_id = session.organization_id
+     LEFT JOIN student_mark mark ON mark.mark_sheet_id = sheet.id
+       AND mark.organization_id = sheet.organization_id
+     WHERE session.organization_id = ?
+     GROUP BY session.id, session.name, session.starts_on
+     ORDER BY session.starts_on DESC`,
+  )
+    .bind(context.organizationId)
+    .all<{ id: string; name: string; markSheets: number; results: number }>();
+  const selectedId = parsed.data.sessionId ?? sessions.results[0]?.id;
+  if (!selectedId)
+    return Response.json({
+      sessions: [],
+      selectedSessionId: null,
+      summary: { markSheets: 0, results: 0, students: 0 },
+      filters: { schools: [], classes: [], subjects: [], terms: [] },
+    });
+  if (!sessions.results.some((session) => session.id === selectedId)) return forbidden();
+
+  const [summary, schools, classes, subjects, terms] = await Promise.all([
+    runtime.DB.prepare(`SELECT COUNT(DISTINCT sheet.id) AS markSheets, COUNT(mark.id) AS results,
+      COUNT(DISTINCT mark.person_id) AS students FROM mark_sheet sheet
+      LEFT JOIN student_mark mark ON mark.mark_sheet_id=sheet.id AND mark.organization_id=sheet.organization_id
+      WHERE sheet.organization_id=? AND sheet.academic_session_id=?`)
+      .bind(context.organizationId, selectedId)
+      .first<{ markSheets: number; results: number; students: number }>(),
+    resultFilter(
+      runtime.DB,
+      context.organizationId,
+      selectedId,
+      "school.id",
+      "school.name",
+      "school_master school",
+      "school.id=sheet.school_id",
+    ),
+    resultFilter(
+      runtime.DB,
+      context.organizationId,
+      selectedId,
+      "class.id",
+      classDisplayName("class"),
+      "academic_class_master class",
+      "class.id=sheet.academic_class_id",
+    ),
+    resultFilter(
+      runtime.DB,
+      context.organizationId,
+      selectedId,
+      "subject.id",
+      "subject.name",
+      "academic_subject subject",
+      "subject.id=sheet.subject_id",
+    ),
+    resultFilter(
+      runtime.DB,
+      context.organizationId,
+      selectedId,
+      "term.id",
+      "term.name",
+      "academic_term term",
+      "term.id=sheet.term_id",
+    ),
+  ]);
+  return Response.json({
+    sessions: sessions.results,
+    selectedSessionId: selectedId,
+    summary: {
+      markSheets: Number(summary?.markSheets ?? 0),
+      results: Number(summary?.results ?? 0),
+      students: Number(summary?.students ?? 0),
+    },
+    filters: {
+      schools: schools.results,
+      classes: classes.results,
+      subjects: subjects.results,
+      terms: terms.results,
+    },
+  });
+}
+
+function resultFilter(
+  database: D1Database,
+  organizationId: string,
+  sessionId: string,
+  idSql: string,
+  nameSql: string,
+  joinTable: string,
+  joinOn: string,
+) {
+  return database
+    .prepare(`SELECT ${idSql} AS id, ${nameSql} AS name, COUNT(mark.id) AS count
+    FROM mark_sheet sheet JOIN ${joinTable} ON ${joinOn}
+    LEFT JOIN student_mark mark ON mark.mark_sheet_id=sheet.id AND mark.organization_id=sheet.organization_id
+    WHERE sheet.organization_id=? AND sheet.academic_session_id=?
+    GROUP BY ${idSql}, ${nameSql} ORDER BY ${nameSql} COLLATE NOCASE`)
+    .bind(organizationId, sessionId)
+    .all<{ id: string; name: string; count: number }>();
+}
+
+async function getHistoricalResults(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const url = new URL(request.url);
+  const parsed = historicalResultsQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId"),
+    q: url.searchParams.get("q") ?? "",
+    school: url.searchParams.get("school") ?? "all",
+    className: url.searchParams.get("class") ?? "all",
+    subject: url.searchParams.get("subject") ?? "all",
+    term: url.searchParams.get("term") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Check the result filters." }, { status: 400 });
+  const { sessionId, q, school, className, subject, term, page, pageSize } = parsed.data;
+  const conditions = ["sheet.organization_id=?", "sheet.academic_session_id=?"];
+  const bindings: Array<string | number> = [context.organizationId, sessionId];
+  for (const [value, sql] of [
+    [school, "sheet.school_id"],
+    [className, "sheet.academic_class_id"],
+    [subject, "sheet.subject_id"],
+    [term, "sheet.term_id"],
+  ] as const) {
+    if (value !== "all") {
+      conditions.push(`${sql}=?`);
+      bindings.push(value);
+    }
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(
+      "(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\')",
+    );
+    bindings.push(search, search);
+  }
+  const where = conditions.join(" AND ");
+  const runtime = getRuntimeEnv();
+  const [count, rows] = await Promise.all([
+    runtime.DB.prepare(`SELECT COUNT(*) AS total FROM student_mark mark
+      JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
+      JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
+      WHERE ${where}`)
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DB.prepare(`SELECT mark.id, person.id AS personId, person.display_name AS studentName,
+      person.primary_identifier AS admissionNumber, school.name AS schoolName,
+      ${classDisplayName("class")} AS className, subject.name AS subjectName, term.name AS termName,
+      assessment.name AS assessmentName, mark.marks, mark.maximum_marks AS maximumMarks,
+      mark.note, sheet.recorded_on AS recordedOn, sheet.is_verified AS isVerified
+      FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
+      JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
+      JOIN school_master school ON school.id=sheet.school_id
+      JOIN academic_class_master class ON class.id=sheet.academic_class_id
+      JOIN academic_subject subject ON subject.id=sheet.subject_id
+      JOIN academic_term term ON term.id=sheet.term_id
+      JOIN academic_assessment assessment ON assessment.id=mark.assessment_id
+      WHERE ${where}
+      ORDER BY person.display_name COLLATE NOCASE, subject.name COLLATE NOCASE, assessment.name COLLATE NOCASE
+      LIMIT ? OFFSET ?`)
+      .bind(...bindings, pageSize, (page - 1) * pageSize)
+      .all(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    results: rows.results.map((row) => ({ ...row, isVerified: Boolean(row.isVerified) })),
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
 }
 
 async function getSchoolSessionScope(request: Request, sessionId: string) {
