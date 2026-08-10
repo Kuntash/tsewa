@@ -64,16 +64,20 @@ vp run migration:files:bulk -- \
   --confirm-database-id f6dc8a9f-5eb3-4ae7-b9f1-88645634a608 \
   --source-bucket tibetan-homes \
   --target-bucket tsewa-self-hosted-files \
-  --concurrency 4 \
-  --chunk-size 50
+  --concurrency 12 \
+  --chunk-size 50 \
+  --verification upload
 ```
 
 The importer reads completed source asset IDs and hashes from the target D1
 before starting. Matching completed records are skipped, while any metadata
-mismatch stops the run. Each chunk is recorded in D1 only after every object in
-that chunk has passed source and target SHA-256 and byte-size verification. An
-interrupted run can therefore be resumed with the same command. Progress is
-written to `reports/person-files-bulk-import.json` using aggregate counts only.
+mismatch stops the run. Each chunk is recorded in D1 only after every source
+object has passed its SHA-256 and byte-size checks and R2 has accepted every
+upload. This faster bulk mode copies 12 files concurrently and avoids downloading
+every target object a second time. Run a final target reconciliation after the
+bulk copy. An interrupted run can therefore be resumed with the same command.
+Progress is written to `reports/person-files-bulk-import.json` using aggregate
+counts only.
 
 ## Access control
 

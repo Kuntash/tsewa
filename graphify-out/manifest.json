@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1786401001.555542,
-    "ast_hash": "42db7c89f60b266aeb02a2d9200d754c",
+    "mtime": 1786402253.4173737,
+    "ast_hash": "b874501a9ae3f2b30dc7010f4349570d",
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786399467.7313042,
-    "ast_hash": "4a1d1603b8edd65e4419e943919af9d6",
+    "mtime": 1786402385.894184,
+    "ast_hash": "4727332d7790474ec81f82b78487fe31",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "scripts/import-person-files.mjs": {
-    "mtime": 1786401467.2172844,
-    "ast_hash": "ba76f518d9f2e654410dc18f359e931a",
+    "mtime": 1786402216.7277708,
+    "ast_hash": "a5b3b6cbfee31d6f1a40c0d1f167bd4f",
     "semantic_hash": ""
   },
   "scripts/install-git-hooks.sh": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "docs/person-files-migration.md": {
-    "mtime": 1786394866.4590435,
-    "ast_hash": "fa5474c7c951afa2f1ed28b0aff66cfa",
+    "mtime": 1786402228.1304457,
+    "ast_hash": "2e28e4b661cf8959030f391006ff00d1",
     "semantic_hash": ""
   },
   "scripts/school-operations-dry-run.mjs": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786401404.3500025,
-    "ast_hash": "28d407b839b01af0525329eddbb302d7",
+    "mtime": 1786402253.417863,
+    "ast_hash": "f67a22c8abfaf7bf2113d106ce43d305",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -372,6 +372,16 @@
   "graphify-out/memory/query_20260810_224220_why_is_the_media_transfer_process_so_slow__second.md": {
     "mtime": 1786401740.141575,
     "ast_hash": "6917c31ba9d066de3c53eee051f399c7",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/use-debounced-value.ts": {
+    "mtime": 1786402181.5584137,
+    "ast_hash": "2323be6009eefc19bbff4b6ef480c407",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260810_225405_can_t_we_make_the_media_transfer_faster__like_no_n.md": {
+    "mtime": 1786402445.576975,
+    "ast_hash": "351e9638dec9df1c66da1fbc58653d1e",
     "semantic_hash": ""
   }
 }

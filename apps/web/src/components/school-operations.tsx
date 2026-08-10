@@ -15,7 +15,7 @@ import {
   UserRoundSearch,
   Users,
 } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 type AcademicSession = {
   id: string;
@@ -128,7 +129,7 @@ export function SchoolOperations({
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [students, setStudents] = useState<StudentsResponse>(emptyStudents);
   const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
+  const debouncedQuery = useDebouncedValue(query);
   const [school, setSchool] = useState("all");
   const [className, setClassName] = useState("all");
   const [house, setHouse] = useState("all");
@@ -195,7 +196,7 @@ export function SchoolOperations({
     const controller = new AbortController();
     const parameters = new URLSearchParams({
       sessionId: activeSessionId,
-      q: deferredQuery,
+      q: debouncedQuery,
       school,
       class: className,
       house,
@@ -215,9 +216,9 @@ export function SchoolOperations({
         if (!controller.signal.aborted) setLoadingStudents(false);
       });
     return () => controller.abort();
-  }, [activeSessionId, className, deferredQuery, house, page, school, status]);
+  }, [activeSessionId, className, debouncedQuery, house, page, school, status]);
 
-  useEffect(() => setPage(1), [activeSessionId, className, deferredQuery, house, school, status]);
+  useEffect(() => setPage(1), [activeSessionId, className, house, school, status]);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId),
@@ -406,7 +407,10 @@ export function SchoolOperations({
                       <Input
                         aria-label="Search students"
                         className="pl-10"
-                        onChange={(event) => setQuery(event.target.value)}
+                        onChange={(event) => {
+                          setQuery(event.target.value);
+                          setPage(1);
+                        }}
                         placeholder="Search student, admission number, or roll number"
                         value={query}
                       />

@@ -11,7 +11,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 type PersonKind = "child" | "elderly" | "staff";
 type PersonStatus = "active" | "inactive";
@@ -85,7 +86,7 @@ const emptyRegistry: RegistryResponse = {
 
 export function PeopleRegistry({ onBack }: { onBack: () => void }) {
   const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
+  const debouncedQuery = useDebouncedValue(query);
   const [kind, setKind] = useState<"all" | PersonKind>("all");
   const [status, setStatus] = useState<"all" | PersonStatus>("all");
   const [page, setPage] = useState(1);
@@ -97,7 +98,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const controller = new AbortController();
     const parameters = new URLSearchParams({
-      q: deferredQuery,
+      q: debouncedQuery,
       kind,
       status,
       page: String(page),
@@ -124,9 +125,9 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
       });
 
     return () => controller.abort();
-  }, [deferredQuery, kind, status, page]);
+  }, [debouncedQuery, kind, status, page]);
 
-  useEffect(() => setPage(1), [deferredQuery, kind, status]);
+  useEffect(() => setPage(1), [kind, status]);
 
   const counts = useMemo(() => {
     const next = { all: 0, child: 0, elderly: 0, staff: 0, active: 0, inactive: 0 };
@@ -235,7 +236,10 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
                   <Input
                     aria-label="Search people"
                     className="pl-10"
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setPage(1);
+                    }}
                     placeholder="Search name, admission or staff number"
                     value={query}
                   />

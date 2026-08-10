@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 93 files · ~109,550 words
+- 95 files · ~109,999 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2549 nodes · 3066 edges · 205 communities (55 shown, 150 thin omitted)
+- 2557 nodes · 3078 edges · 207 communities (56 shown, 151 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.6)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `03305635`
+- Built from commit: `592b1880`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -219,6 +219,8 @@
 - Q: why is the media transfer process so slow? second can't we merge the class data and reconcile? because class data is supposed to be master data no? also do the product-copy sweep across the entire application.
 - Product language
 - class-master-reconciliation.md
+- Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.
+- badge.tsx
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
@@ -247,7 +249,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (205 total, 150 thin omitted)
+## Communities (207 total, 151 thin omitted)
 
 ### Community 0 - "worker-configuration.d.ts"
 Cohesion: 0.00
@@ -266,16 +268,16 @@ Cohesion: 0.04
 Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEvent, FetchEvent, MessageEvent (+4 more)
 
 ### Community 4 - "index.tsx"
-Cohesion: 0.12
-Nodes (22): AccountSettings(), AccountSettingsProps, SummaryCards(), Badge(), badgeVariants, Card(), CardAction(), CardContent() (+14 more)
+Cohesion: 0.13
+Nodes (20): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+12 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
 Nodes (39): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+31 more)
 
 ### Community 6 - "cn"
-Cohesion: 0.12
-Nodes (18): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+10 more)
+Cohesion: 0.13
+Nodes (17): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+9 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -310,8 +312,8 @@ Cohesion: 0.09
 Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.13
-Nodes (16): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), PersonFilesSection(), Profile (+8 more)
+Cohesion: 0.12
+Nodes (17): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), PersonFilesSection(), PersonProfileSheet() (+9 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -358,8 +360,8 @@ Cohesion: 0.22
 Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
 
 ### Community 54 - "school-operations.tsx"
-Cohesion: 0.09
-Nodes (13): AcademicSession, CountOption, emptyStudents, handleLoadError(), OverviewResponse, parseResponse(), RosterRow, SchoolOperations() (+5 more)
+Cohesion: 0.08
+Nodes (14): AcademicSession, CountOption, emptyStudents, handleLoadError(), OverviewResponse, parseResponse(), RosterRow, SchoolOperations() (+6 more)
 
 ### Community 60 - "Tsewa"
 Cohesion: 0.29
@@ -382,8 +384,8 @@ Cohesion: 0.33
 Nodes (5): Deployment record, Family and relationship migration, Local workflow, Remote gate, Source tables
 
 ### Community 139 - "Tsewa TODO"
-Cohesion: 0.29
-Nodes (6): Account and email follow-ups, Documents and media migration, Invitation UX follow-ups, People Registry migration, School Operations, Tsewa TODO
+Cohesion: 0.25
+Nodes (7): Account and email follow-ups, Documents and media migration, Invitation UX follow-ups, People Registry migration, Product foundations, School Operations, Tsewa TODO
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
@@ -465,15 +467,21 @@ Nodes (4): Answer, Outcome, Q: why is the media transfer process so slow? second
 Cohesion: 0.50
 Nodes (3): Preferred words, Product language, Rules
 
+### Community 205 - "Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely., Source Nodes
+
 ## Knowledge Gaps
-- **1190 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1185 more)
+- **1194 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1189 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **151 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `person_academic_record` (3× useful, score=2.998593101)
+- `student_enrollment` (3× useful, score=2.998984652)
+- `person_academic_record` (3× useful, score=2.997348485)
+- `academic_class_master` (2× useful, score=1.99952154)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -485,7 +493,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Container` connect `Container` to `worker-configuration.d.ts`?**
   _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1190 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1194 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**

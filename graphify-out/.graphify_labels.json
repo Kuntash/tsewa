@@ -203,5 +203,7 @@
   "201": "Q: How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?",
   "202": "Q: why is the media transfer process so slow? second can't we merge the class data and reconcile? because class data is supposed to be master data no? also do the product-copy sweep across the entire application.",
   "203": "Product language",
-  "204": "class-master-reconciliation.md"
+  "204": "class-master-reconciliation.md",
+  "205": "Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.",
+  "206": "badge.tsx"
 }

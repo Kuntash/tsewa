@@ -15,6 +15,12 @@
 - [ ] Replace immediate unverified email changes with the verified email-change
       flow after transactional email is available.
 
+## Product foundations
+
+- [ ] Fix theme consistency across every page, component, and interaction state.
+- [ ] Make every search URL-first, validate URL parameters, and derive search,
+      filter, sort, and page state safely from the URL.
+
 ## People Registry migration
 
 - [x] Add the organization-scoped person and import-batch schema.
@@ -33,6 +39,8 @@
 - [x] Run a one-person D1/R2 pilot before bulk migration.
 - [x] Review the pilot in production before migrating the remaining files.
 - [ ] Complete and reconcile the resumable bulk file migration.
+- [ ] Run a full target byte-size and SHA-256 reconciliation after the accelerated
+      bulk upload finishes.
 
 ## School Operations
 

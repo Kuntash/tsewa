@@ -38,6 +38,7 @@ const expectedByteCount = bulkMode ? Number(requiredOption(options, "expected-by
 const expectedPeopleCount = bulkMode ? Number(requiredOption(options, "expected-people-count")) : 1;
 const concurrency = Number(options.concurrency ?? (bulkMode ? 4 : 1));
 const chunkSize = Number(options["chunk-size"] ?? (bulkMode ? 50 : expectedFileCount));
+const verification = options.verification ?? "full";
 const planOnly = options["plan-only"] === "true";
 
 if (!Number.isInteger(expectedFileCount) || expectedFileCount < 1) {
@@ -55,6 +56,9 @@ if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16) {
 }
 if (!Number.isInteger(chunkSize) || chunkSize < 1 || chunkSize > 100) {
   throw new Error("--chunk-size must be an integer from 1 to 100.");
+}
+if (verification !== "full" && verification !== "upload") {
+  throw new Error("--verification must be either full or upload.");
 }
 if (target !== "local" && target !== "remote") {
   throw new Error("--target must be either local or remote.");
@@ -124,7 +128,7 @@ try {
   for (let offset = 0; !planOnly && offset < pendingFiles.length; offset += chunkSize) {
     const chunk = pendingFiles.slice(offset, offset + chunkSize);
     const copied = await mapWithConcurrency(chunk, concurrency, (file) =>
-      relayObject({ file, sourceBucket, targetBucket, target }),
+      relayObject({ file, sourceBucket, targetBucket, target, verification }),
     );
     const chunkBytes = copied.reduce((total, item) => total + item.byteSize, 0);
     const importedAt = new Date().toISOString();
@@ -170,6 +174,7 @@ try {
         pendingFiles,
         sourceFingerprint,
         target,
+        verification,
       });
       console.log(
         JSON.stringify({
@@ -206,6 +211,7 @@ try {
     completedFiles: alreadyImported.length + copiedFiles,
     completedBytes: alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes,
     sourceUnchanged: true,
+    verification,
   };
 } finally {
   database.close();
@@ -238,6 +244,7 @@ async function writeProgressReport({
   pendingFiles,
   sourceFingerprint,
   target,
+  verification,
 }) {
   const completedBytes =
     alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes;
@@ -259,17 +266,23 @@ async function writeProgressReport({
       filesRemaining: pendingFiles.length - copiedFiles,
       bytesRemaining: expectedByteCount - completedBytes,
     },
-    policy: { genericImageDetectionApplied: false },
+    policy: {
+      genericImageDetectionApplied: false,
+      targetVerification:
+        verification === "full"
+          ? "post-upload byte and SHA-256 comparison"
+          : "successful R2 upload; final reconciliation still required",
+    },
   };
   await writeFile(progressReportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
-async function relayObject({ file, sourceBucket, targetBucket, target }) {
+async function relayObject({ file, sourceBucket, targetBucket, target, verification }) {
   const maximumAttempts = 4;
   let lastError;
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     try {
-      return await relayObjectOnce({ file, sourceBucket, targetBucket, target });
+      return await relayObjectOnce({ file, sourceBucket, targetBucket, target, verification });
     } catch (error) {
       lastError = error;
       if (attempt === maximumAttempts) break;
@@ -279,7 +292,7 @@ async function relayObject({ file, sourceBucket, targetBucket, target }) {
   throw lastError;
 }
 
-async function relayObjectOnce({ file, sourceBucket, targetBucket, target }) {
+async function relayObjectOnce({ file, sourceBucket, targetBucket, target, verification }) {
   const hash = createHash("sha256");
   let byteSize = 0;
   const source = spawnWrangler([
@@ -317,9 +330,11 @@ async function relayObjectOnce({ file, sourceBucket, targetBucket, target }) {
   if (sourceStatus !== 0 || destinationStatus !== 0) {
     throw new Error("Wrangler could not relay a verified legacy object to the target R2 bucket.");
   }
-  if (byteSize !== file.byteSize || hash.digest("hex") !== file.sha256) {
+  const sha256 = hash.digest("hex");
+  if (byteSize !== file.byteSize || sha256 !== file.sha256) {
     throw new Error("A relayed legacy object did not match its D1 size and SHA-256 metadata.");
   }
+  if (verification === "upload") return { byteSize, sha256 };
 
   const verified = await hashR2Object(targetBucket, file.targetObjectKey, target);
   if (verified.byteSize !== file.byteSize || verified.sha256 !== file.sha256) {
