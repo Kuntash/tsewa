@@ -57,7 +57,7 @@
       enrollment, change history, and audit record together.
 - [ ] Confirm enrollment lifecycle meanings with THS before enabling transfer,
       withdrawal, completion, or promotion workflows on THS records.
-- [ ] Add simple actions for changing placement, transferring, withdrawing, and
+- [x] Add simple actions for changing placement, transferring, withdrawing, and
       completing a student, backed by the enrollment change history.
 - [ ] Add year-end promotion with a preview, exceptions, and one-step rollback.
 - [ ] Add attendance after the enrollment lifecycle has been confirmed.

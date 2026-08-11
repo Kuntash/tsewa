@@ -56,7 +56,9 @@ const schoolStudentsQuerySchema = z.object({
   school: z.string().trim().max(160).default("all"),
   className: z.string().trim().max(100).default("all"),
   house: z.string().trim().max(100).default("all"),
-  status: z.enum(["all", "active", "inactive"]).default("all"),
+  status: z
+    .enum(["all", "recorded", "enrolled", "transferred", "withdrawn", "completed"])
+    .default("all"),
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
@@ -82,6 +84,24 @@ const admissionSchema = z.object({
   rollNumber: z.string().trim().max(50).optional(),
 });
 
+const enrollmentIdSchema = z.uuid();
+
+const enrollmentChangeSchema = z.object({
+  action: z.enum([
+    "placement_changed",
+    "internal_transfer",
+    "transferred_out",
+    "withdrawn",
+    "completed",
+  ]),
+  effectiveOn: isoDateSchema,
+  schoolId: z.uuid().optional(),
+  academicClassId: z.uuid().optional(),
+  houseId: z.uuid().nullable().optional(),
+  rollNumber: z.string().trim().max(50).nullable().optional(),
+  note: z.string().trim().max(500).optional(),
+});
+
 const historicalResultsOverviewQuerySchema = z.object({
   sessionId: z.uuid().optional(),
 });
@@ -100,7 +120,7 @@ const historicalResultsQuerySchema = z.object({
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
 
-function classDisplayName(alias: "class" | "offering_class"): string {
+function classDisplayName(alias: "class" | "offering_class" | "from_class" | "to_class"): string {
   return `CASE
     WHEN lower(trim(coalesce(${alias}.section, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
       AND lower(replace(replace(trim(coalesce(nullif(${alias}.title, ''), ${alias}.name)), '''', ''), '"', ''))
@@ -170,6 +190,11 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/admissions") {
       return createStudentAdmission(request);
+    }
+
+    const enrollmentMatch = url.pathname.match(/^\/api\/school-operations\/enrollments\/([^/]+)$/);
+    if (enrollmentMatch) {
+      return handleStudentEnrollment(request, enrollmentMatch[1]);
     }
 
     if (url.pathname === "/api/school-operations/results/overview") {
@@ -632,8 +657,8 @@ async function createStudentAdmission(request: Request): Promise<Response> {
       `INSERT INTO student_enrollment_change
         (id, organization_id, enrollment_id, person_id, academic_session_id,
          change_type, effective_on, to_school_id, to_academic_class_id, to_house_id,
-         to_status, created_by_user_id)
-       VALUES (?, ?, ?, ?, ?, 'admitted', ?, ?, ?, ?, 'enrolled', ?)`,
+         to_status, to_roll_number, created_by_user_id)
+       VALUES (?, ?, ?, ?, ?, 'admitted', ?, ?, ?, ?, 'enrolled', ?, ?)`,
     ).bind(
       changeId,
       scope.organizationId,
@@ -644,6 +669,7 @@ async function createStudentAdmission(request: Request): Promise<Response> {
       schoolId,
       academicClassId,
       houseId ?? null,
+      parsed.data.rollNumber || null,
       scope.userId,
     ),
     auditStatement(runtime.DB, scope, "student.admitted", "person", personId, {
@@ -655,6 +681,366 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   ]);
 
   return Response.json({ personId, enrollmentId, displayName }, { status: 201 });
+}
+
+async function handleStudentEnrollment(request: Request, enrollmentId: string): Promise<Response> {
+  const parsedId = enrollmentIdSchema.safeParse(enrollmentId);
+  if (!parsedId.success) {
+    return Response.json({ error: "Invalid enrollment." }, { status: 400 });
+  }
+  if (request.method === "GET") return getStudentEnrollment(request, parsedId.data);
+  if (request.method === "PATCH") return changeStudentEnrollment(request, parsedId.data);
+  return methodNotAllowed("GET, PATCH");
+}
+
+async function getStudentEnrollment(request: Request, enrollmentId: string): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const runtime = getRuntimeEnv();
+  const enrollment = await readStudentEnrollment(runtime.DB, context.organizationId, enrollmentId);
+  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+
+  const [schools, classes, houses, changes] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id, name FROM school_master
+       WHERE organization_id = ? AND is_active = 1 ORDER BY name COLLATE NOCASE`,
+    )
+      .bind(context.organizationId)
+      .all<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      `SELECT id, ${classDisplayName("class")} AS name FROM academic_class_master class
+       WHERE organization_id = ? AND is_active = 1
+       ORDER BY coalesce(sort_order, 999), coalesce(level, 999), name COLLATE NOCASE`,
+    )
+      .bind(context.organizationId)
+      .all<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      `SELECT id, name FROM house_master
+       WHERE organization_id = ? ORDER BY name COLLATE NOCASE`,
+    )
+      .bind(context.organizationId)
+      .all<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      `SELECT change.id, change.change_type AS changeType,
+              change.effective_on AS effectiveOn, change.from_status AS fromStatus,
+              change.to_status AS toStatus, change.note, change.created_at AS createdAt,
+              from_school.name AS fromSchoolName, to_school.name AS toSchoolName,
+              ${classDisplayName("from_class")} AS fromClassName,
+              ${classDisplayName("to_class")} AS toClassName,
+              from_house.name AS fromHouseName, to_house.name AS toHouseName,
+              change.from_roll_number AS fromRollNumber,
+              change.to_roll_number AS toRollNumber,
+              actor.name AS changedBy
+       FROM student_enrollment_change change
+       LEFT JOIN school_master from_school ON from_school.id = change.from_school_id
+       LEFT JOIN school_master to_school ON to_school.id = change.to_school_id
+       LEFT JOIN academic_class_master from_class
+         ON from_class.id = change.from_academic_class_id
+       LEFT JOIN academic_class_master to_class ON to_class.id = change.to_academic_class_id
+       LEFT JOIN house_master from_house ON from_house.id = change.from_house_id
+       LEFT JOIN house_master to_house ON to_house.id = change.to_house_id
+       LEFT JOIN "user" actor ON actor.id = change.created_by_user_id
+       WHERE change.organization_id = ? AND change.enrollment_id = ?
+       ORDER BY change.effective_on DESC, change.created_at DESC`,
+    )
+      .bind(context.organizationId, enrollmentId)
+      .all(),
+  ]);
+
+  return Response.json({
+    enrollment: {
+      ...enrollment,
+      canEdit:
+        canManageSchool(context.role) &&
+        enrollment.statusSource === "explicit" &&
+        enrollment.status === "enrolled",
+    },
+    options: {
+      schools: schools.results,
+      classes: classes.results,
+      houses: houses.results,
+    },
+    changes: changes.results,
+  });
+}
+
+async function changeStudentEnrollment(request: Request, enrollmentId: string): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const parsed = enrollmentChangeSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Check the enrollment change and try again." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const enrollment = await readStudentEnrollment(runtime.DB, context.organizationId, enrollmentId);
+  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+  if (enrollment.statusSource !== "explicit") {
+    return Response.json(
+      {
+        error:
+          "Imported enrollments are view only for now. Use the practice school to test changes.",
+      },
+      { status: 409 },
+    );
+  }
+  if (enrollment.status !== "enrolled") {
+    return Response.json({ error: "This enrollment has already ended." }, { status: 409 });
+  }
+  if (
+    parsed.data.effectiveOn < enrollment.sessionStartsOn ||
+    parsed.data.effectiveOn > enrollment.sessionEndsOn
+  ) {
+    return Response.json(
+      { error: `Choose a date within the ${enrollment.sessionName} session.` },
+      { status: 400 },
+    );
+  }
+
+  const action = parsed.data.action;
+  const keepsStudentEnrolled = action === "placement_changed" || action === "internal_transfer";
+  const targetSchoolId = keepsStudentEnrolled
+    ? action === "placement_changed"
+      ? enrollment.schoolId
+      : parsed.data.schoolId
+    : enrollment.schoolId;
+  const targetClassId = keepsStudentEnrolled
+    ? (parsed.data.academicClassId ?? enrollment.academicClassId)
+    : enrollment.academicClassId;
+  const targetHouseId = keepsStudentEnrolled
+    ? parsed.data.houseId === undefined
+      ? enrollment.houseId
+      : parsed.data.houseId
+    : enrollment.houseId;
+
+  if (keepsStudentEnrolled && (!targetSchoolId || !targetClassId)) {
+    return Response.json({ error: "Choose a school and class." }, { status: 400 });
+  }
+  if (action === "internal_transfer" && targetSchoolId === enrollment.schoolId) {
+    return Response.json({ error: "Choose a different school for a transfer." }, { status: 400 });
+  }
+
+  let offeringId = enrollment.schoolClassOfferingId;
+  if (keepsStudentEnrolled && targetSchoolId && targetClassId) {
+    const [school, academicClass, house] = await Promise.all([
+      runtime.DB.prepare(
+        `SELECT id FROM school_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
+      )
+        .bind(targetSchoolId, context.organizationId)
+        .first<{ id: string }>(),
+      runtime.DB.prepare(
+        `SELECT id FROM academic_class_master
+         WHERE id = ? AND organization_id = ? AND is_active = 1`,
+      )
+        .bind(targetClassId, context.organizationId)
+        .first<{ id: string }>(),
+      targetHouseId
+        ? runtime.DB.prepare(`SELECT id FROM house_master WHERE id = ? AND organization_id = ?`)
+            .bind(targetHouseId, context.organizationId)
+            .first<{ id: string }>()
+        : Promise.resolve(null),
+    ]);
+    if (!school) return Response.json({ error: "Choose an active school." }, { status: 400 });
+    if (!academicClass) return Response.json({ error: "Choose an active class." }, { status: 400 });
+    if (targetHouseId && !house)
+      return Response.json({ error: "Choose a valid house." }, { status: 400 });
+    offeringId = await getOrCreateClassOffering(
+      runtime.DB,
+      context.organizationId,
+      enrollment.academicSessionId,
+      targetSchoolId,
+      targetClassId,
+    );
+  }
+
+  const nextStatus =
+    action === "transferred_out"
+      ? "transferred"
+      : action === "withdrawn"
+        ? "withdrawn"
+        : action === "completed"
+          ? "completed"
+          : "enrolled";
+  const changeType =
+    action === "internal_transfer" || action === "transferred_out" ? "transferred" : action;
+  const changeId = crypto.randomUUID();
+  const statements = [
+    runtime.DB.prepare(
+      `UPDATE student_enrollment SET school_id = ?, academic_class_id = ?, house_id = ?,
+         school_class_offering_id = ?, status = ?, ended_on = ?, roll_number = ?,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND organization_id = ? AND status = 'enrolled' AND status_source = 'explicit'`,
+    ).bind(
+      targetSchoolId,
+      targetClassId,
+      targetHouseId,
+      offeringId,
+      nextStatus,
+      keepsStudentEnrolled ? null : parsed.data.effectiveOn,
+      keepsStudentEnrolled
+        ? parsed.data.rollNumber === undefined
+          ? enrollment.rollNumber
+          : parsed.data.rollNumber
+        : enrollment.rollNumber,
+      enrollmentId,
+      context.organizationId,
+    ),
+    runtime.DB.prepare(
+      `INSERT INTO student_enrollment_change
+        (id, organization_id, enrollment_id, person_id, academic_session_id, change_type,
+         effective_on, from_school_id, to_school_id, from_academic_class_id,
+         to_academic_class_id, from_house_id, to_house_id, from_status, to_status,
+         from_roll_number, to_roll_number, note, created_by_user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      changeId,
+      context.organizationId,
+      enrollmentId,
+      enrollment.personId,
+      enrollment.academicSessionId,
+      changeType,
+      parsed.data.effectiveOn,
+      enrollment.schoolId,
+      targetSchoolId,
+      enrollment.academicClassId,
+      targetClassId,
+      enrollment.houseId,
+      targetHouseId,
+      enrollment.status,
+      nextStatus,
+      enrollment.rollNumber,
+      keepsStudentEnrolled
+        ? parsed.data.rollNumber === undefined
+          ? enrollment.rollNumber
+          : parsed.data.rollNumber
+        : enrollment.rollNumber,
+      parsed.data.note || null,
+      context.userId,
+    ),
+  ];
+
+  if (!keepsStudentEnrolled && enrollment.academicSessionId === enrollment.latestSessionId) {
+    statements.push(
+      runtime.DB.prepare(
+        `UPDATE person SET status = 'inactive', updated_by_user_id = ?,
+           updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?`,
+      ).bind(context.userId, enrollment.personId, context.organizationId),
+    );
+  }
+  statements.push(
+    auditStatement(
+      runtime.DB,
+      context,
+      `student.${changeType}`,
+      "student_enrollment",
+      enrollmentId,
+      {
+        personId: enrollment.personId,
+        effectiveOn: parsed.data.effectiveOn,
+        fromStatus: enrollment.status,
+        toStatus: nextStatus,
+      },
+    ),
+  );
+  await runtime.DB.batch(statements);
+
+  return Response.json({ ok: true, status: nextStatus, changeId });
+}
+
+type StudentEnrollmentRecord = {
+  id: string;
+  personId: string;
+  displayName: string;
+  admissionNumber: string;
+  academicSessionId: string;
+  sessionName: string;
+  sessionStartsOn: string;
+  sessionEndsOn: string;
+  latestSessionId: string;
+  schoolId: string | null;
+  schoolName: string | null;
+  academicClassId: string;
+  className: string;
+  houseId: string | null;
+  houseName: string | null;
+  schoolClassOfferingId: string | null;
+  rollNumber: string | null;
+  status: "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed" | "graduated";
+  statusSource: "legacy_allocation" | "explicit";
+  startedOn: string | null;
+  endedOn: string | null;
+};
+
+async function readStudentEnrollment(
+  database: D1Database,
+  organizationId: string,
+  enrollmentId: string,
+): Promise<StudentEnrollmentRecord | null> {
+  return database
+    .prepare(
+      `SELECT enrollment.id, enrollment.person_id AS personId,
+              person.display_name AS displayName,
+              person.primary_identifier AS admissionNumber,
+              enrollment.academic_session_id AS academicSessionId,
+              session.name AS sessionName, session.starts_on AS sessionStartsOn,
+              session.ends_on AS sessionEndsOn,
+              (SELECT latest.id FROM academic_session latest
+               WHERE latest.organization_id = enrollment.organization_id AND latest.is_active = 1
+               ORDER BY latest.starts_on DESC LIMIT 1) AS latestSessionId,
+              enrollment.school_id AS schoolId, school.name AS schoolName,
+              enrollment.academic_class_id AS academicClassId,
+              ${classDisplayName("class")} AS className,
+              enrollment.house_id AS houseId, house.name AS houseName,
+              enrollment.school_class_offering_id AS schoolClassOfferingId,
+              enrollment.roll_number AS rollNumber, enrollment.status,
+              enrollment.status_source AS statusSource, enrollment.started_on AS startedOn,
+              enrollment.ended_on AS endedOn
+       FROM student_enrollment enrollment
+       JOIN person ON person.id = enrollment.person_id
+         AND person.organization_id = enrollment.organization_id
+       JOIN academic_session session ON session.id = enrollment.academic_session_id
+         AND session.organization_id = enrollment.organization_id
+       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
+         AND class.organization_id = enrollment.organization_id
+       LEFT JOIN school_master school ON school.id = enrollment.school_id
+       LEFT JOIN house_master house ON house.id = enrollment.house_id
+       WHERE enrollment.id = ? AND enrollment.organization_id = ?`,
+    )
+    .bind(enrollmentId, organizationId)
+    .first<StudentEnrollmentRecord>();
+}
+
+async function getOrCreateClassOffering(
+  database: D1Database,
+  organizationId: string,
+  academicSessionId: string,
+  schoolId: string,
+  academicClassId: string,
+): Promise<string> {
+  const existing = await database
+    .prepare(
+      `SELECT id FROM school_class_offering
+       WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
+         AND academic_class_id = ?`,
+    )
+    .bind(organizationId, academicSessionId, schoolId, academicClassId)
+    .first<{ id: string }>();
+  if (existing) return existing.id;
+
+  const id = crypto.randomUUID();
+  await database
+    .prepare(
+      `INSERT INTO school_class_offering
+        (id, organization_id, academic_session_id, school_id, academic_class_id, origin,
+         source_system, source_table, source_id)
+       VALUES (?, ?, ?, ?, ?, 'manual', 'tsewa', 'school_class_offering', ?)`,
+    )
+    .bind(id, organizationId, academicSessionId, schoolId, academicClassId, id)
+    .run();
+  return id;
 }
 
 async function getSchoolOperationsStudents(request: Request): Promise<Response> {
@@ -715,8 +1101,12 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
     }
   }
   if (status !== "all") {
-    conditions.push("person.status = ?");
-    filterBindings.push(status);
+    if (status === "completed") {
+      conditions.push("enrollment.status IN ('completed', 'graduated')");
+    } else {
+      conditions.push("enrollment.status = ?");
+      filterBindings.push(status);
+    }
   }
 
   const where = conditions.join(" AND ");
@@ -738,13 +1128,15 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
       .bind(...filterBindings)
       .first<{ total: number }>(),
     runtime.DB.prepare(
-      `SELECT person.id AS personId, person.display_name AS displayName,
+      `SELECT person.id AS personId, enrollment.id AS enrollmentId,
+              person.display_name AS displayName,
               person.primary_identifier AS primaryIdentifier, person.status, person.gender,
               school.name AS schoolName, class.name AS className,
               class.section AS classSection, ${classDisplayName("class")} AS classTitle,
               house.name AS houseName, enrollment.roll_number AS rollNumber,
               enrollment.board_registration_number AS boardRegistrationNumber,
-              enrollment.result
+              enrollment.result, enrollment.status AS enrollmentStatus,
+              enrollment.status_source AS statusSource
        FROM student_enrollment enrollment
        JOIN person ON person.id = enrollment.person_id
          AND person.organization_id = enrollment.organization_id
@@ -761,6 +1153,7 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
       .bind(...filterBindings, pageSize, offset)
       .all<{
         personId: string;
+        enrollmentId: string;
         displayName: string;
         primaryIdentifier: string;
         status: "active" | "inactive";
@@ -773,11 +1166,19 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
         rollNumber: string | null;
         boardRegistrationNumber: string | null;
         result: string | null;
+        enrollmentStatus: StudentEnrollmentRecord["status"];
+        statusSource: StudentEnrollmentRecord["statusSource"];
       }>(),
   ]);
   const total = Number(count?.total ?? 0);
   return Response.json({
-    students: students.results,
+    students: students.results.map((student) => ({
+      ...student,
+      canEdit:
+        canManageSchool(scope.role) &&
+        student.statusSource === "explicit" &&
+        student.enrollmentStatus === "enrolled",
+    })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
 }

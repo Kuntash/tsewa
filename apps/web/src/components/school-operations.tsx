@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { AdmissionSheet } from "@/components/admission-sheet";
+import { EnrollmentChangeSheet } from "@/components/enrollment-change-sheet";
 import { HistoricalResults } from "@/components/historical-results";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,7 @@ type OverviewResponse = {
 
 type StudentRow = {
   personId: string;
+  enrollmentId: string;
   displayName: string;
   primaryIdentifier: string;
   status: "active" | "inactive";
@@ -78,6 +80,15 @@ type StudentRow = {
   rollNumber: string | null;
   boardRegistrationNumber: string | null;
   result: string | null;
+  enrollmentStatus:
+    | "recorded"
+    | "enrolled"
+    | "transferred"
+    | "withdrawn"
+    | "completed"
+    | "graduated";
+  statusSource: "legacy_allocation" | "explicit";
+  canEdit: boolean;
 };
 
 type StudentsResponse = {
@@ -137,7 +148,9 @@ export function SchoolOperations({
   const [school, setSchool] = useState("all");
   const [className, setClassName] = useState("all");
   const [house, setHouse] = useState("all");
-  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
+  const [status, setStatus] = useState<
+    "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed"
+  >("all");
   const [page, setPage] = useState(1);
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -151,6 +164,7 @@ export function SchoolOperations({
   const [admissionOpen, setAdmissionOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [message, setMessage] = useState("");
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -474,13 +488,19 @@ export function SchoolOperations({
                         onValueChange={(value) => setStatus(value as typeof status)}
                         value={status}
                       >
-                        <SelectTrigger aria-label="Current status" className="w-full rounded-full">
+                        <SelectTrigger
+                          aria-label="Enrollment status"
+                          className="w-full rounded-full"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All statuses</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="all">All enrollments</SelectItem>
+                          <SelectItem value="recorded">Imported record</SelectItem>
+                          <SelectItem value="enrolled">Enrolled</SelectItem>
+                          <SelectItem value="transferred">Transferred</SelectItem>
+                          <SelectItem value="withdrawn">Withdrawn</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -496,6 +516,7 @@ export function SchoolOperations({
                   ) : students.students.length ? (
                     <StudentResults
                       data={students}
+                      onManage={setSelectedEnrollmentId}
                       onNext={() => setPage((value) => value + 1)}
                       onPrevious={() => setPage((value) => Math.max(1, value - 1))}
                       onSelect={setSelectedPersonId}
@@ -560,6 +581,17 @@ export function SchoolOperations({
         onOpenChange={setAdmissionOpen}
         open={admissionOpen}
         sessionId={activeSessionId}
+      />
+      <EnrollmentChangeSheet
+        enrollmentId={selectedEnrollmentId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEnrollmentId(null);
+        }}
+        onSaved={(savedMessage) => {
+          setMessage(savedMessage);
+          setRefreshKey((value) => value + 1);
+        }}
+        open={Boolean(selectedEnrollmentId)}
       />
     </main>
   );
@@ -816,11 +848,13 @@ function SummaryCards({
 
 function StudentResults({
   data,
+  onManage,
   onNext,
   onPrevious,
   onSelect,
 }: {
   data: StudentsResponse;
+  onManage: (id: string) => void;
   onNext: () => void;
   onPrevious: () => void;
   onSelect: (id: string) => void;
@@ -829,29 +863,42 @@ function StudentResults({
     <>
       <div className="divide-y md:hidden">
         {data.students.map((student) => (
-          <button
-            className="block w-full px-4 py-4 text-left transition-colors hover:bg-muted/50"
-            key={student.personId}
-            onClick={() => onSelect(student.personId)}
-            type="button"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{student.displayName}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {student.primaryIdentifier} ·{" "}
-                  {student.rollNumber ? `Roll ${student.rollNumber}` : "No roll number"}
-                </p>
+          <div key={student.personId}>
+            <button
+              className="block w-full px-4 pb-3 pt-4 text-left transition-colors hover:bg-muted/50"
+              onClick={() => onSelect(student.personId)}
+              type="button"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{student.displayName}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {student.primaryIdentifier} ·{" "}
+                    {student.rollNumber ? `Roll ${student.rollNumber}` : "No roll number"}
+                  </p>
+                </div>
+                <EnrollmentStatusBadge status={student.enrollmentStatus} />
               </div>
-              <RegistryStatusBadge status={student.status} />
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-              <Detail label="School" value={student.schoolName ?? "School not set"} />
-              <Detail label="Class" value={student.classTitle ?? student.className} />
-              <Detail label="House" value={student.houseName ?? "No house"} />
-              <Detail label="Status" value={student.status === "active" ? "Active" : "Inactive"} />
-            </div>
-          </button>
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <Detail label="School" value={student.schoolName ?? "School not set"} />
+                <Detail label="Class" value={student.classTitle ?? student.className} />
+                <Detail label="House" value={student.houseName ?? "No house"} />
+                <Detail label="Status" value={enrollmentStatusLabel(student.enrollmentStatus)} />
+              </div>
+            </button>
+            {student.statusSource === "explicit" ? (
+              <div className="px-4 pb-4">
+                <Button
+                  className="w-full"
+                  onClick={() => onManage(student.enrollmentId)}
+                  size="sm"
+                  variant="outline"
+                >
+                  {student.canEdit ? "Change enrollment" : "View enrollment"}
+                </Button>
+              </div>
+            ) : null}
+          </div>
         ))}
       </div>
       <div className="hidden overflow-x-auto md:block">
@@ -864,7 +911,7 @@ function StudentResults({
               <th className="px-4 py-3 font-semibold">House</th>
               <th className="px-4 py-3 font-semibold">Roll</th>
               <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-5 py-3 text-right font-semibold">Profile</th>
+              <th className="px-5 py-3 text-right font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -883,12 +930,23 @@ function StudentResults({
                 <td className="px-4 py-3.5">{student.houseName ?? "No house"}</td>
                 <td className="px-4 py-3.5 text-muted-foreground">{student.rollNumber ?? "—"}</td>
                 <td className="px-4 py-3.5">
-                  <RegistryStatusBadge status={student.status} />
+                  <EnrollmentStatusBadge status={student.enrollmentStatus} />
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <Button onClick={() => onSelect(student.personId)} size="sm" variant="ghost">
-                    Open profile
-                  </Button>
+                  <div className="flex justify-end gap-1">
+                    {student.statusSource === "explicit" ? (
+                      <Button
+                        onClick={() => onManage(student.enrollmentId)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {student.canEdit ? "Change enrollment" : "View enrollment"}
+                      </Button>
+                    ) : null}
+                    <Button onClick={() => onSelect(student.personId)} size="sm" variant="ghost">
+                      Open profile
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1017,12 +1075,23 @@ function MobileSectionButton({
   );
 }
 
-function RegistryStatusBadge({ status }: { status: "active" | "inactive" }) {
+function EnrollmentStatusBadge({ status }: { status: StudentRow["enrollmentStatus"] }) {
   return (
     <Badge className="rounded-full" variant="outline">
-      {status === "active" ? "Active" : "Inactive"}
+      {enrollmentStatusLabel(status)}
     </Badge>
   );
+}
+
+function enrollmentStatusLabel(status: StudentRow["enrollmentStatus"]): string {
+  return {
+    recorded: "Recorded",
+    enrolled: "Enrolled",
+    transferred: "Transferred",
+    withdrawn: "Withdrawn",
+    completed: "Completed",
+    graduated: "Completed",
+  }[status];
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
