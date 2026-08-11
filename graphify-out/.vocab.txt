@@ -52,6 +52,8 @@ assembly
 assert
 assessment
 assets
+assignment
+assignments
 assistant
 async
 atob

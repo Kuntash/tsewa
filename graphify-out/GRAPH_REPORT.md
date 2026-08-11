@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 125 files · ~199,477 words
+- 127 files · ~200,990 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4561 nodes · 5569 edges · 373 communities (84 shown, 289 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
+- 4583 nodes · 5614 edges · 375 communities (86 shown, 289 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.56)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2114f0e2`
+- Built from commit: `e9c1344d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,7 +28,7 @@
 - devDependencies
 - compilerOptions
 - import-placement-history.mjs
-- people-registry.tsx
+- historical-results.tsx
 - dependencies
 - person-profile-sheet.tsx
 - components.json
@@ -331,7 +331,7 @@
 - Memory
 - MessageBatch
 - NodeStyleServer
-- person-family-editor.tsx
+- admission-sheet.tsx
 - RequestInitCfPropertiesVaryHeader
 - SqlStorage
 - ToMarkdownService
@@ -376,21 +376,23 @@
 - Practice school
 - PipelineTransformationEntrypoint
 - Message
-- button.tsx
+- people-registry.tsx
 - Q: great, continue with the next parity slice?
 - enrollment-change-sheet.tsx
 - Q: continue
 - Q: continue
 - @fontsource-variable/dm-sans
+- student-report-sheet.tsx
+- Q: continue, make sure the printable design aligns and looks professional.
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `getRuntimeEnv()` - 46 edges
-3. `fetch()` - 37 edges
-4. `methodNotAllowed()` - 36 edges
-5. `organization` - 32 edges
-6. `getMembershipContext()` - 32 edges
-7. `forbidden()` - 32 edges
+2. `getRuntimeEnv()` - 47 edges
+3. `fetch()` - 38 edges
+4. `methodNotAllowed()` - 37 edges
+5. `forbidden()` - 33 edges
+6. `organization` - 32 edges
+7. `getMembershipContext()` - 32 edges
 8. `scripts` - 32 edges
 9. `unauthorized()` - 30 edges
 10. `Event` - 25 edges
@@ -400,17 +402,17 @@
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
 - `CardFooter()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
-- `SelectGroup()` --calls--> `cn()`  [EXTRACTED]
-  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
-- `SelectLabel()` --calls--> `cn()`  [EXTRACTED]
-  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
-- `SelectSeparator()` --calls--> `cn()`  [EXTRACTED]
-  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SheetOverlay()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/sheet.tsx → apps/web/src/lib/utils.ts
+- `person_import_issue_summary` --references--> `person_import_batch`  [EXTRACTED]
+  apps/web/migrations/0004_people_registry_dry_run.sql → apps/web/migrations/0003_people_registry.sql
+- `SchoolOperations()` --calls--> `useDebouncedValue()`  [EXTRACTED]
+  apps/web/src/components/school-operations.tsx → apps/web/src/lib/use-debounced-value.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (373 total, 289 thin omitted)
+## Communities (375 total, 289 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -418,7 +420,7 @@ Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentM
 
 ### Community 1 - "server.ts"
 Cohesion: 0.06
-Nodes (124): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, academicClassMasterSchema, academicClassName(), AcademicClassRow, academicClassRowName() (+116 more)
+Nodes (129): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, academicClassMasterSchema, academicClassName(), AcademicClassRow, academicClassRowName() (+121 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -429,16 +431,16 @@ Cohesion: 0.04
 Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEvent, FetchEvent, MessageEvent (+4 more)
 
 ### Community 4 - "index.tsx"
-Cohesion: 0.14
-Nodes (18): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+10 more)
+Cohesion: 0.13
+Nodes (20): AccountSettings(), AccountSettingsProps, Badge(), badgeVariants, Card(), CardAction(), CardContent(), CardDescription() (+12 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
 Nodes (43): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+35 more)
 
 ### Community 6 - "cn"
-Cohesion: 0.12
-Nodes (18): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+10 more)
+Cohesion: 0.10
+Nodes (24): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+16 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -464,7 +466,7 @@ Nodes (24): compilerOptions, allowImportingTsExtensions, jsx, lib, module, modul
 Cohesion: 0.10
 Nodes (18): buildImportSql(), confirmedDatabaseId, database, optionalText(), options, organizationSlug, rawSql(), readPlacements() (+10 more)
 
-### Community 13 - "people-registry.tsx"
+### Community 13 - "historical-results.tsx"
 Cohesion: 0.10
 Nodes (20): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+12 more)
 
@@ -522,7 +524,7 @@ Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
 
 ### Community 54 - "school-operations.tsx"
 Cohesion: 0.09
-Nodes (17): AcademicSession, CountOption, emptyStudents, EnrollmentStatusBadge(), enrollmentStatusLabel(), handleLoadError(), OverviewResponse, parseResponse() (+9 more)
+Nodes (19): AcademicSession, CountOption, emptyStudents, EnrollmentStatusBadge(), enrollmentStatusLabel(), handleLoadError(), optionLabel(), OverviewResponse (+11 more)
 
 ### Community 60 - "Tsewa"
 Cohesion: 0.29
@@ -692,9 +694,9 @@ Nodes (5): CopyInstruction, fetch(), hasValidToken(), hexToBytes(), parseInstruc
 Cohesion: 0.67
 Nodes (3): BasicImageTransformations, RequestInitCfPropertiesImage, RequestInitCfPropertiesImageDraw
 
-### Community 318 - "person-family-editor.tsx"
-Cohesion: 0.10
-Nodes (21): AdmissionSheet(), Option, optionsForSchool(), Setup, emptyFamily, FamilyForm, familyToForm(), PersonFamilyEditor() (+13 more)
+### Community 318 - "admission-sheet.tsx"
+Cohesion: 0.25
+Nodes (6): AdmissionSheet(), Option, optionsForSchool(), Setup, SelectContent(), SelectItem()
 
 ### Community 319 - "RequestInitCfPropertiesVaryHeader"
 Cohesion: 0.67
@@ -704,9 +706,9 @@ Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryA
 Cohesion: 0.50
 Nodes (3): Editing a person, Editing family and siblings, Practice school
 
-### Community 366 - "button.tsx"
-Cohesion: 0.43
-Nodes (5): readTheme(), Theme, ThemeToggle(), Button(), buttonVariants
+### Community 366 - "people-registry.tsx"
+Cohesion: 0.16
+Nodes (12): emptyRegistry, formatDate(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse, readTheme() (+4 more)
 
 ### Community 367 - "Q: great, continue with the next parity slice?"
 Cohesion: 0.40
@@ -724,36 +726,44 @@ Nodes (4): Answer, Outcome, Q: continue, Source Nodes
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: continue, Source Nodes
 
+### Community 373 - "student-report-sheet.tsx"
+Cohesion: 0.31
+Nodes (9): csvCell(), enrollmentStatusLabel(), genderLabel(), parseReportResponse(), ReportStudent, safeFileName(), StudentReportRequest, StudentReportResponse (+1 more)
+
+### Community 374 - "Q: continue, make sure the printable design aligns and looks professional."
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: continue, make sure the printable design aligns and looks professional., Source Nodes
+
 ## Knowledge Gaps
-- **2158 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2153 more)
+- **2166 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2161 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `student_enrollment` (6× useful, score=5.927311718)
-- `school-operations.tsx` (5× useful, score=4.95954339) _(code changed — re-verify)_
-- `TODO.md` (4× useful, score=3.95317279)
-- `person_academic_record` (4× useful, score=3.945096272)
-- `academic_class_master` (3× useful, score=2.973199786)
-- `academic_session` (2× useful, score=1.980600743)
-- `progressReportPath` (2× useful, score=1.973476412)
+- `school-operations.tsx` (6× useful, score=5.958062238) _(code changed — re-verify)_
+- `student_enrollment` (6× useful, score=5.925651153)
+- `TODO.md` (4× useful, score=3.95206529)
+- `person_academic_record` (4× useful, score=3.943991035)
+- `academic_class_master` (3× useful, score=2.97236683)
+- `academic_session` (2× useful, score=1.980045868)
+- `progressReportPath` (2× useful, score=1.972923533)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Console` connect `Console` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **Why does `Event` connect `Event` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Why does `DurableObjectStorage` connect `DurableObjectStorage` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `SubtleCrypto` connect `SubtleCrypto` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `HostedImagesBinding` connect `HostedImagesBinding` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2158 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2166 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06163877952755906 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05844155844155844 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

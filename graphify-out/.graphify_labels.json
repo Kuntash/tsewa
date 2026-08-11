@@ -12,7 +12,7 @@
   "10": "devDependencies",
   "11": "compilerOptions",
   "12": "import-placement-history.mjs",
-  "13": "people-registry.tsx",
+  "13": "historical-results.tsx",
   "14": "dependencies",
   "15": "person-profile-sheet.tsx",
   "16": "components.json",
@@ -317,7 +317,7 @@
   "315": "0015_home_placement_editing.sql",
   "316": "MessageBatch",
   "317": "NodeStyleServer",
-  "318": "person-family-editor.tsx",
+  "318": "admission-sheet.tsx",
   "319": "RequestInitCfPropertiesVaryHeader",
   "320": "SqlStorage",
   "321": "ToMarkdownService",
@@ -365,11 +365,13 @@
   "363": "0014_family_relationship_editing.sql",
   "364": "0016_person_file_editing.sql",
   "365": "Message",
-  "366": "button.tsx",
+  "366": "people-registry.tsx",
   "367": "Q: great, continue with the next parity slice?",
   "368": "enrollment-change-sheet.tsx",
   "369": "Q: continue",
   "370": "Q: continue",
   "371": "0017_class_house_editing.sql",
-  "372": "@fontsource-variable/dm-sans"
+  "372": "@fontsource-variable/dm-sans",
+  "373": "student-report-sheet.tsx",
+  "374": "Q: continue, make sure the printable design aligns and looks professional."
 }

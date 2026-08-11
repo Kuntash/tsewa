@@ -121,3 +121,116 @@
     cursor: pointer;
   }
 }
+
+.student-report-table thead {
+  display: table-header-group;
+}
+
+.student-report-portal {
+  animation: none !important;
+  transform: none !important;
+}
+
+[data-slot="sheet-overlay"][data-state="closed"] {
+  display: none;
+}
+
+.student-report-table th {
+  border-bottom: 1.5px solid #24664d;
+  background: #edf3ef;
+  padding: 8px 7px;
+  color: #3f554a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.student-report-table td {
+  border-bottom: 1px solid #e1e7e3;
+  padding: 7px;
+  vertical-align: top;
+}
+
+.student-report-table tbody tr {
+  break-inside: avoid;
+}
+
+@media screen and (max-width: 640px) {
+  .student-report-table .report-optional {
+    display: none;
+  }
+
+  .student-report-table th,
+  .student-report-table td {
+    padding-inline: 5px;
+  }
+}
+
+@page {
+  size: A4 landscape;
+  margin: 12mm;
+}
+
+@media print {
+  :root,
+  .dark {
+    color-scheme: light;
+  }
+
+  body {
+    background: white;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .student-report-print,
+  .student-report-print * {
+    visibility: visible;
+  }
+
+  .student-report-toolbar,
+  [data-slot="sheet-overlay"] {
+    display: none !important;
+  }
+
+  .student-report-portal {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  .student-report-scroll {
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .student-report-print {
+    position: absolute;
+    inset: 0;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    color: #17251e !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .student-report-table .report-optional {
+    display: table-cell;
+  }
+
+  .student-report-footer {
+    break-inside: avoid;
+  }
+}

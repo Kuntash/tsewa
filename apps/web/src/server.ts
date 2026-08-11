@@ -50,7 +50,7 @@ const schoolOverviewQuerySchema = z.object({
   sessionId: z.uuid(),
 });
 
-const schoolStudentsQuerySchema = z.object({
+const schoolStudentFiltersSchema = z.object({
   sessionId: z.uuid(),
   q: z.string().trim().max(100).default(""),
   school: z.string().trim().max(160).default("all"),
@@ -59,9 +59,14 @@ const schoolStudentsQuerySchema = z.object({
   status: z
     .enum(["all", "recorded", "enrolled", "transferred", "withdrawn", "completed"])
     .default("all"),
+});
+
+const schoolStudentsQuerySchema = schoolStudentFiltersSchema.extend({
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
+
+const schoolStudentReportQuerySchema = schoolStudentFiltersSchema;
 
 const schoolRostersQuerySchema = z.object({
   sessionId: z.uuid(),
@@ -286,6 +291,10 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/students") {
       return getSchoolOperationsStudents(request);
+    }
+
+    if (url.pathname === "/api/school-operations/student-report") {
+      return getSchoolOperationsStudentReport(request);
     }
 
     if (url.pathname === "/api/school-operations/master-data") {
@@ -1218,6 +1227,99 @@ async function readStudentEnrollment(
     .first<StudentEnrollmentRecord>();
 }
 
+type SchoolStudentFilters = z.infer<typeof schoolStudentFiltersSchema>;
+
+type SchoolStudentRow = {
+  personId: string;
+  enrollmentId: string;
+  displayName: string;
+  primaryIdentifier: string;
+  status: "active" | "inactive";
+  gender: "female" | "male" | "other" | "unknown" | null;
+  schoolName: string | null;
+  className: string;
+  classSection: string | null;
+  classTitle: string | null;
+  houseName: string | null;
+  rollNumber: string | null;
+  boardRegistrationNumber: string | null;
+  result: string | null;
+  enrollmentStatus: StudentEnrollmentRecord["status"];
+  statusSource: StudentEnrollmentRecord["statusSource"];
+};
+
+function buildSchoolStudentFilters(
+  scope: { organizationId: string; session: { id: string } },
+  filters: SchoolStudentFilters,
+) {
+  const conditions = [
+    "enrollment.organization_id = ?",
+    "enrollment.academic_session_id = ?",
+    "person.organization_id = ?",
+  ];
+  const bindings: Array<string | number> = [
+    scope.organizationId,
+    scope.session.id,
+    scope.organizationId,
+  ];
+  if (filters.q) {
+    const search = `%${escapeLikePattern(filters.q.toLowerCase())}%`;
+    conditions.push(
+      `(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\' OR lower(coalesce(enrollment.roll_number, '')) LIKE ? ESCAPE '\\')`,
+    );
+    bindings.push(search, search, search);
+  }
+  if (filters.school !== "all") {
+    if (filters.school === "unmapped") {
+      conditions.push("enrollment.school_id IS NULL");
+    } else {
+      conditions.push("school.id = ?");
+      bindings.push(filters.school);
+    }
+  }
+  if (filters.className !== "all") {
+    conditions.push(`${classDisplayName("class")} = ?`);
+    bindings.push(filters.className);
+  }
+  if (filters.house !== "all") {
+    if (filters.house === "none") {
+      conditions.push("enrollment.house_id IS NULL");
+    } else {
+      conditions.push("house.id = ?");
+      bindings.push(filters.house);
+    }
+  }
+  if (filters.status !== "all") {
+    if (filters.status === "completed") {
+      conditions.push("enrollment.status IN ('completed', 'graduated')");
+    } else {
+      conditions.push("enrollment.status = ?");
+      bindings.push(filters.status);
+    }
+  }
+  return { bindings, where: conditions.join(" AND ") };
+}
+
+const schoolStudentFromSql = `FROM student_enrollment enrollment
+       JOIN person ON person.id = enrollment.person_id
+         AND person.organization_id = enrollment.organization_id
+       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
+         AND class.organization_id = enrollment.organization_id
+       LEFT JOIN school_master school ON school.id = enrollment.school_id
+         AND school.organization_id = enrollment.organization_id
+       LEFT JOIN house_master house ON house.id = enrollment.house_id
+         AND house.organization_id = enrollment.organization_id`;
+
+const schoolStudentSelectSql = `SELECT person.id AS personId, enrollment.id AS enrollmentId,
+              person.display_name AS displayName,
+              person.primary_identifier AS primaryIdentifier, person.status, person.gender,
+              school.name AS schoolName, class.name AS className,
+              class.section AS classSection, ${classDisplayName("class")} AS classTitle,
+              house.name AS houseName, enrollment.roll_number AS rollNumber,
+              enrollment.board_registration_number AS boardRegistrationNumber,
+              enrollment.result, enrollment.status AS enrollmentStatus,
+              enrollment.status_source AS statusSource`;
+
 async function getSchoolOperationsStudents(request: Request): Promise<Response> {
   if (request.method !== "GET") return methodNotAllowed("GET");
   const url = new URL(request.url);
@@ -1237,113 +1339,21 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
-  const { q, school, className, house, status, page, pageSize } = parsed.data;
-  const conditions = [
-    "enrollment.organization_id = ?",
-    "enrollment.academic_session_id = ?",
-    "person.organization_id = ?",
-  ];
-  const filterBindings: Array<string | number> = [
-    scope.organizationId,
-    scope.session.id,
-    scope.organizationId,
-  ];
-  if (q) {
-    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
-    conditions.push(
-      `(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\' OR lower(coalesce(enrollment.roll_number, '')) LIKE ? ESCAPE '\\')`,
-    );
-    filterBindings.push(search, search, search);
-  }
-  if (school !== "all") {
-    if (school === "unmapped") {
-      conditions.push("enrollment.school_id IS NULL");
-    } else {
-      conditions.push("school.id = ?");
-      filterBindings.push(school);
-    }
-  }
-  if (className !== "all") {
-    conditions.push(`${classDisplayName("class")} = ?`);
-    filterBindings.push(className);
-  }
-  if (house !== "all") {
-    if (house === "none") {
-      conditions.push("enrollment.house_id IS NULL");
-    } else {
-      conditions.push("house.id = ?");
-      filterBindings.push(house);
-    }
-  }
-  if (status !== "all") {
-    if (status === "completed") {
-      conditions.push("enrollment.status IN ('completed', 'graduated')");
-    } else {
-      conditions.push("enrollment.status = ?");
-      filterBindings.push(status);
-    }
-  }
-
-  const where = conditions.join(" AND ");
+  const { page, pageSize } = parsed.data;
+  const { bindings: filterBindings, where } = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
   const offset = (page - 1) * pageSize;
   const [count, students] = await Promise.all([
-    runtime.DB.prepare(
-      `SELECT COUNT(*) AS total FROM student_enrollment enrollment
-       JOIN person ON person.id = enrollment.person_id
-         AND person.organization_id = enrollment.organization_id
-       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-         AND class.organization_id = enrollment.organization_id
-       LEFT JOIN school_master school ON school.id = enrollment.school_id
-         AND school.organization_id = enrollment.organization_id
-       LEFT JOIN house_master house ON house.id = enrollment.house_id
-         AND house.organization_id = enrollment.organization_id
-       WHERE ${where}`,
-    )
+    runtime.DB.prepare(`SELECT COUNT(*) AS total ${schoolStudentFromSql} WHERE ${where}`)
       .bind(...filterBindings)
       .first<{ total: number }>(),
     runtime.DB.prepare(
-      `SELECT person.id AS personId, enrollment.id AS enrollmentId,
-              person.display_name AS displayName,
-              person.primary_identifier AS primaryIdentifier, person.status, person.gender,
-              school.name AS schoolName, class.name AS className,
-              class.section AS classSection, ${classDisplayName("class")} AS classTitle,
-              house.name AS houseName, enrollment.roll_number AS rollNumber,
-              enrollment.board_registration_number AS boardRegistrationNumber,
-              enrollment.result, enrollment.status AS enrollmentStatus,
-              enrollment.status_source AS statusSource
-       FROM student_enrollment enrollment
-       JOIN person ON person.id = enrollment.person_id
-         AND person.organization_id = enrollment.organization_id
-       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-         AND class.organization_id = enrollment.organization_id
-       LEFT JOIN school_master school ON school.id = enrollment.school_id
-         AND school.organization_id = enrollment.organization_id
-       LEFT JOIN house_master house ON house.id = enrollment.house_id
-         AND house.organization_id = enrollment.organization_id
-       WHERE ${where}
+      `${schoolStudentSelectSql} ${schoolStudentFromSql} WHERE ${where}
        ORDER BY person.display_name COLLATE NOCASE, person.primary_identifier
        LIMIT ? OFFSET ?`,
     )
       .bind(...filterBindings, pageSize, offset)
-      .all<{
-        personId: string;
-        enrollmentId: string;
-        displayName: string;
-        primaryIdentifier: string;
-        status: "active" | "inactive";
-        gender: "female" | "male" | "other" | "unknown" | null;
-        schoolName: string | null;
-        className: string;
-        classSection: string | null;
-        classTitle: string | null;
-        houseName: string | null;
-        rollNumber: string | null;
-        boardRegistrationNumber: string | null;
-        result: string | null;
-        enrollmentStatus: StudentEnrollmentRecord["status"];
-        statusSource: StudentEnrollmentRecord["statusSource"];
-      }>(),
+      .all<SchoolStudentRow>(),
   ]);
   const total = Number(count?.total ?? 0);
   return Response.json({
@@ -1352,6 +1362,64 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
       canEdit: canManageSchool(scope.role) && isOpenEnrollment(student.enrollmentStatus),
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+const MAX_STUDENT_REPORT_ROWS = 5_000;
+
+async function getSchoolOperationsStudentReport(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const url = new URL(request.url);
+  const parsed = schoolStudentReportQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId"),
+    q: url.searchParams.get("q") ?? "",
+    school: url.searchParams.get("school") ?? "all",
+    className: url.searchParams.get("class") ?? "all",
+    house: url.searchParams.get("house") ?? "all",
+    status: url.searchParams.get("status") ?? "all",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Check the report filters and try again." }, { status: 400 });
+  }
+
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  const { bindings, where } = buildSchoolStudentFilters(scope, parsed.data);
+  const runtime = getRuntimeEnv();
+  const [count, organization] = await Promise.all([
+    runtime.DB.prepare(`SELECT COUNT(*) AS total ${schoolStudentFromSql} WHERE ${where}`)
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DB.prepare("SELECT name FROM organization WHERE id = ?")
+      .bind(scope.organizationId)
+      .first<{ name: string }>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  if (total > MAX_STUDENT_REPORT_ROWS) {
+    return Response.json(
+      {
+        error: `This list has ${total.toLocaleString()} students. Narrow the filters to ${MAX_STUDENT_REPORT_ROWS.toLocaleString()} or fewer before printing or downloading.`,
+      },
+      { status: 422 },
+    );
+  }
+
+  const students = await runtime.DB.prepare(
+    `${schoolStudentSelectSql} ${schoolStudentFromSql} WHERE ${where}
+     ORDER BY school.name COLLATE NOCASE, coalesce(class.sort_order, 999),
+              classTitle COLLATE NOCASE, person.display_name COLLATE NOCASE,
+              person.primary_identifier
+     LIMIT ?`,
+  )
+    .bind(...bindings, MAX_STUDENT_REPORT_ROWS)
+    .all<SchoolStudentRow>();
+
+  return Response.json({
+    generatedAt: new Date().toISOString(),
+    organizationName: organization?.name ?? "School",
+    session: scope.session,
+    students: students.results,
+    total,
   });
 }
 

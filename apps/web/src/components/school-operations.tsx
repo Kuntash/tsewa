@@ -12,6 +12,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Printer,
   Search,
   Settings2,
   ShieldCheck,
@@ -28,6 +29,7 @@ import { HistoricalResults } from "@/components/historical-results";
 import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
 import { SchoolAssignmentsSheet } from "@/components/school-assignments-sheet";
 import { SchoolMasterData } from "@/components/school-master-data";
+import { StudentReportSheet, type StudentReportRequest } from "@/components/student-report-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -174,6 +176,7 @@ export function SchoolOperations({
   const [schoolEditorOpen, setSchoolEditorOpen] = useState(false);
   const [schoolBeingEdited, setSchoolBeingEdited] = useState<EditableSchool | null>(null);
   const [schoolBeingAssigned, setSchoolBeingAssigned] = useState<SchoolRow | null>(null);
+  const [studentReport, setStudentReport] = useState<StudentReportRequest | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -300,6 +303,59 @@ export function SchoolOperations({
     } finally {
       setSwitchingSession(false);
     }
+  }
+
+  function openStudentListReport() {
+    const filterSummary = [`Session: ${selectedSession?.name ?? "Selected session"}`];
+    if (school !== "all") {
+      filterSummary.push(
+        `School: ${optionLabel(overview?.filters.schools ?? [], school, "School not set")}`,
+      );
+    }
+    if (className !== "all") filterSummary.push(`Class: ${className}`);
+    if (house !== "all") {
+      filterSummary.push(
+        `House: ${optionLabel(overview?.filters.houses ?? [], house, "No house")}`,
+      );
+    }
+    if (status !== "all") filterSummary.push(`Status: ${reportStatusLabel(status)}`);
+    if (debouncedQuery) filterSummary.push(`Search: ${debouncedQuery}`);
+    setStudentReport({
+      title: "Student list",
+      description: "Students matching the filters selected in School operations.",
+      fileName: `student-list-${selectedSession?.name ?? "session"}`,
+      filterSummary,
+      parameters: {
+        sessionId: activeSessionId,
+        q: debouncedQuery,
+        school,
+        className,
+        house,
+        status,
+      },
+    });
+  }
+
+  function openClassRosterReport(roster: RosterRow) {
+    setStudentReport({
+      title: `${roster.className} class roster`,
+      description: `${roster.schoolName} · ${selectedSession?.name ?? "Selected session"}`,
+      fileName: `${roster.schoolName}-${roster.className}-${selectedSession?.name ?? "roster"}`,
+      filterSummary: [
+        `School: ${roster.schoolName}`,
+        `Class: ${roster.className}`,
+        `Session: ${selectedSession?.name ?? "Selected session"}`,
+      ],
+      hideSchoolAndClass: true,
+      parameters: {
+        sessionId: activeSessionId,
+        q: "",
+        school: roster.schoolId,
+        className: roster.classId,
+        house: "all",
+        status: "all",
+      },
+    });
   }
 
   return (
@@ -538,6 +594,20 @@ export function SchoolOperations({
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        Print or download the full filtered list, not only this page.
+                      </p>
+                      <Button
+                        className="w-full sm:w-auto"
+                        disabled={loadingStudents || students.pagination.total === 0}
+                        onClick={openStudentListReport}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Printer /> Print or export
+                      </Button>
+                    </div>
                   </div>
 
                   {loadingStudents ? (
@@ -597,6 +667,7 @@ export function SchoolOperations({
                 setPage(1);
                 setSection("students");
               }}
+              onPrintRoster={openClassRosterReport}
               rosters={rosters}
               schools={overview?.filters.schools ?? []}
             />
@@ -662,6 +733,10 @@ export function SchoolOperations({
         open={Boolean(schoolBeingAssigned)}
         school={schoolBeingAssigned}
         sessionId={activeSessionId}
+      />
+      <StudentReportSheet
+        onOpenChange={(open) => !open && setStudentReport(null)}
+        request={studentReport}
       />
     </main>
   );
@@ -788,11 +863,13 @@ function SchoolsDirectory({
 function RosterDirectory({
   loading,
   onOpenRoster,
+  onPrintRoster,
   rosters,
   schools,
 }: {
   loading: boolean;
   onOpenRoster: (schoolId: string, classId: string) => void;
+  onPrintRoster: (roster: RosterRow) => void;
   rosters: RosterRow[];
   schools: CountOption[];
 }) {
@@ -829,11 +906,9 @@ function RosterDirectory({
       </Card>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((roster) => (
-          <button
-            className="group rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary/40"
+          <div
+            className="rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary/40"
             key={roster.id}
-            onClick={() => onOpenRoster(roster.schoolId, roster.classId)}
-            type="button"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -851,9 +926,20 @@ function RosterDirectory({
             </div>
             <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
               <span>{roster.currentActiveStudents} active</span>
-              <span className="font-medium text-primary">View students</span>
+              <div className="flex gap-1">
+                <Button onClick={() => onPrintRoster(roster)} size="sm" variant="ghost">
+                  <Printer /> Print
+                </Button>
+                <Button
+                  onClick={() => onOpenRoster(roster.schoolId, roster.classId)}
+                  size="sm"
+                  variant="ghost"
+                >
+                  View students
+                </Button>
+              </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
       {!filtered.length ? (
@@ -1189,6 +1275,14 @@ function enrollmentStatusLabel(status: StudentRow["enrollmentStatus"]): string {
     completed: "Completed",
     graduated: "Completed",
   }[status];
+}
+
+function optionLabel(options: CountOption[], value: string, fallback: string) {
+  return options.find((option) => option.id === value)?.name ?? fallback;
+}
+
+function reportStatusLabel(status: Exclude<StudentRow["enrollmentStatus"], "graduated">) {
+  return enrollmentStatusLabel(status);
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

@@ -85,7 +85,7 @@ evidence of a regularly used year-end workflow.
 - [x] Assign classes and houses to a school, with classes set per academic session.
 - [x] Correct a current enrollment while preserving imported source references
       and change history.
-- [ ] Provide simple printable/exportable student lists and class rosters.
+- [x] Provide simple printable/exportable student lists and class rosters.
 
 ### Data completion before v0 sign-off
 
