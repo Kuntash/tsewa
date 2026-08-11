@@ -133,6 +133,7 @@ card
 cards
 cases
 catalog
+category
 cert
 change
 changes
@@ -207,6 +208,7 @@ continent
 continue
 control
 controller
+controls
 conversation
 conversion
 cookie
@@ -266,6 +268,7 @@ dir
 direct
 directory
 dirxml
+disabled
 dispatch
 dispensary
 display
@@ -273,6 +276,7 @@ disposable
 disposition
 distance
 doctype
+docume
 document
 documents
 does
@@ -294,6 +298,8 @@ dynamic
 each
 easy
 edge
+edit
+editable
 editing
 editor
 edits
@@ -620,6 +626,7 @@ multipart
 mutation
 name
 namespace
+naming
 nav
 navigator
 need
@@ -699,6 +706,7 @@ person
 pfnet
 phase
 phoenix
+photo
 pilot
 pipe
 pipecat
@@ -792,6 +800,7 @@ record
 recorded
 records
 redirect
+redundant
 refusal
 reg
 register
@@ -806,13 +815,16 @@ relay
 release
 remember
 remote
+removal
 remove
 replace
+replacement
 reply
 repo
 report
 repository
 request
+require
 required
 reranker
 reset
@@ -914,6 +926,7 @@ sheet
 shield
 short
 shortcut
+should
 show
 sibling
 siblings
@@ -1010,6 +1023,7 @@ theme
 theming
 there
 therefore
+they
 thf
 thinking
 this
@@ -1119,6 +1133,7 @@ watermarks
 web
 what
 whats
+whether
 while
 whisper
 why

@@ -69,6 +69,23 @@ const schoolRostersQuerySchema = z.object({
   school: z.string().trim().max(160).default("all"),
 });
 
+const schoolMasterSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  locationName: z
+    .string()
+    .trim()
+    .max(160)
+    .nullable()
+    .transform((value) => value || null),
+  affiliationNumber: z
+    .string()
+    .trim()
+    .max(100)
+    .nullable()
+    .transform((value) => value || null),
+  isActive: z.boolean(),
+});
+
 const isoDateSchema = z.iso.date();
 
 const admissionSchema = z.object({
@@ -247,8 +264,15 @@ export default createServerEntry({
       return getSchoolOperationsStudents(request);
     }
 
+    const schoolMasterMatch = url.pathname.match(/^\/api\/school-operations\/schools\/([^/]+)$/);
+    if (schoolMasterMatch) {
+      return updateSchoolMaster(request, schoolMasterMatch[1]);
+    }
+
     if (url.pathname === "/api/school-operations/schools") {
-      return getSchoolOperationsSchools(request);
+      return request.method === "POST"
+        ? createSchoolMaster(request)
+        : getSchoolOperationsSchools(request);
     }
 
     if (url.pathname === "/api/school-operations/rosters") {
@@ -1345,6 +1369,106 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
     session: scope.session,
     schools: schools.results.map((school) => ({ ...school, isActive: Boolean(school.isActive) })),
   });
+}
+
+async function createSchoolMaster(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const parsed = schoolMasterSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Check the school details." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const duplicate = await runtime.DB.prepare(
+    "SELECT id FROM school_master WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?))",
+  )
+    .bind(context.organizationId, parsed.data.name)
+    .first<{ id: string }>();
+  if (duplicate) {
+    return Response.json({ error: "A school with this name already exists." }, { status: 409 });
+  }
+
+  const id = crypto.randomUUID();
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `INSERT INTO school_master (
+         id, organization_id, name, location_name, affiliation_number, is_active,
+         source_system, source_table, source_id
+       ) VALUES (?, ?, ?, ?, ?, ?, 'tsewa', 'school_master', ?)`,
+    ).bind(
+      id,
+      context.organizationId,
+      parsed.data.name,
+      parsed.data.locationName,
+      parsed.data.affiliationNumber,
+      parsed.data.isActive ? 1 : 0,
+      id,
+    ),
+    auditStatement(runtime.DB, context, "school.created", "school_master", id, {
+      name: parsed.data.name,
+    }),
+  ]);
+
+  return Response.json({ id, name: parsed.data.name }, { status: 201 });
+}
+
+async function updateSchoolMaster(request: Request, schoolId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const parsedId = z.uuid().safeParse(schoolId);
+  const parsed = schoolMasterSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success) {
+    return Response.json({ error: "Check the school details." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const [school, duplicate] = await Promise.all([
+    runtime.DB.prepare("SELECT id, name FROM school_master WHERE id = ? AND organization_id = ?")
+      .bind(parsedId.data, context.organizationId)
+      .first<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      `SELECT id FROM school_master
+       WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?)) AND id <> ?`,
+    )
+      .bind(context.organizationId, parsed.data.name, parsedId.data)
+      .first<{ id: string }>(),
+  ]);
+  if (!school) return Response.json({ error: "School not found" }, { status: 404 });
+  if (duplicate) {
+    return Response.json({ error: "A school with this name already exists." }, { status: 409 });
+  }
+
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE school_master
+       SET name = ?, location_name = ?, affiliation_number = ?, is_active = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND organization_id = ?`,
+    ).bind(
+      parsed.data.name,
+      parsed.data.locationName,
+      parsed.data.affiliationNumber,
+      parsed.data.isActive ? 1 : 0,
+      parsedId.data,
+      context.organizationId,
+    ),
+    auditStatement(runtime.DB, context, "school.updated", "school_master", parsedId.data, {
+      previousName: school.name,
+      name: parsed.data.name,
+      active: String(parsed.data.isActive),
+    }),
+  ]);
+
+  return Response.json({ ok: true, id: parsedId.data });
 }
 
 async function getSchoolOperationsRosters(request: Request): Promise<Response> {

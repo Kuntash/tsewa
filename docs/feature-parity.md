@@ -80,7 +80,7 @@ evidence of a regularly used year-end workflow.
 - [x] Change class or house, move school, transfer out, withdraw, or complete an
       enrollment. Test changes in the practice school rather than on migrated
       THS records.
-- [ ] Create and edit schools, including affiliation number and location.
+- [x] Create and edit schools, including affiliation number, location, and active status.
 - [ ] Create and edit classes/sections and houses.
 - [ ] Assign classes and houses to a school.
 - [x] Correct a current enrollment while preserving imported source references
@@ -90,7 +90,7 @@ evidence of a regularly used year-end workflow.
 ### Data completion before v0 sign-off
 
 - [x] Copy all 46,938 referenced media files to the self-hosted R2 bucket.
-- [ ] Reconcile target byte sizes and SHA-256 hashes.
+- [x] Reconcile target byte sizes and SHA-256 hashes.
 - [ ] Test the complete v0 workflow in **Tsewa Practice School** without changing
       imported THS records.
 - [ ] Let THF staff test the same workflow and record missing fields or steps.

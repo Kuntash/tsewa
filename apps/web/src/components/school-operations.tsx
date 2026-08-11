@@ -10,6 +10,8 @@ import {
   Layers3,
   LoaderCircle,
   MapPin,
+  Pencil,
+  Plus,
   Search,
   ShieldCheck,
   UserPlus,
@@ -22,6 +24,7 @@ import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { AdmissionSheet } from "@/components/admission-sheet";
 import { EnrollmentChangeSheet } from "@/components/enrollment-change-sheet";
 import { HistoricalResults } from "@/components/historical-results";
+import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -165,6 +168,8 @@ export function SchoolOperations({
   const [refreshKey, setRefreshKey] = useState(0);
   const [message, setMessage] = useState("");
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
+  const [schoolEditorOpen, setSchoolEditorOpen] = useState(false);
+  const [schoolBeingEdited, setSchoolBeingEdited] = useState<EditableSchool | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -398,7 +403,16 @@ export function SchoolOperations({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {overview?.canEdit ? (
+              {overview?.canEdit && section === "schools" ? (
+                <Button
+                  onClick={() => {
+                    setSchoolBeingEdited(null);
+                    setSchoolEditorOpen(true);
+                  }}
+                >
+                  <Plus /> Add school
+                </Button>
+              ) : overview?.canEdit ? (
                 <Button onClick={() => setAdmissionOpen(true)}>
                   <UserPlus /> Admit student
                 </Button>
@@ -539,7 +553,12 @@ export function SchoolOperations({
             </>
           ) : section === "schools" ? (
             <SchoolsDirectory
+              canEdit={Boolean(overview?.canEdit)}
               loading={loadingDirectories}
+              onEdit={(selectedSchool) => {
+                setSchoolBeingEdited(selectedSchool);
+                setSchoolEditorOpen(true);
+              }}
               onOpenRoster={(schoolId) => {
                 setSchool(schoolId);
                 setClassName("all");
@@ -593,16 +612,30 @@ export function SchoolOperations({
         }}
         open={Boolean(selectedEnrollmentId)}
       />
+      <SchoolEditorSheet
+        onOpenChange={setSchoolEditorOpen}
+        onSaved={(savedMessage) => {
+          setMessage(savedMessage);
+          setSchoolEditorOpen(false);
+          setRefreshKey((value) => value + 1);
+        }}
+        open={schoolEditorOpen}
+        school={schoolBeingEdited}
+      />
     </main>
   );
 }
 
 function SchoolsDirectory({
+  canEdit,
   loading,
+  onEdit,
   onOpenRoster,
   schools,
 }: {
+  canEdit: boolean;
   loading: boolean;
+  onEdit: (school: SchoolRow) => void;
   onOpenRoster: (schoolId: string) => void;
   schools: SchoolRow[];
 }) {
@@ -612,11 +645,9 @@ function SchoolsDirectory({
       <CardContent className="p-0">
         <div className="grid gap-3 p-4 md:hidden">
           {schools.map((school) => (
-            <button
+            <article
               className="rounded-2xl border bg-background p-4 text-left transition-colors hover:border-primary/40"
               key={school.id}
-              onClick={() => onOpenRoster(school.id)}
-              type="button"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -634,7 +665,17 @@ function SchoolsDirectory({
                 <MiniMetric label="Classes" value={school.classes} />
                 <MiniMetric label="Houses" value={school.houses} />
               </div>
-            </button>
+              <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-3">
+                {canEdit ? (
+                  <Button onClick={() => onEdit(school)} size="sm" variant="outline">
+                    <Pencil /> Edit
+                  </Button>
+                ) : null}
+                <Button onClick={() => onOpenRoster(school.id)} size="sm" variant="ghost">
+                  View students
+                </Button>
+              </div>
+            </article>
           ))}
         </div>
         <div className="hidden overflow-x-auto md:block">
@@ -646,7 +687,7 @@ function SchoolsDirectory({
                 <th className="px-4 py-3 font-semibold">Students</th>
                 <th className="px-4 py-3 font-semibold">Classes</th>
                 <th className="px-4 py-3 font-semibold">Houses</th>
-                <th className="px-5 py-3 text-right font-semibold">Open</th>
+                <th className="px-5 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -670,9 +711,16 @@ function SchoolsDirectory({
                   <td className="px-4 py-4 tabular-nums">{school.classes}</td>
                   <td className="px-4 py-4 tabular-nums">{school.houses}</td>
                   <td className="px-5 py-4 text-right">
-                    <Button onClick={() => onOpenRoster(school.id)} size="sm" variant="ghost">
-                      View students
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      {canEdit ? (
+                        <Button onClick={() => onEdit(school)} size="sm" variant="outline">
+                          <Pencil /> Edit
+                        </Button>
+                      ) : null}
+                      <Button onClick={() => onOpenRoster(school.id)} size="sm" variant="ghost">
+                        View students
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
