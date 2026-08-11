@@ -1260,17 +1260,25 @@ function PersonFileEditorRow({
           value={name}
         />
         <Button
-          disabled={Boolean(busy) || name.trim() === file.label || !name.trim()}
-          onClick={() =>
+          disabled={Boolean(busy)}
+          onClick={() => {
+            if (!name.trim()) {
+              setError("Enter a name before saving.");
+              return;
+            }
+            if (name.trim() === file.label) {
+              setError("Change the name before saving.");
+              return;
+            }
             void run("name", async () => {
               const response = await fetch(endpoint, {
                 method: "PATCH",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ name }),
+                body: JSON.stringify({ name: name.trim() }),
               });
               await requireOk(response, "The name could not be saved.");
-            })
-          }
+            });
+          }}
           type="button"
           variant="outline"
         >
@@ -1292,16 +1300,19 @@ function PersonFileEditorRow({
         />
         <div className="flex gap-2">
           <Button
-            disabled={Boolean(busy) || !replacement}
-            onClick={() =>
+            disabled={Boolean(busy)}
+            onClick={() => {
+              if (!replacement) {
+                setError("Choose a replacement file first.");
+                return;
+              }
               void run("replace", async () => {
-                if (!replacement) return;
                 const form = new FormData();
                 form.set("name", name.trim() || file.label);
                 form.set("file", replacement);
                 await sendFileRequest(endpoint, "POST", form);
-              })
-            }
+              });
+            }}
             type="button"
             variant="outline"
           >

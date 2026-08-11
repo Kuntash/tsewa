@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 117 files · ~192,945 words
+- 118 files · ~193,123 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4497 nodes · 5365 edges · 365 communities (77 shown, 288 thin omitted)
+- 4502 nodes · 5369 edges · 367 communities (78 shown, 289 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `94c051dd`
+- Built from commit: `a55d6d7f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -220,7 +220,7 @@
 - Product language
 - class-master-reconciliation.md
 - Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.
-- @fontsource-variable/dm-sans
+- Q: Why are Save name, Replace, and Remove disabled on legacy data? They should be editable; test only in the other organization.
 - import-historical-results.mjs
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
@@ -375,6 +375,8 @@
 - WebSearch
 - Practice school
 - PipelineTransformationEntrypoint
+- Message
+- better-auth
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
@@ -403,7 +405,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (365 total, 288 thin omitted)
+## Communities (367 total, 289 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -463,7 +465,7 @@ Nodes (14): emptyRegistry, formatDate(), PeopleResults(), PersonKind, PersonRow,
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.12
@@ -633,6 +635,10 @@ Nodes (3): Preferred words, Product language, Rules
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely., Source Nodes
 
+### Community 206 - "Q: Why are Save name, Replace, and Remove disabled on legacy data? They should be editable; test only in the other organization."
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Why are Save name, Replace, and Remove disabled on legacy data? They should be editable; test only in the other organization., Source Nodes
+
 ### Community 207 - "import-historical-results.mjs"
 Cohesion: 0.12
 Nodes (16): confirmedDatabaseId, database, id(), optionalNumber(), optionalText(), options, organizationSlug, readData() (+8 more)
@@ -694,20 +700,20 @@ Cohesion: 0.50
 Nodes (3): Editing a person, Editing family and siblings, Practice school
 
 ## Knowledge Gaps
-- **2135 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2130 more)
+- **2138 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2133 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **288 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `student_enrollment` (6× useful, score=5.931049444)
-- `TODO.md` (4× useful, score=3.955665637) _(code changed — re-verify)_
-- `person_academic_record` (4× useful, score=3.947584026)
-- `school-operations.tsx` (3× useful, score=2.961771949)
-- `academic_session` (2× useful, score=1.981849698)
-- `progressReportPath` (2× useful, score=1.974720874)
-- `academic_class_master` (2× useful, score=1.974534583)
+- `student_enrollment` (6× useful, score=5.92998604)
+- `TODO.md` (4× useful, score=3.954956408)
+- `person_academic_record` (4× useful, score=3.946876246)
+- `school-operations.tsx` (3× useful, score=2.96124092)
+- `academic_session` (2× useful, score=1.981494363)
+- `progressReportPath` (2× useful, score=1.974366817)
+- `academic_class_master` (2× useful, score=1.97418056)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -719,7 +725,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `URL` connect `URL` to `web/worker-configuration.d.ts`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2135 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2138 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**

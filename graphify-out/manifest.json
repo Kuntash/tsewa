@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786449380.7300525,
-    "ast_hash": "5aad011e2759e0b0b9228b0f91327505",
+    "mtime": 1786449770.8905025,
+    "ast_hash": "3abed75fe3f18dfe1aa9f179506966f6",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -487,6 +487,11 @@
   "graphify-out/memory/query_20260811_115950_remove_redundant_profile_edit_controls__add_docume.md": {
     "mtime": 1786449590.5359623,
     "ast_hash": "30193a4a1962763ac740612449181cf3",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_120508_why_are_save_name__replace__and_remove_disabled_on.md": {
+    "mtime": 1786449908.831284,
+    "ast_hash": "d768e8668de4a27b4fc418959f23aa81",
     "semantic_hash": ""
   }
 }
