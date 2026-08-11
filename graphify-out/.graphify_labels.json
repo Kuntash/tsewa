@@ -183,7 +183,7 @@
   "181": "Person files migration",
   "182": "school-operations-dry-run.mjs",
   "183": "@hugeicons/core-free-icons",
-  "184": "@hugeicons/react",
+  "184": "Q: What is the next feature slice after printable school reports?",
   "185": "react-dom",
   "186": "tailwind-merge",
   "187": "pre-commit",
@@ -317,7 +317,7 @@
   "315": "0015_home_placement_editing.sql",
   "316": "MessageBatch",
   "317": "NodeStyleServer",
-  "318": "admission-sheet.tsx",
+  "318": "Q: whats next?",
   "319": "RequestInitCfPropertiesVaryHeader",
   "320": "SqlStorage",
   "321": "ToMarkdownService",
@@ -371,7 +371,8 @@
   "369": "Q: continue",
   "370": "Q: continue",
   "371": "0017_class_house_editing.sql",
-  "372": "@fontsource-variable/dm-sans",
+  "372": "better-auth",
   "373": "student-report-sheet.tsx",
-  "374": "Q: continue, make sure the printable design aligns and looks professional."
+  "374": "Q: continue, make sure the printable design aligns and looks professional.",
+  "375": "@fontsource-variable/dm-sans"
 }

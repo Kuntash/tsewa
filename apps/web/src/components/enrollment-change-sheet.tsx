@@ -131,6 +131,7 @@ export function EnrollmentChangeSheet({
   const [houseId, setHouseId] = useState("none");
   const [rollNumber, setRollNumber] = useState("");
   const [effectiveOn, setEffectiveOn] = useState("");
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -156,6 +157,7 @@ export function EnrollmentChangeSheet({
         setHouseId(payload.enrollment.houseId ?? "none");
         setRollNumber(payload.enrollment.rollNumber ?? "");
         setEffectiveOn(dateWithinSession(payload.enrollment));
+        setNote("");
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted)
@@ -219,7 +221,6 @@ export function EnrollmentChangeSheet({
     if (!enrollmentId) return;
     setSubmitting(true);
     setError("");
-    const form = new FormData(event.currentTarget);
     const response = await fetch(`/api/school-operations/enrollments/${enrollmentId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -230,7 +231,7 @@ export function EnrollmentChangeSheet({
         academicClassId: keepsStudentEnrolled ? academicClassId : undefined,
         houseId: keepsStudentEnrolled ? (houseId === "none" ? null : houseId) : undefined,
         rollNumber: keepsStudentEnrolled ? rollNumber || null : undefined,
-        note: form.get("note") || undefined,
+        note: note.trim() || undefined,
       }),
     });
     const payload = (await response.json()) as { error?: string };
@@ -358,17 +359,25 @@ export function EnrollmentChangeSheet({
                   <Label htmlFor="change-note">
                     {action === "transferred_out"
                       ? "Destination or note (optional)"
-                      : "Reason or note (optional)"}
+                      : action === "withdrawn"
+                        ? "Withdrawal reason"
+                        : action === "completed"
+                          ? "Completion reason"
+                          : "Note (optional)"}
                   </Label>
                   <Input
                     id="change-note"
                     maxLength={500}
-                    name="note"
+                    onChange={(event) => setNote(event.target.value)}
                     placeholder={
                       action === "transferred_out"
                         ? "Example: Transferred to ABC School"
-                        : "Add a short note"
+                        : action === "withdrawn" || action === "completed"
+                          ? "Enter the reason"
+                          : "Add a short note"
                     }
+                    required={action === "withdrawn" || action === "completed"}
+                    value={note}
                   />
                 </div>
 

@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 127 files · ~200,990 words
+- 129 files · ~202,749 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4583 nodes · 5614 edges · 375 communities (86 shown, 289 thin omitted)
+- 4598 nodes · 5643 edges · 376 communities (87 shown, 289 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.56)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e9c1344d`
+- Built from commit: `12cf78ff`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -198,7 +198,7 @@
 - Person files migration
 - school-operations-dry-run.mjs
 - @hugeicons/core-free-icons
-- @hugeicons/react
+- Q: What is the next feature slice after printable school reports?
 - react-dom
 - tailwind-merge
 - pre-commit
@@ -331,7 +331,7 @@
 - Memory
 - MessageBatch
 - NodeStyleServer
-- admission-sheet.tsx
+- Q: whats next?
 - RequestInitCfPropertiesVaryHeader
 - SqlStorage
 - ToMarkdownService
@@ -381,38 +381,39 @@
 - enrollment-change-sheet.tsx
 - Q: continue
 - Q: continue
-- @fontsource-variable/dm-sans
+- better-auth
 - student-report-sheet.tsx
 - Q: continue, make sure the printable design aligns and looks professional.
+- @fontsource-variable/dm-sans
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `getRuntimeEnv()` - 47 edges
-3. `fetch()` - 38 edges
-4. `methodNotAllowed()` - 37 edges
-5. `forbidden()` - 33 edges
-6. `organization` - 32 edges
-7. `getMembershipContext()` - 32 edges
+2. `getRuntimeEnv()` - 48 edges
+3. `fetch()` - 39 edges
+4. `methodNotAllowed()` - 38 edges
+5. `forbidden()` - 34 edges
+6. `getMembershipContext()` - 33 edges
+7. `organization` - 32 edges
 8. `scripts` - 32 edges
-9. `unauthorized()` - 30 edges
-10. `Event` - 25 edges
+9. `unauthorized()` - 31 edges
+10. `canManageSchool()` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `CardAction()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
 - `CardFooter()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
-- `SheetOverlay()` --calls--> `cn()`  [EXTRACTED]
-  apps/web/src/components/ui/sheet.tsx → apps/web/src/lib/utils.ts
-- `person_import_issue_summary` --references--> `person_import_batch`  [EXTRACTED]
-  apps/web/migrations/0004_people_registry_dry_run.sql → apps/web/migrations/0003_people_registry.sql
-- `SchoolOperations()` --calls--> `useDebouncedValue()`  [EXTRACTED]
-  apps/web/src/components/school-operations.tsx → apps/web/src/lib/use-debounced-value.ts
+- `SelectGroup()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SelectLabel()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SelectSeparator()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (375 total, 289 thin omitted)
+## Communities (376 total, 289 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -420,7 +421,7 @@ Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentM
 
 ### Community 1 - "server.ts"
 Cohesion: 0.06
-Nodes (129): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, academicClassMasterSchema, academicClassName(), AcademicClassRow, academicClassRowName() (+121 more)
+Nodes (131): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, academicClassMasterSchema, academicClassName(), AcademicClassRow, academicClassRowName() (+123 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -439,8 +440,8 @@ Cohesion: 0.05
 Nodes (43): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+35 more)
 
 ### Community 6 - "cn"
-Cohesion: 0.10
-Nodes (24): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+16 more)
+Cohesion: 0.12
+Nodes (18): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+10 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -467,16 +468,16 @@ Cohesion: 0.10
 Nodes (18): buildImportSql(), confirmedDatabaseId, database, optionalText(), options, organizationSlug, rawSql(), readPlacements() (+10 more)
 
 ### Community 13 - "historical-results.tsx"
-Cohesion: 0.10
-Nodes (20): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+12 more)
+Cohesion: 0.07
+Nodes (32): AdmissionSheet(), Option, optionsForSchool(), Setup, formatMark(), HistoricalResults(), message(), Option (+24 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/inter, @hugeicons/react, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.12
-Nodes (22): capitalize(), FamilyProfileSection(), fileCategoryLabel(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), localDateInput() (+14 more)
+Cohesion: 0.11
+Nodes (25): capitalize(), EnrollmentEndDetailsForm(), enrollmentEndLabel(), enrollmentStatusLabel(), FamilyProfileSection(), fileCategoryLabel(), formatBytes(), formatDate() (+17 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -577,6 +578,10 @@ Nodes (6): Access control, Dry run, One-person pilot, Person files migration, Pr
 ### Community 182 - "school-operations-dry-run.mjs"
 Cohesion: 0.18
 Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+
+### Community 184 - "Q: What is the next feature slice after printable school reports?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: What is the next feature slice after printable school reports?, Source Nodes
 
 ### Community 189 - "r2-relay/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -694,9 +699,9 @@ Nodes (5): CopyInstruction, fetch(), hasValidToken(), hexToBytes(), parseInstruc
 Cohesion: 0.67
 Nodes (3): BasicImageTransformations, RequestInitCfPropertiesImage, RequestInitCfPropertiesImageDraw
 
-### Community 318 - "admission-sheet.tsx"
-Cohesion: 0.25
-Nodes (6): AdmissionSheet(), Option, optionsForSchool(), Setup, SelectContent(), SelectItem()
+### Community 318 - "Q: whats next?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: whats next?, Source Nodes
 
 ### Community 319 - "RequestInitCfPropertiesVaryHeader"
 Cohesion: 0.67
@@ -735,20 +740,21 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: continue, make sure the printable design aligns and looks professional., Source Nodes
 
 ## Knowledge Gaps
-- **2166 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2161 more)
+- **2173 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2168 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `school-operations.tsx` (6× useful, score=5.958062238) _(code changed — re-verify)_
-- `student_enrollment` (6× useful, score=5.925651153)
-- `TODO.md` (4× useful, score=3.95206529)
-- `person_academic_record` (4× useful, score=3.943991035)
-- `academic_class_master` (3× useful, score=2.97236683)
-- `academic_session` (2× useful, score=1.980045868)
-- `progressReportPath` (2× useful, score=1.972923533)
+- `school-operations.tsx` (7× useful, score=6.95518079)
+- `student_enrollment` (6× useful, score=5.923025406)
+- `TODO.md` (4× useful, score=3.95031407)
+- `person_academic_record` (4× useful, score=3.942243392)
+- `academic_class_master` (3× useful, score=2.971049729)
+- `RosterRow` (2× useful, score=1.985537425)
+- `academic_session` (2× useful, score=1.97916848)
+- `progressReportPath` (2× useful, score=1.9720493)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -757,13 +763,13 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
 - **Why does `SubtleCrypto` connect `SubtleCrypto` to `web/worker-configuration.d.ts`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `HostedImagesBinding` connect `HostedImagesBinding` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `ImageHandle` connect `ImageHandle` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2166 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2173 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05844155844155844 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05826423438363737 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

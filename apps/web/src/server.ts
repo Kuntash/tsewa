@@ -132,20 +132,35 @@ const admissionSchema = z.object({
 
 const enrollmentIdSchema = z.uuid();
 
-const enrollmentChangeSchema = z.object({
-  action: z.enum([
-    "placement_changed",
-    "internal_transfer",
-    "transferred_out",
-    "withdrawn",
-    "completed",
-  ]),
+const enrollmentChangeSchema = z
+  .object({
+    action: z.enum([
+      "placement_changed",
+      "internal_transfer",
+      "transferred_out",
+      "withdrawn",
+      "completed",
+    ]),
+    effectiveOn: isoDateSchema,
+    schoolId: z.uuid().optional(),
+    academicClassId: z.uuid().optional(),
+    houseId: z.uuid().nullable().optional(),
+    rollNumber: z.string().trim().max(50).nullable().optional(),
+    note: z.string().trim().max(500).optional(),
+  })
+  .superRefine((value, context) => {
+    if ((value.action === "withdrawn" || value.action === "completed") && !value.note) {
+      context.addIssue({
+        code: "custom",
+        message: "Enter a reason.",
+        path: ["note"],
+      });
+    }
+  });
+
+const enrollmentEndDetailsSchema = z.object({
   effectiveOn: isoDateSchema,
-  schoolId: z.uuid().optional(),
-  academicClassId: z.uuid().optional(),
-  houseId: z.uuid().nullable().optional(),
-  rollNumber: z.string().trim().max(50).nullable().optional(),
-  note: z.string().trim().max(500).optional(),
+  reason: z.string().trim().min(1).max(500),
 });
 
 const historicalResultsOverviewQuerySchema = z.object({
@@ -347,6 +362,13 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/admissions") {
       return createStudentAdmission(request);
+    }
+
+    const enrollmentEndDetailsMatch = url.pathname.match(
+      /^\/api\/school-operations\/enrollments\/([^/]+)\/end-details$/,
+    );
+    if (enrollmentEndDetailsMatch) {
+      return correctEnrollmentEndDetails(request, enrollmentEndDetailsMatch[1]);
     }
 
     const enrollmentMatch = url.pathname.match(/^\/api\/school-operations\/enrollments\/([^/]+)$/);
@@ -1158,6 +1180,133 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   await runtime.DB.batch(statements);
 
   return Response.json({ ok: true, status: nextStatus, changeId });
+}
+
+async function correctEnrollmentEndDetails(
+  request: Request,
+  enrollmentId: string,
+): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const parsedId = enrollmentIdSchema.safeParse(enrollmentId);
+  if (!parsedId.success) {
+    return Response.json({ error: "Invalid enrollment ID." }, { status: 400 });
+  }
+  const parsed = enrollmentEndDetailsSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Enter an end date and reason." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const enrollment = await readStudentEnrollment(runtime.DB, context.organizationId, parsedId.data);
+  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+  if (
+    enrollment.status !== "withdrawn" &&
+    enrollment.status !== "completed" &&
+    enrollment.status !== "graduated"
+  ) {
+    return Response.json(
+      { error: "Only a withdrawal or completion record can be corrected here." },
+      { status: 409 },
+    );
+  }
+  if (
+    parsed.data.effectiveOn < enrollment.sessionStartsOn ||
+    parsed.data.effectiveOn > enrollment.sessionEndsOn
+  ) {
+    return Response.json(
+      { error: `Choose a date within the ${enrollment.sessionName} session.` },
+      { status: 400 },
+    );
+  }
+
+  const changeType = enrollment.status === "withdrawn" ? "withdrawn" : "completed";
+  const existingChange = await runtime.DB.prepare(
+    `SELECT id, effective_on AS effectiveOn, note
+     FROM student_enrollment_change
+     WHERE organization_id = ? AND enrollment_id = ? AND change_type = ?
+     ORDER BY created_at DESC LIMIT 1`,
+  )
+    .bind(context.organizationId, parsedId.data, changeType)
+    .first<{ id: string; effectiveOn: string; note: string | null }>();
+
+  const statements = [
+    runtime.DB.prepare(
+      `UPDATE student_enrollment SET ended_on = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND organization_id = ?`,
+    ).bind(parsed.data.effectiveOn, parsedId.data, context.organizationId),
+  ];
+
+  if (existingChange) {
+    statements.push(
+      runtime.DB.prepare(
+        `UPDATE student_enrollment_change
+         SET effective_on = ?, note = ?
+         WHERE id = ? AND organization_id = ?`,
+      ).bind(
+        parsed.data.effectiveOn,
+        parsed.data.reason,
+        existingChange.id,
+        context.organizationId,
+      ),
+    );
+  } else {
+    statements.push(
+      runtime.DB.prepare(
+        `INSERT INTO student_enrollment_change
+          (id, organization_id, enrollment_id, person_id, academic_session_id, change_type,
+           effective_on, from_school_id, to_school_id, from_academic_class_id,
+           to_academic_class_id, from_house_id, to_house_id, from_status, to_status,
+           from_roll_number, to_roll_number, note, created_by_user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        crypto.randomUUID(),
+        context.organizationId,
+        parsedId.data,
+        enrollment.personId,
+        enrollment.academicSessionId,
+        changeType,
+        parsed.data.effectiveOn,
+        enrollment.schoolId,
+        enrollment.schoolId,
+        enrollment.academicClassId,
+        enrollment.academicClassId,
+        enrollment.houseId,
+        enrollment.houseId,
+        "enrolled",
+        enrollment.status,
+        enrollment.rollNumber,
+        enrollment.rollNumber,
+        parsed.data.reason,
+        context.userId,
+      ),
+    );
+  }
+
+  statements.push(
+    auditStatement(
+      runtime.DB,
+      context,
+      "student.end_details_corrected",
+      "student_enrollment",
+      parsedId.data,
+      {
+        personId: enrollment.personId,
+        status: enrollment.status,
+        previousEffectiveOn: existingChange?.effectiveOn ?? enrollment.endedOn ?? "",
+        previousReason: existingChange?.note ?? "",
+        effectiveOn: parsed.data.effectiveOn,
+        reason: parsed.data.reason,
+      },
+    ),
+  );
+  await runtime.DB.batch(statements);
+
+  return Response.json({ ok: true });
 }
 
 function isOpenEnrollment(status: StudentEnrollmentRecord["status"]): boolean {
@@ -2563,10 +2712,17 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   }
 
   const runtime = getRuntimeEnv();
-  const [person, placements, academicRecords, familyProfile, relationships, files] =
-    await Promise.all([
-      runtime.DB.prepare(
-        `SELECT id, kind, status, identifier_kind AS identifierKind,
+  const [
+    person,
+    placements,
+    academicRecords,
+    schoolEnrollments,
+    familyProfile,
+    relationships,
+    files,
+  ] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id, kind, status, identifier_kind AS identifierKind,
               primary_identifier AS primaryIdentifier, display_name AS displayName,
               gender, date_of_birth AS dateOfBirth,
               admitted_or_joined_on AS admittedOrJoinedOn,
@@ -2580,54 +2736,54 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
               CASE WHEN date(admitted_or_joined_on) < date(date_of_birth) THEN 1 ELSE 0 END AS eventBeforeBirth
        FROM person
        WHERE id = ? AND organization_id = ?`,
-      )
-        .bind(parsedId.data, context.organizationId)
-        .first<{
-          id: string;
-          kind: "child" | "elderly" | "staff";
-          status: "active" | "inactive";
-          identifierKind: "admission" | "staff";
-          primaryIdentifier: string;
-          displayName: string;
-          gender: "female" | "male" | "other" | "unknown" | null;
-          dateOfBirth: string | null;
-          admittedOrJoinedOn: string | null;
-          campusOrLocation: string | null;
-          nationality: string | null;
-          photoReferencePresent: number;
-          sourceSystem: string;
-          sourceTable: string;
-          sourceId: string;
-          importedAt: string | null;
-          dateOfBirthMissing: number;
-          eventDateMissing: number;
-          eventDateBefore1900: number;
-          eventBeforeBirth: number;
-        }>(),
-      runtime.DB.prepare(
-        `SELECT id, home_name AS homeName, location_name AS locationName,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .first<{
+        id: string;
+        kind: "child" | "elderly" | "staff";
+        status: "active" | "inactive";
+        identifierKind: "admission" | "staff";
+        primaryIdentifier: string;
+        displayName: string;
+        gender: "female" | "male" | "other" | "unknown" | null;
+        dateOfBirth: string | null;
+        admittedOrJoinedOn: string | null;
+        campusOrLocation: string | null;
+        nationality: string | null;
+        photoReferencePresent: number;
+        sourceSystem: string;
+        sourceTable: string;
+        sourceId: string;
+        importedAt: string | null;
+        dateOfBirthMissing: number;
+        eventDateMissing: number;
+        eventDateBefore1900: number;
+        eventBeforeBirth: number;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT id, home_name AS homeName, location_name AS locationName,
               placement_type AS placementType, started_on AS startedOn,
               ended_on AS endedOn, reason, remarks, is_current AS isCurrent,
               source_id AS sourceId
        FROM person_placement
        WHERE person_id = ? AND organization_id = ?
        ORDER BY is_current DESC, date(started_on) DESC, CAST(source_id AS INTEGER) DESC`,
-      )
-        .bind(parsedId.data, context.organizationId)
-        .all<{
-          id: string;
-          homeName: string;
-          locationName: string | null;
-          placementType: string | null;
-          startedOn: string;
-          endedOn: string | null;
-          reason: string | null;
-          remarks: string | null;
-          isCurrent: number;
-          sourceId: string;
-        }>(),
-      runtime.DB.prepare(
-        `SELECT id, class_name AS className, class_level AS classLevel,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        homeName: string;
+        locationName: string | null;
+        placementType: string | null;
+        startedOn: string;
+        endedOn: string | null;
+        reason: string | null;
+        remarks: string | null;
+        isCurrent: number;
+        sourceId: string;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT id, class_name AS className, class_level AS classLevel,
               class_section AS classSection, class_title AS classTitle,
               school_name AS schoolName, house_name AS houseName,
               academic_session AS academicSession, recorded_on AS recordedOn,
@@ -2637,27 +2793,69 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
        FROM person_academic_record
        WHERE person_id = ? AND organization_id = ?
        ORDER BY is_latest DESC, date(recorded_on) DESC, CAST(source_id AS INTEGER) DESC`,
-      )
-        .bind(parsedId.data, context.organizationId)
-        .all<{
-          id: string;
-          className: string;
-          classLevel: number | null;
-          classSection: string | null;
-          classTitle: string | null;
-          schoolName: string | null;
-          houseName: string | null;
-          academicSession: string;
-          recordedOn: string;
-          result: string | null;
-          rollNumber: string | null;
-          boardRegistrationNumber: string | null;
-          description: string | null;
-          isLatest: number;
-          sourceId: string;
-        }>(),
-      runtime.DB.prepare(
-        `SELECT parentage_status AS parentageStatus,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        className: string;
+        classLevel: number | null;
+        classSection: string | null;
+        classTitle: string | null;
+        schoolName: string | null;
+        houseName: string | null;
+        academicSession: string;
+        recordedOn: string;
+        result: string | null;
+        rollNumber: string | null;
+        boardRegistrationNumber: string | null;
+        description: string | null;
+        isLatest: number;
+        sourceId: string;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT enrollment.id, session.name AS academicSession,
+                session.starts_on AS sessionStartsOn, session.ends_on AS sessionEndsOn,
+                school.name AS schoolName, ${classDisplayName("class")} AS className,
+                house.name AS houseName, enrollment.roll_number AS rollNumber,
+                enrollment.status, enrollment.started_on AS startedOn,
+                coalesce(end_change.effective_on, enrollment.ended_on) AS endedOn,
+                end_change.note AS endReason
+         FROM student_enrollment enrollment
+         JOIN academic_session session ON session.id = enrollment.academic_session_id
+           AND session.organization_id = enrollment.organization_id
+         JOIN academic_class_master class ON class.id = enrollment.academic_class_id
+           AND class.organization_id = enrollment.organization_id
+         LEFT JOIN school_master school ON school.id = enrollment.school_id
+           AND school.organization_id = enrollment.organization_id
+         LEFT JOIN house_master house ON house.id = enrollment.house_id
+           AND house.organization_id = enrollment.organization_id
+         LEFT JOIN student_enrollment_change end_change ON end_change.id = (
+           SELECT change.id FROM student_enrollment_change change
+           WHERE change.organization_id = enrollment.organization_id
+             AND change.enrollment_id = enrollment.id
+             AND change.change_type IN ('withdrawn', 'completed', 'transferred')
+           ORDER BY change.created_at DESC LIMIT 1
+         )
+         WHERE enrollment.person_id = ? AND enrollment.organization_id = ?
+         ORDER BY date(session.starts_on) DESC, enrollment.created_at DESC`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        academicSession: string;
+        sessionStartsOn: string;
+        sessionEndsOn: string;
+        schoolName: string | null;
+        className: string;
+        houseName: string | null;
+        rollNumber: string | null;
+        status: "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed" | "graduated";
+        startedOn: string;
+        endedOn: string | null;
+        endReason: string | null;
+      }>(),
+    runtime.DB.prepare(
+      `SELECT parentage_status AS parentageStatus,
               mother_name AS motherName, father_name AS fatherName,
               mother_occupation AS motherOccupation,
               father_occupation AS fatherOccupation,
@@ -2677,32 +2875,32 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
               number_of_children AS numberOfChildren
        FROM person_family_profile
        WHERE person_id = ? AND organization_id = ?`,
-      )
-        .bind(parsedId.data, context.organizationId)
-        .first<{
-          parentageStatus: string | null;
-          motherName: string | null;
-          fatherName: string | null;
-          motherOccupation: string | null;
-          fatherOccupation: string | null;
-          parentsPhone: string | null;
-          parentsPermanentAddress: string | null;
-          guardian1Name: string | null;
-          guardian1Address: string | null;
-          guardian1Email: string | null;
-          guardian1Phone: string | null;
-          guardian1Mobile: string | null;
-          guardian2Name: string | null;
-          guardian2Address: string | null;
-          guardian2Email: string | null;
-          guardian2Phone: string | null;
-          guardian2Mobile: string | null;
-          maritalStatus: string | null;
-          spouseName: string | null;
-          numberOfChildren: string | null;
-        }>(),
-      runtime.DB.prepare(
-        `WITH reciprocal_relationships AS (
+    )
+      .bind(parsedId.data, context.organizationId)
+      .first<{
+        parentageStatus: string | null;
+        motherName: string | null;
+        fatherName: string | null;
+        motherOccupation: string | null;
+        fatherOccupation: string | null;
+        parentsPhone: string | null;
+        parentsPermanentAddress: string | null;
+        guardian1Name: string | null;
+        guardian1Address: string | null;
+        guardian1Email: string | null;
+        guardian1Phone: string | null;
+        guardian1Mobile: string | null;
+        guardian2Name: string | null;
+        guardian2Address: string | null;
+        guardian2Email: string | null;
+        guardian2Phone: string | null;
+        guardian2Mobile: string | null;
+        maritalStatus: string | null;
+        spouseName: string | null;
+        numberOfChildren: string | null;
+      }>(),
+    runtime.DB.prepare(
+      `WITH reciprocal_relationships AS (
          SELECT relationship.*,
                 CASE
                   WHEN relationship.person_id = ? THEN relationship.related_person_id
@@ -2735,21 +2933,21 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         AND related.organization_id = relationship.organization_id
        WHERE relationship.relationship_rank = 1
        ORDER BY related.display_name COLLATE NOCASE, relationship.source_id`,
-      )
-        .bind(parsedId.data, context.organizationId, parsedId.data, parsedId.data)
-        .all<{
-          id: string;
-          relationshipType: "sibling";
-          reviewFlag: "self_reference" | "duplicate_source_link" | null;
-          personId: string;
-          displayName: string;
-          primaryIdentifier: string;
-          identifierKind: "admission" | "staff";
-          kind: "child" | "elderly" | "staff";
-          status: "active" | "inactive";
-        }>(),
-      runtime.DB.prepare(
-        `SELECT id, category, label, file_name AS fileName,
+    )
+      .bind(parsedId.data, context.organizationId, parsedId.data, parsedId.data)
+      .all<{
+        id: string;
+        relationshipType: "sibling";
+        reviewFlag: "self_reference" | "duplicate_source_link" | null;
+        personId: string;
+        displayName: string;
+        primaryIdentifier: string;
+        identifierKind: "admission" | "staff";
+        kind: "child" | "elderly" | "staff";
+        status: "active" | "inactive";
+      }>(),
+    runtime.DB.prepare(
+      `SELECT id, category, label, file_name AS fileName,
               content_type AS contentType, byte_size AS byteSize,
               is_primary AS isPrimary
        FROM person_file
@@ -2763,23 +2961,23 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
            ELSE 4
          END,
          label COLLATE NOCASE, source_id`,
-      )
-        .bind(parsedId.data, context.organizationId)
-        .all<{
-          id: string;
-          category:
-            | "profile_photo"
-            | "parents_photo"
-            | "guardian_1_photo"
-            | "guardian_2_photo"
-            | "document";
-          label: string;
-          fileName: string;
-          contentType: string;
-          byteSize: number;
-          isPrimary: number;
-        }>(),
-    ]);
+    )
+      .bind(parsedId.data, context.organizationId)
+      .all<{
+        id: string;
+        category:
+          | "profile_photo"
+          | "parents_photo"
+          | "guardian_1_photo"
+          | "guardian_2_photo"
+          | "document";
+        label: string;
+        fileName: string;
+        contentType: string;
+        byteSize: number;
+        isPrimary: number;
+      }>(),
+  ]);
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
 
@@ -2841,6 +3039,11 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         description: record.description,
         isLatest: Boolean(record.isLatest),
         sourceId: record.sourceId,
+      })),
+      schoolEnrollments: schoolEnrollments.results.map((enrollment) => ({
+        ...enrollment,
+        canCorrectEndDetails:
+          canEdit && ["withdrawn", "completed", "graduated"].includes(enrollment.status),
       })),
       family: familyProfile ?? null,
       relationships: relationships.results,

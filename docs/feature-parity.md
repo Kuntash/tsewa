@@ -69,7 +69,7 @@ evidence of a regularly used year-end workflow.
       relationships with reciprocal profile visibility.
 - [x] Add and change a person's home placement while preserving history.
 - [x] Upload, name, replace, and remove documents and photos.
-- [ ] Record and correct withdrawal information and reasons on the person profile.
+- [x] Record and correct withdrawal or completion dates and reasons on the person profile.
 
 ### School operations
 
@@ -140,6 +140,9 @@ session. The `beneficiary_health`, `hepatitis_b`, `tb_dose`, and
 
 ### Scholarships
 
+The product owner believes staff still use scholarship details. Database dates may not show
+read-only use, so confirm the current daily workflow with staff before deciding the editing scope.
+
 - [ ] Preserve and expose historical scholarship records.
 - [ ] Courses, categories, and scholarship heads.
 - [ ] Scholarship student records and annual details.
@@ -150,6 +153,10 @@ Evidence: 722 scholarship records, 1,243 annual details, 1,402 sanctions, and
 4,319 sanction details exist, but none are tied to a 2020–2026 session.
 
 ### Sponsorship
+
+The product owner believes staff still use sponsorship details. Treat this as a likely next module:
+first preserve and display the current sponsor, beneficiary, fund, and correspondence records, then
+confirm which edits and reports staff need.
 
 - [ ] Preserve and expose historical sponsors and beneficiary links.
 - [ ] Individual and organization sponsors.

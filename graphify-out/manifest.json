@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786449770.8905025,
-    "ast_hash": "3abed75fe3f18dfe1aa9f179506966f6",
+    "mtime": 1786454490.060607,
+    "ast_hash": "cb1252d9f5d641f4ff5d90c385e1f5fa",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786452832.5560882,
-    "ast_hash": "b8e1914a6f0025baa5ff315d4c6604ce",
+    "mtime": 1786454490.0546002,
+    "ast_hash": "bf20b77f2acc9e8ea2b58188fbfafa43",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -455,13 +455,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1786451791.0030525,
-    "ast_hash": "c6be14af6004fad36b6f56065edb7df1",
+    "mtime": 1786454368.1364155,
+    "ast_hash": "9a985aa2b530186d200f7bc3eb966468",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786452813.664039,
-    "ast_hash": "0e789481a237170954c5e28a1c08f67a",
+    "mtime": 1786454505.3705854,
+    "ast_hash": "1047c77e1949ac58a64411e152b68457",
     "semantic_hash": ""
   },
   "apps/web/migrations/0014_family_relationship_editing.sql": {
@@ -530,13 +530,23 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/student-report-sheet.tsx": {
-    "mtime": 1786452832.548511,
-    "ast_hash": "2d38097408e4fffdb2b633b102685092",
+    "mtime": 1786454368.135848,
+    "ast_hash": "333f61e4eb7cc139a295ca9034f71355",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260811_130039_continue__make_sure_the_printable_design_aligns_an.md": {
     "mtime": 1786453239.5478096,
     "ast_hash": "b0c7ca5e2a8549539b9cb8e8c8f28c3b",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_131202_whats_next.md": {
+    "mtime": 1786453922.7071025,
+    "ast_hash": "4e9de5c3aa8760bedf05cd4586b2b73b",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_132731_what_is_the_next_feature_slice_after_printable_sch.md": {
+    "mtime": 1786454851.7044058,
+    "ast_hash": "8f9dfe152f48560300255c24df5d7e63",
     "semantic_hash": ""
   }
 }

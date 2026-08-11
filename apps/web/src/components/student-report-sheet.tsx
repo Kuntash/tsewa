@@ -1,4 +1,4 @@
-import { Download, FileText, LoaderCircle, Printer } from "lucide-react";
+import { ArrowLeft, Download, FileText, LoaderCircle, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -145,13 +145,24 @@ export function StudentReportSheet({
       <SheetContent className="student-report-portal max-w-none border-0 bg-muted/70 p-0 sm:max-w-none">
         <div className="student-report-toolbar sticky top-0 z-10 border-b bg-background/95 px-4 py-3 pr-16 backdrop-blur sm:px-6">
           <div className="mx-auto flex max-w-[1180px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <SheetTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <FileText className="size-4 text-primary" /> Print preview
-              </SheetTitle>
-              <SheetDescription className="mt-0.5 truncate">
-                {request?.title ?? "Student report"}
-              </SheetDescription>
+            <div className="flex min-w-0 items-center gap-3">
+              <Button
+                aria-label="Back to school operations"
+                onClick={() => onOpenChange(false)}
+                size="icon-sm"
+                type="button"
+                variant="outline"
+              >
+                <ArrowLeft />
+              </Button>
+              <div className="min-w-0">
+                <SheetTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="size-4 text-primary" /> Print preview
+                </SheetTitle>
+                <SheetDescription className="mt-0.5 truncate">
+                  {request?.title ?? "Student report"}
+                </SheetDescription>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button disabled={!data || loading} onClick={downloadCsv} size="sm" variant="outline">

@@ -122,6 +122,21 @@ type Profile = {
     isLatest: boolean;
     sourceId: string;
   }>;
+  schoolEnrollments: Array<{
+    id: string;
+    academicSession: string;
+    sessionStartsOn: string;
+    sessionEndsOn: string;
+    schoolName: string | null;
+    className: string;
+    houseName: string | null;
+    rollNumber: string | null;
+    status: "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed" | "graduated";
+    startedOn: string | null;
+    endedOn: string | null;
+    endReason: string | null;
+    canCorrectEndDetails: boolean;
+  }>;
   family: PersonFamilyDetails | null;
   relationships: SiblingRelationship[];
   files: Array<{
@@ -154,12 +169,16 @@ export function PersonProfileSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<"core" | "family" | "placement" | "files" | null>(null);
+  const [endingEnrollment, setEndingEnrollment] = useState<
+    Profile["schoolEnrollments"][number] | null
+  >(null);
 
   useEffect(() => {
     if (!personId) {
       setProfile(null);
       setError("");
       setEditing(null);
+      setEndingEnrollment(null);
       return;
     }
 
@@ -244,12 +263,25 @@ export function PersonProfileSheet({
             onDone={() => setEditing(null)}
             profile={profile}
           />
+        ) : profile && endingEnrollment ? (
+          <EnrollmentEndDetailsForm
+            enrollment={endingEnrollment}
+            onCancel={() => setEndingEnrollment(null)}
+            onSaved={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              setEndingEnrollment(null);
+              onPersonUpdated?.();
+            }}
+            personName={profile.displayName}
+          />
         ) : profile ? (
           <ProfileContent
             onEdit={() => setEditing("core")}
             onEditFamily={() => setEditing("family")}
             onEditFiles={() => setEditing("files")}
             onEditPlacement={() => setEditing("placement")}
+            onCorrectEndDetails={setEndingEnrollment}
             profile={profile}
           />
         ) : null}
@@ -263,12 +295,14 @@ function ProfileContent({
   onEditFamily,
   onEditFiles,
   onEditPlacement,
+  onCorrectEndDetails,
   profile,
 }: {
   onEdit: () => void;
   onEditFamily: () => void;
   onEditFiles: () => void;
   onEditPlacement: () => void;
+  onCorrectEndDetails: (enrollment: Profile["schoolEnrollments"][number]) => void;
   profile: Profile;
 }) {
   const reviewItems = useMemo(
@@ -278,6 +312,7 @@ function ProfileContent({
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
   const currentPlacement = profile.placements.find((placement) => placement.isCurrent);
   const latestAcademicRecord = profile.academicRecords.find((record) => record.isLatest);
+  const latestSchoolEnrollment = profile.schoolEnrollments[0];
   const profilePhoto = profile.files.find((file) => file.category === "profile_photo");
 
   return (
@@ -504,7 +539,43 @@ function ProfileContent({
           <Separator />
 
           <ProfileSection icon={GraduationCap} label="Academic history">
-            {latestAcademicRecord ? (
+            {latestSchoolEnrollment ? (
+              <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
+                <div className="flex items-start gap-3.5">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <GraduationCap className="size-4.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold">{latestSchoolEnrollment.className}</p>
+                      <Badge
+                        className="rounded-full"
+                        variant={
+                          latestSchoolEnrollment.status === "enrolled" ||
+                          latestSchoolEnrollment.status === "recorded"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {enrollmentStatusLabel(latestSchoolEnrollment.status)}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {latestSchoolEnrollment.schoolName || "School not recorded"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>{latestSchoolEnrollment.academicSession}</span>
+                      {latestSchoolEnrollment.houseName ? (
+                        <span>{latestSchoolEnrollment.houseName} house</span>
+                      ) : null}
+                      {latestSchoolEnrollment.startedOn ? (
+                        <span>Started {formatDate(latestSchoolEnrollment.startedOn)}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : latestAcademicRecord ? (
               <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
                 <div className="flex items-start gap-3.5">
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -545,12 +616,86 @@ function ProfileContent({
               </p>
             )}
 
-            {profile.academicRecords.length ? (
+            {profile.schoolEnrollments.length ? (
               <div className="mt-7">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <History className="size-4 text-muted-foreground" />
                     <h4 className="text-sm font-semibold">School history</h4>
+                  </div>
+                  <Badge className="rounded-full tabular-nums" variant="outline">
+                    {profile.schoolEnrollments.length}
+                  </Badge>
+                </div>
+                <ol className="relative ml-2 border-l border-border pl-5">
+                  {profile.schoolEnrollments.map((enrollment) => (
+                    <li className="relative pb-6 last:pb-0" key={enrollment.id}>
+                      <span
+                        className={`absolute -left-[1.59rem] top-1.5 size-2.5 rounded-full border-2 border-background ${
+                          enrollment.status === "enrolled" || enrollment.status === "recorded"
+                            ? "bg-primary"
+                            : "bg-muted-foreground/40"
+                        }`}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-medium tabular-nums">
+                          {enrollment.academicSession}
+                        </p>
+                        <Badge className="rounded-full px-2 py-0 text-[10px]" variant="secondary">
+                          {enrollmentStatusLabel(enrollment.status)}
+                        </Badge>
+                      </div>
+                      <p className="mt-1.5 text-sm font-semibold">{enrollment.className}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {[
+                          enrollment.schoolName,
+                          enrollment.houseName ? `${enrollment.houseName} house` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "School and house not recorded"}
+                      </p>
+                      {enrollment.startedOn ? (
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Started {formatDate(enrollment.startedOn)}
+                        </p>
+                      ) : null}
+                      {enrollment.endedOn ? (
+                        <div className="mt-3 rounded-xl border bg-muted/40 p-3">
+                          <p className="text-xs font-semibold">
+                            {enrollmentEndLabel(enrollment.status)} {formatDate(enrollment.endedOn)}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {enrollment.endReason || "No reason recorded"}
+                          </p>
+                          {enrollment.canCorrectEndDetails ? (
+                            <Button
+                              className="mt-3"
+                              onClick={() => onCorrectEndDetails(enrollment)}
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              <Pencil /> Correct end details
+                            </Button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+
+            {profile.academicRecords.length ? (
+              <div className="mt-7">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <History className="size-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold">
+                      {profile.schoolEnrollments.length
+                        ? "Earlier school records"
+                        : "School history"}
+                    </h4>
                   </div>
                   <Badge className="rounded-full tabular-nums" variant="outline">
                     {profile.academicRecords.length}
@@ -609,6 +754,119 @@ function ProfileContent({
         </div>
       </div>
     </>
+  );
+}
+
+function EnrollmentEndDetailsForm({
+  enrollment,
+  onCancel,
+  onSaved,
+  personName,
+}: {
+  enrollment: Profile["schoolEnrollments"][number];
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+  personName: string;
+}) {
+  const [effectiveOn, setEffectiveOn] = useState(toDateInput(enrollment.endedOn));
+  const [reason, setReason] = useState(enrollment.endReason ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const actionLabel = enrollment.status === "withdrawn" ? "withdrawal" : "completion";
+
+  async function saveEndDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/school-operations/enrollments/${enrollment.id}/end-details`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ effectiveOn, reason }),
+        },
+      );
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "The end details could not be saved.");
+      }
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The end details could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveEndDetails}>
+      <header className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          School history
+        </p>
+        <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+          Correct {actionLabel} details
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          {personName} · {enrollment.academicSession} · {enrollment.className}
+        </p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+        <div className="space-y-6">
+          {error ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <FormField
+            htmlFor="enrollment-end-date"
+            label={`${capitalize(actionLabel)} date`}
+            required
+          >
+            <Input
+              autoFocus
+              id="enrollment-end-date"
+              max={enrollment.sessionEndsOn}
+              min={enrollment.sessionStartsOn}
+              onChange={(event) => setEffectiveOn(event.target.value)}
+              required
+              type="date"
+              value={effectiveOn}
+            />
+          </FormField>
+          <FormField
+            htmlFor="enrollment-end-reason"
+            label={`${capitalize(actionLabel)} reason`}
+            required
+          >
+            <Input
+              id="enrollment-end-reason"
+              maxLength={500}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Enter the reason"
+              required
+              value={reason}
+            />
+          </FormField>
+          <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
+            This corrects the date and reason shown in school history. The enrollment and audit
+            record stay in place.
+          </p>
+        </div>
+      </div>
+
+      <footer className="flex flex-col-reverse gap-2 border-t bg-background/95 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+        <Button disabled={saving} onClick={onCancel} type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button disabled={saving} type="submit">
+          {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
+          {saving ? "Saving…" : "Save correction"}
+        </Button>
+      </footer>
+    </form>
   );
 }
 
@@ -1679,6 +1937,22 @@ function formatDate(value: string): string {
     month: "long",
     year: "numeric",
   }).format(date);
+}
+
+function enrollmentStatusLabel(status: Profile["schoolEnrollments"][number]["status"]): string {
+  if (status === "recorded") return "Recorded";
+  if (status === "enrolled") return "Enrolled";
+  if (status === "transferred") return "Transferred";
+  if (status === "withdrawn") return "Withdrawn";
+  if (status === "graduated") return "Graduated";
+  return "Completed";
+}
+
+function enrollmentEndLabel(status: Profile["schoolEnrollments"][number]["status"]): string {
+  if (status === "withdrawn") return "Withdrawn on";
+  if (status === "transferred") return "Transferred on";
+  if (status === "graduated") return "Graduated on";
+  return "Completed on";
 }
 
 function toDateInput(value: string | null): string {
