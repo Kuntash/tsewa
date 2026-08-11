@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 112 files · ~186,387 words
+- 112 files · ~186,282 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4450 nodes · 5227 edges · 361 communities (72 shown, 289 thin omitted)
+- 4450 nodes · 5228 edges · 361 communities (72 shown, 289 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e2be05d2`
+- Built from commit: `89e52d90`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -224,7 +224,7 @@
 - import-historical-results.mjs
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
-- better-auth
+- Message
 - ServiceWorkerGlobalScope
 - Event
 - Console
@@ -329,9 +329,9 @@
 - ImagesBinding
 - MediaTransformer
 - Memory
+- @fontsource-variable/dm-sans
 - MessageBatch
 - NodeStyleServer
-- PipelineTransformationEntrypoint
 - RequestInitCfPropertiesVaryHeader
 - SqlStorage
 - ToMarkdownService
@@ -462,7 +462,7 @@ Nodes (5): readTheme(), Theme, ThemeToggle(), Button(), buttonVariants
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.14
@@ -713,6 +713,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07415730337078652 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07440699126092384 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

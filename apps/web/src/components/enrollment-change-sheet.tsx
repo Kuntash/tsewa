@@ -383,9 +383,7 @@ export function EnrollmentChangeSheet({
             ) : (
               <div className="p-5 sm:p-7">
                 <p className="rounded-2xl border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
-                  {data.enrollment.status === "enrolled"
-                    ? "Imported enrollments are view only for now. Use the practice school to test changes."
-                    : "This enrollment has ended and cannot be changed."}
+                  This enrollment has ended and cannot be changed.
                 </p>
               </div>
             )}

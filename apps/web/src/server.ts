@@ -767,10 +767,7 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
   return Response.json({
     enrollment: {
       ...enrollment,
-      canEdit:
-        canManageSchool(context.role) &&
-        enrollment.statusSource === "explicit" &&
-        enrollment.status === "enrolled",
+      canEdit: canManageSchool(context.role) && isOpenEnrollment(enrollment.status),
     },
     options: {
       schools: schools.results,
@@ -795,16 +792,7 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   const runtime = getRuntimeEnv();
   const enrollment = await readStudentEnrollment(runtime.DB, context.organizationId, enrollmentId);
   if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
-  if (enrollment.statusSource !== "explicit") {
-    return Response.json(
-      {
-        error:
-          "Imported enrollments are view only for now. Use the practice school to test changes.",
-      },
-      { status: 409 },
-    );
-  }
-  if (enrollment.status !== "enrolled") {
+  if (!isOpenEnrollment(enrollment.status)) {
     return Response.json({ error: "This enrollment has already ended." }, { status: 409 });
   }
   if (
@@ -887,9 +875,10 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   const statements = [
     runtime.DB.prepare(
       `UPDATE student_enrollment SET school_id = ?, academic_class_id = ?, house_id = ?,
-         school_class_offering_id = ?, status = ?, ended_on = ?, roll_number = ?,
+         school_class_offering_id = ?, status = ?, status_source = 'explicit',
+         ended_on = ?, roll_number = ?,
          updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND organization_id = ? AND status = 'enrolled' AND status_source = 'explicit'`,
+       WHERE id = ? AND organization_id = ? AND status IN ('recorded', 'enrolled')`,
     ).bind(
       targetSchoolId,
       targetClassId,
@@ -965,6 +954,10 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   await runtime.DB.batch(statements);
 
   return Response.json({ ok: true, status: nextStatus, changeId });
+}
+
+function isOpenEnrollment(status: StudentEnrollmentRecord["status"]): boolean {
+  return status === "recorded" || status === "enrolled";
 }
 
 type StudentEnrollmentRecord = {
@@ -1191,10 +1184,7 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
   return Response.json({
     students: students.results.map((student) => ({
       ...student,
-      canEdit:
-        canManageSchool(scope.role) &&
-        student.statusSource === "explicit" &&
-        student.enrollmentStatus === "enrolled",
+      canEdit: canManageSchool(scope.role) && isOpenEnrollment(student.enrollmentStatus),
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
@@ -1899,8 +1889,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
 
-  const canEdit = canManageSchool(context.role) && isTsewaManagedSource(person.sourceSystem);
-  const editRestriction = canManageSchool(context.role) ? "imported" : "permission";
+  const canEdit = canManageSchool(context.role);
 
   const reviewFlags = [
     person.dateOfBirthMissing ? "date_of_birth_missing" : null,
@@ -1928,7 +1917,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       sourceId: person.sourceId,
       importedAt: person.importedAt,
       canEdit,
-      editRestriction: canEdit ? null : editRestriction,
+      editRestriction: canEdit ? null : "permission",
       reviewFlags,
       placements: placements.results.map((placement) => ({
         id: placement.id,
@@ -2010,13 +1999,6 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     }>();
 
   if (!current) return Response.json({ error: "Person not found" }, { status: 404 });
-  if (!isTsewaManagedSource(current.sourceSystem)) {
-    return Response.json(
-      { error: "Imported profiles stay read-only while editing is tested." },
-      { status: 409 },
-    );
-  }
-
   const duplicate = await runtime.DB.prepare(
     `SELECT id FROM person
      WHERE organization_id = ? AND identifier_kind = ? AND id <> ?
@@ -2060,7 +2042,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
          SET primary_identifier = ?, display_name = ?, gender = ?, date_of_birth = ?,
              admitted_or_joined_on = ?, campus_or_location = ?, nationality = ?,
              updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND organization_id = ? AND source_system IN ('tsewa', 'tsewa_seed')`,
+         WHERE id = ? AND organization_id = ?`,
       ).bind(
         next.primaryIdentifier,
         next.displayName,
@@ -2075,6 +2057,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
       ),
       auditStatement(runtime.DB, context, "person.details_updated", "person", parsedId.data, {
         changedFields: changedFields.join(","),
+        sourceSystem: current.sourceSystem,
       }),
     ]);
   } catch (error) {
@@ -2085,10 +2068,6 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   }
 
   return Response.json({ personId: parsedId.data, changedFields });
-}
-
-function isTsewaManagedSource(sourceSystem: string): boolean {
-  return sourceSystem === "tsewa" || sourceSystem === "tsewa_seed";
 }
 
 async function getPersonFile(request: Request, fileId: string): Promise<Response> {

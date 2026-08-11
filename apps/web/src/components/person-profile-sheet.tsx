@@ -53,7 +53,7 @@ type Profile = {
   sourceId: string;
   importedAt: string | null;
   canEdit: boolean;
-  editRestriction: "imported" | "permission" | null;
+  editRestriction: "permission" | null;
   reviewFlags: string[];
   placements: Array<{
     id: string;
@@ -547,11 +547,7 @@ function ProfileContent({ onEdit, profile }: { onEdit: () => void; profile: Prof
         ) : (
           <>
             <LockKeyhole className="size-4 text-primary" />
-            <span className="min-w-0 flex-1">
-              {profile.editRestriction === "permission"
-                ? "You do not have permission to edit this record."
-                : "Imported record · protected while editing is tested in the practice school."}
-            </span>
+            <span className="min-w-0 flex-1">You do not have permission to edit this record.</span>
           </>
         )}
       </footer>

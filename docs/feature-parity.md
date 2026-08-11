@@ -63,7 +63,8 @@ evidence of a regularly used year-end workflow.
 - [x] View school, class, house, and home history.
 - [x] View photos and documents with authenticated file access.
 - [x] Create a basic new student and enrollment in the practice organization.
-- [x] Edit a Tsewa-created person's core details with validation and an audit entry. Imported THS profiles stay protected while editing is tested in the practice school.
+- [x] Edit a person's core details with validation and an audit entry. Test
+      changes in the practice school rather than on migrated THS records.
 - [ ] Add and edit parents, guardians, and sibling relationships.
 - [ ] Add and change a person's home placement while preserving history.
 - [ ] Upload, name, replace, and remove documents and photos.
@@ -76,11 +77,13 @@ evidence of a regularly used year-end workflow.
 - [x] View imported academic history.
 - [x] Admit a new student in the practice organization.
 - [x] Change class or house, move school, transfer out, withdraw, or complete an
-      explicit practice enrollment.
+      enrollment. Test changes in the practice school rather than on migrated
+      THS records.
 - [ ] Create and edit schools, including affiliation number and location.
 - [ ] Create and edit classes/sections and houses.
 - [ ] Assign classes and houses to a school.
-- [ ] Correct a current enrollment without changing imported source history.
+- [x] Correct a current enrollment while preserving imported source references
+      and change history.
 - [ ] Provide simple printable/exportable student lists and class rosters.
 
 ### Data completion before v0 sign-off

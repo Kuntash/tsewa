@@ -7,7 +7,6 @@ import {
   HeartHandshake,
   LoaderCircle,
   Search,
-  ShieldCheck,
   UserRound,
   Users,
 } from "lucide-react";
@@ -153,9 +152,6 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
           </div>
         </button>
         <div className="ml-auto flex items-center gap-2">
-          <Badge className="hidden gap-1.5 rounded-full sm:inline-flex" variant="outline">
-            <ShieldCheck className="size-3.5" /> Imported data protected
-          </Badge>
           <ThemeToggle />
           <Button
             className="hidden sm:inline-flex"

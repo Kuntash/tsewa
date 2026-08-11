@@ -20,8 +20,8 @@ must not be included in Tibetan Homes Foundation reports or migrations.
 3. Choose **Edit details**, make a small change, and save it.
 4. Restore the original value after the test. The baseline campus is **Tsewa Practice School**.
 
-Imported THS profiles are not editable. The server enforces this rule as well as
-the interface.
+Use this practice organization for experiments. Migrated THS records can be
+edited by authorized staff, but must not be used for development testing.
 
 The current THS owner is also the owner of this practice organization. Switch
 organizations from the home-page header before testing admissions or later

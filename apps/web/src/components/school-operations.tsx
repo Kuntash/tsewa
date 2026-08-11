@@ -886,18 +886,16 @@ function StudentResults({
                 <Detail label="Status" value={enrollmentStatusLabel(student.enrollmentStatus)} />
               </div>
             </button>
-            {student.statusSource === "explicit" ? (
-              <div className="px-4 pb-4">
-                <Button
-                  className="w-full"
-                  onClick={() => onManage(student.enrollmentId)}
-                  size="sm"
-                  variant="outline"
-                >
-                  {student.canEdit ? "Change enrollment" : "View enrollment"}
-                </Button>
-              </div>
-            ) : null}
+            <div className="px-4 pb-4">
+              <Button
+                className="w-full"
+                onClick={() => onManage(student.enrollmentId)}
+                size="sm"
+                variant="outline"
+              >
+                {student.canEdit ? "Change enrollment" : "View enrollment"}
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -934,15 +932,13 @@ function StudentResults({
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <div className="flex justify-end gap-1">
-                    {student.statusSource === "explicit" ? (
-                      <Button
-                        onClick={() => onManage(student.enrollmentId)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        {student.canEdit ? "Change enrollment" : "View enrollment"}
-                      </Button>
-                    ) : null}
+                    <Button
+                      onClick={() => onManage(student.enrollmentId)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {student.canEdit ? "Change enrollment" : "View enrollment"}
+                    </Button>
                     <Button onClick={() => onSelect(student.personId)} size="sm" variant="ghost">
                       Open profile
                     </Button>
@@ -1085,7 +1081,7 @@ function EnrollmentStatusBadge({ status }: { status: StudentRow["enrollmentStatu
 
 function enrollmentStatusLabel(status: StudentRow["enrollmentStatus"]): string {
   return {
-    recorded: "Recorded",
+    recorded: "Imported",
     enrolled: "Enrolled",
     transferred: "Transferred",
     withdrawn: "Withdrawn",

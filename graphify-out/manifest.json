@@ -15,13 +15,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1786434021.0045018,
-    "ast_hash": "ea1b20f34b827466f0c02423a81d1d89",
+    "mtime": 1786436577.1868405,
+    "ast_hash": "79f1c45bb580a7e64bc13268fb29b512",
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786434689.7825165,
-    "ast_hash": "d981a2e4eaf278352bfa906e9eff894d",
+    "mtime": 1786436577.1866243,
+    "ast_hash": "b8851ec09bb0afb15d9507e3bbfc84ac",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786434735.5009513,
-    "ast_hash": "e17972509b6e3dec71e9777b08ba33aa",
+    "mtime": 1786436577.1852996,
+    "ast_hash": "16594f21bd22bebc8a7a23b7e60d5fdf",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -300,8 +300,8 @@
     "semantic_hash": ""
   },
   "docs/school-operations-slice.md": {
-    "mtime": 1786399639.8765733,
-    "ast_hash": "0418f2f64ca2ffa8a293d717986e50cb",
+    "mtime": 1786444402.187694,
+    "ast_hash": "73c99fbc2cc3a560d607cebe3ff77dd9",
     "semantic_hash": ""
   },
   "apps/web/migrations/0009_school_operations_foundation.sql": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786432076.5672336,
-    "ast_hash": "b404398d11f23e3a91c162711f8a0490",
+    "mtime": 1786436607.0850568,
+    "ast_hash": "39bebe70acfe1988df0aac5d9f56c37c",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -445,8 +445,8 @@
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
-    "mtime": 1786434689.7830184,
-    "ast_hash": "54e56db0624fd9f2ed915c8b3c510335",
+    "mtime": 1786436577.1874032,
+    "ast_hash": "8acc86b526572a15eba68f422aea139b",
     "semantic_hash": ""
   },
   "apps/web/migrations/0013_enrollment_roll_history.sql": {
@@ -455,13 +455,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1786432066.8363032,
-    "ast_hash": "e7b94243169cac816f66b83937d07c8c",
+    "mtime": 1786436577.1857233,
+    "ast_hash": "7c9433d4eec007b577a4aa715bb37742",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786434689.782807,
-    "ast_hash": "cbadb9d6c87141320cf7b82ce2a9c357",
+    "mtime": 1786444402.188097,
+    "ast_hash": "e686a46d78a6bf3905d543256ffaba4b",
     "semantic_hash": ""
   }
 }

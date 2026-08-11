@@ -59,9 +59,11 @@ combinations observed in each session.
 
 The legacy source does not contain a reliable enrollment lifecycle field. For
 that reason, imported records use `recorded` with the source
-`legacy_allocation`; the UI labels this as **Legacy recorded** and shows the
-person's present-day registry status separately. It does not infer that a
-student was enrolled, withdrawn, completed, or graduated in a historical year.
+`legacy_allocation`; the UI labels this as **Imported** and shows the person's
+present-day registry status separately. It does not infer that a student was
+enrolled, withdrawn, completed, or graduated in a historical year. When an
+authorized user changes that enrollment, Tsewa records the explicit status and
+change history while preserving the imported source references.
 
 Reconciliation found:
 
@@ -74,9 +76,9 @@ Reconciliation found:
 - no missing person, session, class, school-house, or house references, and one
   selected enrollment whose source school is unmapped.
 
-The read-only UI now provides the organization school directory and session
-class rosters. Opening a school or roster applies stable master-record IDs to
-the student list, so duplicate source names remain distinguishable.
+The UI provides the organization school directory and session class rosters.
+Opening a school or roster applies stable master-record IDs to the student list,
+so duplicate source names remain distinguishable.
 
 ## API boundary
 
@@ -89,7 +91,8 @@ All endpoints must validate organization membership and the requested session:
 
 The session ID is explicit in each request. The server must verify that it belongs
 to the current member's organization; it must not trust the stored preference as
-authorization. Responses remain read-only and organization scoped.
+authorization. Reads and writes remain organization scoped, and writes require
+an owner, administrator, or staff role.
 
 ## Import result
 
