@@ -137,6 +137,43 @@ const personCoreDetailsSchema = z.object({
   nationality: nullablePersonText(100),
 });
 
+const personFamilyDetailsSchema = z.object({
+  parentageStatus: nullablePersonText(100),
+  motherName: nullablePersonText(160),
+  fatherName: nullablePersonText(160),
+  motherOccupation: nullablePersonText(160),
+  fatherOccupation: nullablePersonText(160),
+  parentsPhone: nullablePersonText(60),
+  parentsPermanentAddress: nullablePersonText(500),
+  guardian1Name: nullablePersonText(160),
+  guardian1Address: nullablePersonText(500),
+  guardian1Email: nullablePersonText(254),
+  guardian1Phone: nullablePersonText(60),
+  guardian1Mobile: nullablePersonText(60),
+  guardian2Name: nullablePersonText(160),
+  guardian2Address: nullablePersonText(500),
+  guardian2Email: nullablePersonText(254),
+  guardian2Phone: nullablePersonText(60),
+  guardian2Mobile: nullablePersonText(60),
+  maritalStatus: nullablePersonText(100),
+  spouseName: nullablePersonText(160),
+  numberOfChildren: nullablePersonText(50),
+});
+
+const siblingOptionsQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+});
+
+const siblingLinkSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("existing"), relatedPersonId: z.uuid() }),
+  z.object({
+    mode: z.literal("new"),
+    displayName: z.string().trim().min(2).max(120),
+    primaryIdentifier: z.string().trim().min(1).max(50),
+    gender: z.enum(["female", "male", "other", "unknown"]),
+  }),
+]);
+
 function classDisplayName(alias: "class" | "offering_class" | "from_class" | "to_class"): string {
   return `CASE
     WHEN lower(trim(coalesce(${alias}.section, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
@@ -220,6 +257,26 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/results") {
       return getHistoricalResults(request);
+    }
+
+    const siblingItemMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/siblings\/([^/]+)$/);
+    if (siblingItemMatch) {
+      return removeSiblingRelationship(request, siblingItemMatch[1], siblingItemMatch[2]);
+    }
+
+    const siblingCollectionMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/siblings$/);
+    if (siblingCollectionMatch) {
+      return addSiblingRelationship(request, siblingCollectionMatch[1]);
+    }
+
+    const siblingOptionsMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/sibling-options$/);
+    if (siblingOptionsMatch) {
+      return getSiblingOptions(request, siblingOptionsMatch[1]);
+    }
+
+    const familyMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/family$/);
+    if (familyMatch) {
+      return updatePersonFamily(request, familyMatch[1]);
     }
 
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
@@ -1818,6 +1875,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
          FROM person_relationship AS relationship
          WHERE relationship.organization_id = ?
            AND relationship.relationship_type = 'sibling'
+           AND relationship.is_active = 1
            AND (relationship.person_id = ? OR relationship.related_person_id = ?)
        ), ranked_relationships AS (
          SELECT reciprocal_relationships.*,
@@ -2068,6 +2126,393 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   }
 
   return Response.json({ personId: parsedId.data, changedFields });
+}
+
+async function updatePersonFamily(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+
+  const parsedId = personIdSchema.safeParse(personId);
+  const parsed = personFamilyDetailsSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success) {
+    return Response.json({ error: "Check the family details and try again." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const runtime = getRuntimeEnv();
+  const person = await runtime.DB.prepare(
+    `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<{ id: string }>();
+  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+
+  const current = await runtime.DB.prepare(
+    `SELECT id, source_system AS sourceSystem,
+            parentage_status AS parentageStatus, mother_name AS motherName,
+            father_name AS fatherName, mother_occupation AS motherOccupation,
+            father_occupation AS fatherOccupation, parents_phone AS parentsPhone,
+            parents_permanent_address AS parentsPermanentAddress,
+            guardian_1_name AS guardian1Name, guardian_1_address AS guardian1Address,
+            guardian_1_email AS guardian1Email, guardian_1_phone AS guardian1Phone,
+            guardian_1_mobile AS guardian1Mobile, guardian_2_name AS guardian2Name,
+            guardian_2_address AS guardian2Address, guardian_2_email AS guardian2Email,
+            guardian_2_phone AS guardian2Phone, guardian_2_mobile AS guardian2Mobile,
+            marital_status AS maritalStatus, spouse_name AS spouseName,
+            number_of_children AS numberOfChildren
+     FROM person_family_profile WHERE person_id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<FamilyDetailsRecord>();
+
+  const familyFieldNames = Object.keys(parsed.data) as Array<keyof typeof parsed.data>;
+  const changedFields = familyFieldNames.filter(
+    (field) => (current?.[field] ?? null) !== parsed.data[field],
+  );
+  if (!changedFields.length) {
+    return Response.json({ personId: parsedId.data, changedFields });
+  }
+
+  const profileId = current?.id ?? crypto.randomUUID();
+  const details = parsed.data;
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `INSERT INTO person_family_profile (
+         id, organization_id, person_id, parentage_status, mother_name, father_name,
+         mother_occupation, father_occupation, parents_phone, parents_permanent_address,
+         guardian_1_name, guardian_1_address, guardian_1_email, guardian_1_phone,
+         guardian_1_mobile, guardian_2_name, guardian_2_address, guardian_2_email,
+         guardian_2_phone, guardian_2_mobile, marital_status, spouse_name,
+         number_of_children, source_system, source_table, source_id, updated_by_user_id
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+         'tsewa', 'person_family_profile', ?, ?)
+       ON CONFLICT(organization_id, person_id) DO UPDATE SET
+         parentage_status = excluded.parentage_status, mother_name = excluded.mother_name,
+         father_name = excluded.father_name, mother_occupation = excluded.mother_occupation,
+         father_occupation = excluded.father_occupation, parents_phone = excluded.parents_phone,
+         parents_permanent_address = excluded.parents_permanent_address,
+         guardian_1_name = excluded.guardian_1_name,
+         guardian_1_address = excluded.guardian_1_address,
+         guardian_1_email = excluded.guardian_1_email,
+         guardian_1_phone = excluded.guardian_1_phone,
+         guardian_1_mobile = excluded.guardian_1_mobile,
+         guardian_2_name = excluded.guardian_2_name,
+         guardian_2_address = excluded.guardian_2_address,
+         guardian_2_email = excluded.guardian_2_email,
+         guardian_2_phone = excluded.guardian_2_phone,
+         guardian_2_mobile = excluded.guardian_2_mobile,
+         marital_status = excluded.marital_status, spouse_name = excluded.spouse_name,
+         number_of_children = excluded.number_of_children,
+         updated_by_user_id = excluded.updated_by_user_id, updated_at = CURRENT_TIMESTAMP`,
+    ).bind(
+      profileId,
+      context.organizationId,
+      parsedId.data,
+      details.parentageStatus,
+      details.motherName,
+      details.fatherName,
+      details.motherOccupation,
+      details.fatherOccupation,
+      details.parentsPhone,
+      details.parentsPermanentAddress,
+      details.guardian1Name,
+      details.guardian1Address,
+      details.guardian1Email,
+      details.guardian1Phone,
+      details.guardian1Mobile,
+      details.guardian2Name,
+      details.guardian2Address,
+      details.guardian2Email,
+      details.guardian2Phone,
+      details.guardian2Mobile,
+      details.maritalStatus,
+      details.spouseName,
+      details.numberOfChildren,
+      profileId,
+      context.userId,
+    ),
+    auditStatement(runtime.DB, context, "person.family_updated", "person", parsedId.data, {
+      changedFields: changedFields.join(","),
+      sourceSystem: current?.sourceSystem ?? "tsewa",
+    }),
+  ]);
+
+  return Response.json({ personId: parsedId.data, changedFields });
+}
+
+type FamilyDetailsRecord = z.infer<typeof personFamilyDetailsSchema> & {
+  id: string;
+  sourceSystem: string;
+};
+
+async function getSiblingOptions(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const parsedId = personIdSchema.safeParse(personId);
+  const parsedQuery = siblingOptionsQuerySchema.safeParse({
+    q: new URL(request.url).searchParams.get("q") ?? "",
+  });
+  if (!parsedId.success || !parsedQuery.success) {
+    return Response.json({ error: "Check the sibling search." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const runtime = getRuntimeEnv();
+  const person = await runtime.DB.prepare(
+    `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<{ id: string }>();
+  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+
+  const bindings: Array<string> = [
+    context.organizationId,
+    parsedId.data,
+    context.organizationId,
+    parsedId.data,
+    parsedId.data,
+  ];
+  const conditions = [
+    "candidate.organization_id = ?",
+    "candidate.id <> ?",
+    `NOT EXISTS (
+       SELECT 1 FROM person_relationship relationship
+       WHERE relationship.organization_id = ? AND relationship.relationship_type = 'sibling'
+         AND relationship.is_active = 1
+         AND ((relationship.person_id = ? AND relationship.related_person_id = candidate.id)
+           OR (relationship.related_person_id = ? AND relationship.person_id = candidate.id))
+     )`,
+  ];
+  if (parsedQuery.data.q) {
+    const search = `%${escapeLikePattern(parsedQuery.data.q.toLowerCase())}%`;
+    conditions.push(
+      `(lower(candidate.display_name) LIKE ? ESCAPE '\\' OR lower(candidate.primary_identifier) LIKE ? ESCAPE '\\')`,
+    );
+    bindings.push(search, search);
+  }
+
+  const candidates = await runtime.DB.prepare(
+    `SELECT candidate.id, candidate.display_name AS displayName,
+            candidate.primary_identifier AS primaryIdentifier,
+            candidate.identifier_kind AS identifierKind, candidate.kind, candidate.status
+     FROM person candidate
+     WHERE ${conditions.join(" AND ")}
+     ORDER BY candidate.display_name COLLATE NOCASE, candidate.primary_identifier
+     LIMIT 20`,
+  )
+    .bind(...bindings)
+    .all();
+
+  return Response.json({ people: candidates.results });
+}
+
+async function addSiblingRelationship(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const parsedId = personIdSchema.safeParse(personId);
+  const parsed = siblingLinkSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success) {
+    return Response.json({ error: "Check the sibling details and try again." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+  const runtime = getRuntimeEnv();
+  const person = await runtime.DB.prepare(
+    `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<{ id: string }>();
+  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+
+  let relatedPersonId: string;
+  let createdPersonId: string | null = null;
+  if (parsed.data.mode === "existing") {
+    if (parsed.data.relatedPersonId === parsedId.data) {
+      return Response.json({ error: "A person cannot be their own sibling." }, { status: 400 });
+    }
+    const related = await runtime.DB.prepare(
+      `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
+    )
+      .bind(parsed.data.relatedPersonId, context.organizationId)
+      .first<{ id: string }>();
+    if (!related) return Response.json({ error: "Sibling not found" }, { status: 404 });
+    relatedPersonId = related.id;
+  } else {
+    const duplicate = await runtime.DB.prepare(
+      `SELECT id FROM person WHERE organization_id = ? AND identifier_kind = 'admission'
+         AND lower(primary_identifier) = lower(?)`,
+    )
+      .bind(context.organizationId, parsed.data.primaryIdentifier)
+      .first<{ id: string }>();
+    if (duplicate) {
+      return Response.json(
+        {
+          error: "That admission number already belongs to a person. Search and link them instead.",
+        },
+        { status: 409 },
+      );
+    }
+    relatedPersonId = crypto.randomUUID();
+    createdPersonId = relatedPersonId;
+  }
+
+  const existing = await runtime.DB.prepare(
+    `SELECT id FROM person_relationship
+     WHERE organization_id = ? AND relationship_type = 'sibling' AND is_active = 1
+       AND ((person_id = ? AND related_person_id = ?)
+         OR (person_id = ? AND related_person_id = ?))
+     LIMIT 1`,
+  )
+    .bind(context.organizationId, parsedId.data, relatedPersonId, relatedPersonId, parsedId.data)
+    .first<{ id: string }>();
+  if (existing)
+    return Response.json(
+      { error: "These people are already linked as siblings." },
+      { status: 409 },
+    );
+
+  const relationshipId = crypto.randomUUID();
+  const statements: D1PreparedStatement[] = [];
+  if (parsed.data.mode === "new") {
+    statements.push(
+      runtime.DB.prepare(
+        `INSERT INTO person (
+           id, organization_id, kind, status, identifier_kind, primary_identifier,
+           display_name, gender, source_system, source_table, source_id,
+           created_by_user_id, updated_by_user_id
+         ) VALUES (?, ?, 'child', 'active', 'admission', ?, ?, ?, 'tsewa', 'person', ?, ?, ?)`,
+      ).bind(
+        relatedPersonId,
+        context.organizationId,
+        parsed.data.primaryIdentifier,
+        parsed.data.displayName,
+        parsed.data.gender,
+        relatedPersonId,
+        context.userId,
+        context.userId,
+      ),
+      auditStatement(runtime.DB, context, "person.created_as_sibling", "person", relatedPersonId, {
+        linkedFromPersonId: parsedId.data,
+      }),
+    );
+  }
+  statements.push(
+    runtime.DB.prepare(
+      `INSERT INTO person_relationship (
+         id, organization_id, person_id, related_person_id, relationship_type,
+         source_system, source_table, source_id, updated_by_user_id
+       ) VALUES (?, ?, ?, ?, 'sibling', 'tsewa', 'person_relationship', ?, ?)`,
+    ).bind(
+      relationshipId,
+      context.organizationId,
+      parsedId.data,
+      relatedPersonId,
+      relationshipId,
+      context.userId,
+    ),
+    auditStatement(
+      runtime.DB,
+      context,
+      "person.sibling_added",
+      "person_relationship",
+      relationshipId,
+      {
+        personId: parsedId.data,
+        relatedPersonId,
+      },
+    ),
+  );
+  await runtime.DB.batch(statements);
+
+  return Response.json({ relationshipId, relatedPersonId, createdPersonId }, { status: 201 });
+}
+
+async function removeSiblingRelationship(
+  request: Request,
+  personId: string,
+  relationshipId: string,
+): Promise<Response> {
+  if (request.method !== "DELETE") return methodNotAllowed("DELETE");
+  if (!isSameOrigin(request)) return forbidden();
+  const parsedPersonId = personIdSchema.safeParse(personId);
+  const parsedRelationshipId = z.uuid().safeParse(relationshipId);
+  if (!parsedPersonId.success || !parsedRelationshipId.success) {
+    return Response.json({ error: "Invalid sibling link." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+  const runtime = getRuntimeEnv();
+  const relationship = await runtime.DB.prepare(
+    `SELECT id, person_id AS personId, related_person_id AS relatedPersonId
+     FROM person_relationship
+     WHERE id = ? AND organization_id = ? AND relationship_type = 'sibling'
+       AND is_active = 1 AND (person_id = ? OR related_person_id = ?)`,
+  )
+    .bind(
+      parsedRelationshipId.data,
+      context.organizationId,
+      parsedPersonId.data,
+      parsedPersonId.data,
+    )
+    .first<{ id: string; personId: string; relatedPersonId: string }>();
+  if (!relationship) return Response.json({ error: "Sibling link not found." }, { status: 404 });
+
+  const relatedPersonId =
+    relationship.personId === parsedPersonId.data
+      ? relationship.relatedPersonId
+      : relationship.personId;
+  const count = await runtime.DB.prepare(
+    `SELECT COUNT(*) AS total FROM person_relationship
+     WHERE organization_id = ? AND relationship_type = 'sibling' AND is_active = 1
+       AND ((person_id = ? AND related_person_id = ?)
+         OR (person_id = ? AND related_person_id = ?))`,
+  )
+    .bind(
+      context.organizationId,
+      parsedPersonId.data,
+      relatedPersonId,
+      relatedPersonId,
+      parsedPersonId.data,
+    )
+    .first<{ total: number }>();
+
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE person_relationship SET is_active = 0, removed_at = CURRENT_TIMESTAMP,
+         updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE organization_id = ? AND relationship_type = 'sibling' AND is_active = 1
+         AND ((person_id = ? AND related_person_id = ?)
+           OR (person_id = ? AND related_person_id = ?))`,
+    ).bind(
+      context.userId,
+      context.organizationId,
+      parsedPersonId.data,
+      relatedPersonId,
+      relatedPersonId,
+      parsedPersonId.data,
+    ),
+    auditStatement(
+      runtime.DB,
+      context,
+      "person.sibling_removed",
+      "person_relationship",
+      relationship.id,
+      {
+        personId: parsedPersonId.data,
+        relatedPersonId,
+        hiddenSourceRows: String(Number(count?.total ?? 0)),
+      },
+    ),
+  ]);
+
+  return Response.json({ ok: true, relatedPersonId });
 }
 
 async function getPersonFile(request: Request, fileId: string): Promise<Response> {

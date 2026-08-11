@@ -34,6 +34,42 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { PersonFamilyEditor } from "@/components/person-family-editor";
+
+export type PersonFamilyDetails = {
+  parentageStatus: string | null;
+  motherName: string | null;
+  fatherName: string | null;
+  motherOccupation: string | null;
+  fatherOccupation: string | null;
+  parentsPhone: string | null;
+  parentsPermanentAddress: string | null;
+  guardian1Name: string | null;
+  guardian1Address: string | null;
+  guardian1Email: string | null;
+  guardian1Phone: string | null;
+  guardian1Mobile: string | null;
+  guardian2Name: string | null;
+  guardian2Address: string | null;
+  guardian2Email: string | null;
+  guardian2Phone: string | null;
+  guardian2Mobile: string | null;
+  maritalStatus: string | null;
+  spouseName: string | null;
+  numberOfChildren: string | null;
+};
+
+export type SiblingRelationship = {
+  id: string;
+  relationshipType: "sibling";
+  reviewFlag: "self_reference" | "duplicate_source_link" | null;
+  personId: string;
+  displayName: string;
+  primaryIdentifier: string;
+  identifierKind: "admission" | "staff";
+  kind: "child" | "elderly" | "staff";
+  status: "active" | "inactive";
+};
 
 type Profile = {
   id: string;
@@ -83,39 +119,8 @@ type Profile = {
     isLatest: boolean;
     sourceId: string;
   }>;
-  family: {
-    parentageStatus: string | null;
-    motherName: string | null;
-    fatherName: string | null;
-    motherOccupation: string | null;
-    fatherOccupation: string | null;
-    parentsPhone: string | null;
-    parentsPermanentAddress: string | null;
-    guardian1Name: string | null;
-    guardian1Address: string | null;
-    guardian1Email: string | null;
-    guardian1Phone: string | null;
-    guardian1Mobile: string | null;
-    guardian2Name: string | null;
-    guardian2Address: string | null;
-    guardian2Email: string | null;
-    guardian2Phone: string | null;
-    guardian2Mobile: string | null;
-    maritalStatus: string | null;
-    spouseName: string | null;
-    numberOfChildren: string | null;
-  } | null;
-  relationships: Array<{
-    id: string;
-    relationshipType: "sibling";
-    reviewFlag: "self_reference" | "duplicate_source_link" | null;
-    personId: string;
-    displayName: string;
-    primaryIdentifier: string;
-    identifierKind: "admission" | "staff";
-    kind: "child" | "elderly" | "staff";
-    status: "active" | "inactive";
-  }>;
+  family: PersonFamilyDetails | null;
+  relationships: SiblingRelationship[];
   files: Array<{
     id: string;
     category:
@@ -145,13 +150,13 @@ export function PersonProfileSheet({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"core" | "family" | null>(null);
 
   useEffect(() => {
     if (!personId) {
       setProfile(null);
       setError("");
-      setEditing(false);
+      setEditing(null);
       return;
     }
 
@@ -191,26 +196,51 @@ export function PersonProfileSheet({
               <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             </div>
           </div>
-        ) : profile && editing ? (
+        ) : profile && editing === "core" ? (
           <PersonCoreDetailsForm
-            onCancel={() => setEditing(false)}
+            onCancel={() => setEditing(null)}
             onSaved={async () => {
               const updated = await readPersonProfile(profile.id);
               setProfile(updated);
-              setEditing(false);
+              setEditing(null);
               onPersonUpdated?.();
             }}
             profile={profile}
           />
+        ) : profile && editing === "family" ? (
+          <PersonFamilyEditor
+            family={profile.family}
+            onChanged={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              onPersonUpdated?.();
+            }}
+            onDone={() => setEditing(null)}
+            personId={profile.id}
+            personName={profile.displayName}
+            relationships={profile.relationships}
+          />
         ) : profile ? (
-          <ProfileContent onEdit={() => setEditing(true)} profile={profile} />
+          <ProfileContent
+            onEdit={() => setEditing("core")}
+            onEditFamily={() => setEditing("family")}
+            profile={profile}
+          />
         ) : null}
       </SheetContent>
     </Sheet>
   );
 }
 
-function ProfileContent({ onEdit, profile }: { onEdit: () => void; profile: Profile }) {
+function ProfileContent({
+  onEdit,
+  onEditFamily,
+  profile,
+}: {
+  onEdit: () => void;
+  onEditFamily: () => void;
+  profile: Profile;
+}) {
   const reviewItems = useMemo(
     () => profile.reviewFlags.map((flag) => reviewLabel(flag, profile.kind)),
     [profile.kind, profile.reviewFlags],
@@ -323,7 +353,7 @@ function ProfileContent({ onEdit, profile }: { onEdit: () => void; profile: Prof
 
           <Separator />
 
-          <FamilyProfileSection profile={profile} />
+          <FamilyProfileSection onEdit={onEditFamily} profile={profile} />
 
           <Separator />
 
@@ -852,7 +882,7 @@ function PersonFilesSection({ profile }: { profile: Profile }) {
   );
 }
 
-function FamilyProfileSection({ profile }: { profile: Profile }) {
+function FamilyProfileSection({ onEdit, profile }: { onEdit: () => void; profile: Profile }) {
   const family = profile.family;
   const guardians = family
     ? [
@@ -890,7 +920,17 @@ function FamilyProfileSection({ profile }: { profile: Profile }) {
   );
 
   return (
-    <ProfileSection icon={UsersRound} label="Family & relationships">
+    <ProfileSection
+      action={
+        profile.canEdit ? (
+          <Button onClick={onEdit} size="sm" variant="outline">
+            <Pencil /> Edit family
+          </Button>
+        ) : null
+      }
+      icon={UsersRound}
+      label="Family & relationships"
+    >
       {!family && !profile.relationships.length ? (
         <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
           {profile.kind === "staff"
@@ -901,7 +941,7 @@ function FamilyProfileSection({ profile }: { profile: Profile }) {
         <div className="space-y-6">
           {hasHouseholdContext ? (
             <div className="grid gap-4 rounded-2xl border bg-card p-4 shadow-xs sm:grid-cols-2 sm:p-5">
-              <ProfileField label="Parentage" value={family?.parentageStatus ?? null} />
+              <ProfileField label="Parents' status" value={family?.parentageStatus ?? null} />
               <ProfileField label="Marital status" value={family?.maritalStatus ?? null} />
               <ProfileField label="Spouse" value={family?.spouseName ?? null} />
               <ProfileField label="Number of children" value={family?.numberOfChildren ?? null} />
@@ -1063,21 +1103,26 @@ function ContactLine({
 }
 
 function ProfileSection({
+  action,
   children,
   icon: Icon,
   label,
 }: {
+  action?: React.ReactNode;
   children: React.ReactNode;
   icon: typeof UserRound;
   label: string;
 }) {
   return (
     <section>
-      <div className="mb-5 flex items-center gap-2.5">
-        <Icon className="size-4 text-primary" />
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
-        </h3>
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Icon className="size-4 text-primary" />
+          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {label}
+          </h3>
+        </div>
+        {action}
       </div>
       {children}
     </section>

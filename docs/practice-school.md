@@ -23,6 +23,16 @@ must not be included in Tibetan Homes Foundation reports or migrations.
 Use this practice organization for experiments. Migrated THS records can be
 edited by authorized staff, but must not be used for development testing.
 
+## Editing family and siblings
+
+1. Open the practice student in **People** and choose **Edit family**.
+2. Update a parent or guardian field and save it.
+3. Search for an existing practice person to link as a sibling, or create a new
+   person when the sibling is not already registered.
+4. Open the sibling's profile and confirm the link appears there too.
+5. Removing a sibling link hides it from both profiles. Imported relationship
+   rows remain stored for history.
+
 The current THS owner is also the owner of this practice organization. Switch
 organizations from the home-page header before testing admissions or later
 enrollment changes.

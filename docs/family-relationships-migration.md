@@ -42,3 +42,14 @@ exact D1 database ID as an explicit guard.
 Local verification and the guarded production import completed on 5 August 2026. The remote D1 reconciliation matched the dry run: 8,593 family profiles,
 1,105 sibling relationships, and 12 retained review flags. The aggregate-only
 record is stored in `reports/family-relationships-import.json`.
+
+## Editing policy
+
+Authorized owners, administrators, and staff can edit imported family details.
+The family profile keeps its original source system, table, and ID, while the
+audit log records which fields changed.
+
+Sibling links are reciprocal in the application: one stored link appears on
+both profiles. New duplicate and self-links are rejected. Removing a link marks
+all matching source rows inactive instead of deleting them, so imported history
+and review flags remain available.

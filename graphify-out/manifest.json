@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786436577.1866243,
-    "ast_hash": "b8851ec09bb0afb15d9507e3bbfc84ac",
+    "mtime": 1786447200.9836261,
+    "ast_hash": "ed828d3cc5d4080a406bde45eacda14a",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786436577.1852996,
-    "ast_hash": "16594f21bd22bebc8a7a23b7e60d5fdf",
+    "mtime": 1786446727.1613896,
+    "ast_hash": "d13e0d83b7b9660c58da73a24ab043bb",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "docs/family-relationships-migration.md": {
-    "mtime": 1785958849.070244,
-    "ast_hash": "ee8ced4c9833618862e7f0b617ce35c6",
+    "mtime": 1786447208.47187,
+    "ast_hash": "fa8f977e1fc7d99d564c6e8a36ee04d4",
     "semantic_hash": ""
   },
   "docs/people-registry-migration.md": {
@@ -445,8 +445,8 @@
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
-    "mtime": 1786436577.1874032,
-    "ast_hash": "8acc86b526572a15eba68f422aea139b",
+    "mtime": 1786447200.98451,
+    "ast_hash": "30649f95c44af90d899d522b881a728a",
     "semantic_hash": ""
   },
   "apps/web/migrations/0013_enrollment_roll_history.sql": {
@@ -460,8 +460,18 @@
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786444402.188097,
-    "ast_hash": "e686a46d78a6bf3905d543256ffaba4b",
+    "mtime": 1786447200.984043,
+    "ast_hash": "ff3c7d38985a5993bb49c80a189806a8",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0014_family_relationship_editing.sql": {
+    "mtime": 1786446595.0415986,
+    "ast_hash": "24f1fc648a6a1fb4316fec9441efefef",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/person-family-editor.tsx": {
+    "mtime": 1786447200.9829903,
+    "ast_hash": "67ca29e704c42e46a6c4e39ee10945b6",
     "semantic_hash": ""
   }
 }

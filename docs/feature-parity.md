@@ -65,7 +65,8 @@ evidence of a regularly used year-end workflow.
 - [x] Create a basic new student and enrollment in the practice organization.
 - [x] Edit a person's core details with validation and an audit entry. Test
       changes in the practice school rather than on migrated THS records.
-- [ ] Add and edit parents, guardians, and sibling relationships.
+- [x] Add and edit parents and guardians; link, create, and remove sibling
+      relationships with reciprocal profile visibility.
 - [ ] Add and change a person's home placement while preserving history.
 - [ ] Upload, name, replace, and remove documents and photos.
 - [ ] Record and correct withdrawal information and reasons on the person profile.
