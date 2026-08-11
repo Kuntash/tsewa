@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-11T12:15:47.973895+00:00",
+  "generated_at": "2026-08-11T12:30:36.975593+00:00",
   "nodes": {
     "apps_web_migrations_0001_platform_foundation_academic_session": {
       "code_fingerprint": "fbd2a72a172df42b0048741a334f17f021364e90fd7ff719d0b740f92da35a56",
@@ -17,7 +17,7 @@
           "q": "okay, why only 2011 and 2012 data? anyways, lets continue and do that."
         }
       ],
-      "score": 1.981071657,
+      "score": 1.980600743,
       "source_file": "apps/web/migrations/0001_platform_foundation.sql",
       "status": "preferred",
       "uses": 2
@@ -33,7 +33,7 @@
           "q": "great, continue with the next parity slice?"
         }
       ],
-      "score": 0.99996609,
+      "score": 0.999728391,
       "source_file": "apps/web/migrations/0001_platform_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -49,7 +49,7 @@
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 0.986058119,
+      "score": 0.985823726,
       "source_file": "apps/web/migrations/0003_people_registry.sql",
       "status": "tentative",
       "uses": 1
@@ -80,7 +80,7 @@
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 3.946034271,
+      "score": 3.945096272,
       "source_file": "apps/web/migrations/0006_person_academic_history.sql",
       "status": "preferred",
       "uses": 4
@@ -88,8 +88,13 @@
     "apps_web_migrations_0009_school_operations_foundation_academic_class_master": {
       "code_fingerprint": "51e53b5a6709ec8ab5a8bb2569e44592ad95c8ab5ba10173477e3789fcbf5214",
       "label": "academic_class_master",
-      "last": "2026-08-10T22:42:20.141162+00:00",
+      "last": "2026-08-11T12:24:58.716424+00:00",
       "provenance": [
+        {
+          "date": "2026-08-11T12:24:58.716424+00:00",
+          "outcome": "useful",
+          "q": "continue"
+        },
         {
           "date": "2026-08-10T22:42:20.141162+00:00",
           "outcome": "useful",
@@ -101,10 +106,26 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 1.973759414,
+      "score": 2.973199786,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "preferred",
-      "uses": 2
+      "uses": 3
+    },
+    "apps_web_migrations_0009_school_operations_foundation_house_master": {
+      "code_fingerprint": "51e53b5a6709ec8ab5a8bb2569e44592ad95c8ab5ba10173477e3789fcbf5214",
+      "label": "house_master",
+      "last": "2026-08-11T12:24:58.716424+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-11T12:24:58.716424+00:00",
+          "outcome": "useful",
+          "q": "continue"
+        }
+      ],
+      "score": 0.999909548,
+      "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
+      "status": "tentative",
+      "uses": 1
     },
     "apps_web_migrations_0009_school_operations_foundation_school_master": {
       "code_fingerprint": "51e53b5a6709ec8ab5a8bb2569e44592ad95c8ab5ba10173477e3789fcbf5214",
@@ -117,7 +138,7 @@
           "q": "great, continue with the next parity slice?"
         }
       ],
-      "score": 0.99996609,
+      "score": 0.999728391,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -133,7 +154,7 @@
           "q": "Okay whats next?"
         }
       ],
-      "score": 0.986086209,
+      "score": 0.98585181,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -169,7 +190,7 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 5.928721015,
+      "score": 5.927311718,
       "source_file": "apps/web/migrations/0010_student_enrollment_rosters.sql",
       "status": "preferred",
       "uses": 6
@@ -185,16 +206,21 @@
           "q": "can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
         }
       ],
-      "score": 0.987218939,
+      "score": 0.98698427,
       "source_file": "apps/web/src/components/people-registry.tsx",
       "status": "tentative",
       "uses": 1
     },
     "apps_web_src_components_school_operations": {
-      "code_fingerprint": "15504d6932c341922409d494cc75617c59391afff5084ccfae87a7b64ad2b055",
+      "code_fingerprint": "b358ad876d85168d78b77337de55c3ab07ab8105b821e2727012799dddde7ff2",
       "label": "school-operations.tsx",
-      "last": "2026-08-11T12:13:41.165805+00:00",
+      "last": "2026-08-11T12:24:58.716424+00:00",
       "provenance": [
+        {
+          "date": "2026-08-11T12:24:58.716424+00:00",
+          "outcome": "useful",
+          "q": "continue"
+        },
         {
           "date": "2026-08-11T12:13:41.165805+00:00",
           "outcome": "useful",
@@ -216,13 +242,13 @@
           "q": "Okay whats next?"
         }
       ],
-      "score": 3.960575297,
+      "score": 4.95954339,
       "source_file": "apps/web/src/components/school-operations.tsx",
       "status": "preferred",
-      "uses": 4
+      "uses": 5
     },
     "apps_web_src_components_school_operations_rosterrow": {
-      "code_fingerprint": "15504d6932c341922409d494cc75617c59391afff5084ccfae87a7b64ad2b055",
+      "code_fingerprint": "b358ad876d85168d78b77337de55c3ab07ab8105b821e2727012799dddde7ff2",
       "label": "RosterRow",
       "last": "2026-08-10T22:23:00.544592+00:00",
       "provenance": [
@@ -232,7 +258,7 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 0.986726693,
+      "score": 0.986492141,
       "source_file": "apps/web/src/components/school-operations.tsx",
       "status": "tentative",
       "uses": 1
@@ -253,7 +279,7 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 1.973945632,
+      "score": 1.973476412,
       "source_file": "scripts/import-person-files.mjs",
       "status": "preferred",
       "uses": 2
@@ -269,7 +295,7 @@
           "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
         }
       ],
-      "score": 0.986585883,
+      "score": 0.986351365,
       "source_file": "scripts/student-enrollment-dry-run.mjs",
       "status": "tentative",
       "uses": 1
@@ -300,7 +326,7 @@
           "q": "Okay whats next?"
         }
       ],
-      "score": 3.95411271,
+      "score": 3.95317279,
       "source_file": "TODO.md",
       "status": "preferred",
       "uses": 4

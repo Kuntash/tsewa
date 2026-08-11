@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; schoolId?: string };
 type Action =
   | "placement_changed"
   | "internal_transfer"
@@ -169,6 +169,16 @@ export function EnrollmentChangeSheet({
 
   const selectedAction = actions.find((item) => item.value === action) ?? actions[0];
   const keepsStudentEnrolled = action === "placement_changed" || action === "internal_transfer";
+  const classOptions = optionsForSchool(
+    data?.options.classes ?? [],
+    schoolId,
+    data?.enrollment.academicClassId,
+  );
+  const houseOptions = optionsForSchool(
+    data?.options.houses ?? [],
+    schoolId,
+    data?.enrollment.houseId ?? undefined,
+  );
   const confirmation = useMemo(() => {
     if (!data) return "";
     if (action === "placement_changed") {
@@ -187,12 +197,21 @@ export function EnrollmentChangeSheet({
     setAction(value);
     setError("");
     if (value === "internal_transfer" && data) {
-      setSchoolId(
+      chooseSchool(
         data.options.schools.find((school) => school.id !== data.enrollment.schoolId)?.id ?? "",
       );
     } else if (data) {
-      setSchoolId(data.enrollment.schoolId ?? "");
+      const currentSchoolId = data.enrollment.schoolId ?? "";
+      setSchoolId(currentSchoolId);
+      setAcademicClassId(data.enrollment.academicClassId);
+      setHouseId(data.enrollment.houseId ?? "none");
     }
+  }
+
+  function chooseSchool(value: string) {
+    setSchoolId(value);
+    setAcademicClassId(optionsForSchool(data?.options.classes ?? [], value)[0]?.id ?? "");
+    setHouseId("none");
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -297,7 +316,7 @@ export function EnrollmentChangeSheet({
                     {action === "internal_transfer" ? (
                       <OptionField
                         label="New school"
-                        onChange={setSchoolId}
+                        onChange={chooseSchool}
                         options={data.options.schools}
                         value={schoolId}
                       />
@@ -305,7 +324,7 @@ export function EnrollmentChangeSheet({
                     <OptionField
                       label="Class"
                       onChange={setAcademicClassId}
-                      options={data.options.classes}
+                      options={classOptions}
                       value={academicClassId}
                     />
                     <div className="space-y-2">
@@ -316,7 +335,7 @@ export function EnrollmentChangeSheet({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">No house</SelectItem>
-                          {data.options.houses.map((item) => (
+                          {houseOptions.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.name}
                             </SelectItem>
@@ -371,7 +390,7 @@ export function EnrollmentChangeSheet({
                     Cancel
                   </Button>
                   <Button
-                    disabled={submitting}
+                    disabled={submitting || (keepsStudentEnrolled && !academicClassId)}
                     type="submit"
                     variant={keepsStudentEnrolled ? "default" : "destructive"}
                   >
@@ -398,6 +417,19 @@ export function EnrollmentChangeSheet({
       </SheetContent>
     </Sheet>
   );
+}
+
+function optionsForSchool(options: Option[], schoolId: string, preferredId?: string) {
+  const names = new Set<string>();
+  return options
+    .filter((option) => option.schoolId === schoolId)
+    .sort((left, right) => Number(right.id === preferredId) - Number(left.id === preferredId))
+    .filter((option) => {
+      const key = option.name.trim().toLowerCase();
+      if (names.has(key)) return false;
+      names.add(key);
+      return true;
+    });
 }
 
 function EnrollmentHistory({ changes }: { changes: Change[] }) {

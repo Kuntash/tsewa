@@ -104,6 +104,12 @@ const houseMasterSchema = z.object({
   isActive: z.boolean(),
 });
 
+const schoolAssignmentsSchema = z.object({
+  sessionId: z.uuid(),
+  classIds: z.array(z.uuid()).max(500),
+  houseIds: z.array(z.uuid()).max(500),
+});
+
 const isoDateSchema = z.iso.date();
 
 const admissionSchema = z.object({
@@ -302,6 +308,13 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/houses") {
       return createHouseMaster(request);
+    }
+
+    const schoolAssignmentsMatch = url.pathname.match(
+      /^\/api\/school-operations\/schools\/([^/]+)\/assignments$/,
+    );
+    if (schoolAssignmentsMatch) {
+      return handleSchoolAssignments(request, schoolAssignmentsMatch[1]);
     }
 
     const schoolMasterMatch = url.pathname.match(/^\/api\/school-operations\/schools\/([^/]+)$/);
@@ -680,18 +693,27 @@ async function getSchoolOperationsSetup(request: Request): Promise<Response> {
       .bind(scope.organizationId)
       .all<{ id: string; name: string }>(),
     runtime.DB.prepare(
-      `SELECT id, ${classDisplayName("class")} AS name FROM academic_class_master class
-       WHERE organization_id = ? AND is_active = 1
-       ORDER BY coalesce(sort_order, 999), coalesce(level, 999), name COLLATE NOCASE`,
+      `SELECT class.id, ${classDisplayName("class")} AS name, offering.school_id AS schoolId
+       FROM school_class_offering offering
+       JOIN academic_class_master class ON class.id = offering.academic_class_id
+         AND class.organization_id = offering.organization_id
+       WHERE offering.organization_id = ? AND offering.academic_session_id = ?
+         AND offering.is_active = 1 AND class.is_active = 1
+       ORDER BY offering.school_id, coalesce(class.sort_order, 999),
+                coalesce(class.level, 999), name COLLATE NOCASE`,
     )
-      .bind(scope.organizationId)
-      .all<{ id: string; name: string }>(),
+      .bind(scope.organizationId, scope.session.id)
+      .all<{ id: string; name: string; schoolId: string }>(),
     runtime.DB.prepare(
-      `SELECT id, name FROM house_master
-       WHERE organization_id = ? AND is_active = 1 ORDER BY name COLLATE NOCASE`,
+      `SELECT house.id, house.name, school_house.school_id AS schoolId
+       FROM school_house_master school_house
+       JOIN house_master house ON house.id = school_house.house_id
+         AND house.organization_id = school_house.organization_id
+       WHERE school_house.organization_id = ? AND house.is_active = 1
+       ORDER BY school_house.school_id, house.name COLLATE NOCASE`,
     )
       .bind(scope.organizationId)
-      .all<{ id: string; name: string }>(),
+      .all<{ id: string; name: string; schoolId: string }>(),
   ]);
 
   return Response.json({
@@ -719,23 +741,31 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const { academicClassId, admissionNumber, admittedOn, displayName, houseId, schoolId } =
     parsed.data;
-  const [school, academicClass, house, existingPerson] = await Promise.all([
+  const [school, offering, house, existingPerson] = await Promise.all([
     runtime.DB.prepare(
       `SELECT id FROM school_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
     )
       .bind(schoolId, scope.organizationId)
       .first<{ id: string }>(),
     runtime.DB.prepare(
-      `SELECT id FROM academic_class_master
-       WHERE id = ? AND organization_id = ? AND is_active = 1`,
+      `SELECT offering.id FROM school_class_offering offering
+       JOIN academic_class_master class ON class.id = offering.academic_class_id
+         AND class.organization_id = offering.organization_id
+       WHERE offering.organization_id = ? AND offering.academic_session_id = ?
+         AND offering.school_id = ? AND offering.academic_class_id = ?
+         AND offering.is_active = 1 AND class.is_active = 1`,
     )
-      .bind(academicClassId, scope.organizationId)
+      .bind(scope.organizationId, scope.session.id, schoolId, academicClassId)
       .first<{ id: string }>(),
     houseId
       ? runtime.DB.prepare(
-          `SELECT id FROM house_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
+          `SELECT house.id FROM school_house_master school_house
+           JOIN house_master house ON house.id = school_house.house_id
+             AND house.organization_id = school_house.organization_id
+           WHERE school_house.organization_id = ? AND school_house.school_id = ?
+             AND house.id = ? AND house.is_active = 1`,
         )
-          .bind(houseId, scope.organizationId)
+          .bind(scope.organizationId, schoolId, houseId)
           .first<{ id: string }>()
       : Promise.resolve(null),
     runtime.DB.prepare(
@@ -748,37 +778,12 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   ]);
 
   if (!school) return Response.json({ error: "Choose an active school." }, { status: 400 });
-  if (!academicClass) return Response.json({ error: "Choose an active class." }, { status: 400 });
-  if (houseId && !house) return Response.json({ error: "Choose a valid house." }, { status: 400 });
+  if (!offering)
+    return Response.json({ error: "Choose a class assigned to this school." }, { status: 400 });
+  if (houseId && !house)
+    return Response.json({ error: "Choose a house assigned to this school." }, { status: 400 });
   if (existingPerson) {
     return Response.json({ error: "That admission number is already in use." }, { status: 409 });
-  }
-
-  let offering = await runtime.DB.prepare(
-    `SELECT id FROM school_class_offering
-     WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
-       AND academic_class_id = ?`,
-  )
-    .bind(scope.organizationId, scope.session.id, schoolId, academicClassId)
-    .first<{ id: string }>();
-  if (!offering) {
-    const offeringId = crypto.randomUUID();
-    await runtime.DB.prepare(
-      `INSERT INTO school_class_offering
-        (id, organization_id, academic_session_id, school_id, academic_class_id, origin,
-         source_system, source_table, source_id)
-       VALUES (?, ?, ?, ?, ?, 'manual', 'tsewa', 'school_class_offering', ?)`,
-    )
-      .bind(
-        offeringId,
-        scope.organizationId,
-        scope.session.id,
-        schoolId,
-        academicClassId,
-        offeringId,
-      )
-      .run();
-    offering = { id: offeringId };
   }
 
   const personId = crypto.randomUUID();
@@ -880,18 +885,27 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
       .bind(context.organizationId)
       .all<{ id: string; name: string }>(),
     runtime.DB.prepare(
-      `SELECT id, ${classDisplayName("class")} AS name FROM academic_class_master class
-       WHERE organization_id = ? AND is_active = 1
-       ORDER BY coalesce(sort_order, 999), coalesce(level, 999), name COLLATE NOCASE`,
+      `SELECT class.id, ${classDisplayName("class")} AS name, offering.school_id AS schoolId
+       FROM school_class_offering offering
+       JOIN academic_class_master class ON class.id = offering.academic_class_id
+         AND class.organization_id = offering.organization_id
+       WHERE offering.organization_id = ? AND offering.academic_session_id = ?
+         AND offering.is_active = 1 AND class.is_active = 1
+       ORDER BY offering.school_id, coalesce(class.sort_order, 999),
+                coalesce(class.level, 999), name COLLATE NOCASE`,
     )
-      .bind(context.organizationId)
-      .all<{ id: string; name: string }>(),
+      .bind(context.organizationId, enrollment.academicSessionId)
+      .all<{ id: string; name: string; schoolId: string }>(),
     runtime.DB.prepare(
-      `SELECT id, name FROM house_master
-       WHERE organization_id = ? ORDER BY name COLLATE NOCASE`,
+      `SELECT house.id, house.name, school_house.school_id AS schoolId
+       FROM school_house_master school_house
+       JOIN house_master house ON house.id = school_house.house_id
+         AND house.organization_id = school_house.organization_id
+       WHERE school_house.organization_id = ? AND house.is_active = 1
+       ORDER BY school_house.school_id, house.name COLLATE NOCASE`,
     )
       .bind(context.organizationId)
-      .all<{ id: string; name: string }>(),
+      .all<{ id: string; name: string; schoolId: string }>(),
     runtime.DB.prepare(
       `SELECT change.id, change.change_type AS changeType,
               change.effective_on AS effectiveOn, change.from_status AS fromStatus,
@@ -919,6 +933,27 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
       .all(),
   ]);
 
+  const classOptions = [...classes.results];
+  if (!classOptions.some((item) => item.id === enrollment.academicClassId)) {
+    classOptions.push({
+      id: enrollment.academicClassId,
+      name: enrollment.className,
+      schoolId: enrollment.schoolId ?? "",
+    });
+  }
+  const houseOptions = [...houses.results];
+  if (
+    enrollment.houseId &&
+    enrollment.houseName &&
+    !houseOptions.some((item) => item.id === enrollment.houseId)
+  ) {
+    houseOptions.push({
+      id: enrollment.houseId,
+      name: enrollment.houseName,
+      schoolId: enrollment.schoolId ?? "",
+    });
+  }
+
   return Response.json({
     enrollment: {
       ...enrollment,
@@ -926,8 +961,8 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
     },
     options: {
       schools: schools.results,
-      classes: classes.results,
-      houses: houses.results,
+      classes: classOptions,
+      houses: houseOptions,
     },
     changes: changes.results,
   });
@@ -985,37 +1020,40 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
 
   let offeringId = enrollment.schoolClassOfferingId;
   if (keepsStudentEnrolled && targetSchoolId && targetClassId) {
-    const [school, academicClass, house] = await Promise.all([
+    const [school, offering, house] = await Promise.all([
       runtime.DB.prepare(
         `SELECT id FROM school_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
       )
         .bind(targetSchoolId, context.organizationId)
         .first<{ id: string }>(),
       runtime.DB.prepare(
-        `SELECT id FROM academic_class_master
-         WHERE id = ? AND organization_id = ? AND is_active = 1`,
+        `SELECT offering.id FROM school_class_offering offering
+         JOIN academic_class_master class ON class.id = offering.academic_class_id
+           AND class.organization_id = offering.organization_id
+         WHERE offering.organization_id = ? AND offering.academic_session_id = ?
+           AND offering.school_id = ? AND offering.academic_class_id = ?
+           AND offering.is_active = 1 AND class.is_active = 1`,
       )
-        .bind(targetClassId, context.organizationId)
+        .bind(context.organizationId, enrollment.academicSessionId, targetSchoolId, targetClassId)
         .first<{ id: string }>(),
       targetHouseId
         ? runtime.DB.prepare(
-            `SELECT id FROM house_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
+            `SELECT house.id FROM school_house_master school_house
+             JOIN house_master house ON house.id = school_house.house_id
+               AND house.organization_id = school_house.organization_id
+             WHERE school_house.organization_id = ? AND school_house.school_id = ?
+               AND house.id = ? AND house.is_active = 1`,
           )
-            .bind(targetHouseId, context.organizationId)
+            .bind(context.organizationId, targetSchoolId, targetHouseId)
             .first<{ id: string }>()
         : Promise.resolve(null),
     ]);
     if (!school) return Response.json({ error: "Choose an active school." }, { status: 400 });
-    if (!academicClass) return Response.json({ error: "Choose an active class." }, { status: 400 });
+    if (!offering)
+      return Response.json({ error: "Choose a class assigned to this school." }, { status: 400 });
     if (targetHouseId && !house)
-      return Response.json({ error: "Choose a valid house." }, { status: 400 });
-    offeringId = await getOrCreateClassOffering(
-      runtime.DB,
-      context.organizationId,
-      enrollment.academicSessionId,
-      targetSchoolId,
-      targetClassId,
-    );
+      return Response.json({ error: "Choose a house assigned to this school." }, { status: 400 });
+    offeringId = offering.id;
   }
 
   const nextStatus =
@@ -1178,36 +1216,6 @@ async function readStudentEnrollment(
     )
     .bind(enrollmentId, organizationId)
     .first<StudentEnrollmentRecord>();
-}
-
-async function getOrCreateClassOffering(
-  database: D1Database,
-  organizationId: string,
-  academicSessionId: string,
-  schoolId: string,
-  academicClassId: string,
-): Promise<string> {
-  const existing = await database
-    .prepare(
-      `SELECT id FROM school_class_offering
-       WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
-         AND academic_class_id = ?`,
-    )
-    .bind(organizationId, academicSessionId, schoolId, academicClassId)
-    .first<{ id: string }>();
-  if (existing) return existing.id;
-
-  const id = crypto.randomUUID();
-  await database
-    .prepare(
-      `INSERT INTO school_class_offering
-        (id, organization_id, academic_session_id, school_id, academic_class_id, origin,
-         source_system, source_table, source_id)
-       VALUES (?, ?, ?, ?, ?, 'manual', 'tsewa', 'school_class_offering', ?)`,
-    )
-    .bind(id, organizationId, academicSessionId, schoolId, academicClassId, id)
-    .run();
-  return id;
 }
 
 async function getSchoolOperationsStudents(request: Request): Promise<Response> {
@@ -1639,12 +1647,7 @@ async function readAcademicClassRows(database: D1Database, organizationId: strin
 }
 
 function groupAcademicClasses(rows: AcademicClassRow[]) {
-  const groups = new Map<string, AcademicClassRow[]>();
-  for (const row of rows) {
-    const key = canonicalMasterName(academicClassRowName(row));
-    groups.set(key, [...(groups.get(key) ?? []), row]);
-  }
-  return [...groups.values()]
+  return groupAcademicClassRows(rows)
     .map((group) => {
       const representative = [...group].sort((left, right) => left.id.localeCompare(right.id))[0];
       return {
@@ -1662,6 +1665,15 @@ function groupAcademicClasses(rows: AcademicClassRow[]) {
       (left, right) =>
         (left.sortOrder ?? 999) - (right.sortOrder ?? 999) || left.name.localeCompare(right.name),
     );
+}
+
+function groupAcademicClassRows(rows: AcademicClassRow[]) {
+  const groups = new Map<string, AcademicClassRow[]>();
+  for (const row of rows) {
+    const key = canonicalMasterName(academicClassRowName(row));
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  return [...groups.values()];
 }
 
 function academicClassRowName(row: Pick<AcademicClassRow, "name" | "title" | "section">) {
@@ -1782,6 +1794,289 @@ async function updateSchoolMaster(request: Request, schoolId: string): Promise<R
   return Response.json({ ok: true, id: parsedId.data });
 }
 
+async function handleSchoolAssignments(request: Request, schoolId: string): Promise<Response> {
+  const parsedSchoolId = z.uuid().safeParse(schoolId);
+  if (!parsedSchoolId.success) {
+    return Response.json({ error: "Invalid school." }, { status: 400 });
+  }
+  if (request.method === "GET") return getSchoolAssignments(request, parsedSchoolId.data);
+  if (request.method === "PUT") return updateSchoolAssignments(request, parsedSchoolId.data);
+  return methodNotAllowed("GET, PUT");
+}
+
+async function getSchoolAssignments(request: Request, schoolId: string): Promise<Response> {
+  const sessionId = new URL(request.url).searchParams.get("sessionId");
+  const parsed = schoolOverviewQuerySchema.safeParse({ sessionId });
+  if (!parsed.success) {
+    return Response.json({ error: "Select an academic session." }, { status: 400 });
+  }
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  const runtime = getRuntimeEnv();
+  const school = await runtime.DB.prepare(
+    "SELECT id, name FROM school_master WHERE id = ? AND organization_id = ?",
+  )
+    .bind(schoolId, scope.organizationId)
+    .first<{ id: string; name: string }>();
+  if (!school) return Response.json({ error: "School not found." }, { status: 404 });
+
+  const [classRows, offerings, enrollmentClasses, houses, schoolHouses, enrollmentHouses] =
+    await Promise.all([
+      readAcademicClassRows(runtime.DB, scope.organizationId),
+      runtime.DB.prepare(
+        `SELECT id, academic_class_id AS academicClassId, is_active AS isActive
+         FROM school_class_offering
+         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?`,
+      )
+        .bind(scope.organizationId, scope.session.id, schoolId)
+        .all<{ id: string; academicClassId: string; isActive: number }>(),
+      runtime.DB.prepare(
+        `SELECT academic_class_id AS academicClassId, COUNT(*) AS students
+         FROM student_enrollment
+         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
+         GROUP BY academic_class_id`,
+      )
+        .bind(scope.organizationId, scope.session.id, schoolId)
+        .all<{ academicClassId: string; students: number }>(),
+      runtime.DB.prepare(
+        `SELECT id, name, is_active AS isActive FROM house_master
+         WHERE organization_id = ? ORDER BY is_active DESC, name COLLATE NOCASE`,
+      )
+        .bind(scope.organizationId)
+        .all<{ id: string; name: string; isActive: number }>(),
+      runtime.DB.prepare(
+        `SELECT house_id AS houseId FROM school_house_master
+         WHERE organization_id = ? AND school_id = ?`,
+      )
+        .bind(scope.organizationId, schoolId)
+        .all<{ houseId: string }>(),
+      runtime.DB.prepare(
+        `SELECT house_id AS houseId, COUNT(*) AS students FROM student_enrollment
+         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
+           AND house_id IS NOT NULL GROUP BY house_id`,
+      )
+        .bind(scope.organizationId, scope.session.id, schoolId)
+        .all<{ houseId: string; students: number }>(),
+    ]);
+
+  const activeOfferingIds = new Set(
+    offerings.results.filter((item) => Boolean(item.isActive)).map((item) => item.academicClassId),
+  );
+  const classStudentCounts = new Map(
+    enrollmentClasses.results.map((item) => [item.academicClassId, Number(item.students)]),
+  );
+  const assignedHouseIds = new Set(schoolHouses.results.map((item) => item.houseId));
+  const houseStudentCounts = new Map(
+    enrollmentHouses.results.map((item) => [item.houseId, Number(item.students)]),
+  );
+
+  return Response.json({
+    canEdit: canManageSchool(scope.role),
+    school,
+    session: scope.session,
+    classes: groupAcademicClassRows(classRows)
+      .map((group) => {
+        const display = groupAcademicClasses(group)[0];
+        return {
+          ...display,
+          assigned: group.some((row) => activeOfferingIds.has(row.id)),
+          students: group.reduce((total, row) => total + (classStudentCounts.get(row.id) ?? 0), 0),
+        };
+      })
+      .filter((item) => item.isActive || item.assigned)
+      .sort(
+        (left, right) =>
+          (left.sortOrder ?? 999) - (right.sortOrder ?? 999) || left.name.localeCompare(right.name),
+      ),
+    houses: houses.results
+      .map((house) => ({
+        ...house,
+        assigned: assignedHouseIds.has(house.id),
+        isActive: Boolean(house.isActive),
+        students: houseStudentCounts.get(house.id) ?? 0,
+      }))
+      .filter((house) => house.isActive || house.assigned),
+  });
+}
+
+async function updateSchoolAssignments(request: Request, schoolId: string): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const parsed = schoolAssignmentsSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Check the selected classes and houses." }, { status: 400 });
+  }
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  if (!canManageSchool(scope.role)) return forbidden();
+  const runtime = getRuntimeEnv();
+  const school = await runtime.DB.prepare(
+    "SELECT id, name FROM school_master WHERE id = ? AND organization_id = ?",
+  )
+    .bind(schoolId, scope.organizationId)
+    .first<{ id: string; name: string }>();
+  if (!school) return Response.json({ error: "School not found." }, { status: 404 });
+
+  const [classRows, offerings, enrollmentClasses, houses, schoolHouses, enrollmentHouses] =
+    await Promise.all([
+      readAcademicClassRows(runtime.DB, scope.organizationId),
+      runtime.DB.prepare(
+        `SELECT id, academic_class_id AS academicClassId, is_active AS isActive
+         FROM school_class_offering
+         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?`,
+      )
+        .bind(scope.organizationId, scope.session.id, schoolId)
+        .all<{ id: string; academicClassId: string; isActive: number }>(),
+      runtime.DB.prepare(
+        `SELECT academic_class_id AS academicClassId, COUNT(*) AS students
+         FROM student_enrollment
+         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
+         GROUP BY academic_class_id`,
+      )
+        .bind(scope.organizationId, scope.session.id, schoolId)
+        .all<{ academicClassId: string; students: number }>(),
+      runtime.DB.prepare(
+        "SELECT id, name, is_active AS isActive FROM house_master WHERE organization_id = ?",
+      )
+        .bind(scope.organizationId)
+        .all<{ id: string; name: string; isActive: number }>(),
+      runtime.DB.prepare(
+        `SELECT id, house_id AS houseId FROM school_house_master
+         WHERE organization_id = ? AND school_id = ?`,
+      )
+        .bind(scope.organizationId, schoolId)
+        .all<{ id: string; houseId: string }>(),
+      runtime.DB.prepare(
+        `SELECT house_id AS houseId, COUNT(*) AS students FROM student_enrollment
+         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
+           AND house_id IS NOT NULL GROUP BY house_id`,
+      )
+        .bind(scope.organizationId, scope.session.id, schoolId)
+        .all<{ houseId: string; students: number }>(),
+    ]);
+
+  const classGroups = groupAcademicClassRows(classRows);
+  const displayedClasses = classGroups.map((group) => ({
+    group,
+    display: groupAcademicClasses(group)[0],
+  }));
+  const classesById = new Map(displayedClasses.map((item) => [item.display.id, item]));
+  const housesById = new Map(houses.results.map((house) => [house.id, house]));
+  const selectedClassIds = new Set(parsed.data.classIds);
+  const selectedHouseIds = new Set(parsed.data.houseIds);
+  if (
+    [...selectedClassIds].some((id) => !classesById.get(id)?.display.isActive) ||
+    [...selectedHouseIds].some((id) => !housesById.get(id)?.isActive)
+  ) {
+    return Response.json({ error: "Choose only active classes and houses." }, { status: 400 });
+  }
+
+  const offeringByClassId = new Map<string, (typeof offerings.results)[number]>();
+  for (const offering of offerings.results)
+    offeringByClassId.set(offering.academicClassId, offering);
+  const classStudentCounts = new Map(
+    enrollmentClasses.results.map((item) => [item.academicClassId, Number(item.students)]),
+  );
+  const schoolHouseByHouseId = new Map(schoolHouses.results.map((item) => [item.houseId, item]));
+  const houseStudentCounts = new Map(
+    enrollmentHouses.results.map((item) => [item.houseId, Number(item.students)]),
+  );
+
+  const blockedClasses = displayedClasses
+    .filter(
+      ({ display, group }) =>
+        !selectedClassIds.has(display.id) &&
+        group.some((row) => Boolean(offeringByClassId.get(row.id)?.isActive)) &&
+        group.some((row) => (classStudentCounts.get(row.id) ?? 0) > 0),
+    )
+    .map(({ display }) => display.name);
+  const blockedHouses = houses.results
+    .filter(
+      (house) =>
+        !selectedHouseIds.has(house.id) &&
+        schoolHouseByHouseId.has(house.id) &&
+        (houseStudentCounts.get(house.id) ?? 0) > 0,
+    )
+    .map((house) => house.name);
+  if (blockedClasses.length || blockedHouses.length) {
+    const names = [...blockedClasses, ...blockedHouses].slice(0, 4).join(", ");
+    return Response.json(
+      { error: `${names} cannot be removed because students use them in this session.` },
+      { status: 409 },
+    );
+  }
+
+  const statements: D1PreparedStatement[] = [];
+  for (const { display, group } of displayedClasses) {
+    const shouldAssign = selectedClassIds.has(display.id);
+    const current = group.map((row) => offeringByClassId.get(row.id)).filter(Boolean);
+    if (shouldAssign) {
+      const representative = offeringByClassId.get(display.id);
+      if (representative) {
+        if (!representative.isActive) {
+          statements.push(
+            runtime.DB.prepare(
+              "UPDATE school_class_offering SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            ).bind(representative.id),
+          );
+        }
+      } else {
+        const id = crypto.randomUUID();
+        statements.push(
+          runtime.DB.prepare(
+            `INSERT INTO school_class_offering
+              (id, organization_id, academic_session_id, school_id, academic_class_id, origin,
+               source_system, source_table, source_id)
+             VALUES (?, ?, ?, ?, ?, 'manual', 'tsewa', 'school_class_offering', ?)`,
+          ).bind(id, scope.organizationId, scope.session.id, schoolId, display.id, id),
+        );
+      }
+    } else {
+      for (const offering of current) {
+        if (offering?.isActive) {
+          statements.push(
+            runtime.DB.prepare(
+              "UPDATE school_class_offering SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            ).bind(offering.id),
+          );
+        }
+      }
+    }
+  }
+  for (const house of houses.results) {
+    const current = schoolHouseByHouseId.get(house.id);
+    if (selectedHouseIds.has(house.id) && !current) {
+      const id = crypto.randomUUID();
+      statements.push(
+        runtime.DB.prepare(
+          `INSERT INTO school_house_master
+            (id, organization_id, school_id, house_id, source_system, source_table, source_id)
+           VALUES (?, ?, ?, ?, 'tsewa', 'school_house_master', ?)`,
+        ).bind(id, scope.organizationId, schoolId, house.id, id),
+      );
+    } else if (!selectedHouseIds.has(house.id) && current) {
+      statements.push(
+        runtime.DB.prepare(
+          "DELETE FROM school_house_master WHERE id = ? AND organization_id = ?",
+        ).bind(current.id, scope.organizationId),
+      );
+    }
+  }
+  statements.push(
+    auditStatement(runtime.DB, scope, "school.assignments_updated", "school_master", schoolId, {
+      academicSessionId: scope.session.id,
+      classes: String(selectedClassIds.size),
+      houses: String(selectedHouseIds.size),
+    }),
+  );
+  await runtime.DB.batch(statements);
+  return Response.json({
+    ok: true,
+    schoolName: school.name,
+    classes: selectedClassIds.size,
+    houses: selectedHouseIds.size,
+  });
+}
+
 async function getSchoolOperationsRosters(request: Request): Promise<Response> {
   if (request.method !== "GET") return methodNotAllowed("GET");
   const url = new URL(request.url);
@@ -1796,7 +2091,11 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
-  const conditions = ["offering.organization_id = ?", "offering.academic_session_id = ?"];
+  const conditions = [
+    "offering.organization_id = ?",
+    "offering.academic_session_id = ?",
+    "offering.is_active = 1",
+  ];
   const bindings: Array<string | number> = [scope.organizationId, scope.session.id];
   if (parsed.data.school !== "all") {
     conditions.push("school.id = ?");

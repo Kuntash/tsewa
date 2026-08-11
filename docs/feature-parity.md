@@ -82,7 +82,7 @@ evidence of a regularly used year-end workflow.
       THS records.
 - [x] Create and edit schools, including affiliation number, location, and active status.
 - [x] Create and edit classes/sections and houses.
-- [ ] Assign classes and houses to a school.
+- [x] Assign classes and houses to a school, with classes set per academic session.
 - [x] Correct a current enrollment while preserving imported source references
       and change history.
 - [ ] Provide simple printable/exportable student lists and class rosters.

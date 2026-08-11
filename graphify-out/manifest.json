@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786450817.5694396,
-    "ast_hash": "f24a02afe31fd6a48e3269abcd07a86f",
+    "mtime": 1786452115.2078726,
+    "ast_hash": "ee18bd2d29e7b15a91a4cdfb82e619e6",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786450785.4881432,
-    "ast_hash": "a09ada44cc7df11c738fd9e171b40bb4",
+    "mtime": 1786451879.038041,
+    "ast_hash": "bcbe227a786896fdcfa1a64fa2d77a1e",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/admission-sheet.tsx": {
-    "mtime": 1786430831.3500805,
-    "ast_hash": "c839010e90224115b70135918ef798b4",
+    "mtime": 1786451896.8639941,
+    "ast_hash": "fee4d8ffe2f6b548407e4af0d1e08563",
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
@@ -455,13 +455,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1786436577.1857233,
-    "ast_hash": "7c9433d4eec007b577a4aa715bb37742",
+    "mtime": 1786451791.0030525,
+    "ast_hash": "c6be14af6004fad36b6f56065edb7df1",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786450785.4883714,
-    "ast_hash": "d4f389b3d606a6b8a64a71b326304967",
+    "mtime": 1786452115.2081368,
+    "ast_hash": "26dbf523fa9b80665532ff30b476693a",
     "semantic_hash": ""
   },
   "apps/web/migrations/0014_family_relationship_editing.sql": {
@@ -517,6 +517,16 @@
   "graphify-out/memory/query_20260811_122458_continue.md": {
     "mtime": 1786451098.717606,
     "ast_hash": "8c87c7e18142036142137ae9aa8035ab",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/school-assignments-sheet.tsx": {
+    "mtime": 1786451896.8645241,
+    "ast_hash": "552102c086af2ea83552b15c64ecd829",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_124221_continue.md": {
+    "mtime": 1786452141.780692,
+    "ast_hash": "dee994ded953b7960d14e720ed033502",
     "semantic_hash": ""
   }
 }

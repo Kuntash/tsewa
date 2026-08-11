@@ -26,6 +26,7 @@ import { AdmissionSheet } from "@/components/admission-sheet";
 import { EnrollmentChangeSheet } from "@/components/enrollment-change-sheet";
 import { HistoricalResults } from "@/components/historical-results";
 import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
+import { SchoolAssignmentsSheet } from "@/components/school-assignments-sheet";
 import { SchoolMasterData } from "@/components/school-master-data";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -172,6 +173,7 @@ export function SchoolOperations({
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
   const [schoolEditorOpen, setSchoolEditorOpen] = useState(false);
   const [schoolBeingEdited, setSchoolBeingEdited] = useState<EditableSchool | null>(null);
+  const [schoolBeingAssigned, setSchoolBeingAssigned] = useState<SchoolRow | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -573,6 +575,7 @@ export function SchoolOperations({
             <SchoolsDirectory
               canEdit={Boolean(overview?.canEdit)}
               loading={loadingDirectories}
+              onAssign={setSchoolBeingAssigned}
               onEdit={(selectedSchool) => {
                 setSchoolBeingEdited(selectedSchool);
                 setSchoolEditorOpen(true);
@@ -648,6 +651,18 @@ export function SchoolOperations({
         open={schoolEditorOpen}
         school={schoolBeingEdited}
       />
+      <SchoolAssignmentsSheet
+        onOpenChange={(open) => {
+          if (!open) setSchoolBeingAssigned(null);
+        }}
+        onSaved={(savedMessage) => {
+          setMessage(savedMessage);
+          setRefreshKey((value) => value + 1);
+        }}
+        open={Boolean(schoolBeingAssigned)}
+        school={schoolBeingAssigned}
+        sessionId={activeSessionId}
+      />
     </main>
   );
 }
@@ -655,12 +670,14 @@ export function SchoolOperations({
 function SchoolsDirectory({
   canEdit,
   loading,
+  onAssign,
   onEdit,
   onOpenRoster,
   schools,
 }: {
   canEdit: boolean;
   loading: boolean;
+  onAssign: (school: SchoolRow) => void;
   onEdit: (school: SchoolRow) => void;
   onOpenRoster: (schoolId: string) => void;
   schools: SchoolRow[];
@@ -693,9 +710,14 @@ function SchoolsDirectory({
               </div>
               <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-3">
                 {canEdit ? (
-                  <Button onClick={() => onEdit(school)} size="sm" variant="outline">
-                    <Pencil /> Edit
-                  </Button>
+                  <>
+                    <Button onClick={() => onAssign(school)} size="sm" variant="outline">
+                      <Settings2 /> Classes & houses
+                    </Button>
+                    <Button onClick={() => onEdit(school)} size="sm" variant="outline">
+                      <Pencil /> Edit
+                    </Button>
+                  </>
                 ) : null}
                 <Button onClick={() => onOpenRoster(school.id)} size="sm" variant="ghost">
                   View students
@@ -739,9 +761,14 @@ function SchoolsDirectory({
                   <td className="px-5 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {canEdit ? (
-                        <Button onClick={() => onEdit(school)} size="sm" variant="outline">
-                          <Pencil /> Edit
-                        </Button>
+                        <>
+                          <Button onClick={() => onAssign(school)} size="sm" variant="outline">
+                            <Settings2 /> Set up
+                          </Button>
+                          <Button onClick={() => onEdit(school)} size="sm" variant="outline">
+                            <Pencil /> Edit
+                          </Button>
+                        </>
                       ) : null}
                       <Button onClick={() => onOpenRoster(school.id)} size="sm" variant="ghost">
                         View students

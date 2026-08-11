@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; schoolId?: string };
 
 type Setup = {
   canEdit: boolean;
@@ -60,8 +60,10 @@ export function AdmissionSheet({
       })
       .then((payload) => {
         setSetup(payload);
-        setSchoolId(payload.schools[0]?.id ?? "");
-        setAcademicClassId(payload.classes[0]?.id ?? "");
+        const firstSchoolId = payload.schools[0]?.id ?? "";
+        setSchoolId(firstSchoolId);
+        setAcademicClassId(optionsForSchool(payload.classes, firstSchoolId)[0]?.id ?? "");
+        setHouseId("none");
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted)
@@ -111,6 +113,8 @@ export function AdmissionSheet({
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const classOptions = optionsForSchool(setup?.classes ?? [], schoolId);
+  const houseOptions = optionsForSchool(setup?.houses ?? [], schoolId);
 
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
@@ -137,9 +141,9 @@ export function AdmissionSheet({
                 {error}
               </p>
             ) : null}
-            {!setup?.schools.length || !setup.classes.length ? (
+            {!setup?.schools.length || !classOptions.length ? (
               <p className="rounded-xl border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                Add at least one school and class before admitting a student.
+                Assign at least one class to this school before admitting a student.
               </p>
             ) : null}
             <Field label="Student name" name="displayName" placeholder="Example Student" required />
@@ -178,14 +182,18 @@ export function AdmissionSheet({
             </div>
             <OptionField
               label="School"
-              onChange={setSchoolId}
+              onChange={(value) => {
+                setSchoolId(value);
+                setAcademicClassId(optionsForSchool(setup?.classes ?? [], value)[0]?.id ?? "");
+                setHouseId("none");
+              }}
               options={setup?.schools ?? []}
               value={schoolId}
             />
             <OptionField
               label="Class"
               onChange={setAcademicClassId}
-              options={setup?.classes ?? []}
+              options={classOptions}
               value={academicClassId}
             />
             <div className="space-y-2">
@@ -196,7 +204,7 @@ export function AdmissionSheet({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No house</SelectItem>
-                  {(setup?.houses ?? []).map((option) => (
+                  {houseOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.name}
                     </SelectItem>
@@ -208,10 +216,7 @@ export function AdmissionSheet({
               <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
                 Cancel
               </Button>
-              <Button
-                disabled={submitting || !setup?.schools.length || !setup.classes.length}
-                type="submit"
-              >
+              <Button disabled={submitting || !schoolId || !academicClassId} type="submit">
                 {submitting ? <LoaderCircle className="animate-spin" /> : <UserPlus />}
                 Admit student
               </Button>
@@ -221,6 +226,17 @@ export function AdmissionSheet({
       </SheetContent>
     </Sheet>
   );
+}
+
+function optionsForSchool(options: Option[], schoolId: string) {
+  const names = new Set<string>();
+  return options.filter((option) => {
+    if (option.schoolId !== schoolId) return false;
+    const key = option.name.trim().toLowerCase();
+    if (names.has(key)) return false;
+    names.add(key);
+    return true;
+  });
 }
 
 function Field({
