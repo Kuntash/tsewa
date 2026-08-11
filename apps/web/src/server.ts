@@ -67,6 +67,21 @@ const schoolRostersQuerySchema = z.object({
   school: z.string().trim().max(160).default("all"),
 });
 
+const isoDateSchema = z.iso.date();
+
+const admissionSchema = z.object({
+  sessionId: z.uuid(),
+  admissionNumber: z.string().trim().min(1).max(50),
+  displayName: z.string().trim().min(2).max(120),
+  gender: z.enum(["female", "male", "other", "unknown"]).optional(),
+  dateOfBirth: isoDateSchema.optional(),
+  admittedOn: isoDateSchema,
+  schoolId: z.uuid(),
+  academicClassId: z.uuid(),
+  houseId: z.uuid().optional(),
+  rollNumber: z.string().trim().max(50).optional(),
+});
+
 const historicalResultsOverviewQuerySchema = z.object({
   sessionId: z.uuid().optional(),
 });
@@ -147,6 +162,14 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/rosters") {
       return getSchoolOperationsRosters(request);
+    }
+
+    if (url.pathname === "/api/school-operations/setup") {
+      return getSchoolOperationsSetup(request);
+    }
+
+    if (url.pathname === "/api/school-operations/admissions") {
+      return createStudentAdmission(request);
     }
 
     if (url.pathname === "/api/school-operations/results/overview") {
@@ -425,6 +448,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
 
   return Response.json({
     session: scope.session,
+    canEdit: canManageSchool(scope.role),
     summary: {
       students: Number(summary?.students ?? 0),
       activeStudents: Number(summary?.activeStudents ?? 0),
@@ -440,6 +464,197 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       houses: houses.results,
     },
   });
+}
+
+async function getSchoolOperationsSetup(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const sessionId = new URL(request.url).searchParams.get("sessionId");
+  const parsed = schoolOverviewQuerySchema.safeParse({ sessionId });
+  if (!parsed.success) {
+    return Response.json({ error: "Select an academic session." }, { status: 400 });
+  }
+
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  const runtime = getRuntimeEnv();
+  const [schools, classes, houses] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id, name FROM school_master
+       WHERE organization_id = ? AND is_active = 1 ORDER BY name COLLATE NOCASE`,
+    )
+      .bind(scope.organizationId)
+      .all<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      `SELECT id, ${classDisplayName("class")} AS name FROM academic_class_master class
+       WHERE organization_id = ? AND is_active = 1
+       ORDER BY coalesce(sort_order, 999), coalesce(level, 999), name COLLATE NOCASE`,
+    )
+      .bind(scope.organizationId)
+      .all<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      `SELECT id, name FROM house_master
+       WHERE organization_id = ? ORDER BY name COLLATE NOCASE`,
+    )
+      .bind(scope.organizationId)
+      .all<{ id: string; name: string }>(),
+  ]);
+
+  return Response.json({
+    canEdit: canManageSchool(scope.role),
+    session: scope.session,
+    schools: schools.results,
+    classes: classes.results,
+    houses: houses.results,
+  });
+}
+
+async function createStudentAdmission(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+
+  const parsed = admissionSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Check the student details and try again." }, { status: 400 });
+  }
+
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  if (!canManageSchool(scope.role)) return forbidden();
+
+  const runtime = getRuntimeEnv();
+  const { academicClassId, admissionNumber, admittedOn, displayName, houseId, schoolId } =
+    parsed.data;
+  const [school, academicClass, house, existingPerson] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id FROM school_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
+    )
+      .bind(schoolId, scope.organizationId)
+      .first<{ id: string }>(),
+    runtime.DB.prepare(
+      `SELECT id FROM academic_class_master
+       WHERE id = ? AND organization_id = ? AND is_active = 1`,
+    )
+      .bind(academicClassId, scope.organizationId)
+      .first<{ id: string }>(),
+    houseId
+      ? runtime.DB.prepare(`SELECT id FROM house_master WHERE id = ? AND organization_id = ?`)
+          .bind(houseId, scope.organizationId)
+          .first<{ id: string }>()
+      : Promise.resolve(null),
+    runtime.DB.prepare(
+      `SELECT id FROM person
+       WHERE organization_id = ? AND identifier_kind = 'admission'
+         AND lower(primary_identifier) = lower(?)`,
+    )
+      .bind(scope.organizationId, admissionNumber)
+      .first<{ id: string }>(),
+  ]);
+
+  if (!school) return Response.json({ error: "Choose an active school." }, { status: 400 });
+  if (!academicClass) return Response.json({ error: "Choose an active class." }, { status: 400 });
+  if (houseId && !house) return Response.json({ error: "Choose a valid house." }, { status: 400 });
+  if (existingPerson) {
+    return Response.json({ error: "That admission number is already in use." }, { status: 409 });
+  }
+
+  let offering = await runtime.DB.prepare(
+    `SELECT id FROM school_class_offering
+     WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
+       AND academic_class_id = ?`,
+  )
+    .bind(scope.organizationId, scope.session.id, schoolId, academicClassId)
+    .first<{ id: string }>();
+  if (!offering) {
+    const offeringId = crypto.randomUUID();
+    await runtime.DB.prepare(
+      `INSERT INTO school_class_offering
+        (id, organization_id, academic_session_id, school_id, academic_class_id, origin,
+         source_system, source_table, source_id)
+       VALUES (?, ?, ?, ?, ?, 'manual', 'tsewa', 'school_class_offering', ?)`,
+    )
+      .bind(
+        offeringId,
+        scope.organizationId,
+        scope.session.id,
+        schoolId,
+        academicClassId,
+        offeringId,
+      )
+      .run();
+    offering = { id: offeringId };
+  }
+
+  const personId = crypto.randomUUID();
+  const enrollmentId = crypto.randomUUID();
+  const changeId = crypto.randomUUID();
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `INSERT INTO person
+        (id, organization_id, kind, status, identifier_kind, primary_identifier,
+         display_name, gender, date_of_birth, admitted_or_joined_on, campus_or_location,
+         source_system, source_table, source_id, created_by_user_id, updated_by_user_id)
+       VALUES (?, ?, 'child', 'active', 'admission', ?, ?, ?, ?, ?,
+         (SELECT name FROM school_master WHERE id = ?), 'tsewa', 'person', ?, ?, ?)`,
+    ).bind(
+      personId,
+      scope.organizationId,
+      admissionNumber,
+      displayName,
+      parsed.data.gender ?? "unknown",
+      parsed.data.dateOfBirth ?? null,
+      admittedOn,
+      schoolId,
+      personId,
+      scope.userId,
+      scope.userId,
+    ),
+    runtime.DB.prepare(
+      `INSERT INTO student_enrollment
+        (id, organization_id, person_id, academic_session_id, school_id,
+         academic_class_id, house_id, school_class_offering_id, status, status_source,
+         started_on, roll_number, source_system, source_table, source_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'enrolled', 'explicit', ?, ?,
+         'tsewa', 'student_enrollment', ?)`,
+    ).bind(
+      enrollmentId,
+      scope.organizationId,
+      personId,
+      scope.session.id,
+      schoolId,
+      academicClassId,
+      houseId ?? null,
+      offering.id,
+      admittedOn,
+      parsed.data.rollNumber || null,
+      enrollmentId,
+    ),
+    runtime.DB.prepare(
+      `INSERT INTO student_enrollment_change
+        (id, organization_id, enrollment_id, person_id, academic_session_id,
+         change_type, effective_on, to_school_id, to_academic_class_id, to_house_id,
+         to_status, created_by_user_id)
+       VALUES (?, ?, ?, ?, ?, 'admitted', ?, ?, ?, ?, 'enrolled', ?)`,
+    ).bind(
+      changeId,
+      scope.organizationId,
+      enrollmentId,
+      personId,
+      scope.session.id,
+      admittedOn,
+      schoolId,
+      academicClassId,
+      houseId ?? null,
+      scope.userId,
+    ),
+    auditStatement(runtime.DB, scope, "student.admitted", "person", personId, {
+      admissionNumber,
+      academicSessionId: scope.session.id,
+      schoolId,
+      academicClassId,
+    }),
+  ]);
+
+  return Response.json({ personId, enrollmentId, displayName }, { status: 201 });
 }
 
 async function getSchoolOperationsStudents(request: Request): Promise<Response> {
@@ -1375,7 +1590,7 @@ function inlineContentDisposition(fileName: string): string {
 async function getPlatformStatus(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const context = await getMembershipContext(request);
-  const [userCount, sessions, preference] = await Promise.all([
+  const [userCount, sessions, preference, organizations] = await Promise.all([
     runtime.DB.prepare('SELECT COUNT(*) AS count FROM "user"').first<{
       count: number;
     }>(),
@@ -1404,12 +1619,33 @@ async function getPlatformStatus(request: Request): Promise<Response> {
           .bind(context.userId, context.organizationId)
           .first<{ activeSessionId: string | null }>()
       : Promise.resolve(null),
+    context
+      ? runtime.DB.prepare(
+          `SELECT organization.id, organization.name, organization_member.role,
+                  (SELECT session.id FROM academic_session session
+                   WHERE session.organization_id = organization.id AND session.is_active = 1
+                   ORDER BY session.starts_on DESC LIMIT 1) AS defaultSessionId
+           FROM organization_member
+           JOIN organization ON organization.id = organization_member.organization_id
+           WHERE organization_member.user_id = ?
+           ORDER BY organization.name COLLATE NOCASE`,
+        )
+          .bind(context.userId)
+          .all<{
+            id: string;
+            name: string;
+            role: MembershipContext["role"];
+            defaultSessionId: string | null;
+          }>()
+      : Promise.resolve({ results: [] }),
   ]);
 
   return Response.json({
     needsSetup: Number(userCount?.count ?? 0) === 0,
     sessions: sessions.results,
     activeSessionId: preference?.activeSessionId ?? sessions.results[0]?.id ?? null,
+    activeOrganizationId: context?.organizationId ?? null,
+    organizations: organizations.results,
   });
 }
 
@@ -1942,6 +2178,10 @@ function isValidTimezone(timezone: string | undefined): boolean {
 
 function escapeLikePattern(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
+function canManageSchool(role: MembershipContext["role"]): boolean {
+  return role === "owner" || role === "admin" || role === "staff";
 }
 
 async function readJson(request: Request): Promise<unknown> {

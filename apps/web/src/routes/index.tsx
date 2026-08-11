@@ -50,6 +50,13 @@ type PlatformState = {
   needsSetup: boolean;
   sessions: AcademicSession[];
   activeSessionId?: string | null;
+  activeOrganizationId?: string | null;
+  organizations: Array<{
+    id: string;
+    name: string;
+    role: "owner" | "admin" | "staff" | "viewer";
+    defaultSessionId: string | null;
+  }>;
   invitation?: InvitationPreview;
 };
 
@@ -372,7 +379,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
   );
 }
 
-function Brand() {
+function Brand({ organizationName = "Tibetan Homes Foundation" }: { organizationName?: string }) {
   return (
     <div className="flex items-center gap-3">
       <div className="grid size-10 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
@@ -380,7 +387,7 @@ function Brand() {
       </div>
       <div>
         <div className="text-sm font-semibold tracking-tight text-foreground">Tsewa</div>
-        <div className="text-xs text-muted-foreground">Tibetan Homes Foundation</div>
+        <div className="text-xs text-muted-foreground">{organizationName}</div>
       </div>
     </div>
   );
@@ -396,6 +403,9 @@ function Launchpad({
   const [view, setView] = useState<"home" | "people" | "school">("home");
   const [activeSessionId, setActiveSessionId] = useState(
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
+  );
+  const activeOrganization = platform.organizations.find(
+    (organization) => organization.id === platform.activeOrganizationId,
   );
   const modules = [
     [Users, "People", "Personal details, family, placement, and documents"],
@@ -422,6 +432,17 @@ function Launchpad({
     }
   }
 
+  async function changeOrganization(organizationId: string) {
+    const organization = platform.organizations.find((item) => item.id === organizationId);
+    if (!organization?.defaultSessionId) return;
+    const response = await fetch("/api/platform", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ academicSessionId: organization.defaultSessionId }),
+    });
+    if (response.ok) window.location.reload();
+  }
+
   if (view === "school") {
     return (
       <SchoolOperations
@@ -436,8 +457,35 @@ function Launchpad({
   return (
     <main className="min-h-svh w-full max-w-none bg-muted/35">
       <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-background/95 px-5 backdrop-blur md:px-8">
-        <Brand />
+        <Brand organizationName={activeOrganization?.name} />
         <div className="ml-auto flex items-center gap-3">
+          {platform.organizations.length > 1 ? (
+            <Select
+              onValueChange={(value) => void changeOrganization(value)}
+              value={platform.activeOrganizationId ?? undefined}
+            >
+              <SelectTrigger
+                aria-label="Organization"
+                className="w-10 rounded-full px-0 sm:w-48 sm:px-3 md:w-52"
+              >
+                <Building2 className="size-4" />
+                <span className="hidden min-w-0 truncate sm:block">
+                  <SelectValue placeholder="Organization" />
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {platform.organizations.map((organization) => (
+                  <SelectItem
+                    disabled={!organization.defaultSessionId}
+                    key={organization.id}
+                    value={organization.id}
+                  >
+                    {organization.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
           <Select onValueChange={(value) => void changeSession(value)} value={activeSessionId}>
             <SelectTrigger
               aria-label="Academic session"

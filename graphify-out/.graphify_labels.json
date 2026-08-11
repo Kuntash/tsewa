@@ -196,7 +196,7 @@
   "194": "Q: I believe the marks sections is not that useful as its old data and no edits has been done after that. anyways what is the next steps?",
   "195": "import-student-enrollments.mjs",
   "196": "student-enrollment-dry-run.mjs",
-  "197": "button.tsx",
+  "197": "admission-sheet.tsx",
   "198": "Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?",
   "199": "Q: Okay whats next?",
   "200": "Q: what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?",
@@ -358,5 +358,6 @@
   "356": "StreamVideos",
   "357": "TraceItemFetchEventInfoRequest",
   "358": "UnsafeTraceMetrics",
-  "359": "WebSearch"
+  "359": "WebSearch",
+  "360": "practice-school.md"
 }

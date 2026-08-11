@@ -12,12 +12,14 @@ import {
   MapPin,
   Search,
   ShieldCheck,
+  UserPlus,
   UserRoundSearch,
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
+import { AdmissionSheet } from "@/components/admission-sheet";
 import { HistoricalResults } from "@/components/historical-results";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +47,7 @@ type CountOption = { id?: string; name: string; count: number };
 
 type OverviewResponse = {
   session: AcademicSession;
+  canEdit: boolean;
   summary: {
     students: number;
     activeStudents: number;
@@ -145,6 +148,9 @@ export function SchoolOperations({
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [rosters, setRosters] = useState<RosterRow[]>([]);
   const [loadingDirectories, setLoadingDirectories] = useState(true);
+  const [admissionOpen, setAdmissionOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -163,7 +169,7 @@ export function SchoolOperations({
         if (!controller.signal.aborted) setLoadingOverview(false);
       });
     return () => controller.abort();
-  }, [activeSessionId]);
+  }, [activeSessionId, refreshKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -191,7 +197,7 @@ export function SchoolOperations({
         if (!controller.signal.aborted) setLoadingDirectories(false);
       });
     return () => controller.abort();
-  }, [activeSessionId]);
+  }, [activeSessionId, refreshKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -217,7 +223,7 @@ export function SchoolOperations({
         if (!controller.signal.aborted) setLoadingStudents(false);
       });
     return () => controller.abort();
-  }, [activeSessionId, className, debouncedQuery, house, page, school, status]);
+  }, [activeSessionId, className, debouncedQuery, house, page, refreshKey, school, status]);
 
   useEffect(() => setPage(1), [activeSessionId, className, house, school, status]);
 
@@ -303,7 +309,7 @@ export function SchoolOperations({
             </SelectContent>
           </Select>
           <Badge className="hidden gap-1.5 rounded-full lg:inline-flex" variant="outline">
-            <ShieldCheck className="size-3.5" /> View only
+            <ShieldCheck className="size-3.5" /> {overview?.canEdit ? "Can edit" : "View only"}
           </Badge>
           <ThemeToggle />
           <Button
@@ -377,9 +383,17 @@ export function SchoolOperations({
                 {sectionCopy.description}
               </p>
             </div>
-            <Badge className="w-fit rounded-full" variant="secondary">
-              View only
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              {overview?.canEdit ? (
+                <Button onClick={() => setAdmissionOpen(true)}>
+                  <UserPlus /> Admit student
+                </Button>
+              ) : (
+                <Badge className="w-fit rounded-full" variant="secondary">
+                  View only
+                </Badge>
+              )}
+            </div>
           </div>
 
           <div className="mt-5 flex gap-2 overflow-x-auto pb-1 md:hidden">
@@ -408,6 +422,12 @@ export function SchoolOperations({
           {error ? (
             <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
+            </div>
+          ) : null}
+
+          {message ? (
+            <div className="mt-6 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
+              {message}
             </div>
           ) : null}
 
@@ -530,6 +550,16 @@ export function SchoolOperations({
           if (!open) setSelectedPersonId(null);
         }}
         personId={selectedPersonId}
+      />
+      <AdmissionSheet
+        onCreated={(personId, displayName) => {
+          setMessage(`${displayName} was admitted successfully.`);
+          setRefreshKey((value) => value + 1);
+          setSelectedPersonId(personId);
+        }}
+        onOpenChange={setAdmissionOpen}
+        open={admissionOpen}
+        sessionId={activeSessionId}
       />
     </main>
   );

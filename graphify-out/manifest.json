@@ -115,13 +115,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1786401404.3497064,
-    "ast_hash": "7367536f05f7a319906fa2dde4c1e265",
+    "mtime": 1786430792.1663666,
+    "ast_hash": "44c043118d2f3d97b2f1291f55963a5e",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786403544.8457825,
-    "ast_hash": "73725aadfa975fae5b8127c7373c4959",
+    "mtime": 1786430831.3506086,
+    "ast_hash": "8d649200e825381535bfd2459727156c",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786402385.894184,
-    "ast_hash": "4727332d7790474ec81f82b78487fe31",
+    "mtime": 1786430599.180707,
+    "ast_hash": "616dc1ae8c781adecfdbb4651439d1a8",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786403386.8987145,
-    "ast_hash": "9456791989bd6a9020250c6cc964a7c6",
+    "mtime": 1786430516.372817,
+    "ast_hash": "42666225ecb4fca7594d055d87579110",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -432,6 +432,21 @@
   "tools/r2-relay/worker-configuration.d.ts": {
     "mtime": 1786427454.79714,
     "ast_hash": "f06572247ee967738e1b24578ac9353c",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0012_enrollment_changes.sql": {
+    "mtime": 1786430324.6410022,
+    "ast_hash": "0edc8d01c23fcc4008d1f0327d8e5c5b",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/admission-sheet.tsx": {
+    "mtime": 1786430831.3500805,
+    "ast_hash": "c839010e90224115b70135918ef798b4",
+    "semantic_hash": ""
+  },
+  "docs/practice-school.md": {
+    "mtime": 1786430590.3806808,
+    "ast_hash": "ba7c4d27c177b1339eb637d60525e9a5",
     "semantic_hash": ""
   }
 }
