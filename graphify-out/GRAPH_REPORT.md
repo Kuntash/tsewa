@@ -1,21 +1,21 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 103 files · ~114,697 words
+- 106 files · ~178,142 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2629 nodes · 3230 edges · 211 communities (61 shown, 150 thin omitted)
+- 4383 nodes · 5045 edges · 360 communities (71 shown, 289 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fb8dcef8`
+- Built from commit: `4da0abf2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- worker-configuration.d.ts
+- web/worker-configuration.d.ts
 - server.ts
 - ServiceWorkerGlobalScope
 - Event
@@ -203,7 +203,7 @@
 - tailwind-merge
 - pre-commit
 - install-git-hooks.sh
-- person-files.mjs
+- r2-relay/worker-configuration.d.ts
 - person-files-dry-run.mjs
 - School Operations vertical slice
 - import-school-operations.mjs
@@ -225,18 +225,167 @@
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
 - better-auth
+- ServiceWorkerGlobalScope
+- Event
+- Console
+- TransformStream
+- URL
+- compilerOptions
+- URLSearchParams
+- DurableObjectStorage
+- Container
+- Element
+- Headers
+- SubtleCrypto
+- Blob
+- Body
+- FormData
+- URLPattern
+- DurableObjectState
+- WorkerEntrypoint
+- StreamError
+- Flagship
+- R2ObjectBody
+- AgentMemoryProfile
+- ByteLengthQueuingStrategy
+- WritableStream
+- DurableObject
+- DurableObjectTransaction
+- ReadableStream
+- Socket
+- WritableStreamDefaultWriter
+- AiSearchInstance
+- DurableObjectNamespace
+- R2Bucket
+- SqlStorageCursor
+- Vectorize
+- Ai
+- AiSearchNamespace
+- ReadableStreamBYOBReader
+- VectorizeIndex
+- WorkflowInstance
+- index.ts
+- AiSearchItem
+- AiSearchItems
+- Artifacts
+- ArtifactsRepo
+- D1Database
+- D1PreparedStatement
+- KVNamespace
+- ReadableByteStreamController
+- ReadableStreamDefaultReader
+- TextDecoder
+- AiGateway
+- Comment
+- DurableObjectFacets
+- ForwardableEmailMessage
+- HTMLRewriter
+- HTMLRewriterDocumentContentHandlers
+- ImageHandle
+- ReadableStreamBYOBRequest
+- ReadableStreamDefaultController
+- StreamScopedCaptions
+- StreamVideoHandle
+- StreamWatermarks
+- SyncKvStorage
+- Table
+- Text
+- TextEncoder
+- TransformStreamDefaultController
+- AbortController
+- AiSearchJob
+- AiSearchJobs
+- AutoRAG
+- Cache
+- Crypto
+- D1DatabaseSession
+- EndTag
+- HostedImagesBinding
+- HTMLRewriterElementContentHandlers
+- ImageTransformationResult
+- ImageTransformer
+- MediaTransformationResult
+- Module
+- Performance
+- Queue
+- R2MultipartUpload
+- Span
+- StreamBinding
+- StreamScopedDownloads
+- WebSocketRequestResponsePair
+- Workflow
+- WorkflowEntrypoint
+- AgentMemoryNamespace
+- BasicImageTransformations
+- BrowserRun
+- ColoLocalActorNamespace
+- StubBase
+- DOMException
+- DurableObjectId
+- ExecProcess
+- ExecutionContext
+- Global
+- HelloWorldBinding
+- ImagesBinding
+- MediaTransformer
+- Memory
+- Message
+- MessageBatch
+- NodeStyleServer
+- PipelineTransformationEntrypoint
+- RequestInitCfPropertiesVaryHeader
+- SqlStorage
+- ToMarkdownService
+- Tracing
+- WorkerLoader
+- WorkerStub
+- WorkflowStep
+- WritableStreamDefaultController
+- AnalyticsEngineDataset
+- __BaseEnv_Env
+- CacheContext
+- CacheStorage
+- CloudflareAccessContext
+- CompileError
+- DispatchNamespace
+- DocumentEnd
+- EventListenerObject
+- Hyperdrive
+- IncomingRequestCfPropertiesBotManagement
+- Instance
+- JsonWebKey
+- MediaBinding
+- MediaTransformationGenerator
+- MessageChannel
+- Navigator
+- NonRetryableError
+- Pipeline
+- ProcessEnv
+- R2Checksums
+- RateLimit
+- ResponseFunctionToolCall
+- RpcTarget
+- RuntimeError
+- ScheduledController
+- Scheduler
+- SecretsStoreSecret
+- SendEmail
+- StreamVideos
+- TraceItemFetchEventInfoRequest
+- UnsafeTraceMetrics
+- WebSearch
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `organization` - 31 edges
-3. `scripts` - 30 edges
+2. `scripts` - 32 edges
+3. `organization` - 31 edges
 4. `getRuntimeEnv()` - 25 edges
 5. `Event` - 25 edges
-6. `Console` - 21 edges
-7. `fetch()` - 19 edges
-8. `methodNotAllowed()` - 18 edges
-9. `compilerOptions` - 17 edges
-10. `getMembershipContext()` - 16 edges
+6. `Event` - 25 edges
+7. `Console` - 21 edges
+8. `Console` - 21 edges
+9. `fetch()` - 19 edges
+10. `methodNotAllowed()` - 18 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `CardAction()` --calls--> `cn()`  [EXTRACTED]
@@ -253,9 +402,9 @@
 ## Import Cycles
 - None detected.
 
-## Communities (211 total, 150 thin omitted)
+## Communities (360 total, 289 thin omitted)
 
-### Community 0 - "worker-configuration.d.ts"
+### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
 Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentMemoryIncomingMemory, AgentMemoryIngestOptions, AgentMemoryListMemoriesOptions, AgentMemoryListMemoriesResult, AgentMemoryMemory, AgentMemoryMemoryListEntry (+839 more)
 
@@ -277,7 +426,7 @@ Nodes (20): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardC
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
-Nodes (41): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+33 more)
+Nodes (43): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+35 more)
 
 ### Community 6 - "cn"
 Cohesion: 0.13
@@ -393,7 +542,7 @@ Nodes (7): Account and email follow-ups, Documents and media migration, Invitati
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
-Nodes (24): chunkSize, concurrency, confirmedDatabaseId, database, delay(), executeD1Import(), expectedFileCount, hashR2Object() (+16 more)
+Nodes (25): chunkSize, concurrency, confirmedDatabaseId, database, delay(), executeD1Import(), expectedFileCount, hashR2Object() (+17 more)
 
 ### Community 178 - "organization"
 Cohesion: 0.11
@@ -415,9 +564,9 @@ Nodes (6): Access control, Dry run, One-person pilot, Person files migration, Pr
 Cohesion: 0.18
 Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
 
-### Community 189 - "person-files.mjs"
-Cohesion: 0.54
-Nodes (7): objectExtension(), optionalText(), readPersonFiles(), requiredText(), stablePersonId(), stableUuid(), withExtension()
+### Community 189 - "r2-relay/worker-configuration.d.ts"
+Cohesion: 0.00
+Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentMemoryIncomingMemory, AgentMemoryIngestOptions, AgentMemoryListMemoriesOptions, AgentMemoryListMemoriesResult, AgentMemoryMemory, AgentMemoryMemoryListEntry (+839 more)
 
 ### Community 190 - "person-files-dry-run.mjs"
 Cohesion: 0.12
@@ -429,7 +578,7 @@ Nodes (6): Academic-session behavior, API boundary, Import result, School Operat
 
 ### Community 192 - "import-school-operations.mjs"
 Cohesion: 0.11
-Nodes (20): buildImportSql(), buildUpsert(), chunkedUpserts(), confirmedDatabaseId, database, optionalInteger(), optionalText(), options (+12 more)
+Nodes (19): buildImportSql(), buildUpsert(), chunkedUpserts(), confirmedDatabaseId, database, optionalInteger(), optionalText(), options (+11 more)
 
 ### Community 193 - "sqlLiteral"
 Cohesion: 0.29
@@ -440,8 +589,8 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: I believe the marks sections is not that useful as its old data and no edits has been done after that. anyways what is the next steps?, Source Nodes
 
 ### Community 195 - "import-student-enrollments.mjs"
-Cohesion: 0.13
-Nodes (15): confirmedDatabaseId, database, offeringId(), optionalText(), options, organizationSlug, readEnrollments(), readOfferings() (+7 more)
+Cohesion: 0.12
+Nodes (23): confirmedDatabaseId, database, offeringId(), optionalText(), options, organizationSlug, readEnrollments(), readOfferings() (+15 more)
 
 ### Community 196 - "student-enrollment-dry-run.mjs"
 Cohesion: 0.18
@@ -495,10 +644,50 @@ Nodes (4): Answer, Outcome, Q: whats next slice? while the migration is ongoing?
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that., Source Nodes
 
+### Community 211 - "ServiceWorkerGlobalScope"
+Cohesion: 0.04
+Nodes (7): AbortSignal, EventSource, EventTarget, MessagePort, ServiceWorkerGlobalScope, WebSocket, WorkerGlobalScope
+
+### Community 212 - "Event"
+Cohesion: 0.04
+Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEvent, FetchEvent, MessageEvent (+4 more)
+
+### Community 214 - "TransformStream"
+Cohesion: 0.10
+Nodes (7): CompressionStream, DecompressionStream, FixedLengthStream, IdentityTransformStream, TextDecoderStream, TextEncoderStream, TransformStream
+
+### Community 216 - "compilerOptions"
+Cohesion: 0.11
+Nodes (18): src/**/*.ts, ./worker-configuration.d.ts, compilerOptions, allowImportingTsExtensions, lib, module, moduleResolution, noEmit (+10 more)
+
+### Community 224 - "Body"
+Cohesion: 0.15
+Nodes (3): Body, Request, Response
+
+### Community 229 - "StreamError"
+Cohesion: 0.18
+Nodes (11): AlreadyUploadedError, BadRequestError, ForbiddenError, InternalError, InvalidURLError, MaxFileSizeError, NotFoundError, QuotaReachedError (+3 more)
+
+### Community 233 - "ByteLengthQueuingStrategy"
+Cohesion: 0.22
+Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
+
+### Community 250 - "index.ts"
+Cohesion: 0.53
+Nodes (5): CopyInstruction, fetch(), hasValidToken(), hexToBytes(), parseInstruction()
+
+### Community 302 - "BasicImageTransformations"
+Cohesion: 0.67
+Nodes (3): BasicImageTransformations, RequestInitCfPropertiesImage, RequestInitCfPropertiesImageDraw
+
+### Community 319 - "RequestInitCfPropertiesVaryHeader"
+Cohesion: 0.67
+Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryAcceptLanguageHeader, RequestInitCfPropertiesVaryHeader
+
 ## Knowledge Gaps
-- **1226 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1221 more)
+- **2089 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2084 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
@@ -513,15 +702,15 @@ Nodes (4): Answer, Outcome, Q: okay, why only 2011 and 2012 data? anyways, lets 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `URLPattern` connect `URLPattern` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `R2ObjectBody` connect `R2ObjectBody` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
-- **Why does `ReadableStreamBYOBRequest` connect `ReadableStreamBYOBRequest` to `worker-configuration.d.ts`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `WritableStreamDefaultWriter` connect `WritableStreamDefaultWriter` to `r2-relay/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `DurableObjectStorage` connect `DurableObjectStorage` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `Console` connect `Console` to `r2-relay/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1226 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
+  _2089 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0909456740442656 - nodes in this community are weakly interconnected._

@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786403125.250726,
-    "ast_hash": "d192dc04e1d1efe1920c48d7cdffa7f4",
+    "mtime": 1786427434.9103966,
+    "ast_hash": "d326635c4c669d86da127f0d719e76e5",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "scripts/import-person-files.mjs": {
-    "mtime": 1786426648.0269594,
-    "ast_hash": "7b157b2d7bab34046c6419cd709e5b1b",
+    "mtime": 1786427226.5455222,
+    "ast_hash": "58c179d91f63bc62ae56eb2743a2f895",
     "semantic_hash": ""
   },
   "scripts/install-git-hooks.sh": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "docs/person-files-migration.md": {
-    "mtime": 1786402228.1304457,
-    "ast_hash": "2e28e4b661cf8959030f391006ff00d1",
+    "mtime": 1786427434.9105964,
+    "ast_hash": "3696cba4afc4408d9aab17b658db0b9e",
     "semantic_hash": ""
   },
   "scripts/school-operations-dry-run.mjs": {
@@ -417,6 +417,21 @@
   "graphify-out/memory/query_20260811_052935_i_believe_the_marks_sections_is_not_that_useful_as.md": {
     "mtime": 1786426175.2888381,
     "ast_hash": "9235757411fcf97a32c51b3d1c57468f",
+    "semantic_hash": ""
+  },
+  "tools/r2-relay/src/index.ts": {
+    "mtime": 1786427204.213484,
+    "ast_hash": "4f2b449b054cc30ca9f09cb03f00f507",
+    "semantic_hash": ""
+  },
+  "tools/r2-relay/tsconfig.json": {
+    "mtime": 1786427150.178493,
+    "ast_hash": "b17b1ae9b31de845df62ad2dd23c5ed9",
+    "semantic_hash": ""
+  },
+  "tools/r2-relay/worker-configuration.d.ts": {
+    "mtime": 1786427454.79714,
+    "ast_hash": "f06572247ee967738e1b24578ac9353c",
     "semantic_hash": ""
   }
 }

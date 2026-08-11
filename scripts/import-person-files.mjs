@@ -40,6 +40,11 @@ const concurrency = Number(options.concurrency ?? (bulkMode ? 4 : 1));
 const chunkSize = Number(options["chunk-size"] ?? (bulkMode ? 50 : expectedFileCount));
 const verification = options.verification ?? "full";
 const planOnly = options["plan-only"] === "true";
+const maxFiles = options["max-files"] ? Number(options["max-files"]) : null;
+const relayUrl = options["relay-url"] ?? null;
+const relayTokenPath = options["relay-token-file"]
+  ? resolve(repositoryRoot, options["relay-token-file"])
+  : null;
 
 if (!Number.isInteger(expectedFileCount) || expectedFileCount < 1) {
   throw new Error("--expected-file-count must be a positive integer.");
@@ -51,8 +56,9 @@ if (
 ) {
   throw new Error("Bulk mode requires positive expected byte and people counts.");
 }
-if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16) {
-  throw new Error("--concurrency must be an integer from 1 to 16.");
+const maximumConcurrency = relayUrl ? 128 : 16;
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > maximumConcurrency) {
+  throw new Error(`--concurrency must be an integer from 1 to ${maximumConcurrency}.`);
 }
 if (!Number.isInteger(chunkSize) || chunkSize < 1 || chunkSize > 100) {
   throw new Error("--chunk-size must be an integer from 1 to 100.");
@@ -64,6 +70,18 @@ if (target !== "local" && target !== "remote") {
   throw new Error("--target must be either local or remote.");
 }
 if (planOnly && !bulkMode) throw new Error("--plan-only is available only with --scope all.");
+if (maxFiles !== null && (!bulkMode || !Number.isInteger(maxFiles) || maxFiles < 1)) {
+  throw new Error("--max-files must be a positive integer used with --scope all.");
+}
+if (Boolean(relayUrl) !== Boolean(relayTokenPath)) {
+  throw new Error("--relay-url and --relay-token-file must be provided together.");
+}
+if (relayUrl && (target !== "remote" || new URL(relayUrl).protocol !== "https:")) {
+  throw new Error("Server-side relay requires a remote target and an HTTPS URL.");
+}
+
+const relayToken = relayTokenPath ? (await readFile(relayTokenPath, "utf8")).trim() : null;
+if (relayTokenPath && relayToken.length < 32) throw new Error("The relay token file is invalid.");
 
 await assertTargetBindings({ confirmedDatabaseId, target, targetBucket });
 const report = JSON.parse(await readFile(reportPath, "utf8"));
@@ -127,12 +145,21 @@ try {
   let copiedBytes = 0;
   let processedFiles = 0;
   let failedFiles = 0;
-  for (let offset = 0; !planOnly && offset < pendingFiles.length; offset += chunkSize) {
-    const chunk = pendingFiles.slice(offset, offset + chunkSize);
+  const selectedPendingFiles = maxFiles ? pendingFiles.slice(0, maxFiles) : pendingFiles;
+  for (let offset = 0; !planOnly && offset < selectedPendingFiles.length; offset += chunkSize) {
+    const chunk = selectedPendingFiles.slice(offset, offset + chunkSize);
     const outcomes = await mapWithConcurrency(chunk, concurrency, async (file) => {
       try {
         return {
-          copied: await relayObject({ file, sourceBucket, targetBucket, target, verification }),
+          copied: await relayObject({
+            file,
+            relayToken,
+            relayUrl,
+            sourceBucket,
+            targetBucket,
+            target,
+            verification,
+          }),
           file,
         };
       } catch {
@@ -153,6 +180,7 @@ try {
         expectedFileCount,
         expectedPeopleCount,
         failedFiles,
+        relayUrl,
         sourceFingerprint,
         target,
         verification,
@@ -201,6 +229,7 @@ try {
         expectedFileCount,
         expectedPeopleCount,
         failedFiles,
+        relayUrl,
         sourceFingerprint,
         target,
         verification,
@@ -237,9 +266,11 @@ try {
     planOnly,
     alreadyImportedFiles: alreadyImported.length,
     pendingFiles: pendingFiles.length,
+    selectedPendingFiles: selectedPendingFiles.length,
     copiedFiles,
     copiedBytes,
     failedFiles,
+    relayMode: relayUrl ? "cloudflare_worker" : "local_wrangler_stream",
     completedFiles: alreadyImported.length + copiedFiles,
     completedBytes: alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes,
     sourceUnchanged: true,
@@ -274,6 +305,7 @@ async function writeProgressReport({
   expectedFileCount,
   expectedPeopleCount,
   failedFiles,
+  relayUrl,
   sourceFingerprint,
   target,
   verification,
@@ -301,8 +333,10 @@ async function writeProgressReport({
     },
     policy: {
       genericImageDetectionApplied: false,
-      targetVerification:
-        verification === "full"
+      relayMode: relayUrl ? "cloudflare_worker" : "local_wrangler_stream",
+      targetVerification: relayUrl
+        ? "R2 checked the expected SHA-256 during the server-side upload; final reconciliation still required"
+        : verification === "full"
           ? "post-upload byte and SHA-256 comparison"
           : "successful R2 upload; final reconciliation still required",
     },
@@ -310,11 +344,21 @@ async function writeProgressReport({
   await writeFile(progressReportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
-async function relayObject({ file, sourceBucket, targetBucket, target, verification }) {
+async function relayObject({
+  file,
+  relayToken,
+  relayUrl,
+  sourceBucket,
+  targetBucket,
+  target,
+  verification,
+}) {
   const maximumAttempts = 6;
   let lastError;
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     try {
+      if (relayUrl && relayToken)
+        return await relayObjectServerSide({ file, relayToken, relayUrl });
       return await relayObjectOnce({ file, sourceBucket, targetBucket, target, verification });
     } catch (error) {
       lastError = error;
@@ -323,6 +367,30 @@ async function relayObject({ file, sourceBucket, targetBucket, target, verificat
     }
   }
   throw lastError;
+}
+
+async function relayObjectServerSide({ file, relayToken, relayUrl }) {
+  const response = await fetch(relayUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${relayToken}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      contentType: file.contentType,
+      expectedByteSize: file.byteSize,
+      expectedSha256: file.sha256,
+      sourceKey: file.sourceObjectKey,
+      targetKey: file.targetObjectKey,
+    }),
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!response.ok) throw new Error(`Server-side R2 relay returned status ${response.status}.`);
+  const copied = await response.json();
+  if (Number(copied?.byteSize) !== file.byteSize || copied?.sha256 !== file.sha256) {
+    throw new Error("Server-side R2 relay returned unexpected verification metadata.");
+  }
+  return { byteSize: file.byteSize, sha256: file.sha256 };
 }
 
 async function relayObjectOnce({ file, sourceBucket, targetBucket, target, verification }) {

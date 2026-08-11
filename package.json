@@ -24,6 +24,8 @@
     "migration:files:dry-run": "node scripts/person-files-dry-run.mjs",
     "migration:files:import": "node scripts/import-person-files.mjs",
     "migration:files:bulk": "node scripts/import-person-files.mjs",
+    "migration:files:relay:deploy": "pnpm --dir apps/web exec wrangler deploy --config ../../tools/r2-relay/wrangler.jsonc",
+    "migration:files:relay:types": "pnpm --dir apps/web exec wrangler types --config ../../tools/r2-relay/wrangler.jsonc ../../tools/r2-relay/worker-configuration.d.ts",
     "migration:school:dry-run": "node scripts/school-operations-dry-run.mjs",
     "migration:school:import": "node scripts/import-school-operations.mjs",
     "migration:enrollment:dry-run": "node scripts/student-enrollment-dry-run.mjs",

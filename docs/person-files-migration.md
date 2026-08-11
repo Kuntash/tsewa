@@ -9,8 +9,9 @@ metadata and R2 objects.
 
 - Every referenced asset is eligible.
 - Generic or placeholder images are not detected, classified, or removed.
-- Object bytes are streamed between R2 buckets and hashed during transfer, so a
-  local 17 GB asset copy is not created.
+- Object bytes are streamed directly between R2 bindings inside Cloudflare, so
+  they do not pass through the migration computer and no local 17 GB copy is
+  created.
 - D1 metadata is written only after every selected target object passes byte-size
   and SHA-256 verification.
 - Temporary SQL containing file labels is mode `0600` and removed after import.
@@ -50,6 +51,11 @@ aggregate-only record is stored in `reports/person-files-pilot-import.json`.
 
 ## Resumable bulk import
 
+Deploy the temporary authenticated R2 relay in `tools/r2-relay`, set its
+`RELAY_TOKEN` secret, and store the same token in a mode-0600 local file that is
+ignored by Git. The relay has bindings to the source and target buckets. R2
+checks the expected SHA-256 while accepting each streamed server-side copy.
+
 After approving the pilot, migrate all remaining records with the reviewed
 aggregate counts as explicit safety gates:
 
@@ -64,20 +70,22 @@ vp run migration:files:bulk -- \
   --confirm-database-id f6dc8a9f-5eb3-4ae7-b9f1-88645634a608 \
   --source-bucket tibetan-homes \
   --target-bucket tsewa-self-hosted-files \
-  --concurrency 12 \
-  --chunk-size 50 \
+  --relay-url https://RELAY_WORKER.workers.dev/copy \
+  --relay-token-file .local-logs/r2-relay-token \
+  --concurrency 64 \
+  --chunk-size 100 \
   --verification upload
 ```
 
 The importer reads completed source asset IDs and hashes from the target D1
 before starting. Matching completed records are skipped, while any metadata
 mismatch stops the run. Each chunk is recorded in D1 only after every source
-object has passed its SHA-256 and byte-size checks and R2 has accepted every
-upload. This faster bulk mode copies 12 files concurrently and avoids downloading
-every target object a second time. Run a final target reconciliation after the
-bulk copy. An interrupted run can therefore be resumed with the same command.
-Progress is written to `reports/person-files-bulk-import.json` using aggregate
-counts only.
+object has passed its byte-size checks and R2 has accepted it using the expected
+SHA-256 checksum. Failed objects remain pending instead of stopping unrelated
+copies, and D1 checkpoints retry transient Cloudflare errors. Run a final target
+reconciliation after the bulk copy, then delete the temporary relay Worker and
+its token. An interrupted run can be resumed with the same command. Progress is
+written to `reports/person-files-bulk-import.json` using aggregate counts only.
 
 ## Access control
 
