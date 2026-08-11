@@ -119,6 +119,14 @@ const historicalResultsQuerySchema = z.object({
 
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
+const personFileCategorySchema = z.enum([
+  "profile_photo",
+  "parents_photo",
+  "guardian_1_photo",
+  "guardian_2_photo",
+  "document",
+]);
+const personFileNameSchema = z.string().trim().min(1).max(160);
 
 const nullablePersonText = (maximum: number) =>
   z.union([z.string().trim().max(maximum), z.null()]).transform((value) => (value ? value : null));
@@ -291,6 +299,16 @@ export default createServerEntry({
     const placementMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/placements$/);
     if (placementMatch) {
       return addHomePlacement(request, placementMatch[1]);
+    }
+
+    const personFileItemMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/files\/([^/]+)$/);
+    if (personFileItemMatch) {
+      return handlePersonFile(request, personFileItemMatch[1], personFileItemMatch[2]);
+    }
+
+    const personFilesMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/files$/);
+    if (personFilesMatch) {
+      return addPersonFile(request, personFilesMatch[1]);
     }
 
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
@@ -1933,7 +1951,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
               content_type AS contentType, byte_size AS byteSize,
               is_primary AS isPrimary
        FROM person_file
-       WHERE person_id = ? AND organization_id = ?
+       WHERE person_id = ? AND organization_id = ? AND is_active = 1
        ORDER BY
          CASE category
            WHEN 'profile_photo' THEN 0
@@ -2664,7 +2682,7 @@ async function getPersonFile(request: Request, fileId: string): Promise<Response
     `SELECT r2_object_key AS r2ObjectKey, file_name AS fileName,
             content_type AS contentType, byte_size AS byteSize
      FROM person_file
-     WHERE id = ? AND organization_id = ?`,
+     WHERE id = ? AND organization_id = ? AND is_active = 1`,
   )
     .bind(parsedId.data, context.organizationId)
     .first<{
@@ -2688,6 +2706,267 @@ async function getPersonFile(request: Request, fileId: string): Promise<Response
   headers.set("X-Content-Type-Options", "nosniff");
 
   return new Response(object.body, { headers });
+}
+
+const MAX_PERSON_FILE_BYTES = 25 * 1024 * 1024;
+const PHOTO_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const DOCUMENT_CONTENT_TYPES = new Set([
+  ...PHOTO_CONTENT_TYPES,
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+]);
+
+async function addPersonFile(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const parsedPersonId = personIdSchema.safeParse(personId);
+  if (!parsedPersonId.success)
+    return Response.json({ error: "Invalid person ID" }, { status: 400 });
+
+  const runtime = getRuntimeEnv();
+  const person = await runtime.DB.prepare(
+    "SELECT id FROM person WHERE id = ? AND organization_id = ?",
+  )
+    .bind(parsedPersonId.data, context.organizationId)
+    .first<{ id: string }>();
+  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+
+  const parsed = await parsePersonFileForm(request);
+  if (parsed instanceof Response) return parsed;
+
+  if (parsed.category !== "document") {
+    const existing = await runtime.DB.prepare(
+      `SELECT id FROM person_file
+       WHERE organization_id = ? AND person_id = ? AND category = ? AND is_active = 1
+       LIMIT 1`,
+    )
+      .bind(context.organizationId, parsedPersonId.data, parsed.category)
+      .first<{ id: string }>();
+    if (existing) {
+      return Response.json(
+        { error: "This photo already exists. Use Replace to change it." },
+        { status: 409 },
+      );
+    }
+  }
+
+  return storePersonFile(runtime, context, parsedPersonId.data, parsed, null);
+}
+
+async function handlePersonFile(
+  request: Request,
+  personId: string,
+  fileId: string,
+): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const parsedPersonId = personIdSchema.safeParse(personId);
+  const parsedFileId = fileIdSchema.safeParse(fileId);
+  if (!parsedPersonId.success || !parsedFileId.success) {
+    return Response.json({ error: "Invalid file ID" }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const existing = await runtime.DB.prepare(
+    `SELECT id, category, label, file_name AS fileName, r2_object_key AS r2ObjectKey
+     FROM person_file
+     WHERE id = ? AND person_id = ? AND organization_id = ? AND is_active = 1`,
+  )
+    .bind(parsedFileId.data, parsedPersonId.data, context.organizationId)
+    .first<{
+      id: string;
+      category: z.infer<typeof personFileCategorySchema>;
+      label: string;
+      fileName: string;
+      r2ObjectKey: string;
+    }>();
+  if (!existing) return Response.json({ error: "File not found" }, { status: 404 });
+
+  if (request.method === "PATCH") {
+    const input = personFileNameSchema.safeParse(
+      ((await request.json().catch(() => null)) as { name?: unknown } | null)?.name,
+    );
+    if (!input.success) {
+      return Response.json(
+        { error: "Enter a name between 1 and 160 characters." },
+        { status: 400 },
+      );
+    }
+    await runtime.DB.batch([
+      runtime.DB.prepare(
+        `UPDATE person_file SET label = ?, updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND organization_id = ? AND is_active = 1`,
+      ).bind(input.data, context.userId, existing.id, context.organizationId),
+      auditStatement(runtime.DB, context, "person.file_renamed", "person_file", existing.id, {
+        personId: parsedPersonId.data,
+        previousName: existing.label,
+        name: input.data,
+      }),
+    ]);
+    return Response.json({ ok: true });
+  }
+
+  if (request.method === "POST") {
+    const parsed = await parsePersonFileForm(request, existing.category);
+    if (parsed instanceof Response) return parsed;
+    const response = await storePersonFile(runtime, context, parsedPersonId.data, parsed, existing);
+    if (response.ok) await runtime.FILES.delete(existing.r2ObjectKey);
+    return response;
+  }
+
+  if (request.method === "DELETE") {
+    const statements = [
+      runtime.DB.prepare(
+        `UPDATE person_file SET is_active = 0, removed_at = CURRENT_TIMESTAMP,
+           updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND organization_id = ? AND is_active = 1`,
+      ).bind(context.userId, existing.id, context.organizationId),
+      auditStatement(runtime.DB, context, "person.file_removed", "person_file", existing.id, {
+        personId: parsedPersonId.data,
+        name: existing.label,
+        category: existing.category,
+      }),
+    ];
+    if (existing.category === "profile_photo") {
+      statements.push(
+        runtime.DB.prepare(
+          "UPDATE person SET photo_asset_key = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?",
+        ).bind(parsedPersonId.data, context.organizationId),
+      );
+    }
+    await runtime.DB.batch(statements);
+    await runtime.FILES.delete(existing.r2ObjectKey);
+    return Response.json({ ok: true });
+  }
+
+  return methodNotAllowed("PATCH, POST, DELETE");
+}
+
+async function parsePersonFileForm(
+  request: Request,
+  fixedCategory?: z.infer<typeof personFileCategorySchema>,
+): Promise<
+  { category: z.infer<typeof personFileCategorySchema>; name: string; file: File } | Response
+> {
+  const form = await request.formData().catch(() => null);
+  if (!form) return Response.json({ error: "Upload a file." }, { status: 400 });
+  const file = form.get("file");
+  const category = fixedCategory ?? personFileCategorySchema.safeParse(form.get("category")).data;
+  const name = personFileNameSchema.safeParse(form.get("name"));
+  if (!(file instanceof File) || !category || !name.success) {
+    return Response.json({ error: "Choose a file, type, and name." }, { status: 400 });
+  }
+  if (file.size === 0 || file.size > MAX_PERSON_FILE_BYTES) {
+    return Response.json({ error: "Files must be between 1 byte and 25 MB." }, { status: 400 });
+  }
+  const allowed = category === "document" ? DOCUMENT_CONTENT_TYPES : PHOTO_CONTENT_TYPES;
+  if (!allowed.has(file.type)) {
+    return Response.json(
+      {
+        error:
+          category === "document"
+            ? "This file type is not supported."
+            : "Use a JPEG, PNG, or WebP photo.",
+      },
+      { status: 400 },
+    );
+  }
+  return { category, name: name.data, file };
+}
+
+async function storePersonFile(
+  runtime: ReturnType<typeof getRuntimeEnv>,
+  context: MembershipContext,
+  personId: string,
+  input: { category: z.infer<typeof personFileCategorySchema>; name: string; file: File },
+  replaced: { id: string; r2ObjectKey: string } | null,
+): Promise<Response> {
+  const id = crypto.randomUUID();
+  const bytes = await input.file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const sha256 = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  const objectKey = `organizations/${context.organizationId}/people/${personId}/uploads/${id}`;
+
+  await runtime.FILES.put(objectKey, bytes, {
+    httpMetadata: { contentType: input.file.type },
+  });
+
+  try {
+    const statements = [];
+    if (replaced) {
+      statements.push(
+        runtime.DB.prepare(
+          `UPDATE person_file SET is_active = 0, removed_at = CURRENT_TIMESTAMP,
+             updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND organization_id = ? AND is_active = 1`,
+        ).bind(context.userId, replaced.id, context.organizationId),
+      );
+    }
+    statements.push(
+      runtime.DB.prepare(
+        `INSERT INTO person_file (
+           id, organization_id, person_id, category, label, file_name, content_type,
+           byte_size, sha256, r2_object_key, is_primary, source_system, source_table,
+           source_id, source_asset_id, created_by_user_id, updated_by_user_id, replaces_file_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'tsewa', 'person_file', ?, ?, ?, ?, ?)`,
+      ).bind(
+        id,
+        context.organizationId,
+        personId,
+        input.category,
+        input.name,
+        input.file.name,
+        input.file.type,
+        input.file.size,
+        sha256,
+        objectKey,
+        input.category === "profile_photo" ? 1 : 0,
+        id,
+        id,
+        context.userId,
+        context.userId,
+        replaced?.id ?? null,
+      ),
+    );
+    if (input.category === "profile_photo") {
+      statements.push(
+        runtime.DB.prepare(
+          "UPDATE person SET photo_asset_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?",
+        ).bind(objectKey, personId, context.organizationId),
+      );
+    }
+    statements.push(
+      auditStatement(
+        runtime.DB,
+        context,
+        replaced ? "person.file_replaced" : "person.file_added",
+        "person_file",
+        id,
+        {
+          personId,
+          category: input.category,
+          name: input.name,
+          replacedFileId: replaced?.id ?? "",
+        },
+      ),
+    );
+    await runtime.DB.batch(statements);
+  } catch (error) {
+    await runtime.FILES.delete(objectKey);
+    throw error;
+  }
+  return Response.json({ ok: true, id }, { status: replaced ? 200 : 201 });
 }
 
 function inlineContentDisposition(fileName: string): string {

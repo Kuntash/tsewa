@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 115 files · ~190,831 words
+- 117 files · ~192,945 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4478 nodes · 5322 edges · 364 communities (75 shown, 289 thin omitted)
+- 4497 nodes · 5365 edges · 365 communities (77 shown, 288 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6edb4f0a`
+- Built from commit: `94c051dd`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -141,7 +141,7 @@
 - ImagesBinding
 - MediaTransformer
 - Memory
-- Message
+- Q: Remove redundant profile edit controls, add document and photo upload, naming, replacement and removal, and verify whether R2 migration is complete
 - MessageBatch
 - NodeStyleServer
 - PipelineTransformationEntrypoint
@@ -220,7 +220,7 @@
 - Product language
 - class-master-reconciliation.md
 - Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.
-- better-auth
+- @fontsource-variable/dm-sans
 - import-historical-results.mjs
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
@@ -378,15 +378,15 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `getRuntimeEnv()` - 35 edges
+2. `getRuntimeEnv()` - 37 edges
 3. `organization` - 32 edges
 4. `scripts` - 32 edges
-5. `fetch()` - 27 edges
-6. `methodNotAllowed()` - 26 edges
-7. `Event` - 25 edges
+5. `fetch()` - 29 edges
+6. `methodNotAllowed()` - 28 edges
+7. `getMembershipContext()` - 26 edges
 8. `Event` - 25 edges
-9. `getMembershipContext()` - 24 edges
-10. `unauthorized()` - 22 edges
+9. `Event` - 25 edges
+10. `unauthorized()` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `CardAction()` --calls--> `cn()`  [EXTRACTED]
@@ -403,7 +403,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (364 total, 289 thin omitted)
+## Communities (365 total, 288 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -411,7 +411,7 @@ Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentM
 
 ### Community 1 - "server.ts"
 Cohesion: 0.07
-Nodes (96): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), addHomePlacement(), addSiblingRelationship() (+88 more)
+Nodes (104): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), addHomePlacement(), addPersonFile() (+96 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -463,11 +463,11 @@ Nodes (14): emptyRegistry, formatDate(), PeopleResults(), PersonKind, PersonRow,
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.13
-Nodes (17): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), localDateInput(), PersonCoreDetailsForm() (+9 more)
+Cohesion: 0.12
+Nodes (22): capitalize(), FamilyProfileSection(), fileCategoryLabel(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), localDateInput() (+14 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -528,6 +528,10 @@ Nodes (11): candidateScore(), canonicalName(), clean(), cleanSection(), compareC
 ### Community 113 - "BasicImageTransformations"
 Cohesion: 0.67
 Nodes (3): BasicImageTransformations, RequestInitCfPropertiesImage, RequestInitCfPropertiesImageDraw
+
+### Community 126 - "Q: Remove redundant profile edit controls, add document and photo upload, naming, replacement and removal, and verify whether R2 migration is complete"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: Remove redundant profile edit controls, add document and photo upload, naming, replacement and removal, and verify whether R2 migration is complete, Source Nodes
 
 ### Community 130 - "RequestInitCfPropertiesVaryHeader"
 Cohesion: 0.67
@@ -690,34 +694,35 @@ Cohesion: 0.50
 Nodes (3): Editing a person, Editing family and siblings, Practice school
 
 ## Knowledge Gaps
-- **2128 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2123 more)
+- **2135 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2130 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **288 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `student_enrollment` (5× useful, score=4.967525581)
-- `person_academic_record` (4× useful, score=3.971866718)
-- `school-operations.tsx` (3× useful, score=2.979990636) _(code changed — re-verify)_
-- `TODO.md` (3× useful, score=2.979990636) _(code changed — re-verify)_
-- `progressReportPath` (2× useful, score=1.986867934) _(code changed — re-verify)_
-- `academic_class_master` (2× useful, score=1.986680497)
+- `student_enrollment` (6× useful, score=5.931049444)
+- `TODO.md` (4× useful, score=3.955665637) _(code changed — re-verify)_
+- `person_academic_record` (4× useful, score=3.947584026)
+- `school-operations.tsx` (3× useful, score=2.961771949)
+- `academic_session` (2× useful, score=1.981849698)
+- `progressReportPath` (2× useful, score=1.974720874)
+- `academic_class_master` (2× useful, score=1.974534583)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DurableObjectStorage` connect `DurableObjectStorage` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `SubtleCrypto` connect `SubtleCrypto` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `Flagship` connect `Flagship` to `web/worker-configuration.d.ts`?**
+- **Why does `FormData` connect `FormData` to `web/worker-configuration.d.ts`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `FormData` connect `FormData` to `r2-relay/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `URL` connect `URL` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2128 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2135 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07131313131313131 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06593977154724819 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

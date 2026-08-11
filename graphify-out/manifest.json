@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786448174.8008394,
-    "ast_hash": "30a6e31fbb7a8361f3912bb1c27f4662",
+    "mtime": 1786449380.7300525,
+    "ast_hash": "5aad011e2759e0b0b9228b0f91327505",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786448190.995357,
-    "ast_hash": "66cf3801ff71b40ab6848cfa1fc03398",
+    "mtime": 1786449380.7301748,
+    "ast_hash": "0cf3e8a0838c2554416b05445a7d10c7",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786433386.6639466,
-    "ast_hash": "9aef00253d4a79360c99502ebfb136f8",
+    "mtime": 1786449527.1677015,
+    "ast_hash": "f10c3678a18c3ee0074b3cff5ddb988a",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786448116.8173313,
-    "ast_hash": "cf126a0e54f65a85b368cf31e8619e10",
+    "mtime": 1786449258.2938302,
+    "ast_hash": "440d970fe2aeae61a76122b63a044c39",
     "semantic_hash": ""
   },
   "apps/web/migrations/0014_family_relationship_editing.sql": {
@@ -477,6 +477,16 @@
   "apps/web/migrations/0015_home_placement_editing.sql": {
     "mtime": 1786448116.8163683,
     "ast_hash": "7e8f856848702c07f82dae26515cfaa9",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0016_person_file_editing.sql": {
+    "mtime": 1786449258.2928963,
+    "ast_hash": "21bf6570257b8f0f600df426b09de3fd",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_115950_remove_redundant_profile_edit_controls__add_docume.md": {
+    "mtime": 1786449590.5359623,
+    "ast_hash": "30193a4a1962763ac740612449181cf3",
     "semantic_hash": ""
   }
 }

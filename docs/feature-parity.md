@@ -68,7 +68,7 @@ evidence of a regularly used year-end workflow.
 - [x] Add and edit parents and guardians; link, create, and remove sibling
       relationships with reciprocal profile visibility.
 - [x] Add and change a person's home placement while preserving history.
-- [ ] Upload, name, replace, and remove documents and photos.
+- [x] Upload, name, replace, and remove documents and photos.
 - [ ] Record and correct withdrawal information and reasons on the person profile.
 
 ### School operations

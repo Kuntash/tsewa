@@ -9,13 +9,15 @@ import {
   History,
   Home,
   LoaderCircle,
-  LockKeyhole,
   Mail,
   MapPinned,
   MapPin,
   Pencil,
   Phone,
+  RefreshCw,
   Save,
+  Trash2,
+  Upload,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -151,7 +153,7 @@ export function PersonProfileSheet({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<"core" | "family" | "placement" | null>(null);
+  const [editing, setEditing] = useState<"core" | "family" | "placement" | "files" | null>(null);
 
   useEffect(() => {
     if (!personId) {
@@ -232,10 +234,21 @@ export function PersonProfileSheet({
             }}
             profile={profile}
           />
+        ) : profile && editing === "files" ? (
+          <PersonFilesEditor
+            onChanged={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              onPersonUpdated?.();
+            }}
+            onDone={() => setEditing(null)}
+            profile={profile}
+          />
         ) : profile ? (
           <ProfileContent
             onEdit={() => setEditing("core")}
             onEditFamily={() => setEditing("family")}
+            onEditFiles={() => setEditing("files")}
             onEditPlacement={() => setEditing("placement")}
             profile={profile}
           />
@@ -248,11 +261,13 @@ export function PersonProfileSheet({
 function ProfileContent({
   onEdit,
   onEditFamily,
+  onEditFiles,
   onEditPlacement,
   profile,
 }: {
   onEdit: () => void;
   onEditFamily: () => void;
+  onEditFiles: () => void;
   onEditPlacement: () => void;
   profile: Profile;
 }) {
@@ -268,15 +283,10 @@ function ProfileContent({
   return (
     <>
       <div className="relative overflow-hidden border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_60%)] px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
-        <div className="flex items-center justify-between gap-3 pr-11">
+        <div className="pr-11">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
             Profile
           </p>
-          {profile.canEdit ? (
-            <Button onClick={onEdit} variant="outline">
-              <Pencil /> Edit details
-            </Button>
-          ) : null}
         </div>
         <div className="mt-8 flex items-start gap-4 sm:gap-5">
           {profilePhoto ? (
@@ -343,6 +353,13 @@ function ProfileContent({
           ) : null}
 
           <ProfileSection icon={UserRound} label="Identity">
+            {profile.canEdit ? (
+              <div className="mb-4 flex justify-end">
+                <Button onClick={onEdit} size="sm" variant="outline">
+                  <Pencil /> Edit personal details
+                </Button>
+              </div>
+            ) : null}
             <div className="grid gap-x-7 gap-y-5 sm:grid-cols-2">
               <ProfileField label="Full name" value={profile.displayName} />
               <ProfileField
@@ -372,7 +389,7 @@ function ProfileContent({
 
           <Separator />
 
-          <PersonFilesSection profile={profile} />
+          <PersonFilesSection onEdit={onEditFiles} profile={profile} />
 
           <Separator />
 
@@ -591,23 +608,6 @@ function ProfileContent({
           </ProfileSection>
         </div>
       </div>
-
-      <footer className="flex items-center gap-3 border-t bg-background/95 px-5 py-4 text-xs text-muted-foreground sm:px-8">
-        {profile.canEdit ? (
-          <>
-            <Pencil className="size-4 text-primary" />
-            <span className="min-w-0 flex-1">You can edit this record.</span>
-            <Button className="ml-auto" onClick={onEdit}>
-              Edit details
-            </Button>
-          </>
-        ) : (
-          <>
-            <LockKeyhole className="size-4 text-primary" />
-            <span className="min-w-0 flex-1">You do not have permission to edit this record.</span>
-          </>
-        )}
-      </footer>
     </>
   );
 }
@@ -963,7 +963,7 @@ function FormField({
   );
 }
 
-function PersonFilesSection({ profile }: { profile: Profile }) {
+function PersonFilesSection({ onEdit, profile }: { onEdit: () => void; profile: Profile }) {
   const relatedImages = profile.files.filter(
     (file) => file.category !== "profile_photo" && file.category !== "document",
   );
@@ -971,6 +971,13 @@ function PersonFilesSection({ profile }: { profile: Profile }) {
 
   return (
     <ProfileSection icon={FileText} label="Media & documents">
+      {profile.canEdit ? (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={onEdit} size="sm" variant="outline">
+            <Pencil /> Manage files
+          </Button>
+        </div>
+      ) : null}
       {!profile.files.length ? (
         <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
           No photos or documents are available.
@@ -1048,6 +1055,297 @@ function PersonFilesSection({ profile }: { profile: Profile }) {
       )}
     </ProfileSection>
   );
+}
+
+function PersonFilesEditor({
+  onChanged,
+  onDone,
+  profile,
+}: {
+  onChanged: () => Promise<void>;
+  onDone: () => void;
+  profile: Profile;
+}) {
+  const [category, setCategory] = useState<Profile["files"][number]["category"]>("document");
+  const [name, setName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function addFile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!file) return setError("Choose a file to upload.");
+    setSaving(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.set("category", category);
+      form.set("name", name);
+      form.set("file", file);
+      await sendFileRequest(`/api/people/${profile.id}/files`, "POST", form);
+      setName("");
+      setFile(null);
+      (event.currentTarget.elements.namedItem("file") as HTMLInputElement).value = "";
+      await onChanged();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The file could not be uploaded.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Files</p>
+        <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+          Photos and documents
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          Add a file or change the name, file, or availability of an existing one.
+        </p>
+      </header>
+
+      <div className="flex-1 space-y-8 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+        {error ? (
+          <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        <form className="rounded-2xl border bg-card p-4 sm:p-5" onSubmit={addFile}>
+          <h3 className="text-sm font-semibold">Add a file</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <FormField htmlFor="new-file-category" label="File type" required>
+              <Select
+                onValueChange={(value) => setCategory(value as typeof category)}
+                value={category}
+              >
+                <SelectTrigger className="w-full" id="new-file-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="document">Document</SelectItem>
+                  <SelectItem value="profile_photo">Profile photo</SelectItem>
+                  <SelectItem value="parents_photo">Parents photo</SelectItem>
+                  <SelectItem value="guardian_1_photo">Primary guardian photo</SelectItem>
+                  <SelectItem value="guardian_2_photo">Secondary guardian photo</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField htmlFor="new-file-name" label="Name" required>
+              <Input
+                id="new-file-name"
+                maxLength={160}
+                onChange={(event) => setName(event.target.value)}
+                required
+                value={name}
+              />
+            </FormField>
+            <FormField className="sm:col-span-2" htmlFor="new-file" label="File" required>
+              <Input
+                accept={
+                  category === "document"
+                    ? ".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.webp"
+                    : ".jpg,.jpeg,.png,.webp"
+                }
+                id="new-file"
+                name="file"
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                required
+                type="file"
+              />
+            </FormField>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button disabled={saving} type="submit">
+              {saving ? <LoaderCircle className="animate-spin" /> : <Upload />}
+              {saving ? "Uploading…" : "Upload file"}
+            </Button>
+          </div>
+        </form>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold">Current files</h3>
+            <Badge className="rounded-full tabular-nums" variant="outline">
+              {profile.files.length}
+            </Badge>
+          </div>
+          {profile.files.length ? (
+            <div className="space-y-3">
+              {profile.files.map((current) => (
+                <PersonFileEditorRow
+                  file={current}
+                  key={current.id}
+                  onChanged={onChanged}
+                  personId={profile.id}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs text-muted-foreground">
+              No files have been added.
+            </p>
+          )}
+        </section>
+      </div>
+
+      <footer className="flex justify-end border-t bg-background/95 px-5 py-4 sm:px-8">
+        <Button onClick={onDone} type="button">
+          Done
+        </Button>
+      </footer>
+    </div>
+  );
+}
+
+function PersonFileEditorRow({
+  file,
+  onChanged,
+  personId,
+}: {
+  file: Profile["files"][number];
+  onChanged: () => Promise<void>;
+  personId: string;
+}) {
+  const [name, setName] = useState(file.label);
+  const [replacement, setReplacement] = useState<File | null>(null);
+  const [busy, setBusy] = useState<"name" | "replace" | "remove" | null>(null);
+  const [error, setError] = useState("");
+  const endpoint = `/api/people/${personId}/files/${file.id}`;
+
+  async function run(action: typeof busy, work: () => Promise<void>) {
+    setBusy(action);
+    setError("");
+    try {
+      await work();
+      await onChanged();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The change could not be saved.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <article className="rounded-2xl border bg-card p-4">
+      <div className="flex items-start gap-3">
+        {file.contentType.startsWith("image/") ? (
+          <img
+            alt=""
+            className="aspect-[4/3] w-16 shrink-0 rounded-xl border bg-muted object-contain"
+            src={file.url}
+          />
+        ) : (
+          <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <FileText className="size-4" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {fileCategoryLabel(file.category)}
+          </p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {file.fileName} · {formatBytes(file.byteSize)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Input
+          aria-label="File name"
+          maxLength={160}
+          onChange={(event) => setName(event.target.value)}
+          value={name}
+        />
+        <Button
+          disabled={Boolean(busy) || name.trim() === file.label || !name.trim()}
+          onClick={() =>
+            void run("name", async () => {
+              const response = await fetch(endpoint, {
+                method: "PATCH",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ name }),
+              });
+              await requireOk(response, "The name could not be saved.");
+            })
+          }
+          type="button"
+          variant="outline"
+        >
+          {busy === "name" ? <LoaderCircle className="animate-spin" /> : <Save />} Save name
+        </Button>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          accept={
+            file.category === "document"
+              ? ".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.webp"
+              : ".jpg,.jpeg,.png,.webp"
+          }
+          aria-label={`Replacement for ${file.label}`}
+          className="min-w-0 flex-1"
+          onChange={(event) => setReplacement(event.target.files?.[0] ?? null)}
+          type="file"
+        />
+        <div className="flex gap-2">
+          <Button
+            disabled={Boolean(busy) || !replacement}
+            onClick={() =>
+              void run("replace", async () => {
+                if (!replacement) return;
+                const form = new FormData();
+                form.set("name", name.trim() || file.label);
+                form.set("file", replacement);
+                await sendFileRequest(endpoint, "POST", form);
+              })
+            }
+            type="button"
+            variant="outline"
+          >
+            {busy === "replace" ? <LoaderCircle className="animate-spin" /> : <RefreshCw />} Replace
+          </Button>
+          <Button
+            disabled={Boolean(busy)}
+            onClick={() => {
+              if (!window.confirm(`Remove “${file.label}”?`)) return;
+              void run("remove", async () => {
+                const response = await fetch(endpoint, { method: "DELETE" });
+                await requireOk(response, "The file could not be removed.");
+              });
+            }}
+            type="button"
+            variant="destructive"
+          >
+            {busy === "remove" ? <LoaderCircle className="animate-spin" /> : <Trash2 />} Remove
+          </Button>
+        </div>
+      </div>
+      {error ? <p className="mt-3 text-xs text-destructive">{error}</p> : null}
+    </article>
+  );
+}
+
+async function sendFileRequest(url: string, method: "POST", body: FormData) {
+  const response = await fetch(url, { method, body });
+  await requireOk(response, "The file could not be saved.");
+}
+
+async function requireOk(response: Response, fallback: string) {
+  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+  if (!response.ok) throw new Error(payload?.error ?? fallback);
+}
+
+function fileCategoryLabel(category: Profile["files"][number]["category"]): string {
+  return {
+    profile_photo: "Profile photo",
+    parents_photo: "Parents photo",
+    guardian_1_photo: "Primary guardian photo",
+    guardian_2_photo: "Secondary guardian photo",
+    document: "Document",
+  }[category];
 }
 
 function FamilyProfileSection({ onEdit, profile }: { onEdit: () => void; profile: Profile }) {

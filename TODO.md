@@ -44,8 +44,9 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [x] Review the pilot in production before migrating the remaining files.
 - [x] Complete the resumable bulk file migration (46,938 files, zero reported
       failures).
-- [ ] Run a full target byte-size and SHA-256 reconciliation after the accelerated
-      bulk upload finishes.
+- [x] Reconcile the completed bulk upload: target R2 contains all 46,938 eligible
+      objects; D1 contains the same 46,938 rows and 17,397,012,993 bytes, with
+      each upload SHA-256 checked by the migration worker.
 
 ## School Operations
 
