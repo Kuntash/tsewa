@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "scripts/import-person-files.mjs": {
-    "mtime": 1786402216.7277708,
-    "ast_hash": "a5b3b6cbfee31d6f1a40c0d1f167bd4f",
+    "mtime": 1786426648.0269594,
+    "ast_hash": "7b157b2d7bab34046c6419cd709e5b1b",
     "semantic_hash": ""
   },
   "scripts/install-git-hooks.sh": {
@@ -412,6 +412,11 @@
   "graphify-out/memory/query_20260810_231608_okay__why_only_2011_and_2012_data__anyways__lets_c.md": {
     "mtime": 1786403768.1340616,
     "ast_hash": "54972f1560e5b8a3a7906bd1b4dc7e22",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_052935_i_believe_the_marks_sections_is_not_that_useful_as.md": {
+    "mtime": 1786426175.2888381,
+    "ast_hash": "9235757411fcf97a32c51b3d1c57468f",
     "semantic_hash": ""
   }
 }

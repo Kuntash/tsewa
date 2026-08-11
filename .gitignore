@@ -12,6 +12,7 @@ node_modules/
 dist/
 coverage/
 *.people-import.sql
+.local-logs/
 
 # Graphify's committed outputs stay reproducible; local caches and dated backups do not.
 graphify-out/cache/

@@ -125,15 +125,44 @@ try {
 
   let copiedFiles = 0;
   let copiedBytes = 0;
+  let processedFiles = 0;
+  let failedFiles = 0;
   for (let offset = 0; !planOnly && offset < pendingFiles.length; offset += chunkSize) {
     const chunk = pendingFiles.slice(offset, offset + chunkSize);
-    const copied = await mapWithConcurrency(chunk, concurrency, (file) =>
-      relayObject({ file, sourceBucket, targetBucket, target, verification }),
-    );
+    const outcomes = await mapWithConcurrency(chunk, concurrency, async (file) => {
+      try {
+        return {
+          copied: await relayObject({ file, sourceBucket, targetBucket, target, verification }),
+          file,
+        };
+      } catch {
+        return { copied: null, file };
+      }
+    });
+    const successful = outcomes.filter((item) => item.copied !== null);
+    const copied = successful.map((item) => item.copied);
+    const copiedChunkFiles = successful.map((item) => item.file);
+    processedFiles += chunk.length;
+    failedFiles += chunk.length - copiedChunkFiles.length;
+    if (!copiedChunkFiles.length) {
+      await writeProgressReport({
+        alreadyImported,
+        copiedBytes,
+        copiedFiles,
+        expectedByteCount,
+        expectedFileCount,
+        expectedPeopleCount,
+        failedFiles,
+        sourceFingerprint,
+        target,
+        verification,
+      });
+      continue;
+    }
     const chunkBytes = copied.reduce((total, item) => total + item.byteSize, 0);
     const importedAt = new Date().toISOString();
     const batchHash = createHash("sha256")
-      .update(chunk.map((file) => file.sourceAssetId).join("\n"))
+      .update(copiedChunkFiles.map((file) => file.sourceAssetId).join("\n"))
       .digest("hex")
       .slice(0, 16);
     const batchId = bulkMode
@@ -141,7 +170,7 @@ try {
       : `file-import-${sourceFingerprint.slice(0, 16)}-${files[0].personSourceTable}-${files[0].personSourceId}-v1`;
     const sql = buildImportSql({
       batchId,
-      files: chunk,
+      files: copiedChunkFiles,
       importedAt,
       organizationSlug,
       sourceFingerprint,
@@ -157,11 +186,11 @@ try {
     workspace = await mkdtemp(join(tmpdir(), "tsewa-file-import-"));
     const sqlPath = join(workspace, "person-files-import.sql");
     await writeFile(sqlPath, sql, { encoding: "utf8", mode: 0o600 });
-    executeD1Import(sqlPath, target);
+    await executeD1Import(sqlPath, target);
     await rm(workspace, { recursive: true, force: true });
     workspace = undefined;
 
-    copiedFiles += chunk.length;
+    copiedFiles += copiedChunkFiles.length;
     copiedBytes += chunkBytes;
     if (bulkMode) {
       await writeProgressReport({
@@ -171,7 +200,7 @@ try {
         expectedByteCount,
         expectedFileCount,
         expectedPeopleCount,
-        pendingFiles,
+        failedFiles,
         sourceFingerprint,
         target,
         verification,
@@ -184,6 +213,8 @@ try {
           completedBytes:
             alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes,
           totalBytes: expectedByteCount,
+          failedFiles,
+          processedFiles,
         }),
       );
     }
@@ -208,6 +239,7 @@ try {
     pendingFiles: pendingFiles.length,
     copiedFiles,
     copiedBytes,
+    failedFiles,
     completedFiles: alreadyImported.length + copiedFiles,
     completedBytes: alreadyImported.reduce((total, file) => total + file.byteSize, 0) + copiedBytes,
     sourceUnchanged: true,
@@ -241,7 +273,7 @@ async function writeProgressReport({
   expectedByteCount,
   expectedFileCount,
   expectedPeopleCount,
-  pendingFiles,
+  failedFiles,
   sourceFingerprint,
   target,
   verification,
@@ -263,7 +295,8 @@ async function writeProgressReport({
     progress: {
       files: alreadyImported.length + copiedFiles,
       bytes: completedBytes,
-      filesRemaining: pendingFiles.length - copiedFiles,
+      filesRemaining: expectedFileCount - alreadyImported.length - copiedFiles,
+      failedFiles,
       bytesRemaining: expectedByteCount - completedBytes,
     },
     policy: {
@@ -278,7 +311,7 @@ async function writeProgressReport({
 }
 
 async function relayObject({ file, sourceBucket, targetBucket, target, verification }) {
-  const maximumAttempts = 4;
+  const maximumAttempts = 6;
   let lastError;
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     try {
@@ -503,17 +536,20 @@ function readImportedFiles({ organizationSlug, target }) {
   );
 }
 
-function executeD1Import(sqlPath, target) {
-  const result = spawnSync(
-    "pnpm",
-    ["exec", "wrangler", "d1", "execute", "DB", `--${target}`, "--file", sqlPath, "--yes"],
-    { cwd: webRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-  if (result.status !== 0) {
-    throw new Error(
-      `Wrangler did not complete the ${target} person-file import. Output was suppressed because it may contain personal data.`,
+async function executeD1Import(sqlPath, target) {
+  const maximumAttempts = 6;
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    const result = spawnSync(
+      "pnpm",
+      ["exec", "wrangler", "d1", "execute", "DB", `--${target}`, "--file", sqlPath, "--yes"],
+      { cwd: webRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
+    if (result.status === 0) return;
+    if (attempt < maximumAttempts) await delay(1_000 * 2 ** (attempt - 1));
   }
+  throw new Error(
+    `Wrangler did not complete the ${target} person-file import after ${maximumAttempts} attempts. Output was suppressed because it may contain personal data.`,
+  );
 }
 
 async function assertTargetBindings({ confirmedDatabaseId, target, targetBucket }) {

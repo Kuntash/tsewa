@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 102 files · ~114,422 words
+- 103 files · ~114,697 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2624 nodes · 3225 edges · 210 communities (60 shown, 150 thin omitted)
+- 2629 nodes · 3230 edges · 211 communities (61 shown, 150 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `23b64faf`
+- Built from commit: `fb8dcef8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -208,7 +208,7 @@
 - School Operations vertical slice
 - import-school-operations.mjs
 - sqlLiteral
-- @fontsource-variable/dm-sans
+- Q: I believe the marks sections is not that useful as its old data and no edits has been done after that. anyways what is the next steps?
 - import-student-enrollments.mjs
 - student-enrollment-dry-run.mjs
 - button.tsx
@@ -224,6 +224,7 @@
 - import-historical-results.mjs
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
+- better-auth
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
@@ -252,7 +253,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (210 total, 150 thin omitted)
+## Communities (211 total, 150 thin omitted)
 
 ### Community 0 - "worker-configuration.d.ts"
 Cohesion: 0.00
@@ -312,7 +313,7 @@ Nodes (11): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), Pers
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.12
@@ -392,7 +393,7 @@ Nodes (7): Account and email follow-ups, Documents and media migration, Invitati
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
-Nodes (23): chunkSize, concurrency, confirmedDatabaseId, database, delay(), expectedFileCount, hashR2Object(), options (+15 more)
+Nodes (24): chunkSize, concurrency, confirmedDatabaseId, database, delay(), executeD1Import(), expectedFileCount, hashR2Object() (+16 more)
 
 ### Community 178 - "organization"
 Cohesion: 0.11
@@ -433,6 +434,10 @@ Nodes (20): buildImportSql(), buildUpsert(), chunkedUpserts(), confirmedDatabase
 ### Community 193 - "sqlLiteral"
 Cohesion: 0.29
 Nodes (10): add(), buildSql(), sqlValue(), buildImportSql(), readImportedFiles(), buildImportSql(), buildUpsert(), chunkedUpserts() (+2 more)
+
+### Community 194 - "Q: I believe the marks sections is not that useful as its old data and no edits has been done after that. anyways what is the next steps?"
+Cohesion: 0.40
+Nodes (4): Answer, Outcome, Q: I believe the marks sections is not that useful as its old data and no edits has been done after that. anyways what is the next steps?, Source Nodes
 
 ### Community 195 - "import-student-enrollments.mjs"
 Cohesion: 0.13
@@ -491,19 +496,19 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that., Source Nodes
 
 ## Knowledge Gaps
-- **1223 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1218 more)
+- **1226 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1221 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **150 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `student_enrollment` (3× useful, score=2.998470292)
-- `person_academic_record` (3× useful, score=2.996834406)
-- `progressReportPath` (2× useful, score=1.999367216)
-- `academic_class_master` (2× useful, score=1.9991786)
-- `school-operations.tsx` (2× useful, score=1.998718483) _(code changed — re-verify)_
-- `TODO.md` (2× useful, score=1.998718483)
+- `student_enrollment` (5× useful, score=4.967525581)
+- `person_academic_record` (4× useful, score=3.971866718)
+- `school-operations.tsx` (3× useful, score=2.979990636)
+- `TODO.md` (3× useful, score=2.979990636)
+- `progressReportPath` (2× useful, score=1.986867934) _(code changed — re-verify)_
+- `academic_class_master` (2× useful, score=1.986680497)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -515,7 +520,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `ReadableStreamBYOBRequest` connect `ReadableStreamBYOBRequest` to `worker-configuration.d.ts`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1223 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1226 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
