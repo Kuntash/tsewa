@@ -13,6 +13,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Settings2,
   ShieldCheck,
   UserPlus,
   UserRoundSearch,
@@ -25,6 +26,7 @@ import { AdmissionSheet } from "@/components/admission-sheet";
 import { EnrollmentChangeSheet } from "@/components/enrollment-change-sheet";
 import { HistoricalResults } from "@/components/historical-results";
 import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
+import { SchoolMasterData } from "@/components/school-master-data";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,7 +128,7 @@ type RosterRow = {
   houses: number;
 };
 
-type SchoolSection = "students" | "schools" | "rosters" | "results";
+type SchoolSection = "students" | "schools" | "rosters" | "setup" | "results";
 
 const emptyStudents: StudentsResponse = {
   students: [],
@@ -267,6 +269,11 @@ export function SchoolOperations({
       title: "Classes",
       description: "Classes and student numbers for this session.",
     },
+    setup: {
+      eyebrow: "School settings",
+      title: "Classes and houses",
+      description: "Manage the names used for admissions, student changes, and school records.",
+    },
     results: {
       eyebrow: "Old school records",
       title: "Marks and results",
@@ -369,6 +376,12 @@ export function SchoolOperations({
               onClick={() => setSection("rosters")}
             />
             <SideItem
+              active={section === "setup"}
+              icon={Settings2}
+              label="School setup"
+              onClick={() => setSection("setup")}
+            />
+            <SideItem
               active={section === "results"}
               icon={BookOpenText}
               label="Marks and results"
@@ -412,15 +425,15 @@ export function SchoolOperations({
                 >
                   <Plus /> Add school
                 </Button>
-              ) : overview?.canEdit ? (
+              ) : overview?.canEdit && section === "students" ? (
                 <Button onClick={() => setAdmissionOpen(true)}>
                   <UserPlus /> Admit student
                 </Button>
-              ) : (
+              ) : !overview?.canEdit ? (
                 <Badge className="w-fit rounded-full" variant="secondary">
                   View only
                 </Badge>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -439,6 +452,11 @@ export function SchoolOperations({
               active={section === "rosters"}
               label="Classes"
               onClick={() => setSection("rosters")}
+            />
+            <MobileSectionButton
+              active={section === "setup"}
+              label="Setup"
+              onClick={() => setSection("setup")}
             />
             <MobileSectionButton
               active={section === "results"}
@@ -578,6 +596,14 @@ export function SchoolOperations({
               }}
               rosters={rosters}
               schools={overview?.filters.schools ?? []}
+            />
+          ) : section === "setup" ? (
+            <SchoolMasterData
+              onChanged={(savedMessage) => {
+                setMessage(savedMessage);
+                setRefreshKey((value) => value + 1);
+              }}
+              sessionId={activeSessionId}
             />
           ) : (
             <HistoricalResults onSelectPerson={setSelectedPersonId} />

@@ -81,7 +81,7 @@ evidence of a regularly used year-end workflow.
       enrollment. Test changes in the practice school rather than on migrated
       THS records.
 - [x] Create and edit schools, including affiliation number, location, and active status.
-- [ ] Create and edit classes/sections and houses.
+- [x] Create and edit classes/sections and houses.
 - [ ] Assign classes and houses to a school.
 - [x] Correct a current enrollment while preserving imported source references
       and change history.

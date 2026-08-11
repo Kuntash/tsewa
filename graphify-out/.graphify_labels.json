@@ -12,7 +12,7 @@
   "10": "devDependencies",
   "11": "compilerOptions",
   "12": "import-placement-history.mjs",
-  "13": "button.tsx",
+  "13": "people-registry.tsx",
   "14": "dependencies",
   "15": "person-profile-sheet.tsx",
   "16": "components.json",
@@ -196,7 +196,7 @@
   "194": "Q: I believe the marks sections is not that useful as its old data and no edits has been done after that. anyways what is the next steps?",
   "195": "import-student-enrollments.mjs",
   "196": "student-enrollment-dry-run.mjs",
-  "197": "enrollment-change-sheet.tsx",
+  "197": "school-master-data.tsx",
   "198": "Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?",
   "199": "Q: Okay whats next?",
   "200": "Q: what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?",
@@ -317,7 +317,7 @@
   "315": "0015_home_placement_editing.sql",
   "316": "MessageBatch",
   "317": "NodeStyleServer",
-  "318": "people-registry.tsx",
+  "318": "historical-results.tsx",
   "319": "RequestInitCfPropertiesVaryHeader",
   "320": "SqlStorage",
   "321": "ToMarkdownService",
@@ -367,5 +367,8 @@
   "365": "Message",
   "366": "person-family-editor.tsx",
   "367": "Q: great, continue with the next parity slice?",
-  "368": "@fontsource-variable/dm-sans"
+  "368": "enrollment-change-sheet.tsx",
+  "369": "Q: continue",
+  "370": "better-auth",
+  "371": "0017_class_house_editing.sql"
 }

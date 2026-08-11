@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786450270.3953478,
-    "ast_hash": "157c42443e4c26fae1b27547591aa983",
+    "mtime": 1786450817.5694396,
+    "ast_hash": "f24a02afe31fd6a48e3269abcd07a86f",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1786450260.5892928,
-    "ast_hash": "1361373286d9c468d139d76df7b8e414",
+    "mtime": 1786450785.4881432,
+    "ast_hash": "a09ada44cc7df11c738fd9e171b40bb4",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786450369.0874171,
-    "ast_hash": "64925a0830167d0ee45bbce40b0ddf24",
+    "mtime": 1786450785.4883714,
+    "ast_hash": "d4f389b3d606a6b8a64a71b326304967",
     "semantic_hash": ""
   },
   "apps/web/migrations/0014_family_relationship_editing.sql": {
@@ -502,6 +502,21 @@
   "graphify-out/memory/query_20260811_121341_great__continue_with_the_next_parity_slice.md": {
     "mtime": 1786450421.166287,
     "ast_hash": "5846c75d5cac64572aa59fb7ddd160ed",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0017_class_house_editing.sql": {
+    "mtime": 1786450680.3379881,
+    "ast_hash": "97fccd20e312f69761821bd2b422746e",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/school-master-data.tsx": {
+    "mtime": 1786450807.1613433,
+    "ast_hash": "520149082204a6d6d6a552236358a5de",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260811_122458_continue.md": {
+    "mtime": 1786451098.717606,
+    "ast_hash": "8c87c7e18142036142137ae9aa8035ab",
     "semantic_hash": ""
   }
 }

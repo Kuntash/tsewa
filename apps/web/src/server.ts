@@ -86,6 +86,24 @@ const schoolMasterSchema = z.object({
   isActive: z.boolean(),
 });
 
+const academicClassMasterSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  section: z
+    .string()
+    .trim()
+    .max(30)
+    .nullable()
+    .transform((value) => value || null),
+  level: z.number().int().min(0).max(30).nullable(),
+  sortOrder: z.number().int().min(0).max(1_000).nullable(),
+  isActive: z.boolean(),
+});
+
+const houseMasterSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  isActive: z.boolean(),
+});
+
 const isoDateSchema = z.iso.date();
 
 const admissionSchema = z.object({
@@ -262,6 +280,28 @@ export default createServerEntry({
 
     if (url.pathname === "/api/school-operations/students") {
       return getSchoolOperationsStudents(request);
+    }
+
+    if (url.pathname === "/api/school-operations/master-data") {
+      return getSchoolMasterData(request);
+    }
+
+    const academicClassMatch = url.pathname.match(/^\/api\/school-operations\/classes\/([^/]+)$/);
+    if (academicClassMatch) {
+      return updateAcademicClassMaster(request, academicClassMatch[1]);
+    }
+
+    if (url.pathname === "/api/school-operations/classes") {
+      return createAcademicClassMaster(request);
+    }
+
+    const houseMasterMatch = url.pathname.match(/^\/api\/school-operations\/houses\/([^/]+)$/);
+    if (houseMasterMatch) {
+      return updateHouseMaster(request, houseMasterMatch[1]);
+    }
+
+    if (url.pathname === "/api/school-operations/houses") {
+      return createHouseMaster(request);
     }
 
     const schoolMasterMatch = url.pathname.match(/^\/api\/school-operations\/schools\/([^/]+)$/);
@@ -648,7 +688,7 @@ async function getSchoolOperationsSetup(request: Request): Promise<Response> {
       .all<{ id: string; name: string }>(),
     runtime.DB.prepare(
       `SELECT id, name FROM house_master
-       WHERE organization_id = ? ORDER BY name COLLATE NOCASE`,
+       WHERE organization_id = ? AND is_active = 1 ORDER BY name COLLATE NOCASE`,
     )
       .bind(scope.organizationId)
       .all<{ id: string; name: string }>(),
@@ -692,7 +732,9 @@ async function createStudentAdmission(request: Request): Promise<Response> {
       .bind(academicClassId, scope.organizationId)
       .first<{ id: string }>(),
     houseId
-      ? runtime.DB.prepare(`SELECT id FROM house_master WHERE id = ? AND organization_id = ?`)
+      ? runtime.DB.prepare(
+          `SELECT id FROM house_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
+        )
           .bind(houseId, scope.organizationId)
           .first<{ id: string }>()
       : Promise.resolve(null),
@@ -956,7 +998,9 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
         .bind(targetClassId, context.organizationId)
         .first<{ id: string }>(),
       targetHouseId
-        ? runtime.DB.prepare(`SELECT id FROM house_master WHERE id = ? AND organization_id = ?`)
+        ? runtime.DB.prepare(
+            `SELECT id FROM house_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
+          )
             .bind(targetHouseId, context.organizationId)
             .first<{ id: string }>()
         : Promise.resolve(null),
@@ -1369,6 +1413,273 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
     session: scope.session,
     schools: schools.results.map((school) => ({ ...school, isActive: Boolean(school.isActive) })),
   });
+}
+
+type AcademicClassRow = {
+  id: string;
+  name: string;
+  title: string | null;
+  section: string | null;
+  level: number | null;
+  sortOrder: number | null;
+  isActive: number;
+};
+
+async function getSchoolMasterData(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const sessionId = new URL(request.url).searchParams.get("sessionId");
+  const parsed = schoolOverviewQuerySchema.safeParse({ sessionId });
+  if (!parsed.success) {
+    return Response.json({ error: "Select an academic session." }, { status: 400 });
+  }
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  const runtime = getRuntimeEnv();
+  const [classRows, houses] = await Promise.all([
+    runtime.DB.prepare(
+      `SELECT id, name, title, section, level, sort_order AS sortOrder, is_active AS isActive
+       FROM academic_class_master WHERE organization_id = ?
+       ORDER BY coalesce(sort_order, 999), coalesce(level, 999), name COLLATE NOCASE`,
+    )
+      .bind(scope.organizationId)
+      .all<AcademicClassRow>(),
+    runtime.DB.prepare(
+      `SELECT id, name, is_active AS isActive
+       FROM house_master WHERE organization_id = ?
+       ORDER BY is_active DESC, name COLLATE NOCASE`,
+    )
+      .bind(scope.organizationId)
+      .all<{ id: string; name: string; isActive: number }>(),
+  ]);
+
+  return Response.json({
+    canEdit: canManageSchool(scope.role),
+    session: scope.session,
+    classes: groupAcademicClasses(classRows.results),
+    houses: houses.results.map((house) => ({ ...house, isActive: Boolean(house.isActive) })),
+  });
+}
+
+async function createAcademicClassMaster(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+  const parsed = academicClassMasterSchema.safeParse(await readJson(request));
+  if (!parsed.success) return Response.json({ error: "Check the class details." }, { status: 400 });
+
+  const runtime = getRuntimeEnv();
+  const rows = await readAcademicClassRows(runtime.DB, context.organizationId);
+  const displayName = academicClassName(parsed.data.name, parsed.data.section);
+  if (
+    rows.some(
+      (row) => canonicalMasterName(academicClassRowName(row)) === canonicalMasterName(displayName),
+    )
+  ) {
+    return Response.json({ error: "This class and section already exists." }, { status: 409 });
+  }
+
+  const id = crypto.randomUUID();
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `INSERT INTO academic_class_master (
+         id, organization_id, name, level, section, title, sort_order, is_active,
+         source_system, source_table, source_id
+       ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 'tsewa', 'academic_class_master', ?)`,
+    ).bind(
+      id,
+      context.organizationId,
+      parsed.data.name,
+      parsed.data.level,
+      parsed.data.section,
+      parsed.data.sortOrder,
+      parsed.data.isActive ? 1 : 0,
+      id,
+    ),
+    auditStatement(runtime.DB, context, "class.created", "academic_class_master", id, {
+      name: displayName,
+    }),
+  ]);
+  return Response.json({ id, name: displayName }, { status: 201 });
+}
+
+async function updateAcademicClassMaster(request: Request, classId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+  const parsedId = z.uuid().safeParse(classId);
+  const parsed = academicClassMasterSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success) {
+    return Response.json({ error: "Check the class details." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const rows = await readAcademicClassRows(runtime.DB, context.organizationId);
+  const selected = rows.find((row) => row.id === parsedId.data);
+  if (!selected) return Response.json({ error: "Class not found" }, { status: 404 });
+  const oldKey = canonicalMasterName(academicClassRowName(selected));
+  const group = rows.filter((row) => canonicalMasterName(academicClassRowName(row)) === oldKey);
+  const newName = academicClassName(parsed.data.name, parsed.data.section);
+  const newKey = canonicalMasterName(newName);
+  if (
+    rows.some(
+      (row) => !group.includes(row) && canonicalMasterName(academicClassRowName(row)) === newKey,
+    )
+  ) {
+    return Response.json({ error: "This class and section already exists." }, { status: 409 });
+  }
+
+  await runtime.DB.batch([
+    ...group.map((row) =>
+      runtime.DB.prepare(
+        `UPDATE academic_class_master
+         SET name = ?, title = NULL, section = ?, level = ?, sort_order = ?, is_active = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND organization_id = ?`,
+      ).bind(
+        parsed.data.name,
+        parsed.data.section,
+        parsed.data.level,
+        parsed.data.sortOrder,
+        parsed.data.isActive ? 1 : 0,
+        row.id,
+        context.organizationId,
+      ),
+    ),
+    auditStatement(runtime.DB, context, "class.updated", "academic_class_master", selected.id, {
+      previousName: academicClassRowName(selected),
+      name: newName,
+      matchingRecords: String(group.length),
+      active: String(parsed.data.isActive),
+    }),
+  ]);
+  return Response.json({ ok: true, id: selected.id, updatedRows: group.length });
+}
+
+async function createHouseMaster(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+  const parsed = houseMasterSchema.safeParse(await readJson(request));
+  if (!parsed.success) return Response.json({ error: "Check the house details." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  const duplicate = await runtime.DB.prepare(
+    "SELECT id FROM house_master WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?))",
+  )
+    .bind(context.organizationId, parsed.data.name)
+    .first<{ id: string }>();
+  if (duplicate)
+    return Response.json({ error: "A house with this name already exists." }, { status: 409 });
+  const id = crypto.randomUUID();
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `INSERT INTO house_master
+        (id, organization_id, name, is_active, source_system, source_table, source_id)
+       VALUES (?, ?, ?, ?, 'tsewa', 'house_master', ?)`,
+    ).bind(id, context.organizationId, parsed.data.name, parsed.data.isActive ? 1 : 0, id),
+    auditStatement(runtime.DB, context, "house.created", "house_master", id, {
+      name: parsed.data.name,
+    }),
+  ]);
+  return Response.json({ id, name: parsed.data.name }, { status: 201 });
+}
+
+async function updateHouseMaster(request: Request, houseId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+  const parsedId = z.uuid().safeParse(houseId);
+  const parsed = houseMasterSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success)
+    return Response.json({ error: "Check the house details." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  const [house, duplicate] = await Promise.all([
+    runtime.DB.prepare("SELECT id, name FROM house_master WHERE id = ? AND organization_id = ?")
+      .bind(parsedId.data, context.organizationId)
+      .first<{ id: string; name: string }>(),
+    runtime.DB.prepare(
+      "SELECT id FROM house_master WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?)) AND id <> ?",
+    )
+      .bind(context.organizationId, parsed.data.name, parsedId.data)
+      .first<{ id: string }>(),
+  ]);
+  if (!house) return Response.json({ error: "House not found" }, { status: 404 });
+  if (duplicate)
+    return Response.json({ error: "A house with this name already exists." }, { status: 409 });
+  await runtime.DB.batch([
+    runtime.DB.prepare(
+      `UPDATE house_master SET name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND organization_id = ?`,
+    ).bind(parsed.data.name, parsed.data.isActive ? 1 : 0, parsedId.data, context.organizationId),
+    auditStatement(runtime.DB, context, "house.updated", "house_master", parsedId.data, {
+      previousName: house.name,
+      name: parsed.data.name,
+      active: String(parsed.data.isActive),
+    }),
+  ]);
+  return Response.json({ ok: true, id: parsedId.data });
+}
+
+async function readAcademicClassRows(database: D1Database, organizationId: string) {
+  const result = await database
+    .prepare(
+      `SELECT id, name, title, section, level, sort_order AS sortOrder, is_active AS isActive
+     FROM academic_class_master WHERE organization_id = ?`,
+    )
+    .bind(organizationId)
+    .all<AcademicClassRow>();
+  return result.results;
+}
+
+function groupAcademicClasses(rows: AcademicClassRow[]) {
+  const groups = new Map<string, AcademicClassRow[]>();
+  for (const row of rows) {
+    const key = canonicalMasterName(academicClassRowName(row));
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  return [...groups.values()]
+    .map((group) => {
+      const representative = [...group].sort((left, right) => left.id.localeCompare(right.id))[0];
+      return {
+        id: representative.id,
+        name: academicClassRowName(representative),
+        baseName: representative.title?.trim() || representative.name.trim(),
+        section: representative.section,
+        level: representative.level,
+        sortOrder: representative.sortOrder,
+        isActive: group.some((row) => Boolean(row.isActive)),
+        matchingRecords: group.length,
+      };
+    })
+    .sort(
+      (left, right) =>
+        (left.sortOrder ?? 999) - (right.sortOrder ?? 999) || left.name.localeCompare(right.name),
+    );
+}
+
+function academicClassRowName(row: Pick<AcademicClassRow, "name" | "title" | "section">) {
+  return academicClassName(row.title?.trim() || row.name.trim(), row.section);
+}
+
+function academicClassName(name: string, section: string | null) {
+  const cleanName = name.trim();
+  const cleanSection = section?.trim();
+  if (!cleanSection || ["none", "0", "n/a", "null"].includes(cleanSection.toLowerCase()))
+    return cleanName;
+  return cleanName.toLowerCase().endsWith(` ${cleanSection.toLowerCase()}`)
+    ? cleanName
+    : `${cleanName} ${cleanSection}`;
+}
+
+function canonicalMasterName(value: string) {
+  return value.trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
 
 async function createSchoolMaster(request: Request): Promise<Response> {
