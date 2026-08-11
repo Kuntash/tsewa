@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 112 files · ~185,050 words
+- 112 files · ~186,387 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4439 nodes · 5189 edges · 362 communities (72 shown, 290 thin omitted)
+- 4450 nodes · 5227 edges · 361 communities (72 shown, 289 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bd0aa974`
+- Built from commit: `e2be05d2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,7 +28,7 @@
 - devDependencies
 - compilerOptions
 - import-placement-history.mjs
-- people-registry.tsx
+- button.tsx
 - dependencies
 - person-profile-sheet.tsx
 - components.json
@@ -220,7 +220,7 @@
 - Product language
 - class-master-reconciliation.md
 - Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.
-- historical-results.tsx
+- people-registry.tsx
 - import-historical-results.mjs
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
@@ -329,7 +329,6 @@
 - ImagesBinding
 - MediaTransformer
 - Memory
-- Message
 - MessageBatch
 - NodeStyleServer
 - PipelineTransformationEntrypoint
@@ -374,13 +373,13 @@
 - TraceItemFetchEventInfoRequest
 - UnsafeTraceMetrics
 - WebSearch
-- practice-school.md
+- Practice school
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
 2. `organization` - 32 edges
 3. `scripts` - 32 edges
-4. `getRuntimeEnv()` - 29 edges
+4. `getRuntimeEnv()` - 30 edges
 5. `Event` - 25 edges
 6. `Event` - 25 edges
 7. `fetch()` - 22 edges
@@ -397,21 +396,21 @@
   apps/web/src/components/ui/sheet.tsx → apps/web/src/lib/utils.ts
 - `person_import_issue_summary` --references--> `person_import_batch`  [EXTRACTED]
   apps/web/migrations/0004_people_registry_dry_run.sql → apps/web/migrations/0003_people_registry.sql
-- `HistoricalResults()` --calls--> `useDebouncedValue()`  [EXTRACTED]
-  apps/web/src/components/historical-results.tsx → apps/web/src/lib/use-debounced-value.ts
+- `SchoolOperations()` --calls--> `useDebouncedValue()`  [EXTRACTED]
+  apps/web/src/components/school-operations.tsx → apps/web/src/lib/use-debounced-value.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (362 total, 290 thin omitted)
+## Communities (361 total, 289 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
 Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentMemoryIncomingMemory, AgentMemoryIngestOptions, AgentMemoryListMemoriesOptions, AgentMemoryListMemoriesResult, AgentMemoryMemory, AgentMemoryMemoryListEntry (+839 more)
 
 ### Community 1 - "server.ts"
-Cohesion: 0.08
-Nodes (81): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), admissionSchema, auditAccountAction() (+73 more)
+Cohesion: 0.07
+Nodes (86): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), admissionSchema, auditAccountAction() (+78 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -457,17 +456,17 @@ Nodes (24): compilerOptions, allowImportingTsExtensions, jsx, lib, module, modul
 Cohesion: 0.10
 Nodes (18): buildImportSql(), confirmedDatabaseId, database, optionalText(), options, organizationSlug, rawSql(), readPlacements() (+10 more)
 
-### Community 13 - "people-registry.tsx"
-Cohesion: 0.14
-Nodes (14): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse (+6 more)
+### Community 13 - "button.tsx"
+Cohesion: 0.43
+Nodes (5): readTheme(), Theme, ThemeToggle(), Button(), buttonVariants
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
 Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.18
-Nodes (12): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), PersonFilesSection(), PersonProfileSheet() (+4 more)
+Cohesion: 0.14
+Nodes (15): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), PersonCoreDetailsForm(), PersonFilesSection() (+7 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -599,7 +598,7 @@ Nodes (8): sha256File(), assertAggregateOnly(), database, options, outputPath, r
 
 ### Community 197 - "enrollment-change-sheet.tsx"
 Cohesion: 0.10
-Nodes (23): AdmissionSheet(), Option, Setup, Action, actions, Change, changeDescription(), changeLabel() (+15 more)
+Nodes (22): AdmissionSheet(), Option, Setup, Action, actions, Change, changeDescription(), changeLabel() (+14 more)
 
 ### Community 198 - "Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
 Cohesion: 0.40
@@ -629,9 +628,9 @@ Nodes (3): Preferred words, Product language, Rules
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely., Source Nodes
 
-### Community 206 - "historical-results.tsx"
-Cohesion: 0.17
-Nodes (11): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+3 more)
+### Community 206 - "people-registry.tsx"
+Cohesion: 0.09
+Nodes (21): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+13 more)
 
 ### Community 207 - "import-historical-results.mjs"
 Cohesion: 0.12
@@ -686,9 +685,9 @@ Cohesion: 0.67
 Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryAcceptLanguageHeader, RequestInitCfPropertiesVaryHeader
 
 ## Knowledge Gaps
-- **2116 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2111 more)
+- **2118 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2113 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **290 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
@@ -703,17 +702,17 @@ Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryA
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `Comment` connect `Comment` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Why does `Event` connect `Event` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `WorkflowStep` connect `WorkflowStep` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `ReadableStreamBYOBReader` connect `ReadableStreamBYOBReader` to `r2-relay/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `Element` connect `Element` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2116 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2118 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07974756167527251 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07415730337078652 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

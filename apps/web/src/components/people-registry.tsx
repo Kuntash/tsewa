@@ -94,6 +94,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,7 +126,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
       });
 
     return () => controller.abort();
-  }, [debouncedQuery, kind, status, page]);
+  }, [debouncedQuery, kind, status, page, refreshVersion]);
 
   useEffect(() => setPage(1), [kind, status]);
 
@@ -153,7 +154,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
         </button>
         <div className="ml-auto flex items-center gap-2">
           <Badge className="hidden gap-1.5 rounded-full sm:inline-flex" variant="outline">
-            <ShieldCheck className="size-3.5" /> View only
+            <ShieldCheck className="size-3.5" /> Imported data protected
           </Badge>
           <ThemeToggle />
           <Button
@@ -318,6 +319,7 @@ export function PeopleRegistry({ onBack }: { onBack: () => void }) {
         onOpenChange={(open) => {
           if (!open) setSelectedPersonId(null);
         }}
+        onPersonUpdated={() => setRefreshVersion((current) => current + 1)}
         personId={selectedPersonId}
       />
     </main>

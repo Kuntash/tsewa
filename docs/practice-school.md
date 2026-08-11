@@ -13,6 +13,16 @@ must not be included in Tibetan Homes Foundation reports or migrations.
 - Student: **Tsewa Test Student**
 - Admission number: **DEMO-001**
 
+## Editing a person
+
+1. Switch to **Tsewa Practice School** and open **People**.
+2. Open **Tsewa Test Student** (`DEMO-001`).
+3. Choose **Edit details**, make a small change, and save it.
+4. Restore the original value after the test. The baseline campus is **Tsewa Practice School**.
+
+Imported THS profiles are not editable. The server enforces this rule as well as
+the interface.
+
 The current THS owner is also the owner of this practice organization. Switch
 organizations from the home-page header before testing admissions or later
 enrollment changes.

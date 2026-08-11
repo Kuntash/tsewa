@@ -15,13 +15,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1786402253.4173737,
-    "ast_hash": "b874501a9ae3f2b30dc7010f4349570d",
+    "mtime": 1786434021.0045018,
+    "ast_hash": "ea1b20f34b827466f0c02423a81d1d89",
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786401172.78377,
-    "ast_hash": "9a6125853fe58f64b3ceb5db8c6a69d0",
+    "mtime": 1786434689.7825165,
+    "ast_hash": "d981a2e4eaf278352bfa906e9eff894d",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786432066.836027,
-    "ast_hash": "efab320fd844ba4f77fe5046241f7149",
+    "mtime": 1786434735.5009513,
+    "ast_hash": "e17972509b6e3dec71e9777b08ba33aa",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -445,8 +445,8 @@
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
-    "mtime": 1786431915.2986217,
-    "ast_hash": "5c040438239589afbc3a825628780ba2",
+    "mtime": 1786434689.7830184,
+    "ast_hash": "54e56db0624fd9f2ed915c8b3c510335",
     "semantic_hash": ""
   },
   "apps/web/migrations/0013_enrollment_roll_history.sql": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786433405.5111132,
-    "ast_hash": "f63e5c1a916c395fd615318697cab44c",
+    "mtime": 1786434689.782807,
+    "ast_hash": "cbadb9d6c87141320cf7b82ce2a9c357",
     "semantic_hash": ""
   }
 }

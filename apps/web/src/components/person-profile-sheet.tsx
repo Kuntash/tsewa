@@ -13,13 +13,25 @@ import {
   Mail,
   MapPinned,
   MapPin,
+  Pencil,
   Phone,
+  Save,
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 
@@ -40,6 +52,8 @@ type Profile = {
   sourceTable: string;
   sourceId: string;
   importedAt: string | null;
+  canEdit: boolean;
+  editRestriction: "imported" | "permission" | null;
   reviewFlags: string[];
   placements: Array<{
     id: string;
@@ -121,33 +135,30 @@ type Profile = {
 
 export function PersonProfileSheet({
   onOpenChange,
+  onPersonUpdated,
   personId,
 }: {
   onOpenChange: (open: boolean) => void;
+  onPersonUpdated?: () => void;
   personId: string | null;
 }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!personId) {
       setProfile(null);
       setError("");
+      setEditing(false);
       return;
     }
 
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    void fetch(`/api/people/${personId}`, { signal: controller.signal })
-      .then(async (response) => {
-        const payload = (await response.json()) as { error?: string; person?: Profile };
-        if (!response.ok || !payload.person) {
-          throw new Error(payload.error ?? "This profile could not be loaded.");
-        }
-        return payload.person;
-      })
+    void readPersonProfile(personId, controller.signal)
       .then(setProfile)
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -180,15 +191,26 @@ export function PersonProfileSheet({
               <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             </div>
           </div>
+        ) : profile && editing ? (
+          <PersonCoreDetailsForm
+            onCancel={() => setEditing(false)}
+            onSaved={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              setEditing(false);
+              onPersonUpdated?.();
+            }}
+            profile={profile}
+          />
         ) : profile ? (
-          <ProfileContent profile={profile} />
+          <ProfileContent onEdit={() => setEditing(true)} profile={profile} />
         ) : null}
       </SheetContent>
     </Sheet>
   );
 }
 
-function ProfileContent({ profile }: { profile: Profile }) {
+function ProfileContent({ onEdit, profile }: { onEdit: () => void; profile: Profile }) {
   const reviewItems = useMemo(
     () => profile.reviewFlags.map((flag) => reviewLabel(flag, profile.kind)),
     [profile.kind, profile.reviewFlags],
@@ -201,7 +223,16 @@ function ProfileContent({ profile }: { profile: Profile }) {
   return (
     <>
       <div className="relative overflow-hidden border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_60%)] px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Profile</p>
+        <div className="flex items-center justify-between gap-3 pr-11">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Profile
+          </p>
+          {profile.canEdit ? (
+            <Button onClick={onEdit} variant="outline">
+              <Pencil /> Edit details
+            </Button>
+          ) : null}
+        </div>
         <div className="mt-8 flex items-start gap-4 sm:gap-5">
           {profilePhoto ? (
             <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-2xl border bg-muted shadow-sm sm:w-20">
@@ -505,10 +536,236 @@ function ProfileContent({ profile }: { profile: Profile }) {
       </div>
 
       <footer className="flex items-center gap-3 border-t bg-background/95 px-5 py-4 text-xs text-muted-foreground sm:px-8">
-        <LockKeyhole className="size-4 text-primary" />
-        View only · Editing is not available yet
+        {profile.canEdit ? (
+          <>
+            <Pencil className="size-4 text-primary" />
+            <span className="min-w-0 flex-1">You can edit this record.</span>
+            <Button className="ml-auto" onClick={onEdit}>
+              Edit details
+            </Button>
+          </>
+        ) : (
+          <>
+            <LockKeyhole className="size-4 text-primary" />
+            <span className="min-w-0 flex-1">
+              {profile.editRestriction === "permission"
+                ? "You do not have permission to edit this record."
+                : "Imported record · protected while editing is tested in the practice school."}
+            </span>
+          </>
+        )}
       </footer>
     </>
+  );
+}
+
+function PersonCoreDetailsForm({
+  onCancel,
+  onSaved,
+  profile,
+}: {
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+  profile: Profile;
+}) {
+  const [primaryIdentifier, setPrimaryIdentifier] = useState(profile.primaryIdentifier);
+  const [displayName, setDisplayName] = useState(profile.displayName);
+  const [gender, setGender] = useState(profile.gender ?? "unknown");
+  const [dateOfBirth, setDateOfBirth] = useState(toDateInput(profile.dateOfBirth));
+  const [admittedOrJoinedOn, setAdmittedOrJoinedOn] = useState(
+    toDateInput(profile.admittedOrJoinedOn),
+  );
+  const [campusOrLocation, setCampusOrLocation] = useState(profile.campusOrLocation ?? "");
+  const [nationality, setNationality] = useState(profile.nationality ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
+
+  async function saveDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/people/${profile.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          primaryIdentifier,
+          displayName,
+          gender,
+          dateOfBirth: dateOfBirth || null,
+          admittedOrJoinedOn: admittedOrJoinedOn || null,
+          campusOrLocation: campusOrLocation || null,
+          nationality: nationality || null,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "The details could not be saved.");
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The details could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveDetails}>
+      <div className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          Editable record
+        </p>
+        <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+          Edit personal details
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          Update the information used to identify this person. School placement and family details
+          are changed separately.
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+        <div className="space-y-8">
+          {error ? (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+
+          <fieldset className="space-y-5">
+            <legend className="mb-5 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <UserRound className="size-4 text-primary" /> Identity
+            </legend>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField
+                className="sm:col-span-2"
+                htmlFor="person-display-name"
+                label="Full name"
+                required
+              >
+                <Input
+                  autoComplete="name"
+                  id="person-display-name"
+                  maxLength={120}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  required
+                  value={displayName}
+                />
+              </FormField>
+              <FormField
+                htmlFor="person-identifier"
+                label={profile.identifierKind === "staff" ? "Staff number" : "Admission number"}
+                required
+              >
+                <Input
+                  className="font-mono"
+                  id="person-identifier"
+                  maxLength={50}
+                  onChange={(event) => setPrimaryIdentifier(event.target.value)}
+                  required
+                  value={primaryIdentifier}
+                />
+              </FormField>
+              <FormField htmlFor="person-gender" label="Gender">
+                <Select onValueChange={(value) => setGender(value as typeof gender)} value={gender}>
+                  <SelectTrigger className="w-full" id="person-gender">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="unknown">Not recorded</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
+          </fieldset>
+
+          <Separator />
+
+          <fieldset className="space-y-5">
+            <legend className="mb-5 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <CalendarDays className="size-4 text-primary" /> Dates and location
+            </legend>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField htmlFor="person-date-of-birth" label="Date of birth">
+                <Input
+                  id="person-date-of-birth"
+                  onChange={(event) => setDateOfBirth(event.target.value)}
+                  type="date"
+                  value={dateOfBirth}
+                />
+              </FormField>
+              <FormField htmlFor="person-event-date" label={eventLabel}>
+                <Input
+                  id="person-event-date"
+                  onChange={(event) => setAdmittedOrJoinedOn(event.target.value)}
+                  type="date"
+                  value={admittedOrJoinedOn}
+                />
+              </FormField>
+              <FormField htmlFor="person-campus" label="Campus or location">
+                <Input
+                  id="person-campus"
+                  maxLength={160}
+                  onChange={(event) => setCampusOrLocation(event.target.value)}
+                  value={campusOrLocation}
+                />
+              </FormField>
+              <FormField htmlFor="person-nationality" label="Nationality">
+                <Input
+                  id="person-nationality"
+                  maxLength={100}
+                  onChange={(event) => setNationality(event.target.value)}
+                  value={nationality}
+                />
+              </FormField>
+            </div>
+          </fieldset>
+
+          <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
+            Person type and active status are managed by admission, transfer, withdrawal, and
+            completion actions.
+          </p>
+        </div>
+      </div>
+
+      <footer className="flex flex-col-reverse gap-2 border-t bg-background/95 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+        <Button disabled={saving} onClick={onCancel} type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button disabled={saving} type="submit">
+          {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
+          {saving ? "Saving…" : "Save details"}
+        </Button>
+      </footer>
+    </form>
+  );
+}
+
+function FormField({
+  children,
+  className,
+  htmlFor,
+  label,
+  required = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  htmlFor: string;
+  label: string;
+  required?: boolean;
+}) {
+  return (
+    <div className={className}>
+      <Label className="mb-2" htmlFor={htmlFor}>
+        {label}
+        {required ? <span className="text-destructive">*</span> : null}
+      </Label>
+      {children}
+    </div>
   );
 }
 
@@ -904,6 +1161,19 @@ function formatDate(value: string): string {
     month: "long",
     year: "numeric",
   }).format(date);
+}
+
+function toDateInput(value: string | null): string {
+  return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+}
+
+async function readPersonProfile(personId: string, signal?: AbortSignal): Promise<Profile> {
+  const response = await fetch(`/api/people/${personId}`, { signal });
+  const payload = (await response.json()) as { error?: string; person?: Profile };
+  if (!response.ok || !payload.person) {
+    throw new Error(payload.error ?? "This profile could not be loaded.");
+  }
+  return payload.person;
 }
 
 function isFutureSourceDate(value: string): boolean {

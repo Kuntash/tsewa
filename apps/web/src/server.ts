@@ -120,6 +120,23 @@ const historicalResultsQuerySchema = z.object({
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
 
+const nullablePersonText = (maximum: number) =>
+  z.union([z.string().trim().max(maximum), z.null()]).transform((value) => (value ? value : null));
+
+const nullablePersonDate = z
+  .union([isoDateSchema, z.literal(""), z.null()])
+  .transform((value) => (value ? value : null));
+
+const personCoreDetailsSchema = z.object({
+  primaryIdentifier: z.string().trim().min(1).max(50),
+  displayName: z.string().trim().min(2).max(120),
+  gender: z.enum(["female", "male", "other", "unknown"]),
+  dateOfBirth: nullablePersonDate,
+  admittedOrJoinedOn: nullablePersonDate,
+  campusOrLocation: nullablePersonText(160),
+  nationality: nullablePersonText(100),
+});
+
 function classDisplayName(alias: "class" | "offering_class" | "from_class" | "to_class"): string {
   return `CASE
     WHEN lower(trim(coalesce(${alias}.section, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
@@ -207,7 +224,7 @@ export default createServerEntry({
 
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
     if (personMatch) {
-      return getPersonProfile(request, personMatch[1]);
+      return handlePersonProfile(request, personMatch[1]);
     }
 
     const fileMatch = url.pathname.match(/^\/api\/files\/([^/]+)$/);
@@ -1649,8 +1666,13 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
   });
 }
 
+async function handlePersonProfile(request: Request, personId: string): Promise<Response> {
+  if (request.method === "GET") return getPersonProfile(request, personId);
+  if (request.method === "PATCH") return updatePersonCoreDetails(request, personId);
+  return methodNotAllowed("GET, PATCH");
+}
+
 async function getPersonProfile(request: Request, personId: string): Promise<Response> {
-  if (request.method !== "GET") return methodNotAllowed("GET");
   const context = await getMembershipContext(request);
   if (!context) return unauthorized();
 
@@ -1877,6 +1899,9 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
 
   if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
 
+  const canEdit = canManageSchool(context.role) && isTsewaManagedSource(person.sourceSystem);
+  const editRestriction = canManageSchool(context.role) ? "imported" : "permission";
+
   const reviewFlags = [
     person.dateOfBirthMissing ? "date_of_birth_missing" : null,
     person.eventDateMissing ? "event_date_missing" : null,
@@ -1902,6 +1927,8 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       sourceTable: person.sourceTable,
       sourceId: person.sourceId,
       importedAt: person.importedAt,
+      canEdit,
+      editRestriction: canEdit ? null : editRestriction,
       reviewFlags,
       placements: placements.results.map((placement) => ({
         id: placement.id,
@@ -1940,6 +1967,128 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       })),
     },
   });
+}
+
+async function updatePersonCoreDetails(request: Request, personId: string): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+
+  const parsedId = personIdSchema.safeParse(personId);
+  if (!parsedId.success) {
+    return Response.json({ error: "Invalid person ID" }, { status: 400 });
+  }
+
+  const parsed = personCoreDetailsSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Check the person details and try again." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const runtime = getRuntimeEnv();
+  const current = await runtime.DB.prepare(
+    `SELECT id, identifier_kind AS identifierKind,
+            primary_identifier AS primaryIdentifier, display_name AS displayName,
+            gender, date_of_birth AS dateOfBirth,
+            admitted_or_joined_on AS admittedOrJoinedOn,
+            campus_or_location AS campusOrLocation, nationality, source_system AS sourceSystem
+     FROM person WHERE id = ? AND organization_id = ?`,
+  )
+    .bind(parsedId.data, context.organizationId)
+    .first<{
+      id: string;
+      identifierKind: "admission" | "staff";
+      primaryIdentifier: string;
+      displayName: string;
+      gender: "female" | "male" | "other" | "unknown" | null;
+      dateOfBirth: string | null;
+      admittedOrJoinedOn: string | null;
+      campusOrLocation: string | null;
+      nationality: string | null;
+      sourceSystem: string;
+    }>();
+
+  if (!current) return Response.json({ error: "Person not found" }, { status: 404 });
+  if (!isTsewaManagedSource(current.sourceSystem)) {
+    return Response.json(
+      { error: "Imported profiles stay read-only while editing is tested." },
+      { status: 409 },
+    );
+  }
+
+  const duplicate = await runtime.DB.prepare(
+    `SELECT id FROM person
+     WHERE organization_id = ? AND identifier_kind = ? AND id <> ?
+       AND lower(primary_identifier) = lower(?)`,
+  )
+    .bind(
+      context.organizationId,
+      current.identifierKind,
+      parsedId.data,
+      parsed.data.primaryIdentifier,
+    )
+    .first<{ id: string }>();
+  if (duplicate) {
+    const label = current.identifierKind === "staff" ? "staff number" : "admission number";
+    return Response.json({ error: `That ${label} is already in use.` }, { status: 409 });
+  }
+
+  const next = parsed.data;
+  const changedFields = (
+    [
+      ["primaryIdentifier", current.primaryIdentifier, next.primaryIdentifier],
+      ["displayName", current.displayName, next.displayName],
+      ["gender", current.gender ?? "unknown", next.gender],
+      ["dateOfBirth", current.dateOfBirth, next.dateOfBirth],
+      ["admittedOrJoinedOn", current.admittedOrJoinedOn, next.admittedOrJoinedOn],
+      ["campusOrLocation", current.campusOrLocation, next.campusOrLocation],
+      ["nationality", current.nationality, next.nationality],
+    ] as const
+  )
+    .filter(([, before, after]) => before !== after)
+    .map(([field]) => field);
+
+  if (!changedFields.length) {
+    return Response.json({ personId: parsedId.data, changedFields });
+  }
+
+  try {
+    await runtime.DB.batch([
+      runtime.DB.prepare(
+        `UPDATE person
+         SET primary_identifier = ?, display_name = ?, gender = ?, date_of_birth = ?,
+             admitted_or_joined_on = ?, campus_or_location = ?, nationality = ?,
+             updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND organization_id = ? AND source_system IN ('tsewa', 'tsewa_seed')`,
+      ).bind(
+        next.primaryIdentifier,
+        next.displayName,
+        next.gender,
+        next.dateOfBirth,
+        next.admittedOrJoinedOn,
+        next.campusOrLocation,
+        next.nationality,
+        context.userId,
+        parsedId.data,
+        context.organizationId,
+      ),
+      auditStatement(runtime.DB, context, "person.details_updated", "person", parsedId.data, {
+        changedFields: changedFields.join(","),
+      }),
+    ]);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+      return Response.json({ error: "That identifier is already in use." }, { status: 409 });
+    }
+    throw error;
+  }
+
+  return Response.json({ personId: parsedId.data, changedFields });
+}
+
+function isTsewaManagedSource(sourceSystem: string): boolean {
+  return sourceSystem === "tsewa" || sourceSystem === "tsewa_seed";
 }
 
 async function getPersonFile(request: Request, fileId: string): Promise<Response> {
