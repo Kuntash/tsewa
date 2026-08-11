@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1786431915.2982252,
-    "ast_hash": "2b0d538d1b522bb32a42428f635e2d6d",
+    "mtime": 1786433386.6639466,
+    "ast_hash": "9aef00253d4a79360c99502ebfb136f8",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -457,6 +457,11 @@
   "apps/web/src/components/enrollment-change-sheet.tsx": {
     "mtime": 1786432066.8363032,
     "ast_hash": "e7b94243169cac816f66b83937d07c8c",
+    "semantic_hash": ""
+  },
+  "docs/feature-parity.md": {
+    "mtime": 1786433405.5111132,
+    "ast_hash": "f63e5c1a916c395fd615318697cab44c",
     "semantic_hash": ""
   }
 }

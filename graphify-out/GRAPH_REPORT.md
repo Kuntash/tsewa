@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 111 files · ~183,413 words
+- 112 files · ~185,050 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4422 nodes · 5172 edges · 362 communities (72 shown, 290 thin omitted)
+- 4439 nodes · 5189 edges · 362 communities (72 shown, 290 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `85393f82`
+- Built from commit: `bd0aa974`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -154,7 +154,7 @@
 - WorkflowStep
 - WritableStreamDefaultController
 - Family and relationship migration
-- Tsewa TODO
+- After v0: real historical use, but not recent use
 - Vite+ workspace
 - web
 - import-person-files.mjs
@@ -537,9 +537,9 @@ Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryA
 Cohesion: 0.33
 Nodes (5): Deployment record, Family and relationship migration, Local workflow, Remote gate, Source tables
 
-### Community 139 - "Tsewa TODO"
-Cohesion: 0.25
-Nodes (7): Account and email follow-ups, Documents and media migration, Invitation UX follow-ups, People Registry migration, Product foundations, School Operations, Tsewa TODO
+### Community 139 - "After v0: real historical use, but not recent use"
+Cohesion: 0.08
+Nodes (23): Academic marks and results, After v0: real historical use, but not recent use, Data completion before v0 sign-off, Do not build without confirmation, Evidence snapshot, Health and dispensary, How to read this checklist, Legacy feature parity (+15 more)
 
 ### Community 142 - "import-person-files.mjs"
 Cohesion: 0.09
@@ -686,7 +686,7 @@ Cohesion: 0.67
 Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryAcceptLanguageHeader, RequestInitCfPropertiesVaryHeader
 
 ## Knowledge Gaps
-- **2103 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2098 more)
+- **2116 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2111 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **290 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -710,7 +710,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `ReadableStreamBYOBReader` connect `ReadableStreamBYOBReader` to `r2-relay/worker-configuration.d.ts`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2103 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2116 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**

@@ -1,5 +1,9 @@
 # Tsewa TODO
 
+The v0 scope and legacy database usage evidence are tracked in
+[`docs/feature-parity.md`](docs/feature-parity.md). Update that checklist when a
+feature ships or THF confirms that a historical workflow is still needed.
+
 ## Invitation UX follow-ups
 
 - [ ] Show a dedicated invalid, expired, revoked, or already-used invitation
@@ -38,7 +42,8 @@
 - [x] Add authenticated, streamed document and photo delivery.
 - [x] Run a one-person D1/R2 pilot before bulk migration.
 - [x] Review the pilot in production before migrating the remaining files.
-- [ ] Complete and reconcile the resumable bulk file migration.
+- [x] Complete the resumable bulk file migration (46,938 files, zero reported
+      failures).
 - [ ] Run a full target byte-size and SHA-256 reconciliation after the accelerated
       bulk upload finishes.
 
@@ -59,6 +64,9 @@
       withdrawal, completion, or promotion workflows on THS records.
 - [x] Add simple actions for changing placement, transferring, withdrawing, and
       completing a student, backed by the enrollment change history.
-- [ ] Add year-end promotion with a preview, exceptions, and one-step rollback.
-- [ ] Add attendance after the enrollment lifecycle has been confirmed.
+- [ ] Confirm bulk promotion with THF before implementation; the legacy database
+      contains only two populated promotion rows, both from 2011.
+- [ ] If confirmed, add promotion with a preview, exceptions, and one-step rollback.
+- [ ] Treat standalone attendance as a new feature, not a parity requirement; no
+      legacy attendance-entry workflow or table was found.
 - [ ] Add assessments, marks, results, and promotion.
