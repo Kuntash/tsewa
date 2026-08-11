@@ -74,32 +74,33 @@
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.17 0.026 255);
-  --foreground: oklch(0.94 0.012 225);
-  --card: oklch(0.205 0.031 255);
-  --card-foreground: oklch(0.94 0.012 225);
-  --popover: oklch(0.205 0.031 255);
-  --popover-foreground: oklch(0.94 0.012 225);
-  --primary: oklch(0.62 0.12 170);
-  --primary-foreground: oklch(0.12 0.025 172);
-  --secondary: oklch(0.27 0.035 255);
-  --secondary-foreground: oklch(0.93 0.012 225);
-  --muted: oklch(0.25 0.03 255);
-  --muted-foreground: oklch(0.68 0.025 240);
-  --accent: oklch(0.3 0.055 177);
-  --accent-foreground: oklch(0.9 0.04 170);
-  --destructive: oklch(0.68 0.19 20);
-  --border: oklch(0.31 0.035 255);
-  --input: oklch(0.31 0.035 255);
-  --ring: oklch(0.62 0.12 170);
-  --sidebar: oklch(0.19 0.03 255);
-  --sidebar-foreground: oklch(0.94 0.012 225);
-  --sidebar-primary: oklch(0.62 0.12 170);
-  --sidebar-primary-foreground: oklch(0.12 0.025 172);
-  --sidebar-accent: oklch(0.3 0.055 177);
-  --sidebar-accent-foreground: oklch(0.9 0.04 170);
-  --sidebar-border: oklch(0.31 0.035 255);
-  --sidebar-ring: oklch(0.62 0.12 170);
+  /* T3 Code's Grove dark palette, mapped to shadcn's semantic tokens. */
+  --background: #1b2821;
+  --foreground: #fffaff;
+  --card: #28352e;
+  --card-foreground: #fffaff;
+  --popover: #344139;
+  --popover-foreground: #fffaff;
+  --primary: #69d69a;
+  --primary-foreground: #000000;
+  --secondary: #2b4b39;
+  --secondary-foreground: #fffaff;
+  --muted: #254333;
+  --muted-foreground: #a8b0aa;
+  --accent: #325c44;
+  --accent-foreground: #fffaff;
+  --destructive: #fb414a;
+  --border: #52645a;
+  --input: #5c7064;
+  --ring: #69d69a;
+  --sidebar: #214632;
+  --sidebar-foreground: #fffaff;
+  --sidebar-primary: #69d69a;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #325c44;
+  --sidebar-accent-foreground: #fffaff;
+  --sidebar-border: #6f887a;
+  --sidebar-ring: #69d69a;
 }
 
 @layer base {

@@ -160,6 +160,15 @@ const personFamilyDetailsSchema = z.object({
   numberOfChildren: nullablePersonText(50),
 });
 
+const homePlacementSchema = z.object({
+  homeName: z.string().trim().min(1).max(160),
+  locationName: nullablePersonText(160),
+  placementType: nullablePersonText(100),
+  startedOn: isoDateSchema,
+  reason: nullablePersonText(500),
+  remarks: nullablePersonText(1_000),
+});
+
 const siblingOptionsQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
 });
@@ -277,6 +286,11 @@ export default createServerEntry({
     const familyMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/family$/);
     if (familyMatch) {
       return updatePersonFamily(request, familyMatch[1]);
+    }
+
+    const placementMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/placements$/);
+    if (placementMatch) {
+      return addHomePlacement(request, placementMatch[1]);
     }
 
     const personMatch = url.pathname.match(/^\/api\/people\/([^/]+)$/);
@@ -1773,7 +1787,8 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       runtime.DB.prepare(
         `SELECT id, home_name AS homeName, location_name AS locationName,
               placement_type AS placementType, started_on AS startedOn,
-              reason, remarks, is_current AS isCurrent, source_id AS sourceId
+              ended_on AS endedOn, reason, remarks, is_current AS isCurrent,
+              source_id AS sourceId
        FROM person_placement
        WHERE person_id = ? AND organization_id = ?
        ORDER BY is_current DESC, date(started_on) DESC, CAST(source_id AS INTEGER) DESC`,
@@ -1785,6 +1800,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
           locationName: string | null;
           placementType: string | null;
           startedOn: string;
+          endedOn: string | null;
           reason: string | null;
           remarks: string | null;
           isCurrent: number;
@@ -1983,6 +1999,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         locationName: placement.locationName,
         placementType: placement.placementType,
         startedOn: placement.startedOn,
+        endedOn: placement.endedOn,
         reason: placement.reason,
         remarks: placement.remarks,
         isCurrent: Boolean(placement.isCurrent),
@@ -2126,6 +2143,123 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   }
 
   return Response.json({ personId: parsedId.data, changedFields });
+}
+
+async function addHomePlacement(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+
+  const parsedId = personIdSchema.safeParse(personId);
+  const parsed = homePlacementSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success) {
+    return Response.json({ error: "Check the placement details and try again." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!canManageSchool(context.role)) return forbidden();
+
+  const runtime = getRuntimeEnv();
+  const [person, current] = await Promise.all([
+    runtime.DB.prepare(`SELECT id, kind FROM person WHERE id = ? AND organization_id = ?`)
+      .bind(parsedId.data, context.organizationId)
+      .first<{ id: string; kind: "child" | "elderly" | "staff" }>(),
+    runtime.DB.prepare(
+      `SELECT id, home_name AS homeName, location_name AS locationName,
+              placement_type AS placementType, started_on AS startedOn
+       FROM person_placement
+       WHERE person_id = ? AND organization_id = ? AND is_current = 1`,
+    )
+      .bind(parsedId.data, context.organizationId)
+      .first<{
+        id: string;
+        homeName: string;
+        locationName: string | null;
+        placementType: string | null;
+        startedOn: string;
+      }>(),
+  ]);
+
+  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+  if (person.kind === "staff") {
+    return Response.json({ error: "Home placement is not used for staff." }, { status: 400 });
+  }
+
+  const placement = parsed.data;
+  if (
+    current &&
+    current.homeName === placement.homeName &&
+    current.locationName === placement.locationName &&
+    current.placementType === placement.placementType &&
+    current.startedOn === placement.startedOn
+  ) {
+    return Response.json({ error: "This is already the current placement." }, { status: 409 });
+  }
+
+  const placementId = crypto.randomUUID();
+  const statements: D1PreparedStatement[] = [];
+  if (current) {
+    statements.push(
+      runtime.DB.prepare(
+        `UPDATE person_placement
+         SET is_current = 0, ended_on = ?, updated_by_user_id = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND organization_id = ? AND is_current = 1`,
+      ).bind(placement.startedOn, context.userId, current.id, context.organizationId),
+    );
+  }
+  statements.push(
+    runtime.DB.prepare(
+      `INSERT INTO person_placement (
+         id, organization_id, person_id, home_name, location_name, placement_type,
+         started_on, reason, remarks, is_current, source_system, source_table,
+         source_id, created_by_user_id, updated_by_user_id
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'tsewa', 'person_placement', ?, ?, ?)`,
+    ).bind(
+      placementId,
+      context.organizationId,
+      parsedId.data,
+      placement.homeName,
+      placement.locationName,
+      placement.placementType,
+      placement.startedOn,
+      placement.reason,
+      placement.remarks,
+      placementId,
+      context.userId,
+      context.userId,
+    ),
+    runtime.DB.prepare(
+      `UPDATE person
+       SET campus_or_location = ?, updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND organization_id = ?`,
+    ).bind(
+      placement.locationName ?? placement.homeName,
+      context.userId,
+      parsedId.data,
+      context.organizationId,
+    ),
+    auditStatement(runtime.DB, context, "person.home_placement_changed", "person", parsedId.data, {
+      placementId,
+      previousPlacementId: current?.id ?? "none",
+      homeName: placement.homeName,
+      startedOn: placement.startedOn,
+    }),
+  );
+
+  try {
+    await runtime.DB.batch(statements);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+      return Response.json(
+        { error: "The placement changed while this form was open. Please try again." },
+        { status: 409 },
+      );
+    }
+    throw error;
+  }
+
+  return Response.json({ personId: parsedId.data, placementId }, { status: 201 });
 }
 
 async function updatePersonFamily(request: Request, personId: string): Promise<Response> {

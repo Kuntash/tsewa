@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1786447200.9836261,
-    "ast_hash": "ed828d3cc5d4080a406bde45eacda14a",
+    "mtime": 1786448174.8008394,
+    "ast_hash": "30a6e31fbb7a8361f3912bb1c27f4662",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
-    "mtime": 1786446727.1613896,
-    "ast_hash": "d13e0d83b7b9660c58da73a24ab043bb",
+    "mtime": 1786448190.995357,
+    "ast_hash": "66cf3801ff71b40ab6848cfa1fc03398",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1786447200.984043,
-    "ast_hash": "ff3c7d38985a5993bb49c80a189806a8",
+    "mtime": 1786448116.8173313,
+    "ast_hash": "cf126a0e54f65a85b368cf31e8619e10",
     "semantic_hash": ""
   },
   "apps/web/migrations/0014_family_relationship_editing.sql": {
@@ -472,6 +472,11 @@
   "apps/web/src/components/person-family-editor.tsx": {
     "mtime": 1786447200.9829903,
     "ast_hash": "67ca29e704c42e46a6c4e39ee10945b6",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0015_home_placement_editing.sql": {
+    "mtime": 1786448116.8163683,
+    "ast_hash": "7e8f856848702c07f82dae26515cfaa9",
     "semantic_hash": ""
   }
 }

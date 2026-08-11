@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-11)
 
 ## Corpus Check
-- 114 files · ~189,798 words
+- 115 files · ~190,831 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4473 nodes · 5307 edges · 364 communities (75 shown, 289 thin omitted)
+- 4478 nodes · 5322 edges · 364 communities (75 shown, 289 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `512c5395`
+- Built from commit: `6edb4f0a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -220,7 +220,7 @@
 - Product language
 - class-master-reconciliation.md
 - Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely.
-- historical-results.tsx
+- better-auth
 - import-historical-results.mjs
 - Q: whats next slice? while the migration is ongoing?
 - Q: okay, why only 2011 and 2012 data? anyways, lets continue and do that.
@@ -329,10 +329,9 @@
 - ImagesBinding
 - MediaTransformer
 - Memory
-- @fontsource-variable/dm-sans
 - MessageBatch
 - NodeStyleServer
-- person-family-editor.tsx
+- historical-results.tsx
 - RequestInitCfPropertiesVaryHeader
 - SqlStorage
 - ToMarkdownService
@@ -379,27 +378,27 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 50 edges
-2. `getRuntimeEnv()` - 34 edges
+2. `getRuntimeEnv()` - 35 edges
 3. `organization` - 32 edges
 4. `scripts` - 32 edges
-5. `fetch()` - 26 edges
-6. `methodNotAllowed()` - 25 edges
+5. `fetch()` - 27 edges
+6. `methodNotAllowed()` - 26 edges
 7. `Event` - 25 edges
 8. `Event` - 25 edges
-9. `getMembershipContext()` - 23 edges
-10. `unauthorized()` - 21 edges
+9. `getMembershipContext()` - 24 edges
+10. `unauthorized()` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `CardAction()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
 - `CardFooter()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
-- `SheetOverlay()` --calls--> `cn()`  [EXTRACTED]
-  apps/web/src/components/ui/sheet.tsx → apps/web/src/lib/utils.ts
-- `person_import_issue_summary` --references--> `person_import_batch`  [EXTRACTED]
-  apps/web/migrations/0004_people_registry_dry_run.sql → apps/web/migrations/0003_people_registry.sql
-- `HistoricalResults()` --calls--> `useDebouncedValue()`  [EXTRACTED]
-  apps/web/src/components/historical-results.tsx → apps/web/src/lib/use-debounced-value.ts
+- `SelectGroup()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SelectLabel()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
+- `SelectSeparator()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/select.tsx → apps/web/src/lib/utils.ts
 
 ## Import Cycles
 - None detected.
@@ -412,7 +411,7 @@ Nodes (847): AgentMemoryGetSummaryOptions, AgentMemoryGetSummaryResponse, AgentM
 
 ### Community 1 - "server.ts"
 Cohesion: 0.07
-Nodes (94): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), addSiblingRelationship(), admissionSchema (+86 more)
+Nodes (96): AuthOptions, createAuth(), getRuntimeEnv(), SecretBindings, acceptInvitation(), acceptInvitationForCurrentUser(), addHomePlacement(), addSiblingRelationship() (+88 more)
 
 ### Community 2 - "ServiceWorkerGlobalScope"
 Cohesion: 0.04
@@ -423,16 +422,16 @@ Cohesion: 0.04
 Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEvent, FetchEvent, MessageEvent (+4 more)
 
 ### Community 4 - "index.tsx"
-Cohesion: 0.13
-Nodes (19): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+11 more)
+Cohesion: 0.14
+Nodes (18): AccountSettings(), AccountSettingsProps, Card(), CardAction(), CardContent(), CardDescription(), CardFooter(), CardHeader() (+10 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.05
 Nodes (43): devDependencies, vite-plus, engines, node, license, name, packageManager, private (+35 more)
 
 ### Community 6 - "cn"
-Cohesion: 0.11
-Nodes (23): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+15 more)
+Cohesion: 0.12
+Nodes (18): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), DropdownMenuCheckboxItem(), DropdownMenuContent() (+10 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -460,15 +459,15 @@ Nodes (18): buildImportSql(), confirmedDatabaseId, database, optionalText(), opt
 
 ### Community 13 - "people-registry.tsx"
 Cohesion: 0.14
-Nodes (14): emptyRegistry, formatDate(), PeopleRegistry(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse (+6 more)
+Nodes (14): emptyRegistry, formatDate(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse, readTheme() (+6 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, better-auth, class-variance-authority, clsx, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
+Nodes (23): dependencies, class-variance-authority, clsx, @fontsource-variable/dm-sans, @fontsource-variable/inter, lucide-react, radix-ui, react (+15 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.14
-Nodes (15): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), PersonCoreDetailsForm(), PersonFilesSection() (+7 more)
+Cohesion: 0.13
+Nodes (17): capitalize(), FamilyProfileSection(), formatBytes(), formatDate(), initials(), isFutureSourceDate(), localDateInput(), PersonCoreDetailsForm() (+9 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -600,7 +599,7 @@ Nodes (8): sha256File(), assertAggregateOnly(), database, options, outputPath, r
 
 ### Community 197 - "enrollment-change-sheet.tsx"
 Cohesion: 0.10
-Nodes (23): AdmissionSheet(), Option, Setup, Action, actions, Change, changeDescription(), changeLabel() (+15 more)
+Nodes (22): AdmissionSheet(), Option, Setup, Action, actions, Change, changeDescription(), changeLabel() (+14 more)
 
 ### Community 198 - "Q: So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
 Cohesion: 0.40
@@ -629,10 +628,6 @@ Nodes (3): Preferred words, Product language, Rules
 ### Community 205 - "Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely., Source Nodes
-
-### Community 206 - "historical-results.tsx"
-Cohesion: 0.17
-Nodes (11): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+3 more)
 
 ### Community 207 - "import-historical-results.mjs"
 Cohesion: 0.12
@@ -682,9 +677,9 @@ Nodes (5): CopyInstruction, fetch(), hasValidToken(), hexToBytes(), parseInstruc
 Cohesion: 0.67
 Nodes (3): BasicImageTransformations, RequestInitCfPropertiesImage, RequestInitCfPropertiesImageDraw
 
-### Community 318 - "person-family-editor.tsx"
-Cohesion: 0.18
-Nodes (9): emptyFamily, FamilyForm, familyToForm(), PersonFamilyEditor(), PersonOption, writeSibling(), PersonFamilyDetails, SiblingRelationship (+1 more)
+### Community 318 - "historical-results.tsx"
+Cohesion: 0.08
+Nodes (27): formatMark(), HistoricalResults(), message(), Option, Overview, parse(), ResultRow, Results (+19 more)
 
 ### Community 319 - "RequestInitCfPropertiesVaryHeader"
 Cohesion: 0.67
@@ -695,7 +690,7 @@ Cohesion: 0.50
 Nodes (3): Editing a person, Editing family and siblings, Practice school
 
 ## Knowledge Gaps
-- **2127 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2122 more)
+- **2128 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+2123 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **289 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -714,15 +709,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `DurableObjectStorage` connect `DurableObjectStorage` to `web/worker-configuration.d.ts`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `VectorizeIndex` connect `VectorizeIndex` to `web/worker-configuration.d.ts`?**
+- **Why does `SubtleCrypto` connect `SubtleCrypto` to `web/worker-configuration.d.ts`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `Flagship` connect `Flagship` to `web/worker-configuration.d.ts`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `URL` connect `URL` to `web/worker-configuration.d.ts`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _2127 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2128 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023501762632197414 - nodes in this community are weakly interconnected._
 - **Should `server.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07174416158215864 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07131313131313131 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

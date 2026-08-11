@@ -97,6 +97,7 @@ type Profile = {
     locationName: string | null;
     placementType: string | null;
     startedOn: string;
+    endedOn: string | null;
     reason: string | null;
     remarks: string | null;
     isCurrent: boolean;
@@ -150,7 +151,7 @@ export function PersonProfileSheet({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<"core" | "family" | null>(null);
+  const [editing, setEditing] = useState<"core" | "family" | "placement" | null>(null);
 
   useEffect(() => {
     if (!personId) {
@@ -220,10 +221,22 @@ export function PersonProfileSheet({
             personName={profile.displayName}
             relationships={profile.relationships}
           />
+        ) : profile && editing === "placement" ? (
+          <PersonPlacementEditor
+            onCancel={() => setEditing(null)}
+            onSaved={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              setEditing(null);
+              onPersonUpdated?.();
+            }}
+            profile={profile}
+          />
         ) : profile ? (
           <ProfileContent
             onEdit={() => setEditing("core")}
             onEditFamily={() => setEditing("family")}
+            onEditPlacement={() => setEditing("placement")}
             profile={profile}
           />
         ) : null}
@@ -235,10 +248,12 @@ export function PersonProfileSheet({
 function ProfileContent({
   onEdit,
   onEditFamily,
+  onEditPlacement,
   profile,
 }: {
   onEdit: () => void;
   onEditFamily: () => void;
+  onEditPlacement: () => void;
   profile: Profile;
 }) {
   const reviewItems = useMemo(
@@ -362,6 +377,13 @@ function ProfileContent({
           <Separator />
 
           <ProfileSection icon={MapPin} label="Placement">
+            {profile.canEdit && profile.kind !== "staff" ? (
+              <div className="mb-4 flex justify-end">
+                <Button onClick={onEditPlacement} size="sm" variant="outline">
+                  <Pencil /> {currentPlacement ? "Change placement" : "Add placement"}
+                </Button>
+              </div>
+            ) : null}
             {currentPlacement ? (
               <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
                 <div className="flex items-start gap-3.5">
@@ -444,6 +466,11 @@ function ProfileContent({
                           .filter(Boolean)
                           .join(" · ") || "Location not recorded"}
                       </p>
+                      {placement.endedOn ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Until {formatDate(placement.endedOn)}
+                        </p>
+                      ) : null}
                       {placement.reason || placement.remarks ? (
                         <div className="mt-2.5 rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-foreground/80">
                           {placement.reason ? <p>{placement.reason}</p> : null}
@@ -582,6 +609,147 @@ function ProfileContent({
         )}
       </footer>
     </>
+  );
+}
+
+function PersonPlacementEditor({
+  onCancel,
+  onSaved,
+  profile,
+}: {
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+  profile: Profile;
+}) {
+  const current = profile.placements.find((placement) => placement.isCurrent);
+  const [homeName, setHomeName] = useState(current?.homeName ?? "");
+  const [locationName, setLocationName] = useState(current?.locationName ?? "");
+  const [placementType, setPlacementType] = useState(current?.placementType ?? "");
+  const [startedOn, setStartedOn] = useState(localDateInput());
+  const [reason, setReason] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function savePlacement(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/people/${profile.id}/placements`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          homeName,
+          locationName: locationName.trim() || null,
+          placementType: placementType.trim() || null,
+          startedOn,
+          reason: reason.trim() || null,
+          remarks: remarks.trim() || null,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "The placement could not be saved.");
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The placement could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={savePlacement}>
+      <header className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          Home placement
+        </p>
+        <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+          {current ? "Change home placement" : "Add home placement"}
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          {current
+            ? `The current ${current.homeName} record will stay in the placement history.`
+            : `Record where ${profile.displayName} currently lives.`}
+        </p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+        <div className="space-y-6">
+          {error ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField className="sm:col-span-2" htmlFor="placement-home" label="Home" required>
+              <Input
+                autoFocus
+                id="placement-home"
+                maxLength={160}
+                onChange={(event) => setHomeName(event.target.value)}
+                required
+                value={homeName}
+              />
+            </FormField>
+            <FormField htmlFor="placement-location" label="Location">
+              <Input
+                id="placement-location"
+                maxLength={160}
+                onChange={(event) => setLocationName(event.target.value)}
+                value={locationName}
+              />
+            </FormField>
+            <FormField htmlFor="placement-type" label="Placement type">
+              <Input
+                id="placement-type"
+                maxLength={100}
+                onChange={(event) => setPlacementType(event.target.value)}
+                value={placementType}
+              />
+            </FormField>
+            <FormField htmlFor="placement-date" label="Change date" required>
+              <Input
+                id="placement-date"
+                onChange={(event) => setStartedOn(event.target.value)}
+                required
+                type="date"
+                value={startedOn}
+              />
+            </FormField>
+            <FormField htmlFor="placement-reason" label="Reason">
+              <Input
+                id="placement-reason"
+                maxLength={500}
+                onChange={(event) => setReason(event.target.value)}
+                value={reason}
+              />
+            </FormField>
+            <FormField className="sm:col-span-2" htmlFor="placement-notes" label="Notes">
+              <Input
+                id="placement-notes"
+                maxLength={1_000}
+                onChange={(event) => setRemarks(event.target.value)}
+                value={remarks}
+              />
+            </FormField>
+          </div>
+          <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
+            Saving creates a new current placement. It does not delete or replace earlier records.
+          </p>
+        </div>
+      </div>
+
+      <footer className="flex flex-col-reverse gap-2 border-t bg-background/95 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+        <Button disabled={saving} onClick={onCancel} type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button disabled={saving} type="submit">
+          {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
+          {saving ? "Saving…" : "Save placement"}
+        </Button>
+      </footer>
+    </form>
   );
 }
 
@@ -1206,6 +1374,12 @@ function formatDate(value: string): string {
 
 function toDateInput(value: string | null): string {
   return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+}
+
+function localDateInput(): string {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }
 
 async function readPersonProfile(personId: string, signal?: AbortSignal): Promise<Profile> {

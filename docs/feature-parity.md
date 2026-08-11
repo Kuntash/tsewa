@@ -67,7 +67,7 @@ evidence of a regularly used year-end workflow.
       changes in the practice school rather than on migrated THS records.
 - [x] Add and edit parents and guardians; link, create, and remove sibling
       relationships with reciprocal profile visibility.
-- [ ] Add and change a person's home placement while preserving history.
+- [x] Add and change a person's home placement while preserving history.
 - [ ] Upload, name, replace, and remove documents and photos.
 - [ ] Record and correct withdrawal information and reasons on the person profile.
 
@@ -196,12 +196,11 @@ exist. Only one holiday row, one leave row, and seven staff records are tied to
 
 1. Editable core person details.
 2. Editable family relationships.
-3. Editable home placement.
-4. Document and photo upload/editing.
-5. School, class/section, house, and assignment editing.
-6. Printable/exportable rosters and person records confirmed by THF.
-7. Practice-school end-to-end testing, followed by controlled enablement for THF.
-8. Reassess the historical modules with staff before planning v1.
+3. Document and photo upload/editing.
+4. School, class/section, house, and assignment editing.
+5. Printable/exportable rosters and person records confirmed by THF.
+6. Practice-school end-to-end testing, followed by controlled enablement for THF.
+7. Reassess the historical modules with staff before planning v1.
 
 Update this document whenever a feature is shipped, new legacy usage evidence is
 found, or THF confirms that a historically used workflow is still required.
