@@ -712,7 +712,7 @@ function SchoolsDirectory({
                 {canEdit ? (
                   <>
                     <Button onClick={() => onAssign(school)} size="sm" variant="outline">
-                      <Settings2 /> Classes & houses
+                      <Settings2 /> Classes and houses
                     </Button>
                     <Button onClick={() => onEdit(school)} size="sm" variant="outline">
                       <Pencil /> Edit
