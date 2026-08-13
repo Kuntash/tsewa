@@ -1284,6 +1284,328 @@ export const studentEnrollmentChange = sqliteTable(
   ],
 );
 
+export const healthHistoryImportBatch = sqliteTable("health_history_import_batch", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sourceSystem: text("source_system").notNull(),
+  sourceDatabase: text("source_database").notNull(),
+  sourceFingerprint: text("source_fingerprint").notNull(),
+  status: text().notNull(),
+  visitCount: integer("visit_count").default(0).notNull(),
+  diagnosisCount: integer("diagnosis_count").default(0).notNull(),
+  tbCaseCount: integer("tb_case_count").default(0).notNull(),
+  tbDetailCount: integer("tb_detail_count").default(0).notNull(),
+  medicalAdvanceCount: integer("medical_advance_count").default(0).notNull(),
+  medicalAdvanceDetailCount: integer("medical_advance_detail_count").default(0).notNull(),
+  medicalSettlementCount: integer("medical_settlement_count").default(0).notNull(),
+  linkedPersonCount: integer("linked_person_count").default(0).notNull(),
+  unlinkedPersonCount: integer("unlinked_person_count").default(0).notNull(),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const healthVisit = sqliteTable(
+  "health_visit",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+    patientName: text("patient_name").notNull(),
+    patientKind: text("patient_kind").notNull(),
+    admissionNumber: text("admission_number"),
+    gender: text(),
+    homeName: text("home_name"),
+    ageAtVisit: integer("age_at_visit"),
+    checkupDate: text("checkup_date").notNull(),
+    admittedOn: text("admitted_on"),
+    dischargedOn: text("discharged_on"),
+    doctorName: text("doctor_name"),
+    referredTo: text("referred_to"),
+    referralLocation: text("referral_location"),
+    remarks: text(),
+    hepatitisBStatus: text("hepatitis_b_status"),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_visit_date_idx").on(table.organizationId, table.checkupDate, table.patientName),
+    index("health_visit_person_idx").on(table.organizationId, table.personId, table.checkupDate),
+  ],
+);
+
+export const healthDiagnosis = sqliteTable(
+  "health_diagnosis",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    healthVisitId: text("health_visit_id")
+      .notNull()
+      .references(() => healthVisit.id, { onDelete: "cascade" }),
+    diagnosisName: text("diagnosis_name").notNull(),
+    recordedOn: text("recorded_on"),
+    remarks: text(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_diagnosis_visit_idx").on(
+      table.organizationId,
+      table.healthVisitId,
+      table.recordedOn,
+    ),
+  ],
+);
+
+export const healthTbCase = sqliteTable(
+  "health_tb_case",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+    patientName: text("patient_name").notNull(),
+    patientKind: text("patient_kind").notNull(),
+    tbCardNumber: text("tb_card_number"),
+    admissionNumber: text("admission_number"),
+    fatherName: text("father_name"),
+    gender: text(),
+    ageAtRegistration: integer("age_at_registration"),
+    homeName: text("home_name"),
+    treatmentRegimen: text("treatment_regimen"),
+    registrationDate: text("registration_date").notNull(),
+    treatmentStartDate: text("treatment_start_date"),
+    treatmentEndDate: text("treatment_end_date"),
+    outcome: text(),
+    tbType: text("tb_type"),
+    caseType: text("case_type"),
+    remarks: text(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_tb_case_date_idx").on(
+      table.organizationId,
+      table.registrationDate,
+      table.patientName,
+    ),
+    index("health_tb_case_person_idx").on(
+      table.organizationId,
+      table.personId,
+      table.registrationDate,
+    ),
+  ],
+);
+
+export const healthTbDetail = sqliteTable(
+  "health_tb_detail",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    tbCaseId: text("tb_case_id")
+      .notNull()
+      .references(() => healthTbCase.id, { onDelete: "cascade" }),
+    recordedOn: text("recorded_on").notNull(),
+    testName: text("test_name").notNull(),
+    result: text(),
+    remarks: text(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_tb_detail_case_idx").on(table.organizationId, table.tbCaseId, table.recordedOn),
+  ],
+);
+
+export const healthMedicalAdvance = sqliteTable(
+  "health_medical_advance",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sanctionedOn: text("sanctioned_on").notNull(),
+    nurseName: text("nurse_name"),
+    sanctionNumber: text("sanction_number"),
+    advanceAmount: real("advance_amount").notNull(),
+    referringDoctorName: text("referring_doctor_name"),
+    referralLocation: text("referral_location"),
+    remarks: text(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_medical_advance_date_idx").on(
+      table.organizationId,
+      table.sanctionedOn,
+      table.sanctionNumber,
+    ),
+  ],
+);
+
+export const healthMedicalAdvanceDetail = sqliteTable(
+  "health_medical_advance_detail",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    medicalAdvanceId: text("medical_advance_id")
+      .notNull()
+      .references(() => healthMedicalAdvance.id, { onDelete: "cascade" }),
+    personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+    patientName: text("patient_name").notNull(),
+    patientKind: text("patient_kind").notNull(),
+    sanctionType: text("sanction_type").notNull(),
+    homeName: text("home_name"),
+    gender: text(),
+    ageAtSanction: integer("age_at_sanction"),
+    medication: text(),
+    referredToDoctorName: text("referred_to_doctor_name"),
+    hospitalRegistrationNumber: text("hospital_registration_number"),
+    hospitalReferredTo: text("hospital_referred_to"),
+    hospitalAdmitted: text("hospital_admitted"),
+    diagnosis: text(),
+    admittedOn: text("admitted_on"),
+    dischargedOn: text("discharged_on"),
+    surgeryType: text("surgery_type"),
+    amount: real(),
+    remarks: text(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_medical_advance_detail_advance_idx").on(
+      table.organizationId,
+      table.medicalAdvanceId,
+      table.patientName,
+    ),
+    index("health_medical_advance_detail_person_idx").on(
+      table.organizationId,
+      table.personId,
+      table.medicalAdvanceId,
+    ),
+  ],
+);
+
+export const healthMedicalSettlement = sqliteTable(
+  "health_medical_settlement",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    medicalAdvanceId: text("medical_advance_id")
+      .notNull()
+      .references(() => healthMedicalAdvance.id, { onDelete: "cascade" }),
+    settledOn: text("settled_on").notNull(),
+    billNumber: text("bill_number"),
+    nurseTada: real("nurse_tada"),
+    totalExpenses: real("total_expenses"),
+    extraExpenses: real("extra_expenses"),
+    balance: real(),
+    remarks: text(),
+    legacySettlementId: text("legacy_settlement_id").notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => healthHistoryImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("health_medical_settlement_advance_idx").on(
+      table.organizationId,
+      table.medicalAdvanceId,
+      table.settledOn,
+    ),
+  ],
+);
+
 export const accessPermission = sqliteTable("access_permission", {
   key: text().primaryKey().notNull(),
   name: text().notNull(),

@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 import { AccountSettings } from "@/components/account-settings";
+import { HealthOperations } from "@/components/health-operations";
 import { PeopleRegistry } from "@/components/people-registry";
 import { SchoolOperations } from "@/components/school-operations";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -434,7 +435,7 @@ function Launchpad({
   platform: PlatformState;
   user: { name: string; email: string; emailVerified: boolean };
 }) {
-  const [view, setView] = useState<"home" | "people" | "school">("home");
+  const [view, setView] = useState<"home" | "people" | "school" | "health">("home");
   const [activeSessionId, setActiveSessionId] = useState(
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
   );
@@ -450,6 +451,10 @@ function Launchpad({
 
   if (view === "people") {
     return <PeopleRegistry onBack={() => setView("home")} />;
+  }
+
+  if (view === "health") {
+    return <HealthOperations onBack={() => setView("home")} />;
   }
 
   async function changeSession(sessionId: string) {
@@ -556,7 +561,7 @@ function Launchpad({
             const card = (
               <Card
                 className={
-                  index < 2
+                  index < 3
                     ? "h-full border-primary/25 transition-colors group-hover:border-primary/50"
                     : "opacity-70"
                 }
@@ -571,19 +576,19 @@ function Launchpad({
                   </div>
                   <Badge
                     className="ml-auto rounded-full"
-                    variant={index < 2 ? "default" : "secondary"}
+                    variant={index < 3 ? "default" : "secondary"}
                   >
-                    {index < 2 ? "Open" : "Planned"}
+                    {index < 3 ? "Open" : "Planned"}
                   </Badge>
                 </CardHeader>
               </Card>
             );
 
-            return index < 2 ? (
+            return index < 3 ? (
               <button
                 className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 key={title}
-                onClick={() => setView(index === 0 ? "people" : "school")}
+                onClick={() => setView(index === 0 ? "people" : index === 1 ? "school" : "health")}
                 type="button"
               >
                 {card}
@@ -609,6 +614,8 @@ function AdministrationPanel() {
   const [inviteGroup, setInviteGroup] = useState<"admin" | "staff" | "viewer">("admin");
   const [invitationUrl, setInvitationUrl] = useState("");
   const [busy, setBusy] = useState("");
+  const [pendingMemberGroups, setPendingMemberGroups] = useState<Set<string>>(() => new Set());
+  const [pendingAccessGroups, setPendingAccessGroups] = useState<Set<AccessGroup>>(() => new Set());
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -678,19 +685,68 @@ function AdministrationPanel() {
   }
 
   async function changeGroup(memberId: string, group: "admin" | "staff" | "viewer") {
-    startRequest(memberId);
-    const response = await fetch(`/api/organization/members/${memberId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ group }),
-    });
-    const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "The access group could not be changed.");
-    else {
+    const previousGroup = state?.members.find((member) => member.id === memberId)?.group;
+    if (!previousGroup || previousGroup === group) return;
+
+    setMessage("");
+    setError("");
+    setPendingMemberGroups((current) => new Set(current).add(memberId));
+    setState((current) =>
+      current
+        ? {
+            ...current,
+            members: current.members.map((member) =>
+              member.id === memberId ? { ...member, group } : member,
+            ),
+          }
+        : current,
+    );
+
+    try {
+      const response = await fetch(`/api/organization/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ group }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                members: current.members.map((member) =>
+                  member.id === memberId && member.group === group
+                    ? { ...member, group: previousGroup }
+                    : member,
+                ),
+              }
+            : current,
+        );
+        setError(payload.error ?? "The access group could not be changed.");
+        return;
+      }
       setMessage("Member access group updated.");
-      await refresh();
+    } catch {
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              members: current.members.map((member) =>
+                member.id === memberId && member.group === group
+                  ? { ...member, group: previousGroup }
+                  : member,
+              ),
+            }
+          : current,
+      );
+      setError("The access group could not be changed.");
+    } finally {
+      setPendingMemberGroups((current) => {
+        const next = new Set(current);
+        next.delete(memberId);
+        return next;
+      });
     }
-    setBusy("");
   }
 
   async function transferOwnership(memberId: string, memberName: string) {
@@ -751,19 +807,77 @@ function AdministrationPanel() {
   }
 
   async function saveGroupRoles(group: Exclude<AccessGroup, "owner">, roleKeys: AccessRole[]) {
-    startRequest(`group-${group}`);
-    const response = await fetch(`/api/organization/groups/${group}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ roleKeys }),
-    });
-    const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "Group roles could not be saved.");
-    else {
+    const previousRoleKeys = state?.accessModel.groups.find((item) => item.key === group)?.roleKeys;
+    if (!previousRoleKeys) return;
+
+    setMessage("");
+    setError("");
+    setPendingAccessGroups((current) => new Set(current).add(group));
+    setState((current) =>
+      current
+        ? {
+            ...current,
+            accessModel: {
+              ...current.accessModel,
+              groups: current.accessModel.groups.map((item) =>
+                item.key === group ? { ...item, roleKeys } : item,
+              ),
+            },
+          }
+        : current,
+    );
+
+    try {
+      const response = await fetch(`/api/organization/groups/${group}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ roleKeys }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                accessModel: {
+                  ...current.accessModel,
+                  groups: current.accessModel.groups.map((item) =>
+                    item.key === group && sameRoleKeys(item.roleKeys, roleKeys)
+                      ? { ...item, roleKeys: previousRoleKeys }
+                      : item,
+                  ),
+                },
+              }
+            : current,
+        );
+        setError(payload.error ?? "Group roles could not be saved.");
+        return;
+      }
       setMessage(`${groupLabel(group)} access updated.`);
-      await refresh();
+    } catch {
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              accessModel: {
+                ...current.accessModel,
+                groups: current.accessModel.groups.map((item) =>
+                  item.key === group && sameRoleKeys(item.roleKeys, roleKeys)
+                    ? { ...item, roleKeys: previousRoleKeys }
+                    : item,
+                ),
+              },
+            }
+          : current,
+      );
+      setError("Group roles could not be saved.");
+    } finally {
+      setPendingAccessGroups((current) => {
+        const next = new Set(current);
+        next.delete(group);
+        return next;
+      });
     }
-    setBusy("");
   }
 
   if (!state) {
@@ -900,7 +1014,7 @@ function AdministrationPanel() {
                   {!isCurrent && canManageMembers && member.group !== "owner" ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <Select
-                        disabled={busy === member.id}
+                        disabled={pendingMemberGroups.has(member.id)}
                         onValueChange={(value) =>
                           void changeGroup(member.id, value as "admin" | "staff" | "viewer")
                         }
@@ -1070,7 +1184,7 @@ function AdministrationPanel() {
                             ? "border-primary/30 bg-primary/8"
                             : "border-border bg-background hover:bg-muted"
                         }`}
-                        disabled={!canManageRoles || busy === `group-${group.key}`}
+                        disabled={!canManageRoles || pendingAccessGroups.has(group.key)}
                         key={role.id}
                         onClick={() =>
                           void saveGroupRoles(group.key as Exclude<AccessGroup, "owner">, nextRoles)
@@ -1098,6 +1212,10 @@ function AdministrationPanel() {
 
 function groupLabel(group: AccessGroup): string {
   return group === "admin" ? "Administrator" : group.charAt(0).toUpperCase() + group.slice(1);
+}
+
+function sameRoleKeys(left: AccessRole[], right: AccessRole[]): boolean {
+  return left.length === right.length && left.every((roleKey) => right.includes(roleKey));
 }
 
 function initials(name: string): string {

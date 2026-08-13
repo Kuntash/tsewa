@@ -38,6 +38,14 @@ import {
   markSheet,
   studentMark,
   studentEnrollmentChange,
+  healthHistoryImportBatch,
+  healthVisit,
+  healthDiagnosis,
+  healthTbCase,
+  healthTbDetail,
+  healthMedicalAdvance,
+  healthMedicalAdvanceDetail,
+  healthMedicalSettlement,
   accessRole,
   accessPermission,
   accessRolePermission,
@@ -151,6 +159,14 @@ export const organizationRelations = relations(organization, ({ many }) => ({
   markSheets: many(markSheet),
   studentMarks: many(studentMark),
   studentEnrollmentChanges: many(studentEnrollmentChange),
+  healthHistoryImportBatches: many(healthHistoryImportBatch),
+  healthVisits: many(healthVisit),
+  healthDiagnoses: many(healthDiagnosis),
+  healthTbCases: many(healthTbCase),
+  healthTbDetails: many(healthTbDetail),
+  healthMedicalAdvances: many(healthMedicalAdvance),
+  healthMedicalAdvanceDetails: many(healthMedicalAdvanceDetail),
+  healthMedicalSettlements: many(healthMedicalSettlement),
   accessRoles: many(accessRole),
   accessGroups: many(accessGroup),
 }));
@@ -776,6 +792,135 @@ export const studentEnrollmentChangeRelations = relations(studentEnrollmentChang
   organization: one(organization, {
     fields: [studentEnrollmentChange.organizationId],
     references: [organization.id],
+  }),
+}));
+
+export const healthHistoryImportBatchRelations = relations(
+  healthHistoryImportBatch,
+  ({ one, many }) => ({
+    organization: one(organization, {
+      fields: [healthHistoryImportBatch.organizationId],
+      references: [organization.id],
+    }),
+    healthVisits: many(healthVisit),
+    healthDiagnoses: many(healthDiagnosis),
+    healthTbCases: many(healthTbCase),
+    healthTbDetails: many(healthTbDetail),
+    healthMedicalAdvances: many(healthMedicalAdvance),
+    healthMedicalAdvanceDetails: many(healthMedicalAdvanceDetail),
+    healthMedicalSettlements: many(healthMedicalSettlement),
+  }),
+);
+
+export const healthVisitRelations = relations(healthVisit, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [healthVisit.organizationId],
+    references: [organization.id],
+  }),
+  person: one(person, {
+    fields: [healthVisit.personId],
+    references: [person.id],
+  }),
+  healthHistoryImportBatch: one(healthHistoryImportBatch, {
+    fields: [healthVisit.importBatchId],
+    references: [healthHistoryImportBatch.id],
+  }),
+  healthDiagnoses: many(healthDiagnosis),
+}));
+
+export const healthDiagnosisRelations = relations(healthDiagnosis, ({ one }) => ({
+  organization: one(organization, {
+    fields: [healthDiagnosis.organizationId],
+    references: [organization.id],
+  }),
+  healthVisit: one(healthVisit, {
+    fields: [healthDiagnosis.healthVisitId],
+    references: [healthVisit.id],
+  }),
+  healthHistoryImportBatch: one(healthHistoryImportBatch, {
+    fields: [healthDiagnosis.importBatchId],
+    references: [healthHistoryImportBatch.id],
+  }),
+}));
+
+export const healthTbCaseRelations = relations(healthTbCase, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [healthTbCase.organizationId],
+    references: [organization.id],
+  }),
+  person: one(person, {
+    fields: [healthTbCase.personId],
+    references: [person.id],
+  }),
+  healthHistoryImportBatch: one(healthHistoryImportBatch, {
+    fields: [healthTbCase.importBatchId],
+    references: [healthHistoryImportBatch.id],
+  }),
+  details: many(healthTbDetail),
+}));
+
+export const healthTbDetailRelations = relations(healthTbDetail, ({ one }) => ({
+  organization: one(organization, {
+    fields: [healthTbDetail.organizationId],
+    references: [organization.id],
+  }),
+  tbCase: one(healthTbCase, {
+    fields: [healthTbDetail.tbCaseId],
+    references: [healthTbCase.id],
+  }),
+  healthHistoryImportBatch: one(healthHistoryImportBatch, {
+    fields: [healthTbDetail.importBatchId],
+    references: [healthHistoryImportBatch.id],
+  }),
+}));
+
+export const healthMedicalAdvanceRelations = relations(healthMedicalAdvance, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [healthMedicalAdvance.organizationId],
+    references: [organization.id],
+  }),
+  healthHistoryImportBatch: one(healthHistoryImportBatch, {
+    fields: [healthMedicalAdvance.importBatchId],
+    references: [healthHistoryImportBatch.id],
+  }),
+  details: many(healthMedicalAdvanceDetail),
+  settlements: many(healthMedicalSettlement),
+}));
+
+export const healthMedicalAdvanceDetailRelations = relations(
+  healthMedicalAdvanceDetail,
+  ({ one }) => ({
+    organization: one(organization, {
+      fields: [healthMedicalAdvanceDetail.organizationId],
+      references: [organization.id],
+    }),
+    medicalAdvance: one(healthMedicalAdvance, {
+      fields: [healthMedicalAdvanceDetail.medicalAdvanceId],
+      references: [healthMedicalAdvance.id],
+    }),
+    person: one(person, {
+      fields: [healthMedicalAdvanceDetail.personId],
+      references: [person.id],
+    }),
+    healthHistoryImportBatch: one(healthHistoryImportBatch, {
+      fields: [healthMedicalAdvanceDetail.importBatchId],
+      references: [healthHistoryImportBatch.id],
+    }),
+  }),
+);
+
+export const healthMedicalSettlementRelations = relations(healthMedicalSettlement, ({ one }) => ({
+  organization: one(organization, {
+    fields: [healthMedicalSettlement.organizationId],
+    references: [organization.id],
+  }),
+  medicalAdvance: one(healthMedicalAdvance, {
+    fields: [healthMedicalSettlement.medicalAdvanceId],
+    references: [healthMedicalAdvance.id],
+  }),
+  healthHistoryImportBatch: one(healthHistoryImportBatch, {
+    fields: [healthMedicalSettlement.importBatchId],
+    references: [healthHistoryImportBatch.id],
   }),
 }));
 

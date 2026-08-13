@@ -33,6 +33,8 @@
     "migration:classes:dry-run": "node scripts/class-master-dry-run.mjs",
     "migration:results:dry-run": "node scripts/historical-results-dry-run.mjs",
     "migration:results:import": "node scripts/import-historical-results.mjs",
+    "migration:health:dry-run": "node scripts/health-history-dry-run.mjs",
+    "migration:health:import": "node scripts/import-health-history.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

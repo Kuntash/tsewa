@@ -1,13 +1,11 @@
 # Legacy feature parity
 
 This is the source of truth for Tsewa v0 scope. A screen existing in the old
-ASP.NET application is not enough reason to rebuild it. We first check whether
-the corresponding legacy tables contain real data and, where possible, whether
-that data continued into recent academic sessions.
-
-The immediate goal is to let Tibetan Homes Foundation test the workflows it
-still uses. Historical or empty modules can follow after v0 if staff confirm
-that they are still needed.
+ASP.NET application is not enough reason to rebuild it: we first check its
+corresponding legacy tables. If those tables contain real operational data, the
+feature belongs before v0 so staff do not lose something they could do in the
+old application. Empty tables or screens with no database evidence require THF
+confirmation before implementation.
 
 ## How to read this checklist
 
@@ -16,13 +14,13 @@ that they are still needed.
   available.
 - **Build for v0**: supported by recent legacy data or required to maintain the
   current records.
-- **After v0**: the database shows historical use, but no meaningful recent
-  activity.
+- **Build for v0**: the database contains real use, even when the last recorded
+  write is historical. Recency determines implementation order, not v0 scope.
 - **Do not build yet**: the legacy table is empty or database usage cannot be
   established. Confirm with THF before implementation.
 
-Recent means a row is tied to the 2020–2026 academic sessions. This is a useful
-signal, not proof of the last time a screen was opened. Read-only reports and
+Recent means a row is tied to the 2020–2026 academic sessions. This helps order
+the work but does not remove a populated feature from v0. Read-only reports and
 print actions generally leave no database record and therefore need staff
 confirmation.
 
@@ -39,13 +37,13 @@ from the 17 GB `TibetHomes.mdf`. The source MDF remains unchanged.
 | Home placement (`beneficeary_home`)        |     18,151 |          8,566 |     1,304 | Home changes are a v0 workflow.                 |
 | Documents                                  |     18,836 |          7,897 |       894 | Viewing and adding documents belong in v0.      |
 | Sibling links                              |      1,105 |            971 |       409 | Family relationship editing belongs in v0.      |
-| Holidays                                   |      6,043 |              1 |         0 | Historically used; not a v0 priority.           |
+| Holidays                                   |      6,043 |              1 |         0 | Used historically; lower in the v0 order.       |
 | Mark sheets                                |        311 |              0 |         0 | Used only in the 2011/2012 sessions.            |
 | Medical diagnoses                          |      2,539 |              0 |         0 | Substantial history, but no recent session use. |
 | Scholarships                               |        722 |              0 |         0 | Substantial history, but no recent session use. |
 | Sponsor links                              |      4,510 |              0 |         0 | Substantial history, but no recent session use. |
-| Staff                                      |        439 |              7 |         0 | Preserve and view now; editing can follow v0.   |
-| Staff leave                                |        356 |              1 |         0 | Historically used; not a v0 priority.           |
+| Staff                                      |        439 |              7 |         0 | Preserve, view, and restore editing before v0.  |
+| Staff leave                                |        356 |              1 |         0 | Used historically; lower in the v0 order.       |
 
 The legacy promotion page exists, but only **2 of 25,427** class-history rows
 contain a promotion result. Both rows are for the same student, on 10 May 2011,
@@ -95,10 +93,11 @@ evidence of a regularly used year-end workflow.
       imported THS records.
 - [ ] Let THF staff test the same workflow and record missing fields or steps.
 
-## After v0: real historical use, but not recent use
+## v0: legacy-used workflows still required for parity
 
-These features should remain visible in the parity plan because the old
-database contains meaningful records. They should not delay school testing.
+The old database contains meaningful records for every feature in this section.
+They are therefore pre-v0 parity work, ordered behind the currently active
+people and school workflows where appropriate.
 
 ### Academic marks and results
 
@@ -120,17 +119,18 @@ belong to the 2011 or 2012 session.
       result, and notes.
 - [ ] Add preview, validation, audit history, and rollback as safety improvements.
 
-Evidence: the ASP.NET page exists, but only two populated promotion records were
-found, both for one student in 2011. Promotion is therefore not required for the
-first v0 school test.
+Evidence: the ASP.NET page exists and two populated promotion records were
+found, both for one student in 2011. This is low-volume evidence, so promotion
+comes later in the v0 order but remains part of parity unless THF explicitly
+retires it.
 
 ### Health and dispensary
 
-- [ ] Preserve and expose historical medical records with stricter permissions.
+- [x] Preserve and expose diagnosis and test history with `health.read` permission checks.
+- [x] Preserve TB registrations, treatment details, and outcomes.
+- [x] Preserve medical advances and settlements.
 - [ ] Outpatient and inpatient visits.
 - [ ] Diagnoses, tests, treatment, referrals, and medical notes.
-- [ ] TB registration, treatment details, and outcomes.
-- [ ] Medical advances and settlements.
 - [ ] Medical reports.
 
 Evidence: 2,539 diagnoses, 2,524 diagnosis details, 112 TB records, 231 TB
@@ -207,7 +207,10 @@ exist. Only one holiday row, one leave row, and seven staff records are tied to
 4. School, class/section, house, and assignment editing.
 5. Printable/exportable rosters and person records confirmed by THF.
 6. Practice-school end-to-end testing, followed by controlled enablement for THF.
-7. Reassess the historical modules with staff before planning v1.
+7. Deliver diagnosis history, then TB and medical advances/settlements.
+8. Deliver sponsorship, scholarships, and the remaining populated staff/leave,
+   holiday, stipend, marks, results, and promotion workflows.
+9. Ask THF to confirm only the empty or non-observable workflows before planning v1.
 
 Update this document whenever a feature is shipped, new legacy usage evidence is
 found, or THF confirms that a historically used workflow is still required.

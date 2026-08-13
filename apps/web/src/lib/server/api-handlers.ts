@@ -205,6 +205,29 @@ const historicalResultsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
 
+const healthHistoryQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  kind: z.enum(["all", "child", "elderly", "staff", "other"]).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const tbHistoryQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  kind: z.enum(["all", "child", "elderly", "staff", "other"]).default("all"),
+  outcome: z.string().trim().max(100).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const medicalAdvanceQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  kind: z.enum(["all", "child", "elderly", "staff", "other"]).default("all"),
+  settlement: z.enum(["all", "settled", "unsettled"]).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
 const personIdSchema = z.uuid();
 const fileIdSchema = z.uuid();
 const personFileCategorySchema = z.enum([
@@ -411,6 +434,18 @@ export const apiDispatcher = {
 
     if (url.pathname === "/api/school-operations/results") {
       return getHistoricalResults(request);
+    }
+
+    if (url.pathname === "/api/health/history") {
+      return getHealthHistory(request);
+    }
+
+    if (url.pathname === "/api/health/tb") {
+      return getTbHistory(request);
+    }
+
+    if (url.pathname === "/api/health/advances") {
+      return getMedicalAdvances(request);
     }
 
     const siblingItemMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/siblings\/([^/]+)$/);
@@ -2711,6 +2746,350 @@ async function getHistoricalResults(request: Request): Promise<Response> {
   const total = Number(count?.total ?? 0);
   return Response.json({
     results: rows.results.map((row) => ({ ...row, isVerified: Boolean(row.isVerified) })),
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+async function getHealthHistory(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "health.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = healthHistoryQuerySchema.safeParse({
+    q: url.searchParams.get("q") ?? "",
+    kind: url.searchParams.get("kind") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Check the health history filters." }, { status: 400 });
+  }
+
+  const { q, kind, page, pageSize } = parsed.data;
+  const conditions = ["visit.organization_id = ?"];
+  const bindings: Array<string | number> = [context.organizationId];
+  if (kind !== "all") {
+    conditions.push("visit.patient_kind = ?");
+    bindings.push(kind);
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(`(lower(visit.patient_name) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(visit.admission_number, '')) LIKE ? ESCAPE '\\'
+      OR EXISTS (SELECT 1 FROM health_diagnosis search_diagnosis
+        WHERE search_diagnosis.health_visit_id=visit.id
+          AND lower(search_diagnosis.diagnosis_name) LIKE ? ESCAPE '\\'))`);
+    bindings.push(search, search, search);
+  }
+  const where = conditions.join(" AND ");
+  const runtime = getRuntimeEnv();
+  const [summary, count, rows] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT COUNT(*) AS visits,
+      COUNT(DISTINCT person_id) AS linkedPeople,
+      MIN(checkup_date) AS firstVisitOn, MAX(checkup_date) AS lastVisitOn,
+      (SELECT COUNT(*) FROM health_diagnosis diagnosis
+        WHERE diagnosis.organization_id=?) AS diagnoses
+      FROM health_visit WHERE organization_id=?`)
+      .bind(context.organizationId, context.organizationId)
+      .first<{
+        visits: number;
+        diagnoses: number;
+        linkedPeople: number;
+        firstVisitOn: string | null;
+        lastVisitOn: string | null;
+      }>(),
+    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total FROM health_visit visit WHERE ${where}`)
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DATABASE.prepare(`SELECT visit.id,visit.person_id AS personId,
+      visit.patient_name AS patientName,visit.patient_kind AS patientKind,
+      visit.admission_number AS admissionNumber,visit.gender,visit.home_name AS homeName,
+      visit.age_at_visit AS ageAtVisit,visit.checkup_date AS checkupDate,
+      visit.admitted_on AS admittedOn,visit.discharged_on AS dischargedOn,
+      visit.doctor_name AS doctorName,visit.referred_to AS referredTo,
+      visit.referral_location AS referralLocation,visit.remarks,
+      visit.hepatitis_b_status AS hepatitisBStatus,
+      coalesce(json_group_array(json_object(
+        'id',diagnosis.id,'name',diagnosis.diagnosis_name,
+        'recordedOn',diagnosis.recorded_on,'remarks',diagnosis.remarks
+      )) FILTER (WHERE diagnosis.id IS NOT NULL), '[]') AS diagnosesJson
+      FROM health_visit visit
+      LEFT JOIN health_diagnosis diagnosis ON diagnosis.health_visit_id=visit.id
+        AND diagnosis.organization_id=visit.organization_id
+      WHERE ${where}
+      GROUP BY visit.id
+      ORDER BY visit.checkup_date DESC,visit.patient_name COLLATE NOCASE
+      LIMIT ? OFFSET ?`)
+      .bind(...bindings, pageSize, (page - 1) * pageSize)
+      .all<{ diagnosesJson: string; [key: string]: unknown }>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    summary: {
+      visits: Number(summary?.visits ?? 0),
+      diagnoses: Number(summary?.diagnoses ?? 0),
+      linkedPeople: Number(summary?.linkedPeople ?? 0),
+      firstVisitOn: summary?.firstVisitOn ?? null,
+      lastVisitOn: summary?.lastVisitOn ?? null,
+    },
+    visits: rows.results.map(({ diagnosesJson, ...row }) => ({
+      ...row,
+      diagnoses: JSON.parse(diagnosesJson) as Array<{
+        id: string;
+        name: string;
+        recordedOn: string | null;
+        remarks: string | null;
+      }>,
+    })),
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+async function getTbHistory(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "health.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = tbHistoryQuerySchema.safeParse({
+    q: url.searchParams.get("q") ?? "",
+    kind: url.searchParams.get("kind") ?? "all",
+    outcome: url.searchParams.get("outcome") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Check the TB history filters." }, { status: 400 });
+  }
+
+  const { q, kind, outcome, page, pageSize } = parsed.data;
+  const conditions = ["record.organization_id = ?"];
+  const bindings: Array<string | number> = [context.organizationId];
+  if (kind !== "all") {
+    conditions.push("record.patient_kind = ?");
+    bindings.push(kind);
+  }
+  if (outcome !== "all") {
+    conditions.push("record.outcome = ?");
+    bindings.push(outcome);
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(`(lower(record.patient_name) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(record.admission_number, '')) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(record.tb_card_number, '')) LIKE ? ESCAPE '\\'
+      OR EXISTS (SELECT 1 FROM health_tb_detail search_detail
+        WHERE search_detail.tb_case_id=record.id
+          AND (lower(search_detail.test_name) LIKE ? ESCAPE '\\'
+            OR lower(coalesce(search_detail.result, '')) LIKE ? ESCAPE '\\')))`);
+    bindings.push(search, search, search, search, search);
+  }
+  const where = conditions.join(" AND ");
+  const runtime = getRuntimeEnv();
+  const [summary, outcomes, count, rows] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT COUNT(*) AS cases,
+      COUNT(DISTINCT person_id) AS linkedPeople,
+      MIN(registration_date) AS firstRegistrationOn,
+      MAX(registration_date) AS lastRegistrationOn,
+      SUM(CASE WHEN lower(outcome)='on treatment' THEN 1 ELSE 0 END) AS onTreatment,
+      (SELECT COUNT(*) FROM health_tb_detail detail
+        WHERE detail.organization_id=?) AS details
+      FROM health_tb_case WHERE organization_id=?`)
+      .bind(context.organizationId, context.organizationId)
+      .first<{
+        cases: number;
+        details: number;
+        linkedPeople: number;
+        onTreatment: number;
+        firstRegistrationOn: string | null;
+        lastRegistrationOn: string | null;
+      }>(),
+    runtime.DATABASE.prepare(`SELECT outcome,COUNT(*) AS count FROM health_tb_case
+      WHERE organization_id=? GROUP BY outcome ORDER BY count DESC,outcome COLLATE NOCASE`)
+      .bind(context.organizationId)
+      .all<{ outcome: string; count: number }>(),
+    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total FROM health_tb_case record WHERE ${where}`)
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DATABASE.prepare(`SELECT record.id,record.person_id AS personId,
+      record.patient_name AS patientName,record.patient_kind AS patientKind,
+      record.tb_card_number AS tbCardNumber,record.admission_number AS admissionNumber,
+      record.father_name AS fatherName,record.gender,
+      record.age_at_registration AS ageAtRegistration,record.home_name AS homeName,
+      record.treatment_regimen AS treatmentRegimen,
+      record.registration_date AS registrationDate,
+      record.treatment_start_date AS treatmentStartDate,
+      record.treatment_end_date AS treatmentEndDate,record.outcome,
+      record.tb_type AS tbType,record.case_type AS caseType,record.remarks,
+      coalesce(json_group_array(json_object(
+        'id',detail.id,'recordedOn',detail.recorded_on,'testName',detail.test_name,
+        'result',detail.result,'remarks',detail.remarks
+      )) FILTER (WHERE detail.id IS NOT NULL), '[]') AS detailsJson
+      FROM health_tb_case record
+      LEFT JOIN health_tb_detail detail ON detail.tb_case_id=record.id
+        AND detail.organization_id=record.organization_id
+      WHERE ${where}
+      GROUP BY record.id
+      ORDER BY record.registration_date DESC,record.patient_name COLLATE NOCASE
+      LIMIT ? OFFSET ?`)
+      .bind(...bindings, pageSize, (page - 1) * pageSize)
+      .all<{ detailsJson: string; [key: string]: unknown }>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    summary: {
+      cases: Number(summary?.cases ?? 0),
+      details: Number(summary?.details ?? 0),
+      linkedPeople: Number(summary?.linkedPeople ?? 0),
+      onTreatment: Number(summary?.onTreatment ?? 0),
+      firstRegistrationOn: summary?.firstRegistrationOn ?? null,
+      lastRegistrationOn: summary?.lastRegistrationOn ?? null,
+    },
+    outcomes: outcomes.results.map((item) => ({
+      name: item.outcome,
+      count: Number(item.count),
+    })),
+    cases: rows.results.map(({ detailsJson, ...row }) => ({
+      ...row,
+      details: JSON.parse(detailsJson) as Array<{
+        id: string;
+        recordedOn: string;
+        testName: string;
+        result: string | null;
+        remarks: string | null;
+      }>,
+    })),
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+async function getMedicalAdvances(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "health.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = medicalAdvanceQuerySchema.safeParse({
+    q: url.searchParams.get("q") ?? "",
+    kind: url.searchParams.get("kind") ?? "all",
+    settlement: url.searchParams.get("settlement") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Check the medical advance filters." }, { status: 400 });
+  }
+
+  const { q, kind, settlement, page, pageSize } = parsed.data;
+  const conditions = ["advance.organization_id = ?"];
+  const bindings: Array<string | number> = [context.organizationId];
+  if (kind !== "all") {
+    conditions.push(`EXISTS (SELECT 1 FROM health_medical_advance_detail kind_detail
+      WHERE kind_detail.medical_advance_id=advance.id AND kind_detail.patient_kind=?)`);
+    bindings.push(kind);
+  }
+  if (settlement !== "all") {
+    conditions.push(`${settlement === "settled" ? "" : "NOT "}EXISTS
+      (SELECT 1 FROM health_medical_settlement status_settlement
+       WHERE status_settlement.medical_advance_id=advance.id)`);
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(`(lower(coalesce(advance.sanction_number, '')) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(advance.nurse_name, '')) LIKE ? ESCAPE '\\'
+      OR lower(coalesce(advance.referring_doctor_name, '')) LIKE ? ESCAPE '\\'
+      OR EXISTS (SELECT 1 FROM health_medical_advance_detail search_detail
+        WHERE search_detail.medical_advance_id=advance.id
+          AND (lower(search_detail.patient_name) LIKE ? ESCAPE '\\'
+            OR lower(coalesce(search_detail.diagnosis, '')) LIKE ? ESCAPE '\\'
+            OR lower(coalesce(search_detail.medication, '')) LIKE ? ESCAPE '\\')))`);
+    bindings.push(search, search, search, search, search, search);
+  }
+  const where = conditions.join(" AND ");
+  const runtime = getRuntimeEnv();
+  const [summary, count, rows] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT COUNT(*) AS advances,SUM(advance_amount) AS advanceAmount,
+      MIN(sanctioned_on) AS firstSanctionOn,MAX(sanctioned_on) AS lastSanctionOn,
+      (SELECT COUNT(*) FROM health_medical_advance_detail detail
+        WHERE detail.organization_id=?) AS patientAllocations,
+      (SELECT COUNT(DISTINCT legacy_settlement_id) FROM health_medical_settlement value
+        WHERE value.organization_id=?) AS settlements,
+      (SELECT COUNT(*) FROM health_medical_settlement value
+        WHERE value.organization_id=?) AS settlementLinks,
+      (SELECT SUM(total_expenses) FROM (
+        SELECT legacy_settlement_id,MAX(total_expenses) AS total_expenses
+        FROM health_medical_settlement value WHERE value.organization_id=?
+        GROUP BY legacy_settlement_id)) AS totalExpenses
+      FROM health_medical_advance WHERE organization_id=?`)
+      .bind(
+        context.organizationId,
+        context.organizationId,
+        context.organizationId,
+        context.organizationId,
+        context.organizationId,
+      )
+      .first<{
+        advances: number;
+        advanceAmount: number;
+        patientAllocations: number;
+        settlements: number;
+        settlementLinks: number;
+        totalExpenses: number;
+        firstSanctionOn: string | null;
+        lastSanctionOn: string | null;
+      }>(),
+    runtime.DATABASE.prepare(
+      `SELECT COUNT(*) AS total FROM health_medical_advance advance WHERE ${where}`,
+    )
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DATABASE.prepare(`SELECT advance.id,advance.sanctioned_on AS sanctionedOn,
+      advance.nurse_name AS nurseName,advance.sanction_number AS sanctionNumber,
+      advance.advance_amount AS advanceAmount,
+      advance.referring_doctor_name AS referringDoctorName,
+      advance.referral_location AS referralLocation,advance.remarks,
+      coalesce((SELECT json_group_array(json_object(
+        'id',detail.id,'personId',detail.person_id,'patientName',detail.patient_name,
+        'patientKind',detail.patient_kind,'sanctionType',detail.sanction_type,
+        'homeName',detail.home_name,'gender',detail.gender,'ageAtSanction',detail.age_at_sanction,
+        'medication',detail.medication,'referredToDoctorName',detail.referred_to_doctor_name,
+        'hospitalRegistrationNumber',detail.hospital_registration_number,
+        'hospitalReferredTo',detail.hospital_referred_to,
+        'hospitalAdmitted',detail.hospital_admitted,'diagnosis',detail.diagnosis,
+        'admittedOn',detail.admitted_on,'dischargedOn',detail.discharged_on,
+        'surgeryType',detail.surgery_type,'amount',detail.amount,'remarks',detail.remarks))
+        FROM health_medical_advance_detail detail
+        WHERE detail.medical_advance_id=advance.id), '[]') AS detailsJson,
+      coalesce((SELECT json_group_array(json_object(
+        'id',value.id,'settledOn',value.settled_on,'billNumber',value.bill_number,
+        'nurseTada',value.nurse_tada,'totalExpenses',value.total_expenses,
+        'extraExpenses',value.extra_expenses,'balance',value.balance,'remarks',value.remarks))
+        FROM health_medical_settlement value
+        WHERE value.medical_advance_id=advance.id), '[]') AS settlementsJson
+      FROM health_medical_advance advance WHERE ${where}
+      ORDER BY advance.sanctioned_on DESC,advance.sanction_number
+      LIMIT ? OFFSET ?`)
+      .bind(...bindings, pageSize, (page - 1) * pageSize)
+      .all<{ detailsJson: string; settlementsJson: string; [key: string]: unknown }>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    summary: {
+      advances: Number(summary?.advances ?? 0),
+      advanceAmount: Number(summary?.advanceAmount ?? 0),
+      patientAllocations: Number(summary?.patientAllocations ?? 0),
+      settlements: Number(summary?.settlements ?? 0),
+      settlementLinks: Number(summary?.settlementLinks ?? 0),
+      totalExpenses: Number(summary?.totalExpenses ?? 0),
+      firstSanctionOn: summary?.firstSanctionOn ?? null,
+      lastSanctionOn: summary?.lastSanctionOn ?? null,
+    },
+    advances: rows.results.map(({ detailsJson, settlementsJson, ...row }) => ({
+      ...row,
+      details: JSON.parse(detailsJson) as unknown[],
+      settlements: JSON.parse(settlementsJson) as unknown[],
+    })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
 }
