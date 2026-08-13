@@ -10,33 +10,552 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiOrganizationRouteImport } from './routes/api.organization'
+import { Route as ApiPeopleRouteImport } from './routes/api.people'
+import { Route as ApiPlatformRouteImport } from './routes/api.platform'
+import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as ApiFilesFileIdRouteImport } from './routes/api.files.$fileId'
+import { Route as ApiInvitationsAcceptRouteImport } from './routes/api.invitations.accept'
+import { Route as ApiInvitationsPreviewRouteImport } from './routes/api.invitations.preview'
+import { Route as ApiOrganizationInvitationsRouteImport } from './routes/api.organization.invitations'
+import { Route as ApiOrganizationTransferRouteImport } from './routes/api.organization.transfer'
+import { Route as ApiPeoplePersonIdRouteImport } from './routes/api.people.$personId'
+import { Route as ApiSchoolOperationsAdmissionsRouteImport } from './routes/api.school-operations.admissions'
+import { Route as ApiSchoolOperationsClassesRouteImport } from './routes/api.school-operations.classes'
+import { Route as ApiSchoolOperationsHousesRouteImport } from './routes/api.school-operations.houses'
+import { Route as ApiSchoolOperationsMasterDataRouteImport } from './routes/api.school-operations.master-data'
+import { Route as ApiSchoolOperationsOverviewRouteImport } from './routes/api.school-operations.overview'
+import { Route as ApiSchoolOperationsResultsRouteImport } from './routes/api.school-operations.results'
+import { Route as ApiSchoolOperationsRostersRouteImport } from './routes/api.school-operations.rosters'
+import { Route as ApiSchoolOperationsSchoolsRouteImport } from './routes/api.school-operations.schools'
+import { Route as ApiSchoolOperationsSetupRouteImport } from './routes/api.school-operations.setup'
+import { Route as ApiSchoolOperationsStudentReportRouteImport } from './routes/api.school-operations.student-report'
+import { Route as ApiSchoolOperationsStudentsRouteImport } from './routes/api.school-operations.students'
+import { Route as ApiOrganizationGroupsGroupKeyRouteImport } from './routes/api.organization.groups.$groupKey'
+import { Route as ApiOrganizationInvitationsInvitationIdRouteImport } from './routes/api.organization.invitations.$invitationId'
+import { Route as ApiOrganizationMembersMemberIdRouteImport } from './routes/api.organization.members.$memberId'
+import { Route as ApiPeoplePersonIdFamilyRouteImport } from './routes/api.people.$personId.family'
+import { Route as ApiPeoplePersonIdFilesRouteImport } from './routes/api.people.$personId.files'
+import { Route as ApiPeoplePersonIdPlacementsRouteImport } from './routes/api.people.$personId.placements'
+import { Route as ApiPeoplePersonIdSiblingOptionsRouteImport } from './routes/api.people.$personId.sibling-options'
+import { Route as ApiPeoplePersonIdSiblingsRouteImport } from './routes/api.people.$personId.siblings'
+import { Route as ApiSchoolOperationsClassesClassIdRouteImport } from './routes/api.school-operations.classes.$classId'
+import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId'
+import { Route as ApiSchoolOperationsHousesHouseIdRouteImport } from './routes/api.school-operations.houses.$houseId'
+import { Route as ApiSchoolOperationsResultsOverviewRouteImport } from './routes/api.school-operations.results.overview'
+import { Route as ApiSchoolOperationsSchoolsSchoolIdRouteImport } from './routes/api.school-operations.schools.$schoolId'
+import { Route as ApiOrganizationInvitationsInvitationIdResendRouteImport } from './routes/api.organization.invitations.$invitationId.resend'
+import { Route as ApiPeoplePersonIdFilesFileIdRouteImport } from './routes/api.people.$personId.files.$fileId'
+import { Route as ApiPeoplePersonIdSiblingsRelatedPersonIdRouteImport } from './routes/api.people.$personId.siblings.$relatedPersonId'
+import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId.end-details'
+import { Route as ApiSchoolOperationsSchoolsSchoolIdAssignmentsRouteImport } from './routes/api.school-operations.schools.$schoolId.assignments'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrganizationRoute = ApiOrganizationRouteImport.update({
+  id: '/api/organization',
+  path: '/api/organization',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPeopleRoute = ApiPeopleRouteImport.update({
+  id: '/api/people',
+  path: '/api/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlatformRoute = ApiPlatformRouteImport.update({
+  id: '/api/platform',
+  path: '/api/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFilesFileIdRoute = ApiFilesFileIdRouteImport.update({
+  id: '/api/files/$fileId',
+  path: '/api/files/$fileId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInvitationsAcceptRoute = ApiInvitationsAcceptRouteImport.update({
+  id: '/api/invitations/accept',
+  path: '/api/invitations/accept',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInvitationsPreviewRoute = ApiInvitationsPreviewRouteImport.update({
+  id: '/api/invitations/preview',
+  path: '/api/invitations/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrganizationInvitationsRoute =
+  ApiOrganizationInvitationsRouteImport.update({
+    id: '/invitations',
+    path: '/invitations',
+    getParentRoute: () => ApiOrganizationRoute,
+  } as any)
+const ApiOrganizationTransferRoute = ApiOrganizationTransferRouteImport.update({
+  id: '/transfer',
+  path: '/transfer',
+  getParentRoute: () => ApiOrganizationRoute,
+} as any)
+const ApiPeoplePersonIdRoute = ApiPeoplePersonIdRouteImport.update({
+  id: '/$personId',
+  path: '/$personId',
+  getParentRoute: () => ApiPeopleRoute,
+} as any)
+const ApiSchoolOperationsAdmissionsRoute =
+  ApiSchoolOperationsAdmissionsRouteImport.update({
+    id: '/api/school-operations/admissions',
+    path: '/api/school-operations/admissions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsClassesRoute =
+  ApiSchoolOperationsClassesRouteImport.update({
+    id: '/api/school-operations/classes',
+    path: '/api/school-operations/classes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsHousesRoute =
+  ApiSchoolOperationsHousesRouteImport.update({
+    id: '/api/school-operations/houses',
+    path: '/api/school-operations/houses',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsMasterDataRoute =
+  ApiSchoolOperationsMasterDataRouteImport.update({
+    id: '/api/school-operations/master-data',
+    path: '/api/school-operations/master-data',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsOverviewRoute =
+  ApiSchoolOperationsOverviewRouteImport.update({
+    id: '/api/school-operations/overview',
+    path: '/api/school-operations/overview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsResultsRoute =
+  ApiSchoolOperationsResultsRouteImport.update({
+    id: '/api/school-operations/results',
+    path: '/api/school-operations/results',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsRostersRoute =
+  ApiSchoolOperationsRostersRouteImport.update({
+    id: '/api/school-operations/rosters',
+    path: '/api/school-operations/rosters',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsSchoolsRoute =
+  ApiSchoolOperationsSchoolsRouteImport.update({
+    id: '/api/school-operations/schools',
+    path: '/api/school-operations/schools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsSetupRoute =
+  ApiSchoolOperationsSetupRouteImport.update({
+    id: '/api/school-operations/setup',
+    path: '/api/school-operations/setup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsStudentReportRoute =
+  ApiSchoolOperationsStudentReportRouteImport.update({
+    id: '/api/school-operations/student-report',
+    path: '/api/school-operations/student-report',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsStudentsRoute =
+  ApiSchoolOperationsStudentsRouteImport.update({
+    id: '/api/school-operations/students',
+    path: '/api/school-operations/students',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrganizationGroupsGroupKeyRoute =
+  ApiOrganizationGroupsGroupKeyRouteImport.update({
+    id: '/groups/$groupKey',
+    path: '/groups/$groupKey',
+    getParentRoute: () => ApiOrganizationRoute,
+  } as any)
+const ApiOrganizationInvitationsInvitationIdRoute =
+  ApiOrganizationInvitationsInvitationIdRouteImport.update({
+    id: '/$invitationId',
+    path: '/$invitationId',
+    getParentRoute: () => ApiOrganizationInvitationsRoute,
+  } as any)
+const ApiOrganizationMembersMemberIdRoute =
+  ApiOrganizationMembersMemberIdRouteImport.update({
+    id: '/members/$memberId',
+    path: '/members/$memberId',
+    getParentRoute: () => ApiOrganizationRoute,
+  } as any)
+const ApiPeoplePersonIdFamilyRoute = ApiPeoplePersonIdFamilyRouteImport.update({
+  id: '/family',
+  path: '/family',
+  getParentRoute: () => ApiPeoplePersonIdRoute,
+} as any)
+const ApiPeoplePersonIdFilesRoute = ApiPeoplePersonIdFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => ApiPeoplePersonIdRoute,
+} as any)
+const ApiPeoplePersonIdPlacementsRoute =
+  ApiPeoplePersonIdPlacementsRouteImport.update({
+    id: '/placements',
+    path: '/placements',
+    getParentRoute: () => ApiPeoplePersonIdRoute,
+  } as any)
+const ApiPeoplePersonIdSiblingOptionsRoute =
+  ApiPeoplePersonIdSiblingOptionsRouteImport.update({
+    id: '/sibling-options',
+    path: '/sibling-options',
+    getParentRoute: () => ApiPeoplePersonIdRoute,
+  } as any)
+const ApiPeoplePersonIdSiblingsRoute =
+  ApiPeoplePersonIdSiblingsRouteImport.update({
+    id: '/siblings',
+    path: '/siblings',
+    getParentRoute: () => ApiPeoplePersonIdRoute,
+  } as any)
+const ApiSchoolOperationsClassesClassIdRoute =
+  ApiSchoolOperationsClassesClassIdRouteImport.update({
+    id: '/$classId',
+    path: '/$classId',
+    getParentRoute: () => ApiSchoolOperationsClassesRoute,
+  } as any)
+const ApiSchoolOperationsEnrollmentsEnrollmentIdRoute =
+  ApiSchoolOperationsEnrollmentsEnrollmentIdRouteImport.update({
+    id: '/api/school-operations/enrollments/$enrollmentId',
+    path: '/api/school-operations/enrollments/$enrollmentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSchoolOperationsHousesHouseIdRoute =
+  ApiSchoolOperationsHousesHouseIdRouteImport.update({
+    id: '/$houseId',
+    path: '/$houseId',
+    getParentRoute: () => ApiSchoolOperationsHousesRoute,
+  } as any)
+const ApiSchoolOperationsResultsOverviewRoute =
+  ApiSchoolOperationsResultsOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => ApiSchoolOperationsResultsRoute,
+  } as any)
+const ApiSchoolOperationsSchoolsSchoolIdRoute =
+  ApiSchoolOperationsSchoolsSchoolIdRouteImport.update({
+    id: '/$schoolId',
+    path: '/$schoolId',
+    getParentRoute: () => ApiSchoolOperationsSchoolsRoute,
+  } as any)
+const ApiOrganizationInvitationsInvitationIdResendRoute =
+  ApiOrganizationInvitationsInvitationIdResendRouteImport.update({
+    id: '/resend',
+    path: '/resend',
+    getParentRoute: () => ApiOrganizationInvitationsInvitationIdRoute,
+  } as any)
+const ApiPeoplePersonIdFilesFileIdRoute =
+  ApiPeoplePersonIdFilesFileIdRouteImport.update({
+    id: '/$fileId',
+    path: '/$fileId',
+    getParentRoute: () => ApiPeoplePersonIdFilesRoute,
+  } as any)
+const ApiPeoplePersonIdSiblingsRelatedPersonIdRoute =
+  ApiPeoplePersonIdSiblingsRelatedPersonIdRouteImport.update({
+    id: '/$relatedPersonId',
+    path: '/$relatedPersonId',
+    getParentRoute: () => ApiPeoplePersonIdSiblingsRoute,
+  } as any)
+const ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute =
+  ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport.update({
+    id: '/end-details',
+    path: '/end-details',
+    getParentRoute: () => ApiSchoolOperationsEnrollmentsEnrollmentIdRoute,
+  } as any)
+const ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute =
+  ApiSchoolOperationsSchoolsSchoolIdAssignmentsRouteImport.update({
+    id: '/assignments',
+    path: '/assignments',
+    getParentRoute: () => ApiSchoolOperationsSchoolsSchoolIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/organization': typeof ApiOrganizationRouteWithChildren
+  '/api/people': typeof ApiPeopleRouteWithChildren
+  '/api/platform': typeof ApiPlatformRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$fileId': typeof ApiFilesFileIdRoute
+  '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
+  '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
+  '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
+  '/api/organization/transfer': typeof ApiOrganizationTransferRoute
+  '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
+  '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
+  '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
+  '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
+  '/api/school-operations/master-data': typeof ApiSchoolOperationsMasterDataRoute
+  '/api/school-operations/overview': typeof ApiSchoolOperationsOverviewRoute
+  '/api/school-operations/results': typeof ApiSchoolOperationsResultsRouteWithChildren
+  '/api/school-operations/rosters': typeof ApiSchoolOperationsRostersRoute
+  '/api/school-operations/schools': typeof ApiSchoolOperationsSchoolsRouteWithChildren
+  '/api/school-operations/setup': typeof ApiSchoolOperationsSetupRoute
+  '/api/school-operations/student-report': typeof ApiSchoolOperationsStudentReportRoute
+  '/api/school-operations/students': typeof ApiSchoolOperationsStudentsRoute
+  '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
+  '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
+  '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
+  '/api/people/$personId/family': typeof ApiPeoplePersonIdFamilyRoute
+  '/api/people/$personId/files': typeof ApiPeoplePersonIdFilesRouteWithChildren
+  '/api/people/$personId/placements': typeof ApiPeoplePersonIdPlacementsRoute
+  '/api/people/$personId/sibling-options': typeof ApiPeoplePersonIdSiblingOptionsRoute
+  '/api/people/$personId/siblings': typeof ApiPeoplePersonIdSiblingsRouteWithChildren
+  '/api/school-operations/classes/$classId': typeof ApiSchoolOperationsClassesClassIdRoute
+  '/api/school-operations/enrollments/$enrollmentId': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren
+  '/api/school-operations/houses/$houseId': typeof ApiSchoolOperationsHousesHouseIdRoute
+  '/api/school-operations/results/overview': typeof ApiSchoolOperationsResultsOverviewRoute
+  '/api/school-operations/schools/$schoolId': typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
+  '/api/organization/invitations/$invitationId/resend': typeof ApiOrganizationInvitationsInvitationIdResendRoute
+  '/api/people/$personId/files/$fileId': typeof ApiPeoplePersonIdFilesFileIdRoute
+  '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+  '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/organization': typeof ApiOrganizationRouteWithChildren
+  '/api/people': typeof ApiPeopleRouteWithChildren
+  '/api/platform': typeof ApiPlatformRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$fileId': typeof ApiFilesFileIdRoute
+  '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
+  '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
+  '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
+  '/api/organization/transfer': typeof ApiOrganizationTransferRoute
+  '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
+  '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
+  '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
+  '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
+  '/api/school-operations/master-data': typeof ApiSchoolOperationsMasterDataRoute
+  '/api/school-operations/overview': typeof ApiSchoolOperationsOverviewRoute
+  '/api/school-operations/results': typeof ApiSchoolOperationsResultsRouteWithChildren
+  '/api/school-operations/rosters': typeof ApiSchoolOperationsRostersRoute
+  '/api/school-operations/schools': typeof ApiSchoolOperationsSchoolsRouteWithChildren
+  '/api/school-operations/setup': typeof ApiSchoolOperationsSetupRoute
+  '/api/school-operations/student-report': typeof ApiSchoolOperationsStudentReportRoute
+  '/api/school-operations/students': typeof ApiSchoolOperationsStudentsRoute
+  '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
+  '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
+  '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
+  '/api/people/$personId/family': typeof ApiPeoplePersonIdFamilyRoute
+  '/api/people/$personId/files': typeof ApiPeoplePersonIdFilesRouteWithChildren
+  '/api/people/$personId/placements': typeof ApiPeoplePersonIdPlacementsRoute
+  '/api/people/$personId/sibling-options': typeof ApiPeoplePersonIdSiblingOptionsRoute
+  '/api/people/$personId/siblings': typeof ApiPeoplePersonIdSiblingsRouteWithChildren
+  '/api/school-operations/classes/$classId': typeof ApiSchoolOperationsClassesClassIdRoute
+  '/api/school-operations/enrollments/$enrollmentId': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren
+  '/api/school-operations/houses/$houseId': typeof ApiSchoolOperationsHousesHouseIdRoute
+  '/api/school-operations/results/overview': typeof ApiSchoolOperationsResultsOverviewRoute
+  '/api/school-operations/schools/$schoolId': typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
+  '/api/organization/invitations/$invitationId/resend': typeof ApiOrganizationInvitationsInvitationIdResendRoute
+  '/api/people/$personId/files/$fileId': typeof ApiPeoplePersonIdFilesFileIdRoute
+  '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+  '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/organization': typeof ApiOrganizationRouteWithChildren
+  '/api/people': typeof ApiPeopleRouteWithChildren
+  '/api/platform': typeof ApiPlatformRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$fileId': typeof ApiFilesFileIdRoute
+  '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
+  '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
+  '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
+  '/api/organization/transfer': typeof ApiOrganizationTransferRoute
+  '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
+  '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
+  '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
+  '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
+  '/api/school-operations/master-data': typeof ApiSchoolOperationsMasterDataRoute
+  '/api/school-operations/overview': typeof ApiSchoolOperationsOverviewRoute
+  '/api/school-operations/results': typeof ApiSchoolOperationsResultsRouteWithChildren
+  '/api/school-operations/rosters': typeof ApiSchoolOperationsRostersRoute
+  '/api/school-operations/schools': typeof ApiSchoolOperationsSchoolsRouteWithChildren
+  '/api/school-operations/setup': typeof ApiSchoolOperationsSetupRoute
+  '/api/school-operations/student-report': typeof ApiSchoolOperationsStudentReportRoute
+  '/api/school-operations/students': typeof ApiSchoolOperationsStudentsRoute
+  '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
+  '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
+  '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
+  '/api/people/$personId/family': typeof ApiPeoplePersonIdFamilyRoute
+  '/api/people/$personId/files': typeof ApiPeoplePersonIdFilesRouteWithChildren
+  '/api/people/$personId/placements': typeof ApiPeoplePersonIdPlacementsRoute
+  '/api/people/$personId/sibling-options': typeof ApiPeoplePersonIdSiblingOptionsRoute
+  '/api/people/$personId/siblings': typeof ApiPeoplePersonIdSiblingsRouteWithChildren
+  '/api/school-operations/classes/$classId': typeof ApiSchoolOperationsClassesClassIdRoute
+  '/api/school-operations/enrollments/$enrollmentId': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren
+  '/api/school-operations/houses/$houseId': typeof ApiSchoolOperationsHousesHouseIdRoute
+  '/api/school-operations/results/overview': typeof ApiSchoolOperationsResultsOverviewRoute
+  '/api/school-operations/schools/$schoolId': typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
+  '/api/organization/invitations/$invitationId/resend': typeof ApiOrganizationInvitationsInvitationIdResendRoute
+  '/api/people/$personId/files/$fileId': typeof ApiPeoplePersonIdFilesFileIdRoute
+  '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+  '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/api/organization'
+    | '/api/people'
+    | '/api/platform'
+    | '/api/auth/$'
+    | '/api/files/$fileId'
+    | '/api/invitations/accept'
+    | '/api/invitations/preview'
+    | '/api/organization/invitations'
+    | '/api/organization/transfer'
+    | '/api/people/$personId'
+    | '/api/school-operations/admissions'
+    | '/api/school-operations/classes'
+    | '/api/school-operations/houses'
+    | '/api/school-operations/master-data'
+    | '/api/school-operations/overview'
+    | '/api/school-operations/results'
+    | '/api/school-operations/rosters'
+    | '/api/school-operations/schools'
+    | '/api/school-operations/setup'
+    | '/api/school-operations/student-report'
+    | '/api/school-operations/students'
+    | '/api/organization/groups/$groupKey'
+    | '/api/organization/invitations/$invitationId'
+    | '/api/organization/members/$memberId'
+    | '/api/people/$personId/family'
+    | '/api/people/$personId/files'
+    | '/api/people/$personId/placements'
+    | '/api/people/$personId/sibling-options'
+    | '/api/people/$personId/siblings'
+    | '/api/school-operations/classes/$classId'
+    | '/api/school-operations/enrollments/$enrollmentId'
+    | '/api/school-operations/houses/$houseId'
+    | '/api/school-operations/results/overview'
+    | '/api/school-operations/schools/$schoolId'
+    | '/api/organization/invitations/$invitationId/resend'
+    | '/api/people/$personId/files/$fileId'
+    | '/api/people/$personId/siblings/$relatedPersonId'
+    | '/api/school-operations/enrollments/$enrollmentId/end-details'
+    | '/api/school-operations/schools/$schoolId/assignments'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/api/organization'
+    | '/api/people'
+    | '/api/platform'
+    | '/api/auth/$'
+    | '/api/files/$fileId'
+    | '/api/invitations/accept'
+    | '/api/invitations/preview'
+    | '/api/organization/invitations'
+    | '/api/organization/transfer'
+    | '/api/people/$personId'
+    | '/api/school-operations/admissions'
+    | '/api/school-operations/classes'
+    | '/api/school-operations/houses'
+    | '/api/school-operations/master-data'
+    | '/api/school-operations/overview'
+    | '/api/school-operations/results'
+    | '/api/school-operations/rosters'
+    | '/api/school-operations/schools'
+    | '/api/school-operations/setup'
+    | '/api/school-operations/student-report'
+    | '/api/school-operations/students'
+    | '/api/organization/groups/$groupKey'
+    | '/api/organization/invitations/$invitationId'
+    | '/api/organization/members/$memberId'
+    | '/api/people/$personId/family'
+    | '/api/people/$personId/files'
+    | '/api/people/$personId/placements'
+    | '/api/people/$personId/sibling-options'
+    | '/api/people/$personId/siblings'
+    | '/api/school-operations/classes/$classId'
+    | '/api/school-operations/enrollments/$enrollmentId'
+    | '/api/school-operations/houses/$houseId'
+    | '/api/school-operations/results/overview'
+    | '/api/school-operations/schools/$schoolId'
+    | '/api/organization/invitations/$invitationId/resend'
+    | '/api/people/$personId/files/$fileId'
+    | '/api/people/$personId/siblings/$relatedPersonId'
+    | '/api/school-operations/enrollments/$enrollmentId/end-details'
+    | '/api/school-operations/schools/$schoolId/assignments'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/organization'
+    | '/api/people'
+    | '/api/platform'
+    | '/api/auth/$'
+    | '/api/files/$fileId'
+    | '/api/invitations/accept'
+    | '/api/invitations/preview'
+    | '/api/organization/invitations'
+    | '/api/organization/transfer'
+    | '/api/people/$personId'
+    | '/api/school-operations/admissions'
+    | '/api/school-operations/classes'
+    | '/api/school-operations/houses'
+    | '/api/school-operations/master-data'
+    | '/api/school-operations/overview'
+    | '/api/school-operations/results'
+    | '/api/school-operations/rosters'
+    | '/api/school-operations/schools'
+    | '/api/school-operations/setup'
+    | '/api/school-operations/student-report'
+    | '/api/school-operations/students'
+    | '/api/organization/groups/$groupKey'
+    | '/api/organization/invitations/$invitationId'
+    | '/api/organization/members/$memberId'
+    | '/api/people/$personId/family'
+    | '/api/people/$personId/files'
+    | '/api/people/$personId/placements'
+    | '/api/people/$personId/sibling-options'
+    | '/api/people/$personId/siblings'
+    | '/api/school-operations/classes/$classId'
+    | '/api/school-operations/enrollments/$enrollmentId'
+    | '/api/school-operations/houses/$houseId'
+    | '/api/school-operations/results/overview'
+    | '/api/school-operations/schools/$schoolId'
+    | '/api/organization/invitations/$invitationId/resend'
+    | '/api/people/$personId/files/$fileId'
+    | '/api/people/$personId/siblings/$relatedPersonId'
+    | '/api/school-operations/enrollments/$enrollmentId/end-details'
+    | '/api/school-operations/schools/$schoolId/assignments'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiOrganizationRoute: typeof ApiOrganizationRouteWithChildren
+  ApiPeopleRoute: typeof ApiPeopleRouteWithChildren
+  ApiPlatformRoute: typeof ApiPlatformRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiFilesFileIdRoute: typeof ApiFilesFileIdRoute
+  ApiInvitationsAcceptRoute: typeof ApiInvitationsAcceptRoute
+  ApiInvitationsPreviewRoute: typeof ApiInvitationsPreviewRoute
+  ApiSchoolOperationsAdmissionsRoute: typeof ApiSchoolOperationsAdmissionsRoute
+  ApiSchoolOperationsClassesRoute: typeof ApiSchoolOperationsClassesRouteWithChildren
+  ApiSchoolOperationsHousesRoute: typeof ApiSchoolOperationsHousesRouteWithChildren
+  ApiSchoolOperationsMasterDataRoute: typeof ApiSchoolOperationsMasterDataRoute
+  ApiSchoolOperationsOverviewRoute: typeof ApiSchoolOperationsOverviewRoute
+  ApiSchoolOperationsResultsRoute: typeof ApiSchoolOperationsResultsRouteWithChildren
+  ApiSchoolOperationsRostersRoute: typeof ApiSchoolOperationsRostersRoute
+  ApiSchoolOperationsSchoolsRoute: typeof ApiSchoolOperationsSchoolsRouteWithChildren
+  ApiSchoolOperationsSetupRoute: typeof ApiSchoolOperationsSetupRoute
+  ApiSchoolOperationsStudentReportRoute: typeof ApiSchoolOperationsStudentReportRoute
+  ApiSchoolOperationsStudentsRoute: typeof ApiSchoolOperationsStudentsRoute
+  ApiSchoolOperationsEnrollmentsEnrollmentIdRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +567,502 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/organization': {
+      id: '/api/organization'
+      path: '/api/organization'
+      fullPath: '/api/organization'
+      preLoaderRoute: typeof ApiOrganizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/people': {
+      id: '/api/people'
+      path: '/api/people'
+      fullPath: '/api/people'
+      preLoaderRoute: typeof ApiPeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/platform': {
+      id: '/api/platform'
+      path: '/api/platform'
+      fullPath: '/api/platform'
+      preLoaderRoute: typeof ApiPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/files/$fileId': {
+      id: '/api/files/$fileId'
+      path: '/api/files/$fileId'
+      fullPath: '/api/files/$fileId'
+      preLoaderRoute: typeof ApiFilesFileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/invitations/accept': {
+      id: '/api/invitations/accept'
+      path: '/api/invitations/accept'
+      fullPath: '/api/invitations/accept'
+      preLoaderRoute: typeof ApiInvitationsAcceptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/invitations/preview': {
+      id: '/api/invitations/preview'
+      path: '/api/invitations/preview'
+      fullPath: '/api/invitations/preview'
+      preLoaderRoute: typeof ApiInvitationsPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/organization/invitations': {
+      id: '/api/organization/invitations'
+      path: '/invitations'
+      fullPath: '/api/organization/invitations'
+      preLoaderRoute: typeof ApiOrganizationInvitationsRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/organization/transfer': {
+      id: '/api/organization/transfer'
+      path: '/transfer'
+      fullPath: '/api/organization/transfer'
+      preLoaderRoute: typeof ApiOrganizationTransferRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/people/$personId': {
+      id: '/api/people/$personId'
+      path: '/$personId'
+      fullPath: '/api/people/$personId'
+      preLoaderRoute: typeof ApiPeoplePersonIdRouteImport
+      parentRoute: typeof ApiPeopleRoute
+    }
+    '/api/school-operations/admissions': {
+      id: '/api/school-operations/admissions'
+      path: '/api/school-operations/admissions'
+      fullPath: '/api/school-operations/admissions'
+      preLoaderRoute: typeof ApiSchoolOperationsAdmissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/classes': {
+      id: '/api/school-operations/classes'
+      path: '/api/school-operations/classes'
+      fullPath: '/api/school-operations/classes'
+      preLoaderRoute: typeof ApiSchoolOperationsClassesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/houses': {
+      id: '/api/school-operations/houses'
+      path: '/api/school-operations/houses'
+      fullPath: '/api/school-operations/houses'
+      preLoaderRoute: typeof ApiSchoolOperationsHousesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/master-data': {
+      id: '/api/school-operations/master-data'
+      path: '/api/school-operations/master-data'
+      fullPath: '/api/school-operations/master-data'
+      preLoaderRoute: typeof ApiSchoolOperationsMasterDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/overview': {
+      id: '/api/school-operations/overview'
+      path: '/api/school-operations/overview'
+      fullPath: '/api/school-operations/overview'
+      preLoaderRoute: typeof ApiSchoolOperationsOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/results': {
+      id: '/api/school-operations/results'
+      path: '/api/school-operations/results'
+      fullPath: '/api/school-operations/results'
+      preLoaderRoute: typeof ApiSchoolOperationsResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/rosters': {
+      id: '/api/school-operations/rosters'
+      path: '/api/school-operations/rosters'
+      fullPath: '/api/school-operations/rosters'
+      preLoaderRoute: typeof ApiSchoolOperationsRostersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/schools': {
+      id: '/api/school-operations/schools'
+      path: '/api/school-operations/schools'
+      fullPath: '/api/school-operations/schools'
+      preLoaderRoute: typeof ApiSchoolOperationsSchoolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/setup': {
+      id: '/api/school-operations/setup'
+      path: '/api/school-operations/setup'
+      fullPath: '/api/school-operations/setup'
+      preLoaderRoute: typeof ApiSchoolOperationsSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/student-report': {
+      id: '/api/school-operations/student-report'
+      path: '/api/school-operations/student-report'
+      fullPath: '/api/school-operations/student-report'
+      preLoaderRoute: typeof ApiSchoolOperationsStudentReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/students': {
+      id: '/api/school-operations/students'
+      path: '/api/school-operations/students'
+      fullPath: '/api/school-operations/students'
+      preLoaderRoute: typeof ApiSchoolOperationsStudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/organization/groups/$groupKey': {
+      id: '/api/organization/groups/$groupKey'
+      path: '/groups/$groupKey'
+      fullPath: '/api/organization/groups/$groupKey'
+      preLoaderRoute: typeof ApiOrganizationGroupsGroupKeyRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/organization/invitations/$invitationId': {
+      id: '/api/organization/invitations/$invitationId'
+      path: '/$invitationId'
+      fullPath: '/api/organization/invitations/$invitationId'
+      preLoaderRoute: typeof ApiOrganizationInvitationsInvitationIdRouteImport
+      parentRoute: typeof ApiOrganizationInvitationsRoute
+    }
+    '/api/organization/members/$memberId': {
+      id: '/api/organization/members/$memberId'
+      path: '/members/$memberId'
+      fullPath: '/api/organization/members/$memberId'
+      preLoaderRoute: typeof ApiOrganizationMembersMemberIdRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/people/$personId/family': {
+      id: '/api/people/$personId/family'
+      path: '/family'
+      fullPath: '/api/people/$personId/family'
+      preLoaderRoute: typeof ApiPeoplePersonIdFamilyRouteImport
+      parentRoute: typeof ApiPeoplePersonIdRoute
+    }
+    '/api/people/$personId/files': {
+      id: '/api/people/$personId/files'
+      path: '/files'
+      fullPath: '/api/people/$personId/files'
+      preLoaderRoute: typeof ApiPeoplePersonIdFilesRouteImport
+      parentRoute: typeof ApiPeoplePersonIdRoute
+    }
+    '/api/people/$personId/placements': {
+      id: '/api/people/$personId/placements'
+      path: '/placements'
+      fullPath: '/api/people/$personId/placements'
+      preLoaderRoute: typeof ApiPeoplePersonIdPlacementsRouteImport
+      parentRoute: typeof ApiPeoplePersonIdRoute
+    }
+    '/api/people/$personId/sibling-options': {
+      id: '/api/people/$personId/sibling-options'
+      path: '/sibling-options'
+      fullPath: '/api/people/$personId/sibling-options'
+      preLoaderRoute: typeof ApiPeoplePersonIdSiblingOptionsRouteImport
+      parentRoute: typeof ApiPeoplePersonIdRoute
+    }
+    '/api/people/$personId/siblings': {
+      id: '/api/people/$personId/siblings'
+      path: '/siblings'
+      fullPath: '/api/people/$personId/siblings'
+      preLoaderRoute: typeof ApiPeoplePersonIdSiblingsRouteImport
+      parentRoute: typeof ApiPeoplePersonIdRoute
+    }
+    '/api/school-operations/classes/$classId': {
+      id: '/api/school-operations/classes/$classId'
+      path: '/$classId'
+      fullPath: '/api/school-operations/classes/$classId'
+      preLoaderRoute: typeof ApiSchoolOperationsClassesClassIdRouteImport
+      parentRoute: typeof ApiSchoolOperationsClassesRoute
+    }
+    '/api/school-operations/enrollments/$enrollmentId': {
+      id: '/api/school-operations/enrollments/$enrollmentId'
+      path: '/api/school-operations/enrollments/$enrollmentId'
+      fullPath: '/api/school-operations/enrollments/$enrollmentId'
+      preLoaderRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/school-operations/houses/$houseId': {
+      id: '/api/school-operations/houses/$houseId'
+      path: '/$houseId'
+      fullPath: '/api/school-operations/houses/$houseId'
+      preLoaderRoute: typeof ApiSchoolOperationsHousesHouseIdRouteImport
+      parentRoute: typeof ApiSchoolOperationsHousesRoute
+    }
+    '/api/school-operations/results/overview': {
+      id: '/api/school-operations/results/overview'
+      path: '/overview'
+      fullPath: '/api/school-operations/results/overview'
+      preLoaderRoute: typeof ApiSchoolOperationsResultsOverviewRouteImport
+      parentRoute: typeof ApiSchoolOperationsResultsRoute
+    }
+    '/api/school-operations/schools/$schoolId': {
+      id: '/api/school-operations/schools/$schoolId'
+      path: '/$schoolId'
+      fullPath: '/api/school-operations/schools/$schoolId'
+      preLoaderRoute: typeof ApiSchoolOperationsSchoolsSchoolIdRouteImport
+      parentRoute: typeof ApiSchoolOperationsSchoolsRoute
+    }
+    '/api/organization/invitations/$invitationId/resend': {
+      id: '/api/organization/invitations/$invitationId/resend'
+      path: '/resend'
+      fullPath: '/api/organization/invitations/$invitationId/resend'
+      preLoaderRoute: typeof ApiOrganizationInvitationsInvitationIdResendRouteImport
+      parentRoute: typeof ApiOrganizationInvitationsInvitationIdRoute
+    }
+    '/api/people/$personId/files/$fileId': {
+      id: '/api/people/$personId/files/$fileId'
+      path: '/$fileId'
+      fullPath: '/api/people/$personId/files/$fileId'
+      preLoaderRoute: typeof ApiPeoplePersonIdFilesFileIdRouteImport
+      parentRoute: typeof ApiPeoplePersonIdFilesRoute
+    }
+    '/api/people/$personId/siblings/$relatedPersonId': {
+      id: '/api/people/$personId/siblings/$relatedPersonId'
+      path: '/$relatedPersonId'
+      fullPath: '/api/people/$personId/siblings/$relatedPersonId'
+      preLoaderRoute: typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRouteImport
+      parentRoute: typeof ApiPeoplePersonIdSiblingsRoute
+    }
+    '/api/school-operations/enrollments/$enrollmentId/end-details': {
+      id: '/api/school-operations/enrollments/$enrollmentId/end-details'
+      path: '/end-details'
+      fullPath: '/api/school-operations/enrollments/$enrollmentId/end-details'
+      preLoaderRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport
+      parentRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRoute
+    }
+    '/api/school-operations/schools/$schoolId/assignments': {
+      id: '/api/school-operations/schools/$schoolId/assignments'
+      path: '/assignments'
+      fullPath: '/api/school-operations/schools/$schoolId/assignments'
+      preLoaderRoute: typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRouteImport
+      parentRoute: typeof ApiSchoolOperationsSchoolsSchoolIdRoute
+    }
   }
 }
 
+interface ApiOrganizationInvitationsInvitationIdRouteChildren {
+  ApiOrganizationInvitationsInvitationIdResendRoute: typeof ApiOrganizationInvitationsInvitationIdResendRoute
+}
+
+const ApiOrganizationInvitationsInvitationIdRouteChildren: ApiOrganizationInvitationsInvitationIdRouteChildren =
+  {
+    ApiOrganizationInvitationsInvitationIdResendRoute:
+      ApiOrganizationInvitationsInvitationIdResendRoute,
+  }
+
+const ApiOrganizationInvitationsInvitationIdRouteWithChildren =
+  ApiOrganizationInvitationsInvitationIdRoute._addFileChildren(
+    ApiOrganizationInvitationsInvitationIdRouteChildren,
+  )
+
+interface ApiOrganizationInvitationsRouteChildren {
+  ApiOrganizationInvitationsInvitationIdRoute: typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
+}
+
+const ApiOrganizationInvitationsRouteChildren: ApiOrganizationInvitationsRouteChildren =
+  {
+    ApiOrganizationInvitationsInvitationIdRoute:
+      ApiOrganizationInvitationsInvitationIdRouteWithChildren,
+  }
+
+const ApiOrganizationInvitationsRouteWithChildren =
+  ApiOrganizationInvitationsRoute._addFileChildren(
+    ApiOrganizationInvitationsRouteChildren,
+  )
+
+interface ApiOrganizationRouteChildren {
+  ApiOrganizationInvitationsRoute: typeof ApiOrganizationInvitationsRouteWithChildren
+  ApiOrganizationTransferRoute: typeof ApiOrganizationTransferRoute
+  ApiOrganizationGroupsGroupKeyRoute: typeof ApiOrganizationGroupsGroupKeyRoute
+  ApiOrganizationMembersMemberIdRoute: typeof ApiOrganizationMembersMemberIdRoute
+}
+
+const ApiOrganizationRouteChildren: ApiOrganizationRouteChildren = {
+  ApiOrganizationInvitationsRoute: ApiOrganizationInvitationsRouteWithChildren,
+  ApiOrganizationTransferRoute: ApiOrganizationTransferRoute,
+  ApiOrganizationGroupsGroupKeyRoute: ApiOrganizationGroupsGroupKeyRoute,
+  ApiOrganizationMembersMemberIdRoute: ApiOrganizationMembersMemberIdRoute,
+}
+
+const ApiOrganizationRouteWithChildren = ApiOrganizationRoute._addFileChildren(
+  ApiOrganizationRouteChildren,
+)
+
+interface ApiPeoplePersonIdFilesRouteChildren {
+  ApiPeoplePersonIdFilesFileIdRoute: typeof ApiPeoplePersonIdFilesFileIdRoute
+}
+
+const ApiPeoplePersonIdFilesRouteChildren: ApiPeoplePersonIdFilesRouteChildren =
+  {
+    ApiPeoplePersonIdFilesFileIdRoute: ApiPeoplePersonIdFilesFileIdRoute,
+  }
+
+const ApiPeoplePersonIdFilesRouteWithChildren =
+  ApiPeoplePersonIdFilesRoute._addFileChildren(
+    ApiPeoplePersonIdFilesRouteChildren,
+  )
+
+interface ApiPeoplePersonIdSiblingsRouteChildren {
+  ApiPeoplePersonIdSiblingsRelatedPersonIdRoute: typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+}
+
+const ApiPeoplePersonIdSiblingsRouteChildren: ApiPeoplePersonIdSiblingsRouteChildren =
+  {
+    ApiPeoplePersonIdSiblingsRelatedPersonIdRoute:
+      ApiPeoplePersonIdSiblingsRelatedPersonIdRoute,
+  }
+
+const ApiPeoplePersonIdSiblingsRouteWithChildren =
+  ApiPeoplePersonIdSiblingsRoute._addFileChildren(
+    ApiPeoplePersonIdSiblingsRouteChildren,
+  )
+
+interface ApiPeoplePersonIdRouteChildren {
+  ApiPeoplePersonIdFamilyRoute: typeof ApiPeoplePersonIdFamilyRoute
+  ApiPeoplePersonIdFilesRoute: typeof ApiPeoplePersonIdFilesRouteWithChildren
+  ApiPeoplePersonIdPlacementsRoute: typeof ApiPeoplePersonIdPlacementsRoute
+  ApiPeoplePersonIdSiblingOptionsRoute: typeof ApiPeoplePersonIdSiblingOptionsRoute
+  ApiPeoplePersonIdSiblingsRoute: typeof ApiPeoplePersonIdSiblingsRouteWithChildren
+}
+
+const ApiPeoplePersonIdRouteChildren: ApiPeoplePersonIdRouteChildren = {
+  ApiPeoplePersonIdFamilyRoute: ApiPeoplePersonIdFamilyRoute,
+  ApiPeoplePersonIdFilesRoute: ApiPeoplePersonIdFilesRouteWithChildren,
+  ApiPeoplePersonIdPlacementsRoute: ApiPeoplePersonIdPlacementsRoute,
+  ApiPeoplePersonIdSiblingOptionsRoute: ApiPeoplePersonIdSiblingOptionsRoute,
+  ApiPeoplePersonIdSiblingsRoute: ApiPeoplePersonIdSiblingsRouteWithChildren,
+}
+
+const ApiPeoplePersonIdRouteWithChildren =
+  ApiPeoplePersonIdRoute._addFileChildren(ApiPeoplePersonIdRouteChildren)
+
+interface ApiPeopleRouteChildren {
+  ApiPeoplePersonIdRoute: typeof ApiPeoplePersonIdRouteWithChildren
+}
+
+const ApiPeopleRouteChildren: ApiPeopleRouteChildren = {
+  ApiPeoplePersonIdRoute: ApiPeoplePersonIdRouteWithChildren,
+}
+
+const ApiPeopleRouteWithChildren = ApiPeopleRoute._addFileChildren(
+  ApiPeopleRouteChildren,
+)
+
+interface ApiSchoolOperationsClassesRouteChildren {
+  ApiSchoolOperationsClassesClassIdRoute: typeof ApiSchoolOperationsClassesClassIdRoute
+}
+
+const ApiSchoolOperationsClassesRouteChildren: ApiSchoolOperationsClassesRouteChildren =
+  {
+    ApiSchoolOperationsClassesClassIdRoute:
+      ApiSchoolOperationsClassesClassIdRoute,
+  }
+
+const ApiSchoolOperationsClassesRouteWithChildren =
+  ApiSchoolOperationsClassesRoute._addFileChildren(
+    ApiSchoolOperationsClassesRouteChildren,
+  )
+
+interface ApiSchoolOperationsHousesRouteChildren {
+  ApiSchoolOperationsHousesHouseIdRoute: typeof ApiSchoolOperationsHousesHouseIdRoute
+}
+
+const ApiSchoolOperationsHousesRouteChildren: ApiSchoolOperationsHousesRouteChildren =
+  {
+    ApiSchoolOperationsHousesHouseIdRoute:
+      ApiSchoolOperationsHousesHouseIdRoute,
+  }
+
+const ApiSchoolOperationsHousesRouteWithChildren =
+  ApiSchoolOperationsHousesRoute._addFileChildren(
+    ApiSchoolOperationsHousesRouteChildren,
+  )
+
+interface ApiSchoolOperationsResultsRouteChildren {
+  ApiSchoolOperationsResultsOverviewRoute: typeof ApiSchoolOperationsResultsOverviewRoute
+}
+
+const ApiSchoolOperationsResultsRouteChildren: ApiSchoolOperationsResultsRouteChildren =
+  {
+    ApiSchoolOperationsResultsOverviewRoute:
+      ApiSchoolOperationsResultsOverviewRoute,
+  }
+
+const ApiSchoolOperationsResultsRouteWithChildren =
+  ApiSchoolOperationsResultsRoute._addFileChildren(
+    ApiSchoolOperationsResultsRouteChildren,
+  )
+
+interface ApiSchoolOperationsSchoolsSchoolIdRouteChildren {
+  ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute: typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
+}
+
+const ApiSchoolOperationsSchoolsSchoolIdRouteChildren: ApiSchoolOperationsSchoolsSchoolIdRouteChildren =
+  {
+    ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute:
+      ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute,
+  }
+
+const ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren =
+  ApiSchoolOperationsSchoolsSchoolIdRoute._addFileChildren(
+    ApiSchoolOperationsSchoolsSchoolIdRouteChildren,
+  )
+
+interface ApiSchoolOperationsSchoolsRouteChildren {
+  ApiSchoolOperationsSchoolsSchoolIdRoute: typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
+}
+
+const ApiSchoolOperationsSchoolsRouteChildren: ApiSchoolOperationsSchoolsRouteChildren =
+  {
+    ApiSchoolOperationsSchoolsSchoolIdRoute:
+      ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren,
+  }
+
+const ApiSchoolOperationsSchoolsRouteWithChildren =
+  ApiSchoolOperationsSchoolsRoute._addFileChildren(
+    ApiSchoolOperationsSchoolsRouteChildren,
+  )
+
+interface ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren {
+  ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+}
+
+const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren: ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren =
+  {
+    ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute:
+      ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute,
+  }
+
+const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren =
+  ApiSchoolOperationsEnrollmentsEnrollmentIdRoute._addFileChildren(
+    ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiOrganizationRoute: ApiOrganizationRouteWithChildren,
+  ApiPeopleRoute: ApiPeopleRouteWithChildren,
+  ApiPlatformRoute: ApiPlatformRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiFilesFileIdRoute: ApiFilesFileIdRoute,
+  ApiInvitationsAcceptRoute: ApiInvitationsAcceptRoute,
+  ApiInvitationsPreviewRoute: ApiInvitationsPreviewRoute,
+  ApiSchoolOperationsAdmissionsRoute: ApiSchoolOperationsAdmissionsRoute,
+  ApiSchoolOperationsClassesRoute: ApiSchoolOperationsClassesRouteWithChildren,
+  ApiSchoolOperationsHousesRoute: ApiSchoolOperationsHousesRouteWithChildren,
+  ApiSchoolOperationsMasterDataRoute: ApiSchoolOperationsMasterDataRoute,
+  ApiSchoolOperationsOverviewRoute: ApiSchoolOperationsOverviewRoute,
+  ApiSchoolOperationsResultsRoute: ApiSchoolOperationsResultsRouteWithChildren,
+  ApiSchoolOperationsRostersRoute: ApiSchoolOperationsRostersRoute,
+  ApiSchoolOperationsSchoolsRoute: ApiSchoolOperationsSchoolsRouteWithChildren,
+  ApiSchoolOperationsSetupRoute: ApiSchoolOperationsSetupRoute,
+  ApiSchoolOperationsStudentReportRoute: ApiSchoolOperationsStudentReportRoute,
+  ApiSchoolOperationsStudentsRoute: ApiSchoolOperationsStudentsRoute,
+  ApiSchoolOperationsEnrollmentsEnrollmentIdRoute:
+    ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

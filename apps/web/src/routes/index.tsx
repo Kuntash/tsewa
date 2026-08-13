@@ -54,7 +54,7 @@ type PlatformState = {
   organizations: Array<{
     id: string;
     name: string;
-    role: "owner" | "admin" | "staff" | "viewer";
+    group: "owner" | "admin" | "staff" | "viewer";
     defaultSessionId: string | null;
   }>;
   invitation?: InvitationPreview;
@@ -63,9 +63,21 @@ type PlatformState = {
 type InvitationPreview = {
   organizationName: string;
   email: string;
-  role: "admin" | "staff" | "viewer";
+  group: "admin" | "staff" | "viewer";
+  roleNames: string[];
   expiresAt: string;
 };
+
+type AccessGroup = "owner" | "admin" | "staff" | "viewer";
+type AccessRole =
+  | "organization_administrator"
+  | "registration"
+  | "school"
+  | "sponsorship"
+  | "scholarship"
+  | "dispensary"
+  | "staff_operations"
+  | "auditor";
 
 type OrganizationState = {
   organization: {
@@ -77,11 +89,12 @@ type OrganizationState = {
   };
   currentMember: {
     id: string;
-    role: "owner" | "admin" | "staff" | "viewer";
+    group: AccessGroup;
+    permissions: string[];
   };
   members: Array<{
     id: string;
-    role: "owner" | "admin" | "staff" | "viewer";
+    group: AccessGroup;
     joinedAt: string;
     userId: string;
     name: string;
@@ -91,10 +104,31 @@ type OrganizationState = {
   invitations: Array<{
     id: string;
     email: string;
-    role: "admin" | "staff" | "viewer";
+    group: "admin" | "staff" | "viewer";
     expiresAt: string;
     createdAt: string;
+    emailStatus: "not_sent" | "sent" | "failed";
+    emailSentAt: string | null;
+    emailLastAttemptAt: string | null;
+    emailAttemptCount: number;
   }>;
+  accessModel: {
+    permissions: Array<{ key: string; name: string; category: string }>;
+    roles: Array<{
+      id: string;
+      key: AccessRole;
+      name: string;
+      description: string;
+      permissionKeys: string[];
+    }>;
+    groups: Array<{
+      id: string;
+      key: AccessGroup;
+      name: string;
+      description: string;
+      roleKeys: AccessRole[];
+    }>;
+  };
 };
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -267,7 +301,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
               </CardTitle>
               <CardDescription className="leading-6">
                 {isInvitation
-                  ? `You have been invited as ${platform.invitation?.role}. Use ${platform.invitation?.email}.`
+                  ? `You have been invited as ${platform.invitation?.group}. Use ${platform.invitation?.email}.`
                   : mode === "setup"
                     ? "Create your organization and its first owner account."
                     : "Sign in to your organization."}
@@ -572,7 +606,7 @@ function AdministrationPanel() {
   const [timezone, setTimezone] = useState("");
   const [locale, setLocale] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "staff" | "viewer">("admin");
+  const [inviteGroup, setInviteGroup] = useState<"admin" | "staff" | "viewer">("admin");
   const [invitationUrl, setInvitationUrl] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
@@ -622,39 +656,38 @@ function AdministrationPanel() {
     const response = await fetch("/api/organization/invitations", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+      body: JSON.stringify({ email: inviteEmail, group: inviteGroup }),
     });
     const payload = (await response.json()) as {
       error?: string;
       invitationUrl?: string;
-      added?: boolean;
-      memberName?: string;
+      delivery?: { status: "sent" | "failed" };
     };
     if (!response.ok) setError(payload.error ?? "Invitation could not be created.");
-    else if (payload.added) {
-      setMessage(`${payload.memberName ?? "The existing user"} was added to the organization.`);
-      setInviteEmail("");
-      await refresh();
-    } else if (payload.invitationUrl) {
+    else if (payload.invitationUrl) {
       setInvitationUrl(payload.invitationUrl);
-      setMessage("Invitation created. Copy and share this private link.");
+      setMessage(
+        payload.delivery?.status === "sent"
+          ? "Invitation created and emailed."
+          : "Invitation created, but email delivery failed. Copy the private link below.",
+      );
       setInviteEmail("");
       await refresh();
     }
     setBusy("");
   }
 
-  async function changeRole(memberId: string, role: "admin" | "staff" | "viewer") {
+  async function changeGroup(memberId: string, group: "admin" | "staff" | "viewer") {
     startRequest(memberId);
     const response = await fetch(`/api/organization/members/${memberId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ group }),
     });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "The role could not be changed.");
+    if (!response.ok) setError(payload.error ?? "The access group could not be changed.");
     else {
-      setMessage("Member role updated.");
+      setMessage("Member access group updated.");
       await refresh();
     }
     setBusy("");
@@ -694,6 +727,45 @@ function AdministrationPanel() {
     setBusy("");
   }
 
+  async function resendInvitation(invitationId: string) {
+    startRequest(`resend-${invitationId}`);
+    const response = await fetch(`/api/organization/invitations/${invitationId}/resend`, {
+      method: "POST",
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      invitationUrl?: string;
+      delivery?: { status: "sent" | "failed" };
+    };
+    if (!response.ok) setError(payload.error ?? "Invitation could not be resent.");
+    else {
+      setInvitationUrl(payload.invitationUrl ?? "");
+      setMessage(
+        payload.delivery?.status === "sent"
+          ? "A fresh invitation was emailed. The old link no longer works."
+          : "The link was refreshed, but email delivery failed. Copy the new link below.",
+      );
+      await refresh();
+    }
+    setBusy("");
+  }
+
+  async function saveGroupRoles(group: Exclude<AccessGroup, "owner">, roleKeys: AccessRole[]) {
+    startRequest(`group-${group}`);
+    const response = await fetch(`/api/organization/groups/${group}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ roleKeys }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) setError(payload.error ?? "Group roles could not be saved.");
+    else {
+      setMessage(`${groupLabel(group)} access updated.`);
+      await refresh();
+    }
+    setBusy("");
+  }
+
   if (!state) {
     return (
       <Card className="mt-10">
@@ -704,8 +776,12 @@ function AdministrationPanel() {
     );
   }
 
-  const canManage = state.currentMember.role === "owner" || state.currentMember.role === "admin";
-  const isOwner = state.currentMember.role === "owner";
+  const canManageSettings = state.currentMember.permissions.includes(
+    "organization.settings.manage",
+  );
+  const canManageMembers = state.currentMember.permissions.includes("organization.members.manage");
+  const canManageRoles = state.currentMember.permissions.includes("organization.roles.manage");
+  const isOwner = state.currentMember.group === "owner";
 
   return (
     <section className="mt-12" id="administration">
@@ -721,7 +797,7 @@ function AdministrationPanel() {
         </div>
         <Badge className="w-fit gap-1.5 rounded-full" variant="outline">
           {isOwner ? <Crown className="size-3.5" /> : <UserCog className="size-3.5" />}
-          {roleLabel(state.currentMember.role)}
+          {groupLabel(state.currentMember.group)}
         </Badge>
       </div>
 
@@ -750,7 +826,7 @@ function AdministrationPanel() {
               <div className="space-y-2">
                 <Label htmlFor="organization-name">Organization name</Label>
                 <Input
-                  disabled={!canManage}
+                  disabled={!canManageSettings}
                   id="organization-name"
                   onChange={(event) => setName(event.target.value)}
                   value={name}
@@ -760,7 +836,7 @@ function AdministrationPanel() {
                 <div className="space-y-2">
                   <Label htmlFor="organization-timezone">Timezone</Label>
                   <Input
-                    disabled={!canManage}
+                    disabled={!canManageSettings}
                     id="organization-timezone"
                     onChange={(event) => setTimezone(event.target.value)}
                     value={timezone}
@@ -769,14 +845,14 @@ function AdministrationPanel() {
                 <div className="space-y-2">
                   <Label htmlFor="organization-locale">Locale</Label>
                   <Input
-                    disabled={!canManage}
+                    disabled={!canManageSettings}
                     id="organization-locale"
                     onChange={(event) => setLocale(event.target.value)}
                     value={locale}
                   />
                 </div>
               </div>
-              <Button disabled={!canManage || busy === "settings"} type="submit">
+              <Button disabled={!canManageSettings || busy === "settings"} type="submit">
                 {busy === "settings" ? <LoaderCircle className="animate-spin" /> : <Settings />}
                 Save settings
               </Button>
@@ -813,7 +889,7 @@ function AdministrationPanel() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-semibold">{member.name}</p>
                       {isCurrent ? <Badge variant="secondary">You</Badge> : null}
-                      {member.role === "owner" ? (
+                      {member.group === "owner" ? (
                         <Badge className="gap-1 rounded-full">
                           <Crown className="size-3" /> Owner
                         </Badge>
@@ -821,14 +897,14 @@ function AdministrationPanel() {
                     </div>
                     <p className="mt-1 truncate text-xs text-muted-foreground">{member.email}</p>
                   </div>
-                  {!isCurrent && isOwner && member.role !== "owner" ? (
+                  {!isCurrent && canManageMembers && member.group !== "owner" ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <Select
                         disabled={busy === member.id}
                         onValueChange={(value) =>
-                          void changeRole(member.id, value as "admin" | "staff" | "viewer")
+                          void changeGroup(member.id, value as "admin" | "staff" | "viewer")
                         }
-                        value={member.role}
+                        value={member.group}
                       >
                         <SelectTrigger className="h-9 w-28 rounded-full">
                           <SelectValue />
@@ -848,23 +924,22 @@ function AdministrationPanel() {
                         <Crown /> Transfer
                       </Button>
                     </div>
-                  ) : member.role !== "owner" ? (
+                  ) : member.group !== "owner" ? (
                     <Badge className="w-fit rounded-full" variant="outline">
-                      {roleLabel(member.role)}
+                      {groupLabel(member.group)}
                     </Badge>
                   ) : null}
                 </div>
               );
             })}
 
-            {canManage ? (
+            {canManageMembers ? (
               <form className="mt-5 rounded-2xl border border-dashed p-4" onSubmit={inviteMember}>
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <MailPlus className="size-4 text-primary" /> Invite a member
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Until email delivery is connected, copy the private seven-day link and send it
-                  yourself.
+                  Tsewa emails a private seven-day link and records the delivery result.
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
                   <Input
@@ -876,8 +951,8 @@ function AdministrationPanel() {
                     value={inviteEmail}
                   />
                   <Select
-                    onValueChange={(value) => setInviteRole(value as typeof inviteRole)}
-                    value={inviteRole}
+                    onValueChange={(value) => setInviteGroup(value as typeof inviteGroup)}
+                    value={inviteGroup}
                   >
                     <SelectTrigger className="w-full rounded-full">
                       <SelectValue />
@@ -924,20 +999,35 @@ function AdministrationPanel() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{invitation.email}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {roleLabel(invitation.role)} · expires{" "}
-                        {formatShortDate(invitation.expiresAt)}
+                        {groupLabel(invitation.group)} ·{" "}
+                        {invitation.emailStatus === "sent"
+                          ? "emailed"
+                          : invitation.emailStatus === "failed"
+                            ? "email failed"
+                            : "not emailed"}{" "}
+                        · expires {formatShortDate(invitation.expiresAt)}
                       </p>
                     </div>
-                    {canManage ? (
-                      <Button
-                        aria-label={`Revoke invitation for ${invitation.email}`}
-                        disabled={busy === invitation.id}
-                        onClick={() => void revokeInvitation(invitation.id)}
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        <X />
-                      </Button>
+                    {canManageMembers ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          disabled={busy === `resend-${invitation.id}`}
+                          onClick={() => void resendInvitation(invitation.id)}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          Resend
+                        </Button>
+                        <Button
+                          aria-label={`Revoke invitation for ${invitation.email}`}
+                          disabled={busy === invitation.id}
+                          onClick={() => void revokeInvitation(invitation.id)}
+                          size="icon-sm"
+                          variant="ghost"
+                        >
+                          <X />
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
                 ))}
@@ -946,12 +1036,68 @@ function AdministrationPanel() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle>Access groups and functional roles</CardTitle>
+          <CardDescription>
+            Every member belongs to one access group. A group receives explicit permissions through
+            its functional roles; owner always retains every role.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-3">
+          {state.accessModel.groups
+            .filter((group) => group.key !== "owner")
+            .map((group) => (
+              <div className="rounded-2xl border bg-muted/20 p-4" key={group.id}>
+                <div>
+                  <p className="font-semibold">{group.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {group.description}
+                  </p>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {state.accessModel.roles.map((role) => {
+                    const selected = group.roleKeys.includes(role.key);
+                    const nextRoles = selected
+                      ? group.roleKeys.filter((roleKey) => roleKey !== role.key)
+                      : [...group.roleKeys, role.key];
+                    return (
+                      <button
+                        aria-pressed={selected}
+                        className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                          selected
+                            ? "border-primary/30 bg-primary/8"
+                            : "border-border bg-background hover:bg-muted"
+                        }`}
+                        disabled={!canManageRoles || busy === `group-${group.key}`}
+                        key={role.id}
+                        onClick={() =>
+                          void saveGroupRoles(group.key as Exclude<AccessGroup, "owner">, nextRoles)
+                        }
+                        type="button"
+                      >
+                        <span className="flex items-center justify-between gap-3 text-sm font-medium">
+                          {role.name}
+                          {selected ? <Check className="size-4 text-primary" /> : null}
+                        </span>
+                        <span className="mt-1 block text-xs leading-4 text-muted-foreground">
+                          {role.permissionKeys.length} explicit permissions
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+        </CardContent>
+      </Card>
     </section>
   );
 }
 
-function roleLabel(role: OrganizationState["currentMember"]["role"]): string {
-  return role.charAt(0).toUpperCase() + role.slice(1);
+function groupLabel(group: AccessGroup): string {
+  return group === "admin" ? "Administrator" : group.charAt(0).toUpperCase() + group.slice(1);
 }
 
 function initials(name: string): string {

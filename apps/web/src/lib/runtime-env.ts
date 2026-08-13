@@ -1,5 +1,7 @@
 import { env } from "cloudflare:workers";
 
+import { QueryDatabase } from "@/db/query";
+
 type SecretBindings = {
   BETTER_AUTH_SECRET?: string;
 };
@@ -13,5 +15,8 @@ export function getRuntimeEnv() {
     );
   }
 
-  return runtime as Env & { BETTER_AUTH_SECRET: string };
+  return {
+    ...runtime,
+    DATABASE: new QueryDatabase(runtime.DB),
+  } as Env & { BETTER_AUTH_SECRET: string; DATABASE: QueryDatabase };
 }

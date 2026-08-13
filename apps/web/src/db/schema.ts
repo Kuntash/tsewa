@@ -1,0 +1,1373 @@
+import {
+  sqliteTable,
+  customType,
+  integer,
+  text,
+  numeric,
+  index,
+  foreignKey,
+  uniqueIndex,
+  primaryKey,
+  real,
+} from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+
+const timestampText = customType<{ data: Date; driverData: string }>({
+  dataType() {
+    return "text";
+  },
+  fromDriver(value) {
+    return new Date(value);
+  },
+  toDriver(value) {
+    return value.toISOString();
+  },
+});
+
+export const d1Migrations = sqliteTable("d1_migrations", {
+  id: integer().primaryKey({ autoIncrement: true }),
+  name: text(),
+  appliedAt: numeric("applied_at")
+    .default(sql`(CURRENT_TIMESTAMP)`)
+    .notNull(),
+});
+
+export const user = sqliteTable("user", {
+  id: text().primaryKey().notNull(),
+  name: text().notNull(),
+  email: text().notNull(),
+  emailVerified: integer({ mode: "boolean" }).default(false).notNull(),
+  image: text(),
+  createdAt: timestampText()
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestampText()
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const session = sqliteTable(
+  "session",
+  {
+    id: text().primaryKey().notNull(),
+    expiresAt: timestampText().notNull(),
+    token: text().notNull(),
+    createdAt: timestampText()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestampText()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    ipAddress: text(),
+    userAgent: text(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("session_user_id_idx").on(table.userId)],
+);
+
+export const account = sqliteTable(
+  "account",
+  {
+    id: text().primaryKey().notNull(),
+    accountId: text().notNull(),
+    providerId: text().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text(),
+    refreshToken: text(),
+    idToken: text(),
+    accessTokenExpiresAt: timestampText(),
+    refreshTokenExpiresAt: timestampText(),
+    scope: text(),
+    password: text(),
+    createdAt: timestampText()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestampText()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("account_user_id_idx").on(table.userId)],
+);
+
+export const verification = sqliteTable(
+  "verification",
+  {
+    id: text().primaryKey().notNull(),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: timestampText().notNull(),
+    createdAt: timestampText()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestampText()
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+export const organization = sqliteTable("organization", {
+  id: text().primaryKey().notNull(),
+  name: text().notNull(),
+  slug: text().notNull(),
+  logoAssetKey: text("logo_asset_key"),
+  timezone: text().default("Asia/Kolkata").notNull(),
+  locale: text().default("en-IN").notNull(),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const organizationMember = sqliteTable(
+  "organization_member",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text().notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    groupId: text("group_id").references(() => accessGroup.id, { onDelete: "restrict" }),
+  },
+  (table) => [
+    index("organization_member_group_idx").on(table.groupId),
+    index("organization_member_user_idx").on(table.userId, table.organizationId),
+  ],
+);
+
+export const academicSession = sqliteTable(
+  "academic_session",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    startsOn: text("starts_on").notNull(),
+    endsOn: text("ends_on").notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    sourceSystem: text("source_system"),
+    sourceTable: text("source_table"),
+    sourceId: text("source_id"),
+  },
+  (table) => [
+    uniqueIndex("academic_session_source_idx")
+      .on(table.organizationId, table.sourceSystem, table.sourceTable, table.sourceId)
+      .where(
+        sql`${table.sourceSystem} IS NOT NULL AND ${table.sourceTable} IS NOT NULL AND ${table.sourceId} IS NOT NULL`,
+      ),
+    index("academic_session_org_idx").on(table.organizationId, table.isActive, table.startsOn),
+  ],
+);
+
+export const userPreference = sqliteTable("user_preference", {
+  userId: text("user_id")
+    .primaryKey()
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  activeOrganizationId: text("active_organization_id").references(() => organization.id, {
+    onDelete: "set null",
+  }),
+  activeAcademicSessionId: text("active_academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  theme: text().default("system").notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const auditEvent = sqliteTable(
+  "audit_event",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+    action: text().notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    metadataJson: text("metadata_json"),
+    occurredAt: text("occurred_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("audit_event_org_time_idx").on(table.organizationId, table.occurredAt)],
+);
+
+export const organizationInvitation = sqliteTable(
+  "organization_invitation",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    email: text().notNull(),
+    role: text().notNull(),
+    tokenHash: text("token_hash").notNull(),
+    invitedByUserId: text("invited_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    acceptedByUserId: text("accepted_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    expiresAt: text("expires_at").notNull(),
+    acceptedAt: text("accepted_at"),
+    revokedAt: text("revoked_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    groupId: text("group_id").references(() => accessGroup.id, { onDelete: "restrict" }),
+    emailStatus: text("email_status").default("not_sent").notNull(),
+    emailMessageId: text("email_message_id"),
+    emailSentAt: text("email_sent_at"),
+    emailLastAttemptAt: text("email_last_attempt_at"),
+    emailAttemptCount: integer("email_attempt_count").default(0).notNull(),
+  },
+  (table) => [
+    index("organization_invitation_delivery_idx").on(
+      table.organizationId,
+      table.emailStatus,
+      table.createdAt,
+    ),
+    index("organization_invitation_group_idx").on(table.groupId),
+    uniqueIndex("organization_invitation_active_email_idx")
+      .on(table.organizationId, table.email)
+      .where(sql`${table.acceptedAt} IS NULL AND ${table.revokedAt} IS NULL`),
+    index("organization_invitation_org_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+export const personImportBatch = sqliteTable(
+  "person_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint"),
+    mode: text().notNull(),
+    status: text().notNull(),
+    sourceCount: integer("source_count").default(0).notNull(),
+    importedCount: integer("imported_count").default(0).notNull(),
+    skippedCount: integer("skipped_count").default(0).notNull(),
+    issueCount: integer("issue_count").default(0).notNull(),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    eligibleCount: integer("eligible_count").default(0).notNull(),
+  },
+  (table) => [index("person_import_batch_org_idx").on(table.organizationId, table.createdAt)],
+);
+
+export const person = sqliteTable(
+  "person",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    kind: text().notNull(),
+    status: text().notNull(),
+    identifierKind: text("identifier_kind").notNull(),
+    primaryIdentifier: text("primary_identifier").notNull(),
+    displayName: text("display_name").notNull(),
+    gender: text(),
+    dateOfBirth: text("date_of_birth"),
+    admittedOrJoinedOn: text("admitted_or_joined_on"),
+    campusOrLocation: text("campus_or_location"),
+    nationality: text(),
+    photoAssetKey: text("photo_asset_key"),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => personImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("person_registry_name_idx").on(table.organizationId, table.displayName),
+    index("person_registry_filter_idx").on(
+      table.organizationId,
+      table.kind,
+      table.status,
+      table.displayName,
+    ),
+  ],
+);
+
+export const personImportIssue = sqliteTable(
+  "person_import_issue",
+  {
+    id: text().primaryKey().notNull(),
+    importBatchId: text("import_batch_id")
+      .notNull()
+      .references(() => personImportBatch.id, { onDelete: "cascade" }),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    fieldName: text("field_name"),
+    issueCode: text("issue_code").notNull(),
+    severity: text().notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("person_import_issue_batch_idx").on(table.importBatchId, table.severity, table.issueCode),
+  ],
+);
+
+export const personImportIssueSummary = sqliteTable(
+  "person_import_issue_summary",
+  {
+    importBatchId: text("import_batch_id")
+      .notNull()
+      .references(() => personImportBatch.id, { onDelete: "cascade" }),
+    sourceTable: text("source_table").notNull(),
+    issueCode: text("issue_code").notNull(),
+    severity: text().notNull(),
+    recordCount: integer("record_count").notNull(),
+  },
+  (table) => [
+    index("person_import_issue_summary_batch_idx").on(
+      table.importBatchId,
+      table.severity,
+      table.issueCode,
+    ),
+    primaryKey({
+      columns: [table.importBatchId, table.sourceTable, table.issueCode],
+      name: "person_import_issue_summary_import_batch_id_source_table_issue_code_pk",
+    }),
+  ],
+);
+
+export const personPlacementImportBatch = sqliteTable(
+  "person_placement_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint"),
+    status: text().notNull(),
+    sourceCount: integer("source_count").default(0).notNull(),
+    importedCount: integer("imported_count").default(0).notNull(),
+    skippedCount: integer("skipped_count").default(0).notNull(),
+    currentPlacementCount: integer("current_placement_count").default(0).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("person_placement_import_batch_org_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+export const personPlacement = sqliteTable(
+  "person_placement",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    homeName: text("home_name").notNull(),
+    locationName: text("location_name"),
+    placementType: text("placement_type"),
+    startedOn: text("started_on").notNull(),
+    reason: text(),
+    remarks: text(),
+    isCurrent: integer("is_current").default(0).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => personPlacementImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    endedOn: text("ended_on"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    index("person_placement_current_home_idx").on(
+      table.organizationId,
+      table.homeName,
+      table.isCurrent,
+    ),
+    uniqueIndex("person_placement_one_current_idx")
+      .on(table.organizationId, table.personId)
+      .where(sql`${table.isCurrent} = 1`),
+    index("person_placement_timeline_idx").on(
+      table.organizationId,
+      table.personId,
+      table.startedOn,
+      table.sourceId,
+    ),
+  ],
+);
+
+export const personAcademicImportBatch = sqliteTable(
+  "person_academic_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint"),
+    status: text().notNull(),
+    sourceCount: integer("source_count").default(0).notNull(),
+    importedCount: integer("imported_count").default(0).notNull(),
+    skippedCount: integer("skipped_count").default(0).notNull(),
+    latestRecordCount: integer("latest_record_count").default(0).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("person_academic_import_batch_org_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+export const personAcademicRecord = sqliteTable(
+  "person_academic_record",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    className: text("class_name").notNull(),
+    classLevel: integer("class_level"),
+    classSection: text("class_section"),
+    classTitle: text("class_title"),
+    schoolName: text("school_name"),
+    houseName: text("house_name"),
+    academicSession: text("academic_session").notNull(),
+    recordedOn: text("recorded_on").notNull(),
+    result: text(),
+    rollNumber: text("roll_number"),
+    boardRegistrationNumber: text("board_registration_number"),
+    description: text(),
+    isLatest: integer("is_latest").default(0).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => personAcademicImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("person_academic_one_latest_idx")
+      .on(table.organizationId, table.personId)
+      .where(sql`${table.isLatest} = 1`),
+    index("person_academic_timeline_idx").on(
+      table.organizationId,
+      table.personId,
+      table.recordedOn,
+      table.sourceId,
+    ),
+  ],
+);
+
+export const personFamilyImportBatch = sqliteTable(
+  "person_family_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint"),
+    status: text().notNull(),
+    sourceProfileCount: integer("source_profile_count").default(0).notNull(),
+    importedProfileCount: integer("imported_profile_count").default(0).notNull(),
+    sourceRelationshipCount: integer("source_relationship_count").default(0).notNull(),
+    importedRelationshipCount: integer("imported_relationship_count").default(0).notNull(),
+    reviewCount: integer("review_count").default(0).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("person_family_import_batch_org_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+export const personFamilyProfile = sqliteTable(
+  "person_family_profile",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    parentageStatus: text("parentage_status"),
+    motherName: text("mother_name"),
+    fatherName: text("father_name"),
+    motherOccupation: text("mother_occupation"),
+    fatherOccupation: text("father_occupation"),
+    parentsPhone: text("parents_phone"),
+    parentsPermanentAddress: text("parents_permanent_address"),
+    guardian1Name: text("guardian_1_name"),
+    guardian1Address: text("guardian_1_address"),
+    guardian1Email: text("guardian_1_email"),
+    guardian1Phone: text("guardian_1_phone"),
+    guardian1Mobile: text("guardian_1_mobile"),
+    guardian2Name: text("guardian_2_name"),
+    guardian2Address: text("guardian_2_address"),
+    guardian2Email: text("guardian_2_email"),
+    guardian2Phone: text("guardian_2_phone"),
+    guardian2Mobile: text("guardian_2_mobile"),
+    maritalStatus: text("marital_status"),
+    spouseName: text("spouse_name"),
+    numberOfChildren: text("number_of_children"),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => personFamilyImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  },
+  (table) => [index("person_family_profile_person_idx").on(table.organizationId, table.personId)],
+);
+
+export const personRelationship = sqliteTable(
+  "person_relationship",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    relatedPersonId: text("related_person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    relationshipType: text("relationship_type").notNull(),
+    reviewFlag: text("review_flag"),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => personFamilyImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    removedAt: text("removed_at"),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    index("person_relationship_active_pair_idx").on(
+      table.organizationId,
+      table.relationshipType,
+      table.personId,
+      table.relatedPersonId,
+      table.isActive,
+    ),
+    index("person_relationship_related_idx").on(
+      table.organizationId,
+      table.relatedPersonId,
+      table.relationshipType,
+      table.personId,
+    ),
+    index("person_relationship_person_idx").on(
+      table.organizationId,
+      table.personId,
+      table.relationshipType,
+      table.relatedPersonId,
+    ),
+  ],
+);
+
+export const personFileImportBatch = sqliteTable(
+  "person_file_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint"),
+    status: text().notNull(),
+    selectedPersonCount: integer("selected_person_count").default(0).notNull(),
+    sourceFileCount: integer("source_file_count").default(0).notNull(),
+    importedFileCount: integer("imported_file_count").default(0).notNull(),
+    sourceByteCount: integer("source_byte_count").default(0).notNull(),
+    importedByteCount: integer("imported_byte_count").default(0).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("person_file_import_batch_org_idx").on(table.organizationId, table.createdAt)],
+);
+
+export const personFile = sqliteTable(
+  "person_file",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    category: text().notNull(),
+    label: text().notNull(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sha256: text().notNull(),
+    r2ObjectKey: text("r2_object_key").notNull(),
+    isPrimary: integer("is_primary").default(0).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    sourceAssetId: text("source_asset_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => personFileImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    removedAt: text("removed_at"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    replacesFileId: text("replaces_file_id"),
+  },
+  (table) => [
+    index("person_file_active_person_idx").on(
+      table.organizationId,
+      table.personId,
+      table.isActive,
+      table.category,
+      table.label,
+    ),
+    index("person_file_source_idx").on(table.organizationId, table.sourceTable, table.sourceId),
+    index("person_file_person_idx").on(
+      table.organizationId,
+      table.personId,
+      table.category,
+      table.label,
+    ),
+    foreignKey(() => ({
+      columns: [table.replacesFileId],
+      foreignColumns: [table.id],
+      name: "person_file_replaces_file_id_person_file_id_fk",
+    })).onDelete("set null"),
+  ],
+);
+
+export const schoolOperationsImportBatch = sqliteTable(
+  "school_operations_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint").notNull(),
+    status: text().notNull(),
+    sessionCount: integer("session_count").default(0).notNull(),
+    schoolCount: integer("school_count").default(0).notNull(),
+    classCount: integer("class_count").default(0).notNull(),
+    houseCount: integer("house_count").default(0).notNull(),
+    schoolHouseCount: integer("school_house_count").default(0).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("school_operations_import_batch_org_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+export const schoolMaster = sqliteTable(
+  "school_master",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    locationName: text("location_name"),
+    affiliationNumber: text("affiliation_number"),
+    isActive: integer("is_active").default(1).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => schoolOperationsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("school_master_org_name_idx").on(table.organizationId, table.name)],
+);
+
+export const academicClassMaster = sqliteTable(
+  "academic_class_master",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    level: integer(),
+    section: text(),
+    title: text(),
+    sortOrder: integer("sort_order"),
+    isActive: integer("is_active").default(1).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => schoolOperationsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("academic_class_master_org_sort_idx").on(
+      table.organizationId,
+      table.sortOrder,
+      table.level,
+      table.section,
+      table.name,
+    ),
+  ],
+);
+
+export const houseMaster = sqliteTable(
+  "house_master",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => schoolOperationsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+  },
+  (table) => [
+    index("house_master_active_name_idx").on(table.organizationId, table.isActive, table.name),
+    index("house_master_org_name_idx").on(table.organizationId, table.name),
+  ],
+);
+
+export const schoolHouseMaster = sqliteTable(
+  "school_house_master",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    schoolId: text("school_id")
+      .notNull()
+      .references(() => schoolMaster.id, { onDelete: "cascade" }),
+    houseId: text("house_id")
+      .notNull()
+      .references(() => houseMaster.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => schoolOperationsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("school_house_master_org_school_idx").on(
+      table.organizationId,
+      table.schoolId,
+      table.houseId,
+    ),
+  ],
+);
+
+export const studentEnrollmentImportBatch = sqliteTable(
+  "student_enrollment_import_batch",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sourceSystem: text("source_system").notNull(),
+    sourceDatabase: text("source_database").notNull(),
+    sourceFingerprint: text("source_fingerprint").notNull(),
+    status: text().notNull(),
+    sourceRowCount: integer("source_row_count").default(0).notNull(),
+    enrollmentCount: integer("enrollment_count").default(0).notNull(),
+    supersededRowCount: integer("superseded_row_count").default(0).notNull(),
+    offeringCount: integer("offering_count").default(0).notNull(),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("student_enrollment_import_batch_org_idx").on(table.organizationId, table.createdAt),
+  ],
+);
+
+export const schoolClassOffering = sqliteTable(
+  "school_class_offering",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    academicSessionId: text("academic_session_id")
+      .notNull()
+      .references(() => academicSession.id, { onDelete: "cascade" }),
+    schoolId: text("school_id")
+      .notNull()
+      .references(() => schoolMaster.id, { onDelete: "cascade" }),
+    academicClassId: text("academic_class_id")
+      .notNull()
+      .references(() => academicClassMaster.id, { onDelete: "cascade" }),
+    isActive: integer("is_active").default(1).notNull(),
+    origin: text().notNull(),
+    sourceSystem: text("source_system"),
+    sourceTable: text("source_table"),
+    sourceId: text("source_id"),
+    importBatchId: text("import_batch_id").references(() => studentEnrollmentImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("school_class_offering_roster_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.schoolId,
+      table.academicClassId,
+      table.isActive,
+    ),
+  ],
+);
+
+export const studentEnrollment = sqliteTable(
+  "student_enrollment",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    academicSessionId: text("academic_session_id")
+      .notNull()
+      .references(() => academicSession.id, { onDelete: "cascade" }),
+    schoolId: text("school_id").references(() => schoolMaster.id, { onDelete: "restrict" }),
+    academicClassId: text("academic_class_id")
+      .notNull()
+      .references(() => academicClassMaster.id, { onDelete: "restrict" }),
+    houseId: text("house_id").references(() => houseMaster.id, { onDelete: "restrict" }),
+    schoolClassOfferingId: text("school_class_offering_id").references(
+      () => schoolClassOffering.id,
+      { onDelete: "restrict" },
+    ),
+    status: text().default("recorded").notNull(),
+    statusSource: text("status_source").default("legacy_allocation").notNull(),
+    startedOn: text("started_on"),
+    endedOn: text("ended_on"),
+    sourceRecordedOn: text("source_recorded_on"),
+    rollNumber: text("roll_number"),
+    boardRegistrationNumber: text("board_registration_number"),
+    result: text(),
+    sourceAcademicRecordId: text("source_academic_record_id").references(
+      () => personAcademicRecord.id,
+      { onDelete: "set null" },
+    ),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => studentEnrollmentImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("student_enrollment_person_history_idx").on(
+      table.organizationId,
+      table.personId,
+      table.academicSessionId,
+    ),
+    index("student_enrollment_session_roster_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.schoolId,
+      table.academicClassId,
+      table.status,
+    ),
+  ],
+);
+
+export const historicalResultsImportBatch = sqliteTable("historical_results_import_batch", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sourceSystem: text("source_system").notNull(),
+  sourceDatabase: text("source_database").notNull(),
+  sourceFingerprint: text("source_fingerprint").notNull(),
+  status: text().notNull(),
+  subjectCount: integer("subject_count").default(0).notNull(),
+  termCount: integer("term_count").default(0).notNull(),
+  assessmentCount: integer("assessment_count").default(0).notNull(),
+  markSheetCount: integer("mark_sheet_count").default(0).notNull(),
+  resultCount: integer("result_count").default(0).notNull(),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const academicSubject = sqliteTable(
+  "academic_subject",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    academicSessionId: text("academic_session_id")
+      .notNull()
+      .references(() => academicSession.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    shortName: text("short_name"),
+    isOptional: integer("is_optional").default(0).notNull(),
+    passingPercentage: real("passing_percentage"),
+    isActive: integer("is_active").default(1).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => historicalResultsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("academic_subject_session_name_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.name,
+    ),
+  ],
+);
+
+export const academicTerm = sqliteTable("academic_term", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importBatchId: text("import_batch_id").references(() => historicalResultsImportBatch.id, {
+    onDelete: "set null",
+  }),
+  importedAt: text("imported_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const academicAssessment = sqliteTable("academic_assessment", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  academicSessionId: text("academic_session_id")
+    .notNull()
+    .references(() => academicSession.id, { onDelete: "cascade" }),
+  termId: text("term_id")
+    .notNull()
+    .references(() => academicTerm.id, { onDelete: "restrict" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importBatchId: text("import_batch_id").references(() => historicalResultsImportBatch.id, {
+    onDelete: "set null",
+  }),
+  importedAt: text("imported_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const markSheet = sqliteTable(
+  "mark_sheet",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    academicSessionId: text("academic_session_id")
+      .notNull()
+      .references(() => academicSession.id, { onDelete: "cascade" }),
+    schoolId: text("school_id").references(() => schoolMaster.id, { onDelete: "restrict" }),
+    academicClassId: text("academic_class_id")
+      .notNull()
+      .references(() => academicClassMaster.id, { onDelete: "restrict" }),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => academicSubject.id, { onDelete: "restrict" }),
+    termId: text("term_id")
+      .notNull()
+      .references(() => academicTerm.id, { onDelete: "restrict" }),
+    recordedOn: text("recorded_on"),
+    isVerified: integer("is_verified").default(0).notNull(),
+    maximumMarks: real("maximum_marks"),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => historicalResultsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("mark_sheet_filter_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.schoolId,
+      table.academicClassId,
+      table.subjectId,
+    ),
+  ],
+);
+
+export const studentMark = sqliteTable(
+  "student_mark",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    markSheetId: text("mark_sheet_id")
+      .notNull()
+      .references(() => markSheet.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    assessmentId: text("assessment_id")
+      .notNull()
+      .references(() => academicAssessment.id, { onDelete: "restrict" }),
+    marks: real(),
+    maximumMarks: real("maximum_marks"),
+    note: text(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importBatchId: text("import_batch_id").references(() => historicalResultsImportBatch.id, {
+      onDelete: "set null",
+    }),
+    importedAt: text("imported_at"),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("student_mark_person_idx").on(table.organizationId, table.personId, table.markSheetId),
+  ],
+);
+
+export const studentEnrollmentChange = sqliteTable(
+  "student_enrollment_change",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    enrollmentId: text("enrollment_id")
+      .notNull()
+      .references(() => studentEnrollment.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    academicSessionId: text("academic_session_id")
+      .notNull()
+      .references(() => academicSession.id, { onDelete: "cascade" }),
+    changeType: text("change_type").notNull(),
+    effectiveOn: text("effective_on").notNull(),
+    fromSchoolId: text("from_school_id").references(() => schoolMaster.id, {
+      onDelete: "restrict",
+    }),
+    toSchoolId: text("to_school_id").references(() => schoolMaster.id, { onDelete: "restrict" }),
+    fromAcademicClassId: text("from_academic_class_id").references(() => academicClassMaster.id, {
+      onDelete: "restrict",
+    }),
+    toAcademicClassId: text("to_academic_class_id").references(() => academicClassMaster.id, {
+      onDelete: "restrict",
+    }),
+    fromHouseId: text("from_house_id").references(() => houseMaster.id, { onDelete: "restrict" }),
+    toHouseId: text("to_house_id").references(() => houseMaster.id, { onDelete: "restrict" }),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status"),
+    note: text(),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    fromRollNumber: text("from_roll_number"),
+    toRollNumber: text("to_roll_number"),
+  },
+  (table) => [
+    index("student_enrollment_change_enrollment_idx").on(
+      table.organizationId,
+      table.enrollmentId,
+      table.createdAt,
+    ),
+    index("student_enrollment_change_history_idx").on(
+      table.organizationId,
+      table.personId,
+      table.academicSessionId,
+      table.effectiveOn,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const accessPermission = sqliteTable("access_permission", {
+  key: text().primaryKey().notNull(),
+  name: text().notNull(),
+  category: text().notNull(),
+  description: text(),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const accessRole = sqliteTable(
+  "access_role",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    key: text().notNull(),
+    name: text().notNull(),
+    description: text(),
+    isSystem: integer("is_system").default(1).notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("access_role_org_idx").on(table.organizationId, table.name)],
+);
+
+export const accessRolePermission = sqliteTable(
+  "access_role_permission",
+  {
+    roleId: text("role_id")
+      .notNull()
+      .references(() => accessRole.id, { onDelete: "cascade" }),
+    permissionKey: text("permission_key")
+      .notNull()
+      .references(() => accessPermission.key, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.roleId, table.permissionKey],
+      name: "access_role_permission_role_id_permission_key_pk",
+    }),
+  ],
+);
+
+export const accessGroup = sqliteTable(
+  "access_group",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    key: text().notNull(),
+    name: text().notNull(),
+    description: text(),
+    isSystem: integer("is_system").default(1).notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("access_group_org_idx").on(table.organizationId, table.name)],
+);
+
+export const accessGroupRole = sqliteTable(
+  "access_group_role",
+  {
+    groupId: text("group_id")
+      .notNull()
+      .references(() => accessGroup.id, { onDelete: "cascade" }),
+    roleId: text("role_id")
+      .notNull()
+      .references(() => accessRole.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.groupId, table.roleId],
+      name: "access_group_role_group_id_role_id_pk",
+    }),
+  ],
+);

@@ -6,9 +6,11 @@ catalogMode: prefer
 
 catalog:
   "@types/node": ^24.12.3
+  drizzle-kit: ^0.31.10
+  drizzle-orm: ^0.45.2
   typescript: ^6.0.2
   vite: npm:@voidzero-dev/vite-plus-core@latest
-  vite-plus: latest
+  vite-plus: 0.2.7
 
 overrides:
   vite: "catalog:"

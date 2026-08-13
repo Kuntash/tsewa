@@ -21,7 +21,14 @@
   "vars": {
     "APP_NAME": "Tsewa",
     "DEFAULT_ORGANIZATION_SLUG": "tibetan-homes-foundation",
+    "INVITATION_FROM_EMAIL": "invites@ths.kunga.dev",
   },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["invites@ths.kunga.dev"],
+    },
+  ],
   "d1_databases": [
     {
       "binding": "DB",

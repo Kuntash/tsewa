@@ -1,5 +1,8 @@
 import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+
+import { createDatabase } from "@/db/client";
 
 type AuthOptions = {
   database: D1Database;
@@ -11,7 +14,7 @@ type AuthOptions = {
 export function createAuth({ database, secret, baseURL, allowSignUp }: AuthOptions) {
   return betterAuth({
     appName: "Tsewa",
-    database,
+    database: drizzleAdapter(createDatabase(database), { provider: "sqlite" }),
     secret,
     baseURL,
     trustedOrigins: [baseURL],
