@@ -9,6 +9,7 @@ import {
   Crown,
   FileText,
   GraduationCap,
+  HeartHandshake,
   HeartPulse,
   LoaderCircle,
   LockKeyhole,
@@ -27,6 +28,7 @@ import { HealthOperations } from "@/components/health-operations";
 import { PeopleRegistry } from "@/components/people-registry";
 import { SchoolOperations } from "@/components/school-operations";
 import { ScholarshipOperations } from "@/components/scholarship-operations";
+import { SponsorshipOperations } from "@/components/sponsorship-operations";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -437,7 +439,9 @@ function Launchpad({
   platform: PlatformState;
   user: { name: string; email: string; emailVerified: boolean };
 }) {
-  const [view, setView] = useState<"home" | "people" | "school" | "health" | "scholarship">("home");
+  const [view, setView] = useState<
+    "home" | "people" | "school" | "health" | "scholarship" | "sponsorship"
+  >("home");
   const [activeSessionId, setActiveSessionId] = useState(
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
   );
@@ -474,6 +478,13 @@ function Launchpad({
       open: true,
     },
     {
+      Icon: HeartHandshake,
+      title: "Sponsorship",
+      description: "Sponsors, beneficiary links, remittances, correspondence, and visits",
+      view: "sponsorship",
+      open: true,
+    },
+    {
       Icon: FileText,
       title: "Reports and documents",
       description: "Documents and reports",
@@ -493,6 +504,12 @@ function Launchpad({
   if (view === "scholarship") {
     return (
       <ScholarshipOperations activeSessionId={activeSessionId} onBack={() => setView("home")} />
+    );
+  }
+
+  if (view === "sponsorship") {
+    return (
+      <SponsorshipOperations activeSessionId={activeSessionId} onBack={() => setView("home")} />
     );
   }
 

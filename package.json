@@ -37,6 +37,8 @@
     "migration:health:import": "node scripts/import-health-history.mjs",
     "migration:scholarship:dry-run": "node scripts/scholarship-history-dry-run.mjs",
     "migration:scholarship:import": "node scripts/import-scholarship-history.mjs",
+    "migration:sponsorship:dry-run": "node scripts/sponsorship-history-dry-run.mjs",
+    "migration:sponsorship:import": "node scripts/import-sponsorship-history.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

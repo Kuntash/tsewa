@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "mode": "sponsorship_history_dry_run",
+  "generatedAt": "2026-08-15T20:24:35.235Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": [
+      "individual",
+      "sponsors",
+      "beneficeary_sponsors",
+      "funds",
+      "fund_detail",
+      "letter",
+      "visitor",
+      "fund_type",
+      "sponsor_type",
+      "sponsor_category",
+      "sponsor_ship_status",
+      "correspondence_type",
+      "visitor_type"
+    ],
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "inventory": {
+    "individuals": 3073,
+    "organizations": 32,
+    "assignments": 4510,
+    "funds": 15,
+    "allocations": 712,
+    "letters": 16,
+    "visitors": 19,
+    "fundTypes": 7,
+    "sponsorTypes": 2,
+    "sponsorCategories": 3,
+    "statuses": 5,
+    "correspondenceTypes": 3,
+    "visitorTypes": 3,
+    "emptySponsorshipRows": 0,
+    "emptyBeneficiaryFundRows": 0
+  },
+  "linkChecks": {
+    "individualsWithoutOrganization": 17,
+    "assignmentsWithoutPerson": 0,
+    "assignmentsWithoutSponsor": 0,
+    "assignmentsWithoutStatus": 0,
+    "fundsWithoutType": 0,
+    "fundsWithoutIndividual": 0,
+    "fundsWithoutOrganization": 2,
+    "fundsWithoutSingleParty": 0,
+    "allocationsWithoutFund": 0,
+    "allocationsWithoutPerson": 4,
+    "lettersWithoutType": 0,
+    "visitorsWithoutType": 0
+  },
+  "ranges": {
+    "firstAssignmentOn": "2011-03-09",
+    "lastAssignmentOn": "2015-06-04",
+    "firstFundOn": "2011-07-29",
+    "lastFundOn": "2012-01-25",
+    "firstLetterOn": "2014-11-20",
+    "lastLetterOn": "2015-01-07",
+    "firstVisitOn": "2011-04-01",
+    "lastVisitOn": "2011-10-02",
+    "receivedAmount": 632010.03,
+    "allocatedAmount": 52392
+  },
+  "assignmentStatuses": [
+    {
+      "name": "Approved",
+      "assignments": 4005
+    },
+    {
+      "name": "Discontinued",
+      "assignments": 300
+    },
+    {
+      "name": "Applied",
+      "assignments": 160
+    },
+    {
+      "name": "Rejected",
+      "assignments": 43
+    },
+    {
+      "name": "Continued",
+      "assignments": 2
+    }
+  ],
+  "fundTypes": [
+    {
+      "name": "Donate Money",
+      "funds": 5,
+      "amount": 469846
+    },
+    {
+      "name": "General Donation",
+      "funds": 5,
+      "amount": 14100
+    },
+    {
+      "name": "Sponsorship Money",
+      "funds": 3,
+      "amount": 119518.08
+    },
+    {
+      "name": "Pilgrimage Money",
+      "funds": 1,
+      "amount": 3545.95
+    },
+    {
+      "name": "Tuberculosis Project",
+      "funds": 1,
+      "amount": 25000
+    },
+    {
+      "name": "Gift Money",
+      "funds": 0,
+      "amount": 0
+    },
+    {
+      "name": "Library Project",
+      "funds": 0,
+      "amount": 0
+    }
+  ],
+  "proposedPolicy": {
+    "access": "Require sponsorship.read for all records and sponsorship.manage for mutations.",
+    "missingOrganizations": "Retain 17 individual and two remittance organization identifiers without inventing parent records.",
+    "missingBeneficiaries": "Retain four allocation beneficiary identifiers without inventing person links.",
+    "editing": "Imported sponsorship records remain editable with audit history because the legacy workflows supported correction.",
+    "emptyTables": "Do not import the empty sponsorship and beneficiary_funds tables as evidence of separate workflows."
+  }
+}

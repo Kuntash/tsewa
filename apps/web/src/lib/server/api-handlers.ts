@@ -14,6 +14,7 @@ import { nextMarkSheetStatus } from "@/lib/academic-results";
 import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { allocationsFitFund, sponsorshipDisplayName } from "@/lib/sponsorship";
 
 const preferenceSchema = z.object({
   academicSessionId: z.string().uuid(),
@@ -398,6 +399,136 @@ const scholarshipSetupSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+const sponsorshipListQuerySchema = z.object({
+  section: z.enum(["sponsors", "assignments", "funds", "correspondence", "visitors"]),
+  q: z.string().trim().max(100).default(""),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const sponsorshipReportQuerySchema = z.object({
+  report: z.enum([
+    "homeWise",
+    "organizationWise",
+    "addresses",
+    "completionElderly",
+    "completionStudent",
+    "caseHistoryStudent",
+    "caseHistoryElderly",
+    "giftMoney",
+    "payments",
+    "sponsors",
+    "visitors",
+  ]),
+  session: z.union([z.literal("all"), z.uuid()]).default("all"),
+});
+
+const sponsorshipMutationSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("organization"),
+    id: z.uuid().optional(),
+    name: z.string().trim().min(1).max(180),
+    countryName: z.string().trim().max(120).nullable().optional(),
+    supportsChildren: z.boolean().default(false),
+    supportsElderly: z.boolean().default(false),
+  }),
+  z.object({
+    kind: z.literal("individual"),
+    id: z.uuid().optional(),
+    sponsorOrganizationId: z.uuid().nullable().optional(),
+    sponsorTypeId: z.uuid().nullable().optional(),
+    sponsorCategoryId: z.uuid().nullable().optional(),
+    firstName: z.string().trim().min(1).max(100),
+    middleName: z.string().trim().max(100).nullable().optional(),
+    lastName: z.string().trim().max(100).nullable().optional(),
+    address: z.string().trim().max(1000).nullable().optional(),
+    countryName: z.string().trim().max(120).nullable().optional(),
+    email: z.string().trim().email().max(254).nullable().optional(),
+    phone: z.string().trim().max(60).nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("assignment"),
+    id: z.uuid().optional(),
+    personId: z.uuid(),
+    sponsorIndividualId: z.uuid(),
+    statusId: z.uuid(),
+    sessionId: z.uuid().nullable().optional(),
+    statusOn: isoDateSchema,
+    remarks: z.string().trim().max(1000).nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("fund"),
+    id: z.uuid().optional(),
+    fundTypeId: z.uuid(),
+    sessionId: z.uuid().nullable().optional(),
+    sponsorKind: z.enum(["individual", "organization", "visitor"]),
+    sponsorPartyId: z.uuid(),
+    receivedOn: isoDateSchema,
+    periodFrom: isoDateSchema.nullable().optional(),
+    periodTo: isoDateSchema.nullable().optional(),
+    amount: z.number().min(0),
+    receiptNumber: z.string().trim().max(100).nullable().optional(),
+    remarks: z.string().trim().max(1000).nullable().optional(),
+    allocations: z
+      .array(
+        z.object({
+          personId: z.uuid(),
+          amount: z.number().min(0),
+          remarks: z.string().trim().max(500).nullable().optional(),
+        }),
+      )
+      .max(1000),
+  }),
+  z.object({
+    kind: z.literal("correspondence"),
+    id: z.uuid().optional(),
+    correspondenceTypeId: z.uuid(),
+    sponsorIndividualId: z.uuid().nullable().optional(),
+    personId: z.uuid().nullable().optional(),
+    sessionId: z.uuid().nullable().optional(),
+    sender: z.string().trim().max(180).nullable().optional(),
+    receiver: z.string().trim().max(180).nullable().optional(),
+    receivedOn: isoDateSchema,
+    repliedOn: isoDateSchema.nullable().optional(),
+    replyDueOn: isoDateSchema.nullable().optional(),
+    remarks: z.string().trim().max(2000).nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("visitor"),
+    id: z.uuid().optional(),
+    visitorTypeId: z.uuid().nullable().optional(),
+    firstName: z.string().trim().min(1).max(100),
+    middleName: z.string().trim().max(100).nullable().optional(),
+    lastName: z.string().trim().max(100).nullable().optional(),
+    address: z.string().trim().max(1000).nullable().optional(),
+    countryName: z.string().trim().max(120).nullable().optional(),
+    email: z.string().trim().email().max(254).nullable().optional(),
+    phone: z.string().trim().max(60).nullable().optional(),
+    relatedPersonName: z.string().trim().max(180).nullable().optional(),
+    visitedOn: isoDateSchema,
+    mementoQuantity: z.number().int().min(0).nullable().optional(),
+    giftsPresented: z.string().trim().max(500).nullable().optional(),
+    visitSummary: z.string().trim().max(2000).nullable().optional(),
+    comments: z.string().trim().max(2000).nullable().optional(),
+  }),
+  ...(
+    [
+      "sponsorType",
+      "sponsorCategory",
+      "status",
+      "fundType",
+      "correspondenceType",
+      "visitorType",
+    ] as const
+  ).map((kind) =>
+    z.object({
+      kind: z.literal(kind),
+      id: z.uuid().optional(),
+      name: z.string().trim().min(1).max(160),
+    }),
+  ),
+]);
+
 const healthHistoryQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
   kind: z.enum(["all", "child", "elderly", "staff", "other"]).default("all"),
@@ -666,6 +797,18 @@ export const apiDispatcher = {
 
     if (url.pathname === "/api/scholarships") {
       return handleScholarships(request);
+    }
+
+    if (url.pathname === "/api/sponsorship/setup") {
+      return getSponsorshipSetup(request);
+    }
+
+    if (url.pathname === "/api/sponsorship/reports") {
+      return getSponsorshipReport(request);
+    }
+
+    if (url.pathname === "/api/sponsorship") {
+      return handleSponsorship(request);
     }
 
     if (url.pathname === "/api/health/tb") {
@@ -4252,6 +4395,940 @@ async function handleScholarshipSetup(request: Request): Promise<Response> {
     ),
   ]);
   return Response.json({ id }, { status: existing ? 200 : 201 });
+}
+
+async function handleSponsorship(request: Request): Promise<Response> {
+  if (request.method === "GET") return getSponsorshipRecords(request);
+  if (request.method === "POST") return writeSponsorshipRecord(request);
+  return methodNotAllowed("GET, POST");
+}
+
+async function getSponsorshipReport(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "sponsorship.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = sponsorshipReportQuerySchema.safeParse({
+    report: url.searchParams.get("report"),
+    session: url.searchParams.get("session") ?? "all",
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Choose a valid sponsorship report." }, { status: 400 });
+  const { report, session } = parsed.data;
+  const runtime = getRuntimeEnv();
+  const sessionRow =
+    session === "all"
+      ? null
+      : await runtime.DATABASE.prepare(
+          "SELECT name FROM academic_session WHERE id=? AND organization_id=?",
+        )
+          .bind(session, context.organizationId)
+          .first<{ name: string }>();
+  if (session !== "all" && !sessionRow)
+    return Response.json({ error: "Academic session not found." }, { status: 404 });
+
+  let title = "Sponsors list";
+  let columns: Array<{ key: string; label: string; numeric?: boolean }> = [];
+  let rows: Record<string, unknown>[] = [];
+  if (report === "homeWise" || report === "organizationWise") {
+    const byHome = report === "homeWise";
+    title = byHome ? "Sponsor list · home-wise" : "Sponsor list · organisation-wise";
+    columns = [
+      { key: byHome ? "homeName" : "organizationName", label: byHome ? "Home" : "Organisation" },
+      { key: "beneficiaries", label: "Beneficiaries", numeric: true },
+      { key: "sponsors", label: "Sponsors", numeric: true },
+      { key: "approved", label: "Approved", numeric: true },
+      { key: "latestStatusOn", label: "Latest status date" },
+    ];
+    const groupExpression = byHome
+      ? "coalesce(placement.home_name,'No current home')"
+      : "coalesce(parent.name,'Independent sponsors')";
+    const sessionCondition = session === "all" ? "" : " AND assignment.academic_session_id=?";
+    const bindings =
+      session === "all" ? [context.organizationId] : [context.organizationId, session];
+    const result =
+      await runtime.DATABASE.prepare(`SELECT ${groupExpression} AS ${byHome ? "homeName" : "organizationName"},
+      COUNT(DISTINCT assignment.person_id) AS beneficiaries,
+      COUNT(DISTINCT assignment.sponsor_individual_id) AS sponsors,
+      SUM(CASE WHEN lower(status.name)='approved' THEN 1 ELSE 0 END) AS approved,
+      MAX(assignment.status_on) AS latestStatusOn
+      FROM sponsorship_assignment assignment
+      JOIN sponsorship_individual sponsor ON sponsor.id=assignment.sponsor_individual_id
+      JOIN sponsorship_status status ON status.id=assignment.sponsorship_status_id
+      LEFT JOIN sponsorship_organization parent ON parent.id=sponsor.sponsor_organization_id
+      LEFT JOIN person_placement placement ON placement.person_id=assignment.person_id
+        AND placement.organization_id=assignment.organization_id AND placement.is_current=1
+      WHERE assignment.organization_id=?${sessionCondition}
+      GROUP BY ${groupExpression} ORDER BY beneficiaries DESC,1 COLLATE NOCASE`)
+        .bind(...bindings)
+        .all<Record<string, unknown>>();
+    rows = result.results;
+  } else if (report === "addresses" || report === "sponsors") {
+    title = report === "addresses" ? "Address of sponsors" : "Sponsors list";
+    columns = [
+      { key: "sponsorName", label: "Sponsor" },
+      { key: "organizationName", label: "Organisation" },
+      { key: "categoryName", label: "Category" },
+      { key: "address", label: "Address" },
+      { key: "countryName", label: "Country" },
+      { key: "email", label: "Email" },
+      { key: "phone", label: "Phone" },
+      { key: "beneficiaries", label: "Beneficiaries", numeric: true },
+    ];
+    const result = await runtime.DATABASE.prepare(`SELECT sponsor.display_name AS sponsorName,
+      parent.name AS organizationName,category.name AS categoryName,sponsor.address,
+      sponsor.country_name AS countryName,sponsor.email,sponsor.phone,
+      (SELECT COUNT(*) FROM sponsorship_assignment assignment
+        WHERE assignment.sponsor_individual_id=sponsor.id) AS beneficiaries
+      FROM sponsorship_individual sponsor
+      LEFT JOIN sponsorship_organization parent ON parent.id=sponsor.sponsor_organization_id
+      LEFT JOIN sponsorship_sponsor_category category ON category.id=sponsor.sponsor_category_id
+      WHERE sponsor.organization_id=? ORDER BY sponsor.display_name COLLATE NOCASE`)
+      .bind(context.organizationId)
+      .all<Record<string, unknown>>();
+    rows = result.results;
+  } else if (
+    report === "completionElderly" ||
+    report === "completionStudent" ||
+    report === "caseHistoryStudent" ||
+    report === "caseHistoryElderly"
+  ) {
+    const elderly = report === "completionElderly" || report === "caseHistoryElderly";
+    const caseHistory = report === "caseHistoryStudent" || report === "caseHistoryElderly";
+    title = `${caseHistory ? "Case history" : "Completion report"} · ${elderly ? "elderly" : "student"}`;
+    columns = [
+      { key: "beneficiaryName", label: "Beneficiary" },
+      { key: "identifier", label: "Identifier" },
+      { key: "homeName", label: "Home" },
+      { key: "sponsorName", label: "Sponsor" },
+      { key: "statusName", label: "Sponsorship status" },
+      { key: "statusOn", label: "Status date" },
+      { key: "remarks", label: "Remarks" },
+    ];
+    const sessionCondition = session === "all" ? "" : " AND assignment.academic_session_id=?";
+    const bindings =
+      session === "all"
+        ? [context.organizationId, elderly ? "elderly" : "child"]
+        : [context.organizationId, elderly ? "elderly" : "child", session];
+    const completionCondition = caseHistory
+      ? ""
+      : " AND lower(status.name) IN ('discontinued','rejected','continued')";
+    const result = await runtime.DATABASE.prepare(`SELECT person.display_name AS beneficiaryName,
+      person.primary_identifier AS identifier,placement.home_name AS homeName,
+      sponsor.display_name AS sponsorName,status.name AS statusName,
+      assignment.status_on AS statusOn,assignment.remarks
+      FROM sponsorship_assignment assignment JOIN person ON person.id=assignment.person_id
+      JOIN sponsorship_individual sponsor ON sponsor.id=assignment.sponsor_individual_id
+      JOIN sponsorship_status status ON status.id=assignment.sponsorship_status_id
+      LEFT JOIN person_placement placement ON placement.person_id=person.id
+        AND placement.organization_id=person.organization_id AND placement.is_current=1
+      WHERE assignment.organization_id=? AND person.kind=?${sessionCondition}${completionCondition}
+      ORDER BY person.display_name COLLATE NOCASE,assignment.status_on DESC`)
+      .bind(...bindings)
+      .all<Record<string, unknown>>();
+    rows = result.results;
+  } else if (report === "giftMoney" || report === "payments") {
+    title = report === "giftMoney" ? "Gift money" : "Sponsorship payment list";
+    columns = [
+      { key: "receivedOn", label: "Received" },
+      { key: "sponsorName", label: "Sponsor / donor" },
+      { key: "fundType", label: "Fund type" },
+      { key: "receiptNumber", label: "Receipt no." },
+      { key: "amount", label: "Amount", numeric: true },
+      { key: "allocatedAmount", label: "Allocated", numeric: true },
+      { key: "beneficiaries", label: "Beneficiaries", numeric: true },
+      { key: "remarks", label: "Remarks" },
+    ];
+    const sessionCondition = session === "all" ? "" : " AND fund.academic_session_id=?";
+    const typeCondition = report === "giftMoney" ? " AND lower(type.name)='gift money'" : "";
+    const bindings =
+      session === "all" ? [context.organizationId] : [context.organizationId, session];
+    const result = await runtime.DATABASE.prepare(`SELECT fund.received_on AS receivedOn,
+      coalesce(individual.display_name,parent.name,visitor.display_name,'Legacy sponsor') AS sponsorName,
+      type.name AS fundType,fund.receipt_number AS receiptNumber,fund.amount,
+      coalesce(SUM(allocation.amount),0) AS allocatedAmount,
+      COUNT(DISTINCT allocation.person_id) AS beneficiaries,fund.remarks
+      FROM sponsorship_fund fund JOIN sponsorship_fund_type type ON type.id=fund.fund_type_id
+      LEFT JOIN sponsorship_individual individual ON individual.id=fund.sponsor_individual_id
+      LEFT JOIN sponsorship_organization parent ON parent.id=fund.sponsor_organization_id
+      LEFT JOIN sponsorship_visitor visitor ON visitor.id=fund.visitor_id
+      LEFT JOIN sponsorship_fund_allocation allocation ON allocation.fund_id=fund.id
+      WHERE fund.organization_id=?${sessionCondition}${typeCondition}
+      GROUP BY fund.id ORDER BY fund.received_on DESC,fund.id`)
+      .bind(...bindings)
+      .all<Record<string, unknown>>();
+    rows = result.results;
+  } else {
+    title = "Visitor list";
+    columns = [
+      { key: "visitedOn", label: "Visited" },
+      { key: "visitorName", label: "Visitor" },
+      { key: "visitorType", label: "Type" },
+      { key: "countryName", label: "Country" },
+      { key: "relatedPersonName", label: "Related person" },
+      { key: "giftsPresented", label: "Gifts presented" },
+      { key: "visitSummary", label: "Visit summary" },
+    ];
+    const result = await runtime.DATABASE.prepare(`SELECT visitor.visited_on AS visitedOn,
+      visitor.display_name AS visitorName,type.name AS visitorType,visitor.country_name AS countryName,
+      visitor.related_person_name AS relatedPersonName,visitor.gifts_presented,visitor.visit_summary AS visitSummary
+      FROM sponsorship_visitor visitor LEFT JOIN sponsorship_visitor_type type ON type.id=visitor.visitor_type_id
+      WHERE visitor.organization_id=? ORDER BY visitor.visited_on DESC,visitor.display_name COLLATE NOCASE`)
+      .bind(context.organizationId)
+      .all<Record<string, unknown>>();
+    rows = result.results;
+  }
+  return Response.json({
+    generatedAt: new Date().toISOString(),
+    report,
+    title,
+    sessionName: sessionRow?.name ?? "All sessions",
+    columns,
+    rows,
+  });
+}
+
+async function getSponsorshipRecords(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "sponsorship.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = sponsorshipListQuerySchema.safeParse({
+    section: url.searchParams.get("section"),
+    q: url.searchParams.get("q") ?? "",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Check the sponsorship filters." }, { status: 400 });
+  const { section, q, page, pageSize } = parsed.data;
+  const runtime = getRuntimeEnv();
+  const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+  const offset = (page - 1) * pageSize;
+  const summaries = await runtime.DATABASE.prepare(`SELECT
+    (SELECT COUNT(*) FROM sponsorship_individual WHERE organization_id=?) individuals,
+    (SELECT COUNT(*) FROM sponsorship_organization WHERE organization_id=?) organizations,
+    (SELECT COUNT(*) FROM sponsorship_assignment WHERE organization_id=?) assignments,
+    (SELECT COUNT(*) FROM sponsorship_fund WHERE organization_id=?) funds,
+    (SELECT coalesce(SUM(amount),0) FROM sponsorship_fund WHERE organization_id=?) receivedAmount,
+    (SELECT COUNT(*) FROM sponsorship_letter WHERE organization_id=?) letters,
+    (SELECT COUNT(*) FROM sponsorship_visitor WHERE organization_id=?) visitors`)
+    .bind(...Array(7).fill(context.organizationId))
+    .first<Record<string, unknown>>();
+  let count = 0;
+  let rows: Record<string, unknown>[] = [];
+  if (section === "sponsors") {
+    const where = `value.organization_id=? AND (?='' OR lower(value.display_name) LIKE ? ESCAPE '\\' OR lower(coalesce(value.email,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(parent.name,'')) LIKE ? ESCAPE '\\')`;
+    const bindings = [context.organizationId, q, search, search, search];
+    const [total, result] = await Promise.all([
+      runtime.DATABASE.prepare(
+        `SELECT COUNT(*) total FROM sponsorship_individual value LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id WHERE ${where}`,
+      )
+        .bind(...bindings)
+        .first<{ total: number }>(),
+      runtime.DATABASE.prepare(
+        `SELECT value.id,value.display_name AS displayName,value.first_name AS firstName,value.middle_name AS middleName,value.last_name AS lastName,value.address,value.country_name AS countryName,value.email,value.phone,value.sponsor_organization_id AS sponsorOrganizationId,value.sponsor_type_id AS sponsorTypeId,value.sponsor_category_id AS sponsorCategoryId,parent.name AS organizationName,type.name AS sponsorType,category.name AS sponsorCategory,(SELECT COUNT(*) FROM sponsorship_assignment assignment WHERE assignment.sponsor_individual_id=value.id) assignmentCount FROM sponsorship_individual value LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id LEFT JOIN sponsorship_sponsor_type type ON type.id=value.sponsor_type_id LEFT JOIN sponsorship_sponsor_category category ON category.id=value.sponsor_category_id WHERE ${where} ORDER BY value.display_name COLLATE NOCASE LIMIT ? OFFSET ?`,
+      )
+        .bind(...bindings, pageSize, offset)
+        .all<Record<string, unknown>>(),
+    ]);
+    count = Number(total?.total ?? 0);
+    rows = result.results;
+  } else if (section === "assignments") {
+    const where = `value.organization_id=? AND (?='' OR lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(sponsor.display_name) LIKE ? ESCAPE '\\' OR lower(status.name) LIKE ? ESCAPE '\\')`;
+    const bindings = [context.organizationId, q, search, search, search];
+    const [total, result] = await Promise.all([
+      runtime.DATABASE.prepare(
+        `SELECT COUNT(*) total FROM sponsorship_assignment value JOIN person ON person.id=value.person_id JOIN sponsorship_individual sponsor ON sponsor.id=value.sponsor_individual_id JOIN sponsorship_status status ON status.id=value.sponsorship_status_id WHERE ${where}`,
+      )
+        .bind(...bindings)
+        .first<{ total: number }>(),
+      runtime.DATABASE.prepare(
+        `SELECT value.id,value.person_id AS personId,value.sponsor_individual_id AS sponsorIndividualId,value.sponsorship_status_id AS statusId,value.academic_session_id AS sessionId,value.status_on AS statusOn,value.remarks,person.display_name AS personName,person.primary_identifier AS admissionNumber,sponsor.display_name AS sponsorName,status.name AS statusName,session.name AS sessionName FROM sponsorship_assignment value JOIN person ON person.id=value.person_id JOIN sponsorship_individual sponsor ON sponsor.id=value.sponsor_individual_id JOIN sponsorship_status status ON status.id=value.sponsorship_status_id LEFT JOIN academic_session session ON session.id=value.academic_session_id WHERE ${where} ORDER BY value.status_on DESC,person.display_name COLLATE NOCASE LIMIT ? OFFSET ?`,
+      )
+        .bind(...bindings, pageSize, offset)
+        .all<Record<string, unknown>>(),
+    ]);
+    count = Number(total?.total ?? 0);
+    rows = result.results;
+  } else if (section === "funds") {
+    const where = `value.organization_id=? AND (?='' OR lower(coalesce(individual.display_name,parent.name,visitor.display_name,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(value.receipt_number,'')) LIKE ? ESCAPE '\\' OR lower(type.name) LIKE ? ESCAPE '\\')`;
+    const bindings = [context.organizationId, q, search, search, search];
+    const [total, result] = await Promise.all([
+      runtime.DATABASE.prepare(
+        `SELECT COUNT(*) total FROM sponsorship_fund value JOIN sponsorship_fund_type type ON type.id=value.fund_type_id LEFT JOIN sponsorship_individual individual ON individual.id=value.sponsor_individual_id LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id LEFT JOIN sponsorship_visitor visitor ON visitor.id=value.visitor_id WHERE ${where}`,
+      )
+        .bind(...bindings)
+        .first<{ total: number }>(),
+      runtime.DATABASE.prepare(
+        `SELECT value.id,value.fund_type_id AS fundTypeId,value.academic_session_id AS sessionId,value.sponsor_kind AS sponsorKind,coalesce(value.sponsor_individual_id,value.sponsor_organization_id,value.visitor_id) AS sponsorPartyId,value.received_on AS receivedOn,value.period_from AS periodFrom,value.period_to AS periodTo,value.amount,value.receipt_number AS receiptNumber,value.remarks,type.name AS fundType,coalesce(individual.display_name,parent.name,visitor.display_name,'Legacy sponsor') AS sponsorName,(SELECT COUNT(*) FROM sponsorship_fund_allocation allocation WHERE allocation.fund_id=value.id) allocationCount FROM sponsorship_fund value JOIN sponsorship_fund_type type ON type.id=value.fund_type_id LEFT JOIN sponsorship_individual individual ON individual.id=value.sponsor_individual_id LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id LEFT JOIN sponsorship_visitor visitor ON visitor.id=value.visitor_id WHERE ${where} ORDER BY value.received_on DESC LIMIT ? OFFSET ?`,
+      )
+        .bind(...bindings, pageSize, offset)
+        .all<Record<string, unknown>>(),
+    ]);
+    count = Number(total?.total ?? 0);
+    rows = result.results;
+  } else if (section === "correspondence") {
+    const where = `value.organization_id=? AND (?='' OR lower(coalesce(value.sender,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(value.receiver,'')) LIKE ? ESCAPE '\\' OR lower(type.name) LIKE ? ESCAPE '\\')`;
+    const bindings = [context.organizationId, q, search, search, search];
+    const [total, result] = await Promise.all([
+      runtime.DATABASE.prepare(
+        `SELECT COUNT(*) total FROM sponsorship_letter value JOIN sponsorship_correspondence_type type ON type.id=value.correspondence_type_id WHERE ${where}`,
+      )
+        .bind(...bindings)
+        .first<{ total: number }>(),
+      runtime.DATABASE.prepare(
+        `SELECT value.id,value.correspondence_type_id AS correspondenceTypeId,value.sponsor_individual_id AS sponsorIndividualId,value.person_id AS personId,value.academic_session_id AS sessionId,value.sender,value.receiver,value.received_on AS receivedOn,value.replied_on AS repliedOn,value.reply_due_on AS replyDueOn,value.remarks,type.name AS correspondenceType,sponsor.display_name AS sponsorName,person.display_name AS personName,person.primary_identifier AS admissionNumber FROM sponsorship_letter value JOIN sponsorship_correspondence_type type ON type.id=value.correspondence_type_id LEFT JOIN sponsorship_individual sponsor ON sponsor.id=value.sponsor_individual_id LEFT JOIN person ON person.id=value.person_id WHERE ${where} ORDER BY value.received_on DESC LIMIT ? OFFSET ?`,
+      )
+        .bind(...bindings, pageSize, offset)
+        .all<Record<string, unknown>>(),
+    ]);
+    count = Number(total?.total ?? 0);
+    rows = result.results;
+  } else {
+    const where = `value.organization_id=? AND (?='' OR lower(value.display_name) LIKE ? ESCAPE '\\' OR lower(coalesce(value.country_name,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(type.name,'')) LIKE ? ESCAPE '\\')`;
+    const bindings = [context.organizationId, q, search, search, search];
+    const [total, result] = await Promise.all([
+      runtime.DATABASE.prepare(
+        `SELECT COUNT(*) total FROM sponsorship_visitor value LEFT JOIN sponsorship_visitor_type type ON type.id=value.visitor_type_id WHERE ${where}`,
+      )
+        .bind(...bindings)
+        .first<{ total: number }>(),
+      runtime.DATABASE.prepare(
+        `SELECT value.id,value.visitor_type_id AS visitorTypeId,value.first_name AS firstName,value.middle_name AS middleName,value.last_name AS lastName,value.display_name AS displayName,value.address,value.country_name AS countryName,value.email,value.phone,value.related_person_name AS relatedPersonName,value.visited_on AS visitedOn,value.memento_quantity AS mementoQuantity,value.gifts_presented AS giftsPresented,value.visit_summary AS visitSummary,value.comments,type.name AS visitorType FROM sponsorship_visitor value LEFT JOIN sponsorship_visitor_type type ON type.id=value.visitor_type_id WHERE ${where} ORDER BY value.visited_on DESC LIMIT ? OFFSET ?`,
+      )
+        .bind(...bindings, pageSize, offset)
+        .all<Record<string, unknown>>(),
+    ]);
+    count = Number(total?.total ?? 0);
+    rows = result.results;
+  }
+  if (section === "funds") {
+    rows = await Promise.all(
+      rows.map(async (row) => {
+        const allocations = await runtime.DATABASE.prepare(`SELECT allocation.person_id AS personId,
+          person.display_name AS personName,allocation.amount,allocation.remarks
+          FROM sponsorship_fund_allocation allocation LEFT JOIN person ON person.id=allocation.person_id
+          WHERE allocation.organization_id=? AND allocation.fund_id=? ORDER BY person.display_name COLLATE NOCASE`)
+          .bind(context.organizationId, String(row.id))
+          .all<Record<string, unknown>>();
+        return { ...row, allocations: allocations.results };
+      }),
+    );
+  }
+  return Response.json({
+    summary: summaries,
+    records: rows,
+    pagination: { page, pageSize, total: count, totalPages: Math.ceil(count / pageSize) },
+    capabilities: { manage: hasPermission(context, "sponsorship.manage") },
+  });
+}
+
+async function getSponsorshipSetup(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "sponsorship.read")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
+  const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+  const tables = [
+    "sponsorship_sponsor_type",
+    "sponsorship_sponsor_category",
+    "sponsorship_status",
+    "sponsorship_fund_type",
+    "sponsorship_correspondence_type",
+    "sponsorship_visitor_type",
+  ];
+  const [
+    organizations,
+    sponsorTypes,
+    sponsorCategories,
+    statuses,
+    fundTypes,
+    correspondenceTypes,
+    visitorTypes,
+    sessions,
+    people,
+    individuals,
+    visitors,
+  ] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT id,name,country_name AS countryName,
+      supports_children AS supportsChildren,supports_elderly AS supportsElderly
+      FROM sponsorship_organization WHERE organization_id=? AND is_active=1
+      ORDER BY name COLLATE NOCASE`)
+      .bind(context.organizationId)
+      .all(),
+    ...tables.map((table) =>
+      runtime.DATABASE.prepare(
+        `SELECT id,name FROM ${table} WHERE organization_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`,
+      )
+        .bind(context.organizationId)
+        .all(),
+    ),
+    runtime.DATABASE.prepare(
+      "SELECT id,name FROM academic_session WHERE organization_id=? ORDER BY starts_on DESC",
+    )
+      .bind(context.organizationId)
+      .all(),
+    runtime.DATABASE.prepare(
+      `SELECT id,display_name AS name,primary_identifier AS admissionNumber FROM person WHERE organization_id=? AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\' OR lower(primary_identifier) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 50`,
+    )
+      .bind(context.organizationId, q, search, search)
+      .all(),
+    runtime.DATABASE.prepare(
+      `SELECT id,display_name AS name FROM sponsorship_individual WHERE organization_id=? AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 50`,
+    )
+      .bind(context.organizationId, q, search)
+      .all(),
+    runtime.DATABASE.prepare(
+      `SELECT id,display_name AS name FROM sponsorship_visitor WHERE organization_id=? AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 50`,
+    )
+      .bind(context.organizationId, q, search)
+      .all(),
+  ]);
+  return Response.json({
+    organizations: organizations.results,
+    sponsorTypes: sponsorTypes.results,
+    sponsorCategories: sponsorCategories.results,
+    statuses: statuses.results,
+    fundTypes: fundTypes.results,
+    correspondenceTypes: correspondenceTypes.results,
+    visitorTypes: visitorTypes.results,
+    sessions: sessions.results,
+    people: people.results,
+    individuals: individuals.results,
+    visitors: visitors.results,
+    capabilities: { manage: hasPermission(context, "sponsorship.manage") },
+  });
+}
+
+async function writeSponsorshipRecord(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "sponsorship.manage")) return forbidden();
+  const parsed = sponsorshipMutationSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the sponsorship record." }, { status: 400 });
+  const value = parsed.data;
+  const runtime = getRuntimeEnv();
+  const id = value.id ?? crypto.randomUUID();
+  const catalogTables: Record<string, string> = {
+    sponsorType: "sponsorship_sponsor_type",
+    sponsorCategory: "sponsorship_sponsor_category",
+    status: "sponsorship_status",
+    fundType: "sponsorship_fund_type",
+    correspondenceType: "sponsorship_correspondence_type",
+    visitorType: "sponsorship_visitor_type",
+  };
+  if (
+    value.kind === "sponsorType" ||
+    value.kind === "sponsorCategory" ||
+    value.kind === "status" ||
+    value.kind === "fundType" ||
+    value.kind === "correspondenceType" ||
+    value.kind === "visitorType"
+  ) {
+    const catalogTable = catalogTables[value.kind];
+    const existing = value.id
+      ? await sponsorshipEntityExists(
+          runtime.DATABASE,
+          catalogTable,
+          value.id,
+          context.organizationId,
+        )
+      : false;
+    if (value.id && !existing)
+      return Response.json({ error: "Setup record not found." }, { status: 404 });
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          `UPDATE ${catalogTable} SET name=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
+        ).bind(value.name, context.userId, id, context.organizationId)
+      : runtime.DATABASE.prepare(
+          `INSERT INTO ${catalogTable} (id,organization_id,name,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,? ,?,'tsewa',?,?,?,?)`,
+        ).bind(
+          id,
+          context.organizationId,
+          value.name,
+          catalogTable,
+          id,
+          context.userId,
+          context.userId,
+        );
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+        catalogTable,
+        id,
+      ),
+    ]);
+    return Response.json({ id }, { status: existing ? 200 : 201 });
+  }
+  if (value.kind === "organization") {
+    const existing = value.id
+      ? await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "sponsorship_organization",
+          value.id,
+          context.organizationId,
+        )
+      : false;
+    if (value.id && !existing)
+      return Response.json({ error: "Sponsor organization not found." }, { status: 404 });
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          "UPDATE sponsorship_organization SET name=?,country_name=?,supports_children=?,supports_elderly=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+        ).bind(
+          value.name,
+          value.countryName ?? null,
+          value.supportsChildren ? 1 : 0,
+          value.supportsElderly ? 1 : 0,
+          context.userId,
+          id,
+          context.organizationId,
+        )
+      : runtime.DATABASE.prepare(
+          "INSERT INTO sponsorship_organization (id,organization_id,name,country_name,supports_children,supports_elderly,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,'tsewa','sponsorship_organization',?,?,?)",
+        ).bind(
+          id,
+          context.organizationId,
+          value.name,
+          value.countryName ?? null,
+          value.supportsChildren ? 1 : 0,
+          value.supportsElderly ? 1 : 0,
+          id,
+          context.userId,
+          context.userId,
+        );
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        `sponsorship.organization_${existing ? "updated" : "created"}`,
+        "sponsorship_organization",
+        id,
+      ),
+    ]);
+    return Response.json({ id }, { status: existing ? 200 : 201 });
+  }
+  if (value.kind === "individual") {
+    for (const [table, reference] of [
+      ["sponsorship_organization", value.sponsorOrganizationId],
+      ["sponsorship_sponsor_type", value.sponsorTypeId],
+      ["sponsorship_sponsor_category", value.sponsorCategoryId],
+    ] as const)
+      if (
+        reference &&
+        !(await sponsorshipEntityExists(runtime.DATABASE, table, reference, context.organizationId))
+      )
+        return Response.json({ error: "Choose valid sponsor setup values." }, { status: 400 });
+    const existing = value.id
+      ? await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "sponsorship_individual",
+          value.id,
+          context.organizationId,
+        )
+      : false;
+    if (value.id && !existing)
+      return Response.json({ error: "Individual sponsor not found." }, { status: 404 });
+    const displayName = sponsorshipDisplayName([value.firstName, value.middleName, value.lastName]);
+    const bindings = [
+      value.sponsorOrganizationId ?? null,
+      value.sponsorTypeId ?? null,
+      value.sponsorCategoryId ?? null,
+      value.firstName,
+      value.middleName ?? null,
+      value.lastName ?? null,
+      displayName,
+      value.address ?? null,
+      value.countryName ?? null,
+      value.email ?? null,
+      value.phone ?? null,
+    ];
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          "UPDATE sponsorship_individual SET sponsor_organization_id=?,sponsor_type_id=?,sponsor_category_id=?,first_name=?,middle_name=?,last_name=?,display_name=?,address=?,country_name=?,email=?,phone=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+        ).bind(...bindings, context.userId, id, context.organizationId)
+      : runtime.DATABASE.prepare(
+          "INSERT INTO sponsorship_individual (id,organization_id,sponsor_organization_id,sponsor_type_id,sponsor_category_id,first_name,middle_name,last_name,display_name,address,country_name,email,phone,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_individual',?,?,?)",
+        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId);
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        `sponsorship.individual_${existing ? "updated" : "created"}`,
+        "sponsorship_individual",
+        id,
+      ),
+    ]);
+    return Response.json({ id }, { status: existing ? 200 : 201 });
+  }
+  if (value.kind === "assignment") {
+    if (
+      !(await sponsorshipEntityExists(
+        runtime.DATABASE,
+        "person",
+        value.personId,
+        context.organizationId,
+      )) ||
+      !(await sponsorshipEntityExists(
+        runtime.DATABASE,
+        "sponsorship_individual",
+        value.sponsorIndividualId,
+        context.organizationId,
+      )) ||
+      !(await sponsorshipEntityExists(
+        runtime.DATABASE,
+        "sponsorship_status",
+        value.statusId,
+        context.organizationId,
+      )) ||
+      (value.sessionId &&
+        !(await scholarshipSessionExists(
+          runtime.DATABASE,
+          context.organizationId,
+          value.sessionId,
+        )))
+    )
+      return Response.json(
+        { error: "Choose a valid person, sponsor, status, and session." },
+        { status: 400 },
+      );
+    const existing = value.id
+      ? await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "sponsorship_assignment",
+          value.id,
+          context.organizationId,
+        )
+      : false;
+    if (value.id && !existing)
+      return Response.json({ error: "Sponsor assignment not found." }, { status: 404 });
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          "UPDATE sponsorship_assignment SET person_id=?,sponsor_individual_id=?,sponsorship_status_id=?,academic_session_id=?,status_on=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+        ).bind(
+          value.personId,
+          value.sponsorIndividualId,
+          value.statusId,
+          value.sessionId ?? null,
+          value.statusOn,
+          value.remarks ?? null,
+          context.userId,
+          id,
+          context.organizationId,
+        )
+      : runtime.DATABASE.prepare(
+          "INSERT INTO sponsorship_assignment (id,organization_id,person_id,sponsor_individual_id,sponsorship_status_id,academic_session_id,status_on,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,'tsewa','sponsorship_assignment',?,?,?)",
+        ).bind(
+          id,
+          context.organizationId,
+          value.personId,
+          value.sponsorIndividualId,
+          value.statusId,
+          value.sessionId ?? null,
+          value.statusOn,
+          value.remarks ?? null,
+          id,
+          context.userId,
+          context.userId,
+        );
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        `sponsorship.assignment_${existing ? "updated" : "created"}`,
+        "sponsorship_assignment",
+        id,
+      ),
+    ]);
+    return Response.json({ id }, { status: existing ? 200 : 201 });
+  }
+  if (value.kind === "visitor") {
+    if (
+      value.visitorTypeId &&
+      !(await sponsorshipEntityExists(
+        runtime.DATABASE,
+        "sponsorship_visitor_type",
+        value.visitorTypeId,
+        context.organizationId,
+      ))
+    )
+      return Response.json({ error: "Choose a valid visitor type." }, { status: 400 });
+    const existing = value.id
+      ? await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "sponsorship_visitor",
+          value.id,
+          context.organizationId,
+        )
+      : false;
+    if (value.id && !existing)
+      return Response.json({ error: "Visitor not found." }, { status: 404 });
+    const displayName = sponsorshipDisplayName([value.firstName, value.middleName, value.lastName]);
+    const bindings = [
+      value.visitorTypeId ?? null,
+      value.firstName,
+      value.middleName ?? null,
+      value.lastName ?? null,
+      displayName,
+      value.address ?? null,
+      value.countryName ?? null,
+      value.email ?? null,
+      value.phone ?? null,
+      value.relatedPersonName ?? null,
+      value.visitedOn,
+      value.mementoQuantity ?? null,
+      value.giftsPresented ?? null,
+      value.visitSummary ?? null,
+      value.comments ?? null,
+    ];
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          "UPDATE sponsorship_visitor SET visitor_type_id=?,first_name=?,middle_name=?,last_name=?,display_name=?,address=?,country_name=?,email=?,phone=?,related_person_name=?,visited_on=?,memento_quantity=?,gifts_presented=?,visit_summary=?,comments=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+        ).bind(...bindings, context.userId, id, context.organizationId)
+      : runtime.DATABASE.prepare(
+          "INSERT INTO sponsorship_visitor (id,organization_id,visitor_type_id,first_name,middle_name,last_name,display_name,address,country_name,email,phone,related_person_name,visited_on,memento_quantity,gifts_presented,visit_summary,comments,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_visitor',?,?,?)",
+        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId);
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        `sponsorship.visitor_${existing ? "updated" : "created"}`,
+        "sponsorship_visitor",
+        id,
+      ),
+    ]);
+    return Response.json({ id }, { status: existing ? 200 : 201 });
+  }
+  if (value.kind === "correspondence") {
+    if (
+      !(await sponsorshipEntityExists(
+        runtime.DATABASE,
+        "sponsorship_correspondence_type",
+        value.correspondenceTypeId,
+        context.organizationId,
+      )) ||
+      (value.sponsorIndividualId &&
+        !(await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "sponsorship_individual",
+          value.sponsorIndividualId,
+          context.organizationId,
+        ))) ||
+      (value.personId &&
+        !(await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "person",
+          value.personId,
+          context.organizationId,
+        ))) ||
+      (value.sessionId &&
+        !(await scholarshipSessionExists(
+          runtime.DATABASE,
+          context.organizationId,
+          value.sessionId,
+        )))
+    )
+      return Response.json({ error: "Choose valid correspondence references." }, { status: 400 });
+    const existing = value.id
+      ? await sponsorshipEntityExists(
+          runtime.DATABASE,
+          "sponsorship_letter",
+          value.id,
+          context.organizationId,
+        )
+      : false;
+    if (value.id && !existing)
+      return Response.json({ error: "Correspondence not found." }, { status: 404 });
+    const bindings = [
+      value.correspondenceTypeId,
+      value.sponsorIndividualId ?? null,
+      value.personId ?? null,
+      value.sessionId ?? null,
+      value.sender ?? null,
+      value.receiver ?? null,
+      value.receivedOn,
+      value.repliedOn ?? null,
+      value.replyDueOn ?? null,
+      value.remarks ?? null,
+    ];
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          "UPDATE sponsorship_letter SET correspondence_type_id=?,sponsor_individual_id=?,person_id=?,academic_session_id=?,sender=?,receiver=?,received_on=?,replied_on=?,reply_due_on=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+        ).bind(...bindings, context.userId, id, context.organizationId)
+      : runtime.DATABASE.prepare(
+          "INSERT INTO sponsorship_letter (id,organization_id,correspondence_type_id,sponsor_individual_id,person_id,academic_session_id,sender,receiver,received_on,replied_on,reply_due_on,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_letter',?,?,?)",
+        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId);
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        `sponsorship.correspondence_${existing ? "updated" : "created"}`,
+        "sponsorship_letter",
+        id,
+      ),
+    ]);
+    return Response.json({ id }, { status: existing ? 200 : 201 });
+  }
+  if (value.kind !== "fund")
+    return Response.json({ error: "Unsupported sponsorship record." }, { status: 400 });
+  if (
+    !(await sponsorshipEntityExists(
+      runtime.DATABASE,
+      "sponsorship_fund_type",
+      value.fundTypeId,
+      context.organizationId,
+    )) ||
+    (value.sessionId &&
+      !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId)))
+  )
+    return Response.json({ error: "Choose a valid fund type and session." }, { status: 400 });
+  const partyTable =
+    value.sponsorKind === "individual"
+      ? "sponsorship_individual"
+      : value.sponsorKind === "organization"
+        ? "sponsorship_organization"
+        : "sponsorship_visitor";
+  if (
+    !(await sponsorshipEntityExists(
+      runtime.DATABASE,
+      partyTable,
+      value.sponsorPartyId,
+      context.organizationId,
+    ))
+  )
+    return Response.json({ error: "Choose a valid remittance source." }, { status: 400 });
+  const people = new Set(
+    (
+      await runtime.DATABASE.prepare("SELECT id FROM person WHERE organization_id=?")
+        .bind(context.organizationId)
+        .all<{ id: string }>()
+    ).results.map((item) => item.id),
+  );
+  if (value.allocations.some((item) => !people.has(item.personId)))
+    return Response.json({ error: "Choose valid allocation beneficiaries." }, { status: 400 });
+  if (!allocationsFitFund(value.amount, value.allocations))
+    return Response.json(
+      { error: "Beneficiary allocations cannot exceed the remittance amount." },
+      { status: 400 },
+    );
+  const existing = value.id
+    ? await sponsorshipEntityExists(
+        runtime.DATABASE,
+        "sponsorship_fund",
+        value.id,
+        context.organizationId,
+      )
+    : false;
+  if (value.id && !existing)
+    return Response.json({ error: "Remittance not found." }, { status: 404 });
+  const individualId = value.sponsorKind === "individual" ? value.sponsorPartyId : null;
+  const organizationId = value.sponsorKind === "organization" ? value.sponsorPartyId : null;
+  const visitorId = value.sponsorKind === "visitor" ? value.sponsorPartyId : null;
+  const bindings = [
+    value.fundTypeId,
+    value.sessionId ?? null,
+    value.sponsorKind,
+    individualId,
+    organizationId,
+    visitorId,
+    value.receivedOn,
+    value.periodFrom ?? null,
+    value.periodTo ?? null,
+    value.amount,
+    value.receiptNumber ?? null,
+    value.remarks ?? null,
+  ];
+  const statements: DrizzleStatement[] = [
+    existing
+      ? runtime.DATABASE.prepare(
+          "UPDATE sponsorship_fund SET fund_type_id=?,academic_session_id=?,sponsor_kind=?,sponsor_individual_id=?,sponsor_organization_id=?,visitor_id=?,received_on=?,period_from=?,period_to=?,amount=?,receipt_number=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+        ).bind(...bindings, context.userId, id, context.organizationId)
+      : runtime.DATABASE.prepare(
+          "INSERT INTO sponsorship_fund (id,organization_id,fund_type_id,academic_session_id,sponsor_kind,sponsor_individual_id,sponsor_organization_id,visitor_id,received_on,period_from,period_to,amount,receipt_number,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_fund',?,?,?)",
+        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId),
+  ];
+  if (existing)
+    statements.push(
+      runtime.DATABASE.prepare(
+        "DELETE FROM sponsorship_fund_allocation WHERE fund_id=? AND organization_id=?",
+      ).bind(id, context.organizationId),
+    );
+  for (const allocation of value.allocations) {
+    const allocationId = crypto.randomUUID();
+    statements.push(
+      runtime.DATABASE.prepare(
+        "INSERT INTO sponsorship_fund_allocation (id,organization_id,fund_id,person_id,academic_session_id,amount,period_from,period_to,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_fund_allocation',?,?,?)",
+      ).bind(
+        allocationId,
+        context.organizationId,
+        id,
+        allocation.personId,
+        value.sessionId ?? null,
+        allocation.amount,
+        value.periodFrom ?? null,
+        value.periodTo ?? null,
+        allocation.remarks ?? null,
+        allocationId,
+        context.userId,
+        context.userId,
+      ),
+    );
+  }
+  statements.push(
+    auditStatement(
+      runtime.DATABASE,
+      context,
+      `sponsorship.fund_${existing ? "updated" : "created"}`,
+      "sponsorship_fund",
+      id,
+      { allocationCount: String(value.allocations.length) },
+    ),
+  );
+  await runtime.DATABASE.batch(statements);
+  return Response.json({ id }, { status: existing ? 200 : 201 });
+}
+
+async function sponsorshipEntityExists(
+  database: QueryDatabase,
+  table: string,
+  id: string,
+  organizationId: string,
+): Promise<boolean> {
+  const allowed = new Set([
+    "person",
+    "sponsorship_organization",
+    "sponsorship_sponsor_type",
+    "sponsorship_sponsor_category",
+    "sponsorship_status",
+    "sponsorship_individual",
+    "sponsorship_assignment",
+    "sponsorship_fund_type",
+    "sponsorship_visitor_type",
+    "sponsorship_visitor",
+    "sponsorship_fund",
+    "sponsorship_correspondence_type",
+    "sponsorship_letter",
+  ]);
+  if (!allowed.has(table)) return false;
+  return Boolean(
+    await database
+      .prepare(`SELECT id FROM ${table} WHERE id=? AND organization_id=?`)
+      .bind(id, organizationId)
+      .first(),
+  );
 }
 
 function scholarshipRecordWrite(

@@ -1844,6 +1844,267 @@ export const scholarshipLimit = sqliteTable("scholarship_limit", {
   ...scholarshipSourceColumns(),
 });
 
+export const sponsorshipImportBatch = sqliteTable("sponsorship_import_batch", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sourceSystem: text("source_system").notNull(),
+  sourceDatabase: text("source_database").notNull(),
+  sourceFingerprint: text("source_fingerprint").notNull(),
+  status: text().notNull(),
+  individualCount: integer("individual_count").default(0).notNull(),
+  assignmentCount: integer("assignment_count").default(0).notNull(),
+  fundCount: integer("fund_count").default(0).notNull(),
+  allocationCount: integer("allocation_count").default(0).notNull(),
+  startedAt: text("started_at").notNull(),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+const sponsorshipSourceColumns = () => ({
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importBatchId: text("import_batch_id").references(() => sponsorshipImportBatch.id, {
+    onDelete: "set null",
+  }),
+  importedAt: text("imported_at"),
+  createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const sponsorshipOrganization = sqliteTable("sponsorship_organization", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  countryName: text("country_name"),
+  supportsChildren: integer("supports_children").default(0).notNull(),
+  supportsElderly: integer("supports_elderly").default(0).notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipSponsorType = sqliteTable("sponsorship_sponsor_type", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipSponsorCategory = sqliteTable("sponsorship_sponsor_category", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipStatus = sqliteTable("sponsorship_status", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipIndividual = sqliteTable("sponsorship_individual", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sponsorOrganizationId: text("sponsor_organization_id").references(
+    () => sponsorshipOrganization.id,
+    { onDelete: "set null" },
+  ),
+  legacySponsorOrganizationId: text("legacy_sponsor_organization_id"),
+  sponsorTypeId: text("sponsor_type_id").references(() => sponsorshipSponsorType.id, {
+    onDelete: "set null",
+  }),
+  sponsorCategoryId: text("sponsor_category_id").references(() => sponsorshipSponsorCategory.id, {
+    onDelete: "set null",
+  }),
+  firstName: text("first_name").notNull(),
+  middleName: text("middle_name"),
+  lastName: text("last_name"),
+  displayName: text("display_name").notNull(),
+  address: text(),
+  countryName: text("country_name"),
+  email: text(),
+  phone: text(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipAssignment = sqliteTable("sponsorship_assignment", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  personId: text("person_id")
+    .notNull()
+    .references(() => person.id, { onDelete: "cascade" }),
+  sponsorIndividualId: text("sponsor_individual_id")
+    .notNull()
+    .references(() => sponsorshipIndividual.id, { onDelete: "cascade" }),
+  sponsorshipStatusId: text("sponsorship_status_id")
+    .notNull()
+    .references(() => sponsorshipStatus.id, { onDelete: "restrict" }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  statusOn: text("status_on"),
+  remarks: text(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipFundType = sqliteTable("sponsorship_fund_type", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipVisitorType = sqliteTable("sponsorship_visitor_type", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipVisitor = sqliteTable("sponsorship_visitor", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  visitorTypeId: text("visitor_type_id").references(() => sponsorshipVisitorType.id, {
+    onDelete: "set null",
+  }),
+  firstName: text("first_name").notNull(),
+  middleName: text("middle_name"),
+  lastName: text("last_name"),
+  displayName: text("display_name").notNull(),
+  address: text(),
+  countryName: text("country_name"),
+  email: text(),
+  phone: text(),
+  relatedPersonName: text("related_person_name"),
+  visitedOn: text("visited_on"),
+  mementoQuantity: integer("memento_quantity"),
+  giftsPresented: text("gifts_presented"),
+  visitSummary: text("visit_summary"),
+  comments: text(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipFund = sqliteTable("sponsorship_fund", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  fundTypeId: text("fund_type_id")
+    .notNull()
+    .references(() => sponsorshipFundType.id, { onDelete: "restrict" }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  sponsorKind: text("sponsor_kind").notNull(),
+  sponsorIndividualId: text("sponsor_individual_id").references(() => sponsorshipIndividual.id, {
+    onDelete: "set null",
+  }),
+  sponsorOrganizationId: text("sponsor_organization_id").references(
+    () => sponsorshipOrganization.id,
+    { onDelete: "set null" },
+  ),
+  visitorId: text("visitor_id").references(() => sponsorshipVisitor.id, { onDelete: "set null" }),
+  legacySponsorPartyId: text("legacy_sponsor_party_id"),
+  receivedOn: text("received_on").notNull(),
+  periodFrom: text("period_from"),
+  periodTo: text("period_to"),
+  amount: real().notNull(),
+  receiptNumber: text("receipt_number"),
+  remarks: text(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipFundAllocation = sqliteTable("sponsorship_fund_allocation", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  fundId: text("fund_id")
+    .notNull()
+    .references(() => sponsorshipFund.id, { onDelete: "cascade" }),
+  personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+  legacyBeneficiaryId: text("legacy_beneficiary_id"),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  amount: real().notNull(),
+  receiptNumber: text("receipt_number"),
+  periodFrom: text("period_from"),
+  periodTo: text("period_to"),
+  remarks: text(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipCorrespondenceType = sqliteTable("sponsorship_correspondence_type", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...sponsorshipSourceColumns(),
+});
+
+export const sponsorshipLetter = sqliteTable("sponsorship_letter", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  correspondenceTypeId: text("correspondence_type_id")
+    .notNull()
+    .references(() => sponsorshipCorrespondenceType.id, { onDelete: "restrict" }),
+  sponsorIndividualId: text("sponsor_individual_id").references(() => sponsorshipIndividual.id, {
+    onDelete: "set null",
+  }),
+  personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  sender: text(),
+  receiver: text(),
+  receivedOn: text("received_on").notNull(),
+  repliedOn: text("replied_on"),
+  replyDueOn: text("reply_due_on"),
+  remarks: text(),
+  ...sponsorshipSourceColumns(),
+});
+
 export const accessPermission = sqliteTable("access_permission", {
   key: text().primaryKey().notNull(),
   name: text().notNull(),

@@ -161,20 +161,25 @@ session.
 
 ### Sponsorship
 
-The product owner believes staff still use sponsorship details. Treat this as a likely next module:
-first preserve and display the current sponsor, beneficiary, fund, and correspondence records, then
-confirm which edits and reports staff need.
+Sponsorship history is imported into organization-scoped tables and exposed through an operational
+relationship desk. Authorized staff can create and correct sponsor organizations, individual
+sponsors, beneficiary assignments and statuses, remittances and beneficiary allocations,
+correspondence, visitors, and the supporting controlled lists. All writes require
+`sponsorship.manage` and create audit events; reads and reports require `sponsorship.read`.
 
-- [ ] Preserve and expose historical sponsors and beneficiary links.
-- [ ] Individual and organization sponsors.
-- [ ] Sponsor assignments, status, funds, and remittances.
-- [ ] Correspondence and visitors.
-- [ ] Sponsorship reports.
+- [x] Preserve and expose historical sponsors and beneficiary links.
+- [x] Individual and organization sponsors.
+- [x] Sponsor assignments, status, funds, and remittances.
+- [x] Correspondence and visitors.
+- [x] Recreate the eleven named legacy sponsorship reports with print and CSV export.
 
-Evidence: 3,073 individuals, 32 sponsor organizations, 4,510 beneficiary-sponsor
-links, 712 fund details, 16 letters, and 19 visitors exist. None of the sponsor
-links are tied to a 2020–2026 session. The separate `sponsorship` and
-`beneficiary_funds` tables are empty.
+Evidence: the import preserves 3,073 individual sponsors, 32 sponsor organizations,
+4,510 beneficiary-sponsor links, 15 remittances, 712 beneficiary allocations,
+16 letters, 19 visitors, and all associated type/status catalogs. Seventeen individual
+sponsor rows and two remittances retain missing legacy organization references without
+inventing organizations; four fund allocations retain missing legacy beneficiary identifiers.
+None of the sponsor links are tied to a 2020–2026 session. The separate `sponsorship`
+and `beneficiary_funds` tables are empty.
 
 ### Staff, leave, holidays, and stipends
 
