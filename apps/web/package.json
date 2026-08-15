@@ -11,6 +11,7 @@
     "generate-routes": "tsr generate",
     "build": "vp build",
     "preview": "vp preview",
+    "test": "vitest run --config vitest.config.ts",
     "deploy": "vp run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
@@ -49,6 +50,7 @@
     "tw-animate-css": "latest",
     "typescript": "catalog:",
     "vite": "catalog:",
+    "vitest": "^4.1.10",
     "wrangler": "^4.70.0"
   }
 }

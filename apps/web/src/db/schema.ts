@@ -1164,6 +1164,15 @@ export const markSheet = sqliteTable(
       .references(() => academicTerm.id, { onDelete: "restrict" }),
     recordedOn: text("recorded_on"),
     isVerified: integer("is_verified").default(0).notNull(),
+    status: text().default("draft").notNull(),
+    verifiedAt: text("verified_at"),
+    verifiedByUserId: text("verified_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    finalizedAt: text("finalized_at"),
+    finalizedByUserId: text("finalized_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     maximumMarks: real("maximum_marks"),
     sourceSystem: text("source_system").notNull(),
     sourceTable: text("source_table").notNull(),
@@ -1178,6 +1187,12 @@ export const markSheet = sqliteTable(
     updatedAt: text("updated_at")
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     index("mark_sheet_filter_idx").on(
@@ -1186,6 +1201,20 @@ export const markSheet = sqliteTable(
       table.schoolId,
       table.academicClassId,
       table.subjectId,
+    ),
+    uniqueIndex("mark_sheet_scope_unique_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.schoolId,
+      table.academicClassId,
+      table.subjectId,
+      table.termId,
+    ),
+    index("mark_sheet_status_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.status,
+      table.recordedOn,
     ),
   ],
 );
@@ -1209,6 +1238,8 @@ export const studentMark = sqliteTable(
     marks: real(),
     maximumMarks: real("maximum_marks"),
     note: text(),
+    isActive: integer("is_active").default(1).notNull(),
+    removedAt: text("removed_at"),
     sourceSystem: text("source_system").notNull(),
     sourceTable: text("source_table").notNull(),
     sourceId: text("source_id").notNull(),
@@ -1222,9 +1253,21 @@ export const studentMark = sqliteTable(
     updatedAt: text("updated_at")
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     index("student_mark_person_idx").on(table.organizationId, table.personId, table.markSheetId),
+    index("student_mark_active_sheet_idx").on(
+      table.organizationId,
+      table.markSheetId,
+      table.isActive,
+      table.personId,
+    ),
   ],
 );
 

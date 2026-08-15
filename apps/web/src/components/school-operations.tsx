@@ -680,7 +680,10 @@ export function SchoolOperations({
               sessionId={activeSessionId}
             />
           ) : (
-            <HistoricalResults onSelectPerson={setSelectedPersonId} />
+            <HistoricalResults
+              activeSessionId={activeSessionId}
+              onSelectPerson={setSelectedPersonId}
+            />
           )}
         </section>
       </div>

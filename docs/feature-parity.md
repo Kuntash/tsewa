@@ -102,12 +102,13 @@ people and school workflows where appropriate.
 ### Academic marks and results
 
 - [x] Preserve and display imported historical marks and results.
-- [ ] Configure subjects, subject types, subject heads, terms, assessments,
-      evaluation types, grades, and their class mappings.
-- [ ] Create and edit mark sheets.
-- [ ] Support draft, verification, and final locking.
+- [x] Configure subjects, terms, and assessments for the active session.
+- [ ] Add the remaining subject types, subject heads, evaluation types, grades,
+      and class-mapping catalogs where legacy use requires them.
+- [x] Create and edit Tsewa draft mark sheets while keeping imported sheets immutable.
+- [x] Support draft, verification, final locking, audited reopening, and correction.
 - [ ] Confirm whether Excel marks import is still wanted.
-- [ ] Generate and print student results and result summaries.
+- [x] Generate student summaries and printable/exportable report cards.
 
 Evidence: 311 mark sheets and 17,821 mark-detail rows exist, but all mark sheets
 belong to the 2011 or 2012 session.
@@ -207,10 +208,14 @@ exist. Only one holiday row, one leave row, and seven staff records are tied to
 4. School, class/section, house, and assignment editing.
 5. Printable/exportable rosters and person records confirmed by THF.
 6. Practice-school end-to-end testing, followed by controlled enablement for THF.
-7. Deliver diagnosis history, then TB and medical advances/settlements.
-8. Deliver sponsorship, scholarships, and the remaining populated staff/leave,
-   holiday, stipend, marks, results, and promotion workflows.
-9. Ask THF to confirm only the empty or non-observable workflows before planning v1.
+7. Complete academic marks and results: setup, entry, verification, final locking,
+   and printable/exportable results.
+8. Deliver scholarships, followed by sponsorships.
+9. Deliver staff employment, dependants, qualifications, experience, and transfers.
+10. Resume health write workflows after staff parity.
+11. Defer holidays and stipends until the modules above are complete; then validate
+    their exact operational scope with THF.
+12. Ask THF to confirm only the empty or non-observable workflows before planning v1.
 
 Update this document whenever a feature is shipped, new legacy usage evidence is
 found, or THF confirms that a historically used workflow is still required.

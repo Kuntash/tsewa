@@ -1,6 +1,17 @@
-import { BookOpenText, ChevronLeft, ChevronRight, LoaderCircle, Search, Users } from "lucide-react";
+import {
+  BookOpenText,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  Search,
+  Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { MarkEntrySheet } from "@/components/mark-entry-sheet";
+import { ResultSummaryPanel } from "@/components/result-summary-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,13 +47,23 @@ type ResultRow = {
   note: string | null;
   recordedOn: string | null;
   isVerified: boolean;
+  markSheetId: string;
+  sheetStatus: "draft" | "verified" | "final";
+  sourceSystem: string;
 };
 type Results = {
   results: ResultRow[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  capabilities?: { manage: boolean };
 };
 
-export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: string) => void }) {
+export function HistoricalResults({
+  activeSessionId,
+  onSelectPerson,
+}: {
+  activeSessionId: string;
+  onSelectPerson: (id: string) => void;
+}) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [sessionId, setSessionId] = useState("");
   const [query, setQuery] = useState("");
@@ -58,6 +79,11 @@ export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: str
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [entryOpen, setEntryOpen] = useState(false);
+  const [editSheetId, setEditSheetId] = useState<string | null>(null);
+  const [savedMessage, setSavedMessage] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [changingSheetId, setChangingSheetId] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -74,7 +100,7 @@ export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: str
         if (!controller.signal.aborted) setError(message(reason));
       });
     return () => controller.abort();
-  }, [sessionId]);
+  }, [refreshKey, sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -101,7 +127,7 @@ export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: str
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [className, debouncedQuery, page, school, sessionId, subject, term]);
+  }, [className, debouncedQuery, page, refreshKey, school, sessionId, subject, term]);
 
   function changeSession(value: string) {
     setSessionId(value);
@@ -111,13 +137,56 @@ export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: str
     setTerm("all");
     setPage(1);
   }
+  async function changeSheetStatus(markSheetId: string, action: "verify" | "finalize" | "reopen") {
+    setChangingSheetId(markSheetId);
+    setError("");
+    try {
+      const response = await fetch(`/api/school-operations/results/${markSheetId}/status`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const payload = (await response.json()) as { error?: string; status?: string };
+      if (!response.ok)
+        throw new Error(payload.error ?? "The mark sheet status could not be changed.");
+      setSavedMessage(`Mark sheet moved to ${payload.status}.`);
+      setRefreshKey((value) => value + 1);
+    } catch (reason) {
+      setError(message(reason));
+    } finally {
+      setChangingSheetId("");
+    }
+  }
   const filters = overview?.filters;
+  const manageableSheets = Array.from(
+    new Map(
+      data.results
+        .filter((row) => row.sourceSystem.toLowerCase() === "tsewa")
+        .map((row) => [row.markSheetId, row]),
+    ).values(),
+  );
   return (
     <div className="mt-7 space-y-4">
-      <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm leading-6 text-muted-foreground">
-        The old system contains results for 2011 and 2012 only. These records are shown exactly as
-        saved and cannot be edited here.
+      <div className="flex flex-col gap-4 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+          Imported 2011–2012 results remain preserved as read-only history. New results are entered
+          against the active academic session as drafts, then verified and finalized.
+        </p>
+        <Button
+          className="shrink-0"
+          onClick={() => {
+            setEditSheetId(null);
+            setEntryOpen(true);
+          }}
+        >
+          <Plus className="size-4" /> Enter marks
+        </Button>
       </div>
+      {savedMessage ? (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
+          {savedMessage}
+        </div>
+      ) : null}
       <div className="grid grid-cols-3 gap-3">
         <Metric label="Students" value={overview?.summary.students ?? 0} icon={Users} />
         <Metric label="Mark sheets" value={overview?.summary.markSheets ?? 0} icon={BookOpenText} />
@@ -197,6 +266,97 @@ export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: str
           {error}
         </div>
       ) : null}
+      {data.capabilities?.manage && manageableSheets.length ? (
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-3">
+              <p className="text-sm font-semibold">Mark-sheet review</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Verify checked drafts, then finalize them to lock publication.
+              </p>
+            </div>
+            <div className="divide-y rounded-xl border">
+              {manageableSheets.map((sheet) => (
+                <div
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  key={sheet.markSheetId}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {sheet.className} · {sheet.subjectName} · {sheet.termName}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {sheet.schoolName} · {sheet.recordedOn ?? "Date not recorded"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={sheet.sheetStatus === "final" ? "default" : "secondary"}>
+                      {statusLabel(sheet.sheetStatus)}
+                    </Badge>
+                    {sheet.sheetStatus === "draft" ? (
+                      <>
+                        <Button
+                          onClick={() => {
+                            setEditSheetId(sheet.markSheetId);
+                            setEntryOpen(true);
+                          }}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Pencil className="size-4" /> Edit
+                        </Button>
+                        <StatusButton
+                          action="verify"
+                          busy={changingSheetId === sheet.markSheetId}
+                          label="Verify"
+                          onChange={changeSheetStatus}
+                          sheetId={sheet.markSheetId}
+                        />
+                      </>
+                    ) : sheet.sheetStatus === "verified" ? (
+                      <>
+                        <StatusButton
+                          action="reopen"
+                          busy={changingSheetId === sheet.markSheetId}
+                          label="Reopen"
+                          onChange={changeSheetStatus}
+                          sheetId={sheet.markSheetId}
+                          variant="outline"
+                        />
+                        <StatusButton
+                          action="finalize"
+                          busy={changingSheetId === sheet.markSheetId}
+                          label="Finalize"
+                          onChange={changeSheetStatus}
+                          sheetId={sheet.markSheetId}
+                        />
+                      </>
+                    ) : (
+                      <StatusButton
+                        action="reopen"
+                        busy={changingSheetId === sheet.markSheetId}
+                        label="Reopen"
+                        onChange={changeSheetStatus}
+                        sheetId={sheet.markSheetId}
+                        variant="outline"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+      <ResultSummaryPanel
+        className={className}
+        query={debouncedQuery}
+        refreshKey={refreshKey}
+        school={school}
+        sessionId={sessionId}
+        subject={subject}
+        term={term}
+      />
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
@@ -278,6 +438,19 @@ export function HistoricalResults({ onSelectPerson }: { onSelectPerson: (id: str
           )}
         </CardContent>
       </Card>
+      <MarkEntrySheet
+        editId={editSheetId}
+        onOpenChange={(open) => {
+          setEntryOpen(open);
+          if (!open) setEditSheetId(null);
+        }}
+        onSaved={(message) => {
+          setSavedMessage(message);
+          setRefreshKey((value) => value + 1);
+        }}
+        open={entryOpen}
+        sessionId={activeSessionId}
+      />
     </div>
   );
 }
@@ -368,6 +541,36 @@ function formatMark(row: ResultRow) {
     : row.maximumMarks === null
       ? String(row.marks)
       : `${row.marks}/${row.maximumMarks}`;
+}
+function statusLabel(status: ResultRow["sheetStatus"]) {
+  return status === "final" ? "Final" : status === "verified" ? "Verified" : "Draft";
+}
+function StatusButton({
+  action,
+  busy,
+  label,
+  onChange,
+  sheetId,
+  variant = "default",
+}: {
+  action: "verify" | "finalize" | "reopen";
+  busy: boolean;
+  label: string;
+  onChange: (sheetId: string, action: "verify" | "finalize" | "reopen") => Promise<void>;
+  sheetId: string;
+  variant?: "default" | "outline";
+}) {
+  return (
+    <Button
+      disabled={busy}
+      onClick={() => void onChange(sheetId, action)}
+      size="sm"
+      variant={variant}
+    >
+      {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+      {label}
+    </Button>
+  );
 }
 async function parse<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & { error?: string };

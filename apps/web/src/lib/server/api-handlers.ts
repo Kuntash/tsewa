@@ -10,6 +10,7 @@ import {
   rolePermissionDefaults,
 } from "@/lib/access-control";
 import type { AccessGroupKey, AccessRoleKey, PermissionKey } from "@/lib/access-control";
+import { nextMarkSheetStatus } from "@/lib/academic-results";
 import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { getRuntimeEnv } from "@/lib/runtime-env";
@@ -204,6 +205,82 @@ const historicalResultsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
+
+const resultSetupQuerySchema = z.object({ sessionId: z.uuid() });
+
+const resultSummaryQuerySchema = z.object({
+  sessionId: z.uuid(),
+  q: z.string().trim().max(100).default(""),
+  school: z.string().trim().max(160).default("all"),
+  className: z.string().trim().max(160).default("all"),
+  subject: z.string().trim().max(160).default("all"),
+  term: z.string().trim().max(160).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const reportCardQuerySchema = z.object({
+  sessionId: z.uuid(),
+  personId: z.uuid(),
+  termId: z.uuid(),
+});
+
+const resultCatalogSchema = z.object({
+  sessionId: z.uuid(),
+  subject: z.object({
+    name: z.string().trim().min(1).max(120),
+    shortName: z.string().trim().max(30).nullable().optional(),
+    isOptional: z.boolean().default(false),
+    passingPercentage: z.number().min(0).max(100).nullable().optional(),
+  }),
+  term: z.object({ name: z.string().trim().min(1).max(80) }),
+  assessments: z
+    .array(z.object({ name: z.string().trim().min(1).max(100) }))
+    .min(1)
+    .max(20),
+});
+
+const markEntrySchema = z.object({
+  personId: z.uuid(),
+  assessmentId: z.uuid(),
+  marks: z.number().min(0).nullable(),
+  maximumMarks: z.number().positive().max(10_000),
+  note: z.string().trim().max(500).nullable().optional(),
+});
+
+const markSheetMutationSchema = z
+  .object({
+    sessionId: z.uuid(),
+    schoolId: z.uuid(),
+    academicClassId: z.uuid(),
+    subjectId: z.uuid(),
+    termId: z.uuid(),
+    recordedOn: isoDateSchema,
+    maximumMarks: z.number().positive().max(10_000).nullable().optional(),
+    marks: z.array(markEntrySchema).min(1).max(5_000),
+  })
+  .superRefine((value, context) => {
+    const keys = new Set<string>();
+    for (const [index, mark] of value.marks.entries()) {
+      const key = `${mark.personId}:${mark.assessmentId}`;
+      if (keys.has(key))
+        context.addIssue({
+          code: "custom",
+          message: "Duplicate mark entry.",
+          path: ["marks", index],
+        });
+      keys.add(key);
+      if (mark.marks !== null && mark.marks > mark.maximumMarks) {
+        context.addIssue({
+          code: "custom",
+          message: "Marks cannot exceed maximum marks.",
+          path: ["marks", index, "marks"],
+        });
+      }
+    }
+  });
+
+const markSheetStatusSchema = z.object({ action: z.enum(["verify", "finalize", "reopen"]) });
 
 const healthHistoryQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
@@ -432,8 +509,28 @@ export const apiDispatcher = {
       return getHistoricalResultsOverview(request);
     }
 
+    if (url.pathname === "/api/school-operations/results/setup") {
+      return handleAcademicResultSetup(request);
+    }
+
+    if (url.pathname === "/api/school-operations/results/summaries") {
+      return getAcademicResultSummaries(request);
+    }
+
+    if (url.pathname === "/api/school-operations/results/report-card") {
+      return getAcademicReportCard(request);
+    }
+
+    const markSheetStatusMatch = url.pathname.match(
+      /^\/api\/school-operations\/results\/([^/]+)\/status$/,
+    );
+    if (markSheetStatusMatch) return changeMarkSheetStatus(request, markSheetStatusMatch[1]);
+
+    const markSheetMatch = url.pathname.match(/^\/api\/school-operations\/results\/([^/]+)$/);
+    if (markSheetMatch) return handleMarkSheet(request, markSheetMatch[1]);
+
     if (url.pathname === "/api/school-operations/results") {
-      return getHistoricalResults(request);
+      return handleAcademicResults(request);
     }
 
     if (url.pathname === "/api/health/history") {
@@ -2670,11 +2767,18 @@ function resultFilter(
   return database
     .prepare(`SELECT ${idSql} AS id, ${nameSql} AS name, COUNT(mark.id) AS count
     FROM mark_sheet sheet JOIN ${joinTable} ON ${joinOn}
-    LEFT JOIN student_mark mark ON mark.mark_sheet_id=sheet.id AND mark.organization_id=sheet.organization_id
+    LEFT JOIN student_mark mark ON mark.mark_sheet_id=sheet.id
+      AND mark.organization_id=sheet.organization_id AND mark.is_active=1
     WHERE sheet.organization_id=? AND sheet.academic_session_id=?
     GROUP BY ${idSql}, ${nameSql} ORDER BY ${nameSql} COLLATE NOCASE`)
     .bind(organizationId, sessionId)
     .all<{ id: string; name: string; count: number }>();
+}
+
+async function handleAcademicResults(request: Request): Promise<Response> {
+  if (request.method === "GET") return getHistoricalResults(request);
+  if (request.method === "POST") return createMarkSheet(request);
+  return methodNotAllowed("GET, POST");
 }
 
 async function getHistoricalResults(request: Request): Promise<Response> {
@@ -2696,7 +2800,7 @@ async function getHistoricalResults(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Check the result filters." }, { status: 400 });
   const { sessionId, q, school, className, subject, term, page, pageSize } = parsed.data;
-  const conditions = ["sheet.organization_id=?", "sheet.academic_session_id=?"];
+  const conditions = ["sheet.organization_id=?", "sheet.academic_session_id=?", "mark.is_active=1"];
   const bindings: Array<string | number> = [context.organizationId, sessionId];
   for (const [value, sql] of [
     [school, "sheet.school_id"],
@@ -2729,7 +2833,8 @@ async function getHistoricalResults(request: Request): Promise<Response> {
       person.primary_identifier AS admissionNumber, school.name AS schoolName,
       ${classDisplayName("class")} AS className, subject.name AS subjectName, term.name AS termName,
       assessment.name AS assessmentName, mark.marks, mark.maximum_marks AS maximumMarks,
-      mark.note, sheet.recorded_on AS recordedOn, sheet.is_verified AS isVerified
+      mark.note, sheet.recorded_on AS recordedOn, sheet.is_verified AS isVerified,
+      sheet.status AS sheetStatus, sheet.id AS markSheetId, sheet.source_system AS sourceSystem
       FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
       JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
       JOIN school_master school ON school.id=sheet.school_id
@@ -2747,7 +2852,706 @@ async function getHistoricalResults(request: Request): Promise<Response> {
   return Response.json({
     results: rows.results.map((row) => ({ ...row, isVerified: Boolean(row.isVerified) })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    capabilities: { manage: hasPermission(context, "school.results.manage") },
   });
+}
+
+async function handleAcademicResultSetup(request: Request): Promise<Response> {
+  if (request.method === "GET") return getAcademicResultSetup(request);
+  if (request.method === "POST") return createAcademicResultCatalog(request);
+  return methodNotAllowed("GET, POST");
+}
+
+async function getAcademicResultSetup(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const parsed = resultSetupQuerySchema.safeParse({ sessionId: url.searchParams.get("sessionId") });
+  if (!parsed.success)
+    return Response.json({ error: "Select a valid academic session." }, { status: 400 });
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope) return forbidden();
+  if (!hasPermission(scope, "school.results.read")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const [schools, classes, subjects, terms, assessments, students] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT DISTINCT school.id,school.name FROM school_class_offering offering
+      JOIN school_master school ON school.id=offering.school_id
+      WHERE offering.organization_id=? AND offering.academic_session_id=? AND offering.is_active=1
+      ORDER BY school.name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all<{ id: string; name: string }>(),
+    runtime.DATABASE.prepare(`SELECT offering.school_id AS schoolId,class.id,
+      ${classDisplayName("class")} AS name FROM school_class_offering offering
+      JOIN academic_class_master class ON class.id=offering.academic_class_id
+      WHERE offering.organization_id=? AND offering.academic_session_id=? AND offering.is_active=1
+      ORDER BY coalesce(class.level,999),name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all<{ schoolId: string; id: string; name: string }>(),
+    runtime.DATABASE.prepare(`SELECT id,name,short_name AS shortName,is_optional AS isOptional,
+      passing_percentage AS passingPercentage FROM academic_subject
+      WHERE organization_id=? AND academic_session_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all<{
+        id: string;
+        name: string;
+        shortName: string | null;
+        isOptional: number;
+        passingPercentage: number | null;
+      }>(),
+    runtime.DATABASE.prepare(
+      `SELECT id,name FROM academic_term WHERE organization_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`,
+    )
+      .bind(scope.organizationId)
+      .all<{ id: string; name: string }>(),
+    runtime.DATABASE.prepare(`SELECT id,term_id AS termId,name FROM academic_assessment
+      WHERE organization_id=? AND academic_session_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all<{ id: string; termId: string; name: string }>(),
+    runtime.DATABASE.prepare(`SELECT enrollment.school_id AS schoolId,enrollment.academic_class_id AS academicClassId,
+      person.id,person.display_name AS name,person.primary_identifier AS admissionNumber
+      FROM student_enrollment enrollment JOIN person ON person.id=enrollment.person_id
+      WHERE enrollment.organization_id=? AND enrollment.academic_session_id=?
+        AND enrollment.status IN ('recorded','enrolled') AND person.status='active'
+      ORDER BY person.display_name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all<{
+        schoolId: string;
+        academicClassId: string;
+        id: string;
+        name: string;
+        admissionNumber: string;
+      }>(),
+  ]);
+  return Response.json({
+    session: scope.session,
+    schools: schools.results,
+    classes: classes.results,
+    subjects: subjects.results.map((subject) => ({
+      ...subject,
+      isOptional: Boolean(subject.isOptional),
+    })),
+    terms: terms.results,
+    assessments: assessments.results,
+    students: students.results,
+    capabilities: { manage: hasPermission(scope, "school.results.manage") },
+  });
+}
+
+async function createAcademicResultCatalog(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const parsed = resultCatalogSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the subject, term, and assessments." }, { status: 400 });
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const duplicateSubject = await runtime.DATABASE.prepare(`SELECT id FROM academic_subject
+    WHERE organization_id=? AND academic_session_id=? AND lower(name)=lower(?)`)
+    .bind(scope.organizationId, scope.session.id, parsed.data.subject.name)
+    .first<{ id: string }>();
+  if (duplicateSubject)
+    return Response.json(
+      { error: "That subject already exists for this session." },
+      { status: 409 },
+    );
+  const duplicateAssessmentNames = new Set<string>();
+  for (const item of parsed.data.assessments) {
+    const key = item.name.toLowerCase();
+    if (duplicateAssessmentNames.has(key))
+      return Response.json({ error: "Assessment names must be unique." }, { status: 400 });
+    duplicateAssessmentNames.add(key);
+  }
+  const existingTerm = await runtime.DATABASE.prepare(`SELECT id FROM academic_term
+    WHERE organization_id=? AND lower(name)=lower(?)`)
+    .bind(scope.organizationId, parsed.data.term.name)
+    .first<{ id: string }>();
+  const termId = existingTerm?.id ?? crypto.randomUUID();
+  const subjectId = crypto.randomUUID();
+  const statements: DrizzleStatement[] = [];
+  if (!existingTerm)
+    statements.push(
+      runtime.DATABASE.prepare(`INSERT INTO academic_term
+    (id,organization_id,name,is_active,source_system,source_table,source_id)
+    VALUES (?,?,?,1,'tsewa','academic_term',?)`).bind(
+        termId,
+        scope.organizationId,
+        parsed.data.term.name,
+        termId,
+      ),
+    );
+  statements.push(
+    runtime.DATABASE.prepare(`INSERT INTO academic_subject
+    (id,organization_id,academic_session_id,name,short_name,is_optional,passing_percentage,
+     is_active,source_system,source_table,source_id)
+    VALUES (?,?,?,?,?,?,?,1,'tsewa','academic_subject',?)`).bind(
+      subjectId,
+      scope.organizationId,
+      scope.session.id,
+      parsed.data.subject.name,
+      parsed.data.subject.shortName ?? null,
+      parsed.data.subject.isOptional ? 1 : 0,
+      parsed.data.subject.passingPercentage ?? null,
+      subjectId,
+    ),
+  );
+  const assessments = parsed.data.assessments.map((item) => ({
+    id: crypto.randomUUID(),
+    name: item.name,
+  }));
+  for (const assessment of assessments)
+    statements.push(
+      runtime.DATABASE.prepare(`INSERT INTO academic_assessment
+    (id,organization_id,academic_session_id,term_id,name,is_active,source_system,source_table,source_id)
+    VALUES (?,?,?,?,?,1,'tsewa','academic_assessment',?)`).bind(
+        assessment.id,
+        scope.organizationId,
+        scope.session.id,
+        termId,
+        assessment.name,
+        assessment.id,
+      ),
+    );
+  statements.push(
+    auditStatement(
+      runtime.DATABASE,
+      scope,
+      "academic.result_catalog_created",
+      "academic_subject",
+      subjectId,
+      {
+        sessionId: scope.session.id,
+        termId,
+        assessmentCount: String(assessments.length),
+      },
+    ),
+  );
+  await runtime.DATABASE.batch(statements);
+  return Response.json({ subjectId, termId, assessments }, { status: 201 });
+}
+
+async function createMarkSheet(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const parsed = markSheetMutationSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the mark sheet entries." }, { status: 400 });
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const data = parsed.data;
+  const [offering, subject, term, assessments, roster, existing] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT id FROM school_class_offering WHERE organization_id=?
+      AND academic_session_id=? AND school_id=? AND academic_class_id=? AND is_active=1`)
+      .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
+      .first<{ id: string }>(),
+    runtime.DATABASE.prepare(`SELECT id FROM academic_subject WHERE id=? AND organization_id=?
+      AND academic_session_id=? AND is_active=1`)
+      .bind(data.subjectId, scope.organizationId, scope.session.id)
+      .first<{ id: string }>(),
+    runtime.DATABASE.prepare(
+      "SELECT id FROM academic_term WHERE id=? AND organization_id=? AND is_active=1",
+    )
+      .bind(data.termId, scope.organizationId)
+      .first<{ id: string }>(),
+    runtime.DATABASE.prepare(`SELECT id FROM academic_assessment WHERE organization_id=?
+      AND academic_session_id=? AND term_id=? AND is_active=1`)
+      .bind(scope.organizationId, scope.session.id, data.termId)
+      .all<{ id: string }>(),
+    runtime.DATABASE.prepare(`SELECT person_id AS personId FROM student_enrollment WHERE organization_id=?
+      AND academic_session_id=? AND school_id=? AND academic_class_id=? AND status IN ('recorded','enrolled')`)
+      .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
+      .all<{ personId: string }>(),
+    runtime.DATABASE.prepare(`SELECT id FROM mark_sheet WHERE organization_id=? AND academic_session_id=?
+      AND school_id=? AND academic_class_id=? AND subject_id=? AND term_id=?`)
+      .bind(
+        scope.organizationId,
+        scope.session.id,
+        data.schoolId,
+        data.academicClassId,
+        data.subjectId,
+        data.termId,
+      )
+      .first<{ id: string }>(),
+  ]);
+  if (!offering || !subject || !term)
+    return Response.json({ error: "Choose valid result setup values." }, { status: 400 });
+  if (existing)
+    return Response.json(
+      { error: "A mark sheet already exists for this class, subject, and term.", id: existing.id },
+      { status: 409 },
+    );
+  const assessmentIds = new Set(assessments.results.map((row) => row.id));
+  const rosterIds = new Set(roster.results.map((row) => row.personId));
+  if (
+    data.marks.some(
+      (mark) => !assessmentIds.has(mark.assessmentId) || !rosterIds.has(mark.personId),
+    )
+  ) {
+    return Response.json(
+      { error: "A mark entry is outside the selected class or term." },
+      { status: 400 },
+    );
+  }
+  const markSheetId = crypto.randomUUID();
+  const statements: DrizzleStatement[] = [
+    runtime.DATABASE.prepare(`INSERT INTO mark_sheet
+    (id,organization_id,academic_session_id,school_id,academic_class_id,subject_id,term_id,
+     recorded_on,is_verified,status,maximum_marks,source_system,source_table,source_id,
+     created_by_user_id,updated_by_user_id)
+    VALUES (?,?,?,?,?,?,?,?,0,'draft',?,'tsewa','mark_sheet',?,?,?)`).bind(
+      markSheetId,
+      scope.organizationId,
+      scope.session.id,
+      data.schoolId,
+      data.academicClassId,
+      data.subjectId,
+      data.termId,
+      data.recordedOn,
+      data.maximumMarks ?? null,
+      markSheetId,
+      scope.userId,
+      scope.userId,
+    ),
+  ];
+  for (const mark of data.marks) {
+    const id = crypto.randomUUID();
+    statements.push(
+      runtime.DATABASE.prepare(`INSERT INTO student_mark
+      (id,organization_id,mark_sheet_id,person_id,assessment_id,marks,maximum_marks,note,
+       source_system,source_table,source_id,created_by_user_id,updated_by_user_id)
+      VALUES (?,?,?,?,?,?,?,?,'tsewa','student_mark',?,?,?)`).bind(
+        id,
+        scope.organizationId,
+        markSheetId,
+        mark.personId,
+        mark.assessmentId,
+        mark.marks,
+        mark.maximumMarks,
+        mark.note ?? null,
+        id,
+        scope.userId,
+        scope.userId,
+      ),
+    );
+  }
+  statements.push(
+    auditStatement(
+      runtime.DATABASE,
+      scope,
+      "academic.mark_sheet_created",
+      "mark_sheet",
+      markSheetId,
+      {
+        sessionId: scope.session.id,
+        entryCount: String(data.marks.length),
+      },
+    ),
+  );
+  await runtime.DATABASE.batch(statements);
+  return Response.json({ id: markSheetId, status: "draft" }, { status: 201 });
+}
+
+async function handleMarkSheet(request: Request, markSheetId: string): Promise<Response> {
+  if (!z.uuid().safeParse(markSheetId).success)
+    return Response.json({ error: "Invalid mark sheet." }, { status: 400 });
+  if (request.method === "GET") return getMarkSheet(request, markSheetId);
+  if (request.method === "PATCH") return updateMarkSheet(request, markSheetId);
+  return methodNotAllowed("GET, PATCH");
+}
+
+async function getMarkSheet(request: Request, markSheetId: string): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "school.results.read")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const sheet = await runtime.DATABASE.prepare(`SELECT id,academic_session_id AS sessionId,
+    school_id AS schoolId,academic_class_id AS academicClassId,subject_id AS subjectId,
+    term_id AS termId,recorded_on AS recordedOn,maximum_marks AS maximumMarks,status,
+    source_system AS sourceSystem FROM mark_sheet WHERE id=? AND organization_id=?`)
+    .bind(markSheetId, context.organizationId)
+    .first<{
+      id: string;
+      sessionId: string;
+      schoolId: string;
+      academicClassId: string;
+      subjectId: string;
+      termId: string;
+      recordedOn: string | null;
+      maximumMarks: number | null;
+      status: string;
+      sourceSystem: string;
+    }>();
+  if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
+  const marks = await runtime.DATABASE.prepare(`SELECT id,person_id AS personId,
+    assessment_id AS assessmentId,marks,maximum_marks AS maximumMarks,note
+    FROM student_mark WHERE organization_id=? AND mark_sheet_id=? AND is_active=1`)
+    .bind(context.organizationId, markSheetId)
+    .all<{
+      id: string;
+      personId: string;
+      assessmentId: string;
+      marks: number | null;
+      maximumMarks: number | null;
+      note: string | null;
+    }>();
+  return Response.json({
+    sheet,
+    marks: marks.results,
+    capabilities: {
+      edit:
+        hasPermission(context, "school.results.manage") &&
+        sheet.status === "draft" &&
+        sheet.sourceSystem.toLowerCase() === "tsewa",
+    },
+  });
+}
+
+async function updateMarkSheet(request: Request, markSheetId: string): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const parsed = markSheetMutationSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the mark sheet entries." }, { status: 400 });
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const sheet = await runtime.DATABASE.prepare(`SELECT id,status,source_system AS sourceSystem,
+    school_id AS schoolId,academic_class_id AS academicClassId,subject_id AS subjectId,term_id AS termId
+    FROM mark_sheet WHERE id=? AND organization_id=? AND academic_session_id=?`)
+    .bind(markSheetId, scope.organizationId, scope.session.id)
+    .first<{
+      id: string;
+      status: string;
+      sourceSystem: string;
+      schoolId: string;
+      academicClassId: string;
+      subjectId: string;
+      termId: string;
+    }>();
+  if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
+  if (sheet.sourceSystem.toLowerCase() !== "tsewa" || sheet.status !== "draft")
+    return Response.json({ error: "Only Tsewa draft mark sheets can be edited." }, { status: 409 });
+  const data = parsed.data;
+  if (
+    sheet.schoolId !== data.schoolId ||
+    sheet.academicClassId !== data.academicClassId ||
+    sheet.subjectId !== data.subjectId ||
+    sheet.termId !== data.termId
+  )
+    return Response.json({ error: "A mark sheet's scope cannot be changed." }, { status: 409 });
+
+  const [assessments, roster, currentMarks] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT id FROM academic_assessment WHERE organization_id=?
+      AND academic_session_id=? AND term_id=? AND is_active=1`)
+      .bind(scope.organizationId, scope.session.id, data.termId)
+      .all<{ id: string }>(),
+    runtime.DATABASE.prepare(`SELECT person_id AS personId FROM student_enrollment WHERE organization_id=?
+      AND academic_session_id=? AND school_id=? AND academic_class_id=? AND status IN ('recorded','enrolled')`)
+      .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
+      .all<{ personId: string }>(),
+    runtime.DATABASE.prepare(`SELECT id,person_id AS personId,assessment_id AS assessmentId
+      FROM student_mark WHERE organization_id=? AND mark_sheet_id=? AND is_active=1`)
+      .bind(scope.organizationId, markSheetId)
+      .all<{ id: string; personId: string; assessmentId: string }>(),
+  ]);
+  const assessmentIds = new Set(assessments.results.map((row) => row.id));
+  const rosterIds = new Set(roster.results.map((row) => row.personId));
+  if (
+    data.marks.some(
+      (mark) => !assessmentIds.has(mark.assessmentId) || !rosterIds.has(mark.personId),
+    )
+  )
+    return Response.json(
+      { error: "A mark entry is outside the selected class or term." },
+      { status: 400 },
+    );
+
+  const existingByKey = new Map(
+    currentMarks.results.map((mark) => [`${mark.personId}:${mark.assessmentId}`, mark]),
+  );
+  const submittedKeys = new Set(data.marks.map((mark) => `${mark.personId}:${mark.assessmentId}`));
+  const statements: DrizzleStatement[] = [
+    runtime.DATABASE.prepare(`UPDATE mark_sheet SET recorded_on=?,maximum_marks=?,updated_by_user_id=?,
+      updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
+      data.recordedOn,
+      data.maximumMarks ?? null,
+      scope.userId,
+      markSheetId,
+      scope.organizationId,
+    ),
+  ];
+  for (const mark of data.marks) {
+    const key = `${mark.personId}:${mark.assessmentId}`;
+    const existing = existingByKey.get(key);
+    if (existing) {
+      statements.push(
+        runtime.DATABASE.prepare(`UPDATE student_mark SET marks=?,maximum_marks=?,note=?,
+          updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
+          mark.marks,
+          mark.maximumMarks,
+          mark.note ?? null,
+          scope.userId,
+          existing.id,
+          scope.organizationId,
+        ),
+      );
+    } else {
+      const id = crypto.randomUUID();
+      statements.push(
+        runtime.DATABASE.prepare(`INSERT INTO student_mark
+          (id,organization_id,mark_sheet_id,person_id,assessment_id,marks,maximum_marks,note,
+           source_system,source_table,source_id,created_by_user_id,updated_by_user_id)
+          VALUES (?,?,?,?,?,?,?,?,'tsewa','student_mark',?,?,?)`).bind(
+          id,
+          scope.organizationId,
+          markSheetId,
+          mark.personId,
+          mark.assessmentId,
+          mark.marks,
+          mark.maximumMarks,
+          mark.note ?? null,
+          id,
+          scope.userId,
+          scope.userId,
+        ),
+      );
+    }
+  }
+  for (const mark of currentMarks.results) {
+    if (submittedKeys.has(`${mark.personId}:${mark.assessmentId}`)) continue;
+    statements.push(
+      runtime.DATABASE.prepare(`UPDATE student_mark SET is_active=0,removed_at=CURRENT_TIMESTAMP,
+        updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
+        scope.userId,
+        mark.id,
+        scope.organizationId,
+      ),
+    );
+  }
+  statements.push(
+    auditStatement(
+      runtime.DATABASE,
+      scope,
+      "academic.mark_sheet_updated",
+      "mark_sheet",
+      markSheetId,
+      {
+        entryCount: String(data.marks.length),
+      },
+    ),
+  );
+  await runtime.DATABASE.batch(statements);
+  return Response.json({ id: markSheetId, status: "draft" });
+}
+
+async function getAcademicResultSummaries(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "school.results.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = resultSummaryQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId"),
+    q: url.searchParams.get("q") ?? "",
+    school: url.searchParams.get("school") ?? "all",
+    className: url.searchParams.get("class") ?? "all",
+    subject: url.searchParams.get("subject") ?? "all",
+    term: url.searchParams.get("term") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Check the summary filters." }, { status: 400 });
+  const { sessionId, q, school, className, subject, term, page, pageSize } = parsed.data;
+  const conditions = ["sheet.organization_id=?", "sheet.academic_session_id=?", "mark.is_active=1"];
+  const bindings: Array<string | number> = [context.organizationId, sessionId];
+  for (const [value, column] of [
+    [school, "sheet.school_id"],
+    [className, "sheet.academic_class_id"],
+    [subject, "sheet.subject_id"],
+    [term, "sheet.term_id"],
+  ] as const) {
+    if (value !== "all") {
+      conditions.push(`${column}=?`);
+      bindings.push(value);
+    }
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(
+      "(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\')",
+    );
+    bindings.push(search, search);
+  }
+  const where = conditions.join(" AND ");
+  const group = `person.id,person.display_name,person.primary_identifier,school.id,school.name,
+    class.id,class.name,class.title,class.level,term.id,term.name`;
+  const joins = `FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
+    JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
+    JOIN school_master school ON school.id=sheet.school_id
+    JOIN academic_class_master class ON class.id=sheet.academic_class_id
+    JOIN academic_term term ON term.id=sheet.term_id WHERE ${where}`;
+  const runtime = getRuntimeEnv();
+  const [count, summaries] = await Promise.all([
+    runtime.DATABASE.prepare(
+      `SELECT COUNT(*) AS total FROM (SELECT person.id ${joins} GROUP BY ${group}) grouped`,
+    )
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DATABASE.prepare(`SELECT person.id AS personId,person.display_name AS studentName,
+      person.primary_identifier AS admissionNumber,school.id AS schoolId,school.name AS schoolName,
+      class.id AS academicClassId,${classDisplayName("class")} AS className,
+      term.id AS termId,term.name AS termName,COUNT(DISTINCT sheet.subject_id) AS subjectCount,
+      SUM(CASE WHEN mark.marks IS NOT NULL THEN mark.marks ELSE 0 END) AS totalMarks,
+      SUM(CASE WHEN mark.marks IS NOT NULL THEN mark.maximum_marks ELSE 0 END) AS totalMaximum,
+      SUM(CASE WHEN mark.marks IS NOT NULL THEN 1 ELSE 0 END) AS recordedCount,
+      SUM(CASE WHEN sheet.status='draft' THEN 1 ELSE 0 END) AS draftEntries,
+      SUM(CASE WHEN sheet.status<>'final' THEN 1 ELSE 0 END) AS nonFinalEntries
+      ${joins} GROUP BY ${group}
+      ORDER BY person.display_name COLLATE NOCASE,term.name COLLATE NOCASE LIMIT ? OFFSET ?`)
+      .bind(...bindings, pageSize, (page - 1) * pageSize)
+      .all<Record<string, unknown>>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    summaries: summaries.results.map((row) => ({
+      ...row,
+      percentage:
+        Number(row.totalMaximum) > 0
+          ? (Number(row.totalMarks) / Number(row.totalMaximum)) * 100
+          : null,
+      publicationStatus:
+        Number(row.draftEntries) > 0
+          ? "draft"
+          : Number(row.nonFinalEntries) > 0
+            ? "verified"
+            : "final",
+    })),
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+async function getAcademicReportCard(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "school.results.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = reportCardQuerySchema.safeParse({
+    sessionId: url.searchParams.get("sessionId"),
+    personId: url.searchParams.get("personId"),
+    termId: url.searchParams.get("termId"),
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Choose a valid student, session, and term." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  const [organization, session, student, rows] = await Promise.all([
+    runtime.DATABASE.prepare("SELECT name FROM organization WHERE id=?")
+      .bind(context.organizationId)
+      .first<{ name: string }>(),
+    runtime.DATABASE.prepare(
+      "SELECT id,name,starts_on AS startsOn,ends_on AS endsOn FROM academic_session WHERE id=? AND organization_id=?",
+    )
+      .bind(parsed.data.sessionId, context.organizationId)
+      .first<{ id: string; name: string; startsOn: string; endsOn: string }>(),
+    runtime.DATABASE.prepare(`SELECT person.id AS personId,person.display_name AS studentName,
+      person.primary_identifier AS admissionNumber,school.name AS schoolName,
+      ${classDisplayName("class")} AS className,term.id AS termId,term.name AS termName
+      FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
+      JOIN person ON person.id=mark.person_id JOIN school_master school ON school.id=sheet.school_id
+      JOIN academic_class_master class ON class.id=sheet.academic_class_id
+      JOIN academic_term term ON term.id=sheet.term_id
+      WHERE mark.organization_id=? AND mark.person_id=? AND sheet.academic_session_id=?
+        AND sheet.term_id=? AND mark.is_active=1 LIMIT 1`)
+      .bind(context.organizationId, parsed.data.personId, parsed.data.sessionId, parsed.data.termId)
+      .first<Record<string, unknown>>(),
+    runtime.DATABASE.prepare(`SELECT subject.id AS subjectId,subject.name AS subjectName,
+      subject.passing_percentage AS passingPercentage,assessment.id AS assessmentId,
+      assessment.name AS assessmentName,mark.marks,mark.maximum_marks AS maximumMarks,
+      mark.note,sheet.status,sheet.source_system AS sourceSystem
+      FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
+      JOIN academic_subject subject ON subject.id=sheet.subject_id
+      JOIN academic_assessment assessment ON assessment.id=mark.assessment_id
+      WHERE mark.organization_id=? AND mark.person_id=? AND sheet.academic_session_id=?
+        AND sheet.term_id=? AND mark.is_active=1
+      ORDER BY subject.name COLLATE NOCASE,assessment.name COLLATE NOCASE`)
+      .bind(context.organizationId, parsed.data.personId, parsed.data.sessionId, parsed.data.termId)
+      .all<Record<string, unknown>>(),
+  ]);
+  if (!session || !student || !rows.results.length)
+    return Response.json(
+      { error: "No result card was found for that selection." },
+      { status: 404 },
+    );
+  return Response.json({
+    generatedAt: new Date().toISOString(),
+    organizationName: organization?.name ?? "School",
+    session,
+    student,
+    results: rows.results,
+  });
+}
+
+async function changeMarkSheetStatus(request: Request, markSheetId: string): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!z.uuid().safeParse(markSheetId).success)
+    return Response.json({ error: "Invalid mark sheet." }, { status: 400 });
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "school.results.manage")) return forbidden();
+  const parsed = markSheetStatusSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Choose a valid status action." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  const sheet = await runtime.DATABASE.prepare(
+    "SELECT id,status,source_system AS sourceSystem FROM mark_sheet WHERE id=? AND organization_id=?",
+  )
+    .bind(markSheetId, context.organizationId)
+    .first<{ id: string; status: string; sourceSystem: string }>();
+  if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
+  if (sheet.sourceSystem.toLowerCase() !== "tsewa") {
+    return Response.json(
+      { error: "Imported mark sheets are preserved as read-only history." },
+      { status: 409 },
+    );
+  }
+  const transition = nextMarkSheetStatus(
+    sheet.status as "draft" | "verified" | "final",
+    parsed.data.action,
+  );
+  if (!transition)
+    return Response.json(
+      { error: `Cannot ${parsed.data.action} a ${sheet.status} mark sheet.` },
+      { status: 409 },
+    );
+  const verified = transition === "verified" || transition === "final";
+  await runtime.DATABASE.batch([
+    runtime.DATABASE.prepare(`UPDATE mark_sheet SET status=?,is_verified=?,
+      verified_at=CASE WHEN ?='verified' THEN CURRENT_TIMESTAMP WHEN ?='draft' THEN NULL ELSE verified_at END,
+      verified_by_user_id=CASE WHEN ?='verified' THEN ? WHEN ?='draft' THEN NULL ELSE verified_by_user_id END,
+      finalized_at=CASE WHEN ?='final' THEN CURRENT_TIMESTAMP WHEN ?='draft' THEN NULL ELSE finalized_at END,
+      finalized_by_user_id=CASE WHEN ?='final' THEN ? WHEN ?='draft' THEN NULL ELSE finalized_by_user_id END,
+      updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
+      transition,
+      verified ? 1 : 0,
+      transition,
+      transition,
+      transition,
+      context.userId,
+      transition,
+      transition,
+      transition,
+      transition,
+      context.userId,
+      transition,
+      context.userId,
+      markSheetId,
+      context.organizationId,
+    ),
+    auditStatement(
+      runtime.DATABASE,
+      context,
+      `academic.mark_sheet_${transition}`,
+      "mark_sheet",
+      markSheetId,
+    ),
+  ]);
+  return Response.json({ id: markSheetId, status: transition });
 }
 
 async function getHealthHistory(request: Request): Promise<Response> {
