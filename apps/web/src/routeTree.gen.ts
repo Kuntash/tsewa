@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiOrganizationRouteImport } from './routes/api.organization'
 import { Route as ApiPeopleRouteImport } from './routes/api.people'
 import { Route as ApiPlatformRouteImport } from './routes/api.platform'
+import { Route as ApiScholarshipsRouteImport } from './routes/api.scholarships'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as ApiFilesFileIdRouteImport } from './routes/api.files.$fileId'
 import { Route as ApiHealthAdvancesRouteImport } from './routes/api.health.advances'
@@ -23,6 +24,9 @@ import { Route as ApiInvitationsPreviewRouteImport } from './routes/api.invitati
 import { Route as ApiOrganizationInvitationsRouteImport } from './routes/api.organization.invitations'
 import { Route as ApiOrganizationTransferRouteImport } from './routes/api.organization.transfer'
 import { Route as ApiPeoplePersonIdRouteImport } from './routes/api.people.$personId'
+import { Route as ApiScholarshipsScholarshipIdRouteImport } from './routes/api.scholarships.$scholarshipId'
+import { Route as ApiScholarshipsReportsRouteImport } from './routes/api.scholarships.reports'
+import { Route as ApiScholarshipsSetupRouteImport } from './routes/api.scholarships.setup'
 import { Route as ApiSchoolOperationsAdmissionsRouteImport } from './routes/api.school-operations.admissions'
 import { Route as ApiSchoolOperationsClassesRouteImport } from './routes/api.school-operations.classes'
 import { Route as ApiSchoolOperationsHousesRouteImport } from './routes/api.school-operations.houses'
@@ -78,6 +82,11 @@ const ApiPlatformRoute = ApiPlatformRouteImport.update({
   path: '/api/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiScholarshipsRoute = ApiScholarshipsRouteImport.update({
+  id: '/api/scholarships',
+  path: '/api/scholarships',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -128,6 +137,22 @@ const ApiPeoplePersonIdRoute = ApiPeoplePersonIdRouteImport.update({
   id: '/$personId',
   path: '/$personId',
   getParentRoute: () => ApiPeopleRoute,
+} as any)
+const ApiScholarshipsScholarshipIdRoute =
+  ApiScholarshipsScholarshipIdRouteImport.update({
+    id: '/$scholarshipId',
+    path: '/$scholarshipId',
+    getParentRoute: () => ApiScholarshipsRoute,
+  } as any)
+const ApiScholarshipsReportsRoute = ApiScholarshipsReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => ApiScholarshipsRoute,
+} as any)
+const ApiScholarshipsSetupRoute = ApiScholarshipsSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => ApiScholarshipsRoute,
 } as any)
 const ApiSchoolOperationsAdmissionsRoute =
   ApiSchoolOperationsAdmissionsRouteImport.update({
@@ -337,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
+  '/api/scholarships': typeof ApiScholarshipsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$fileId': typeof ApiFilesFileIdRoute
   '/api/health/advances': typeof ApiHealthAdvancesRoute
@@ -347,6 +373,9 @@ export interface FileRoutesByFullPath {
   '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
   '/api/organization/transfer': typeof ApiOrganizationTransferRoute
   '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
+  '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
+  '/api/scholarships/reports': typeof ApiScholarshipsReportsRoute
+  '/api/scholarships/setup': typeof ApiScholarshipsSetupRoute
   '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
   '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
   '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -387,6 +416,7 @@ export interface FileRoutesByTo {
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
+  '/api/scholarships': typeof ApiScholarshipsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$fileId': typeof ApiFilesFileIdRoute
   '/api/health/advances': typeof ApiHealthAdvancesRoute
@@ -397,6 +427,9 @@ export interface FileRoutesByTo {
   '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
   '/api/organization/transfer': typeof ApiOrganizationTransferRoute
   '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
+  '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
+  '/api/scholarships/reports': typeof ApiScholarshipsReportsRoute
+  '/api/scholarships/setup': typeof ApiScholarshipsSetupRoute
   '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
   '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
   '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -438,6 +471,7 @@ export interface FileRoutesById {
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
+  '/api/scholarships': typeof ApiScholarshipsRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$fileId': typeof ApiFilesFileIdRoute
   '/api/health/advances': typeof ApiHealthAdvancesRoute
@@ -448,6 +482,9 @@ export interface FileRoutesById {
   '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
   '/api/organization/transfer': typeof ApiOrganizationTransferRoute
   '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
+  '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
+  '/api/scholarships/reports': typeof ApiScholarshipsReportsRoute
+  '/api/scholarships/setup': typeof ApiScholarshipsSetupRoute
   '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
   '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
   '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -490,6 +527,7 @@ export interface FileRouteTypes {
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
+    | '/api/scholarships'
     | '/api/auth/$'
     | '/api/files/$fileId'
     | '/api/health/advances'
@@ -500,6 +538,9 @@ export interface FileRouteTypes {
     | '/api/organization/invitations'
     | '/api/organization/transfer'
     | '/api/people/$personId'
+    | '/api/scholarships/$scholarshipId'
+    | '/api/scholarships/reports'
+    | '/api/scholarships/setup'
     | '/api/school-operations/admissions'
     | '/api/school-operations/classes'
     | '/api/school-operations/houses'
@@ -540,6 +581,7 @@ export interface FileRouteTypes {
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
+    | '/api/scholarships'
     | '/api/auth/$'
     | '/api/files/$fileId'
     | '/api/health/advances'
@@ -550,6 +592,9 @@ export interface FileRouteTypes {
     | '/api/organization/invitations'
     | '/api/organization/transfer'
     | '/api/people/$personId'
+    | '/api/scholarships/$scholarshipId'
+    | '/api/scholarships/reports'
+    | '/api/scholarships/setup'
     | '/api/school-operations/admissions'
     | '/api/school-operations/classes'
     | '/api/school-operations/houses'
@@ -590,6 +635,7 @@ export interface FileRouteTypes {
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
+    | '/api/scholarships'
     | '/api/auth/$'
     | '/api/files/$fileId'
     | '/api/health/advances'
@@ -600,6 +646,9 @@ export interface FileRouteTypes {
     | '/api/organization/invitations'
     | '/api/organization/transfer'
     | '/api/people/$personId'
+    | '/api/scholarships/$scholarshipId'
+    | '/api/scholarships/reports'
+    | '/api/scholarships/setup'
     | '/api/school-operations/admissions'
     | '/api/school-operations/classes'
     | '/api/school-operations/houses'
@@ -641,6 +690,7 @@ export interface RootRouteChildren {
   ApiOrganizationRoute: typeof ApiOrganizationRouteWithChildren
   ApiPeopleRoute: typeof ApiPeopleRouteWithChildren
   ApiPlatformRoute: typeof ApiPlatformRoute
+  ApiScholarshipsRoute: typeof ApiScholarshipsRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiFilesFileIdRoute: typeof ApiFilesFileIdRoute
   ApiHealthAdvancesRoute: typeof ApiHealthAdvancesRoute
@@ -690,6 +740,13 @@ declare module '@tanstack/react-router' {
       path: '/api/platform'
       fullPath: '/api/platform'
       preLoaderRoute: typeof ApiPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/scholarships': {
+      id: '/api/scholarships'
+      path: '/api/scholarships'
+      fullPath: '/api/scholarships'
+      preLoaderRoute: typeof ApiScholarshipsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -761,6 +818,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/people/$personId'
       preLoaderRoute: typeof ApiPeoplePersonIdRouteImport
       parentRoute: typeof ApiPeopleRoute
+    }
+    '/api/scholarships/$scholarshipId': {
+      id: '/api/scholarships/$scholarshipId'
+      path: '/$scholarshipId'
+      fullPath: '/api/scholarships/$scholarshipId'
+      preLoaderRoute: typeof ApiScholarshipsScholarshipIdRouteImport
+      parentRoute: typeof ApiScholarshipsRoute
+    }
+    '/api/scholarships/reports': {
+      id: '/api/scholarships/reports'
+      path: '/reports'
+      fullPath: '/api/scholarships/reports'
+      preLoaderRoute: typeof ApiScholarshipsReportsRouteImport
+      parentRoute: typeof ApiScholarshipsRoute
+    }
+    '/api/scholarships/setup': {
+      id: '/api/scholarships/setup'
+      path: '/setup'
+      fullPath: '/api/scholarships/setup'
+      preLoaderRoute: typeof ApiScholarshipsSetupRouteImport
+      parentRoute: typeof ApiScholarshipsRoute
     }
     '/api/school-operations/admissions': {
       id: '/api/school-operations/admissions'
@@ -1111,6 +1189,22 @@ const ApiPeopleRouteWithChildren = ApiPeopleRoute._addFileChildren(
   ApiPeopleRouteChildren,
 )
 
+interface ApiScholarshipsRouteChildren {
+  ApiScholarshipsScholarshipIdRoute: typeof ApiScholarshipsScholarshipIdRoute
+  ApiScholarshipsReportsRoute: typeof ApiScholarshipsReportsRoute
+  ApiScholarshipsSetupRoute: typeof ApiScholarshipsSetupRoute
+}
+
+const ApiScholarshipsRouteChildren: ApiScholarshipsRouteChildren = {
+  ApiScholarshipsScholarshipIdRoute: ApiScholarshipsScholarshipIdRoute,
+  ApiScholarshipsReportsRoute: ApiScholarshipsReportsRoute,
+  ApiScholarshipsSetupRoute: ApiScholarshipsSetupRoute,
+}
+
+const ApiScholarshipsRouteWithChildren = ApiScholarshipsRoute._addFileChildren(
+  ApiScholarshipsRouteChildren,
+)
+
 interface ApiSchoolOperationsClassesRouteChildren {
   ApiSchoolOperationsClassesClassIdRoute: typeof ApiSchoolOperationsClassesClassIdRoute
 }
@@ -1232,6 +1326,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrganizationRoute: ApiOrganizationRouteWithChildren,
   ApiPeopleRoute: ApiPeopleRouteWithChildren,
   ApiPlatformRoute: ApiPlatformRoute,
+  ApiScholarshipsRoute: ApiScholarshipsRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiFilesFileIdRoute: ApiFilesFileIdRoute,
   ApiHealthAdvancesRoute: ApiHealthAdvancesRoute,

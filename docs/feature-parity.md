@@ -141,17 +141,23 @@ session. The `beneficiary_health`, `hepatitis_b`, `tb_dose`, and
 
 ### Scholarships
 
-The product owner believes staff still use scholarship details. Database dates may not show
-read-only use, so confirm the current daily workflow with staff before deciding the editing scope.
+The operational register and editing workflows are now available behind
+`scholarship.read` and `scholarship.manage`. Imported records remain correctable
+with audit history, matching the legacy system's write behavior.
 
-- [ ] Preserve and expose historical scholarship records.
-- [ ] Courses, categories, and scholarship heads.
-- [ ] Scholarship student records and annual details.
-- [ ] Sanctions, sanction details, and advances.
-- [ ] Scholarship reports.
+- [x] Preserve and expose historical scholarship records.
+- [x] Courses, categories, scholarship heads, policy limits, and city advances.
+- [x] Scholarship student records and annual details.
+- [x] Sanctions, head-level sanction details, and advance dates.
+- [x] Recreate the six named legacy reports: scholarship ledger, course completed,
+      new student, student place-wise, student year-wise, and scholarship students.
 
-Evidence: 722 scholarship records, 1,243 annual details, 1,402 sanctions, and
-4,319 sanction details exist, but none are tied to a 2020–2026 session.
+Evidence: the import preserves 722 scholarship records, 1,243 annual details,
+1,402 sanctions, 4,319 sanction details, 37 city advances, 30 limits, 51 courses,
+6 course categories, and 12 scholarship heads. Twelve orphan annual details and
+two orphan sanction lines are retained with their legacy identifiers rather than
+being attached to invented parents. None of the records are tied to a 2020–2026
+session.
 
 ### Sponsorship
 

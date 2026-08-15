@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "mode": "scholarship_history_dry_run",
+  "generatedAt": "2026-08-15T20:00:03.606Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false
+  },
+  "source": {
+    "system": "THF Office Manager",
+    "database": "tibethomes-newer-d1.sqlite",
+    "tables": [
+      "course_category",
+      "course",
+      "scholarship_head",
+      "scholarship",
+      "scholarship_detail",
+      "scholarship_sanction",
+      "scholarship_sanction_detail",
+      "scholarship_advance",
+      "scholarship_limit"
+    ],
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "sizeBytes": 42991616,
+    "openedReadOnly": true
+  },
+  "inventory": {
+    "scholarships": 722,
+    "annualDetails": 1243,
+    "sanctions": 1402,
+    "sanctionLines": 4319,
+    "cityAdvances": 37,
+    "limits": 30,
+    "courses": 51,
+    "courseCategories": 6,
+    "heads": 12
+  },
+  "linkChecks": {
+    "scholarshipsWithoutPerson": 0,
+    "scholarshipsWithoutCourse": 0,
+    "annualDetailsWithoutScholarship": 12,
+    "sanctionsWithoutScholarship": 0,
+    "sanctionLinesWithoutSanction": 2,
+    "sanctionLinesWithoutHead": 0,
+    "sanctionLinesWithDifferentPerson": 0
+  },
+  "ranges": {
+    "firstAdmissionYear": 2006,
+    "lastAdmissionYear": 2015,
+    "firstSanctionOn": "2008-07-21",
+    "lastSanctionOn": "2015-05-18",
+    "sanctionedAmount": 28527031,
+    "allocatedAmount": 28542031
+  },
+  "courseCategories": [
+    {
+      "name": "Degree",
+      "courses": 34,
+      "scholarships": 635
+    },
+    {
+      "name": "Diploma",
+      "courses": 10,
+      "scholarships": 67
+    },
+    {
+      "name": "Varanasi Higher Studies",
+      "courses": 5,
+      "scholarships": 9
+    },
+    {
+      "name": "Sarah Tibetan Higher Studies",
+      "courses": 1,
+      "scholarships": 8
+    },
+    {
+      "name": "Tibetan Medical Mentse Khang",
+      "courses": 1,
+      "scholarships": 3
+    },
+    {
+      "name": "Post Graduation",
+      "courses": 0,
+      "scholarships": 0
+    }
+  ],
+  "heads": [
+    {
+      "name": "Maintenance",
+      "allocations": 1110,
+      "amount": 15832333
+    },
+    {
+      "name": "Pocket Money",
+      "allocations": 1043,
+      "amount": 1759900
+    },
+    {
+      "name": "Tution Fees",
+      "allocations": 544,
+      "amount": 7500057
+    },
+    {
+      "name": "Stationary",
+      "allocations": 521,
+      "amount": 788401
+    },
+    {
+      "name": "Clothing",
+      "allocations": 520,
+      "amount": 536500
+    },
+    {
+      "name": "TA/DA",
+      "allocations": 200,
+      "amount": 697347
+    },
+    {
+      "name": "Advance",
+      "allocations": 197,
+      "amount": 693658
+    },
+    {
+      "name": "Merit",
+      "allocations": 83,
+      "amount": 355625
+    },
+    {
+      "name": "Examination Fees",
+      "allocations": 29,
+      "amount": 26887
+    },
+    {
+      "name": "Other Fees",
+      "allocations": 28,
+      "amount": 139741
+    },
+    {
+      "name": "Special Allowance",
+      "allocations": 22,
+      "amount": 56000
+    },
+    {
+      "name": "Medical exps",
+      "allocations": 22,
+      "amount": 155582
+    }
+  ],
+  "proposedPolicy": {
+    "access": "Require scholarship.read for all records and scholarship.manage for mutations.",
+    "orphanAnnualDetails": "Retain the 12 orphan annual details with their legacy scholarship identifier instead of inventing a link.",
+    "orphanSanctionLines": "Retain the two sanction lines without a parent and their legacy sanction identifier.",
+    "editing": "Imported and new scholarship records remain editable with audit history because the legacy workflows supported correction."
+  }
+}

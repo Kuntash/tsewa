@@ -187,8 +187,16 @@
   }
 
   .student-report-print,
-  .student-report-print * {
+  .student-report-print *,
+  .scholarship-report-print,
+  .scholarship-report-print *,
+  .scholarship-legacy-report,
+  .scholarship-legacy-report * {
     visibility: visible;
+  }
+
+  body:has(.scholarship-legacy-report) .scholarship-report-print {
+    display: none !important;
   }
 
   .student-report-toolbar,
@@ -205,6 +213,30 @@
     border: 0 !important;
     background: white !important;
     box-shadow: none !important;
+  }
+
+  .scholarship-report-portal {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .scholarship-legacy-report {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    border: 0 !important;
+    background: white !important;
+    color: #17251e !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   .student-report-scroll {
@@ -224,6 +256,22 @@
     box-shadow: none !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  .scholarship-report-print {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    color: #17251e !important;
+    background: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .scholarship-report-controls {
+    display: none !important;
   }
 
   .student-report-table .report-optional {

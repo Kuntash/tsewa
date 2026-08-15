@@ -282,6 +282,122 @@ const markSheetMutationSchema = z
 
 const markSheetStatusSchema = z.object({ action: z.enum(["verify", "finalize", "reopen"]) });
 
+const scholarshipListQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  status: z.enum(["all", "active", "closed"]).default("all"),
+  course: z.string().trim().max(160).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const scholarshipReportQuerySchema = z.object({
+  report: z.enum(["ledger", "courseCompleted", "newStudents", "placeWise", "yearWise", "students"]),
+  session: z.union([z.literal("all"), z.uuid()]).default("all"),
+});
+
+const scholarshipRecordSchema = z.object({
+  personId: z.uuid(),
+  sessionId: z.uuid().nullable().optional(),
+  courseId: z.uuid(),
+  beneficiaryCategory: z.string().trim().max(100).nullable().optional(),
+  studentName: z.string().trim().min(1).max(160),
+  admissionNumber: z.string().trim().max(80).nullable().optional(),
+  fatherName: z.string().trim().max(160).nullable().optional(),
+  gender: z.enum(["female", "male", "other", "unknown"]).nullable().optional(),
+  dateOfBirth: isoDateSchema.nullable().optional(),
+  classStream: z.string().trim().max(120).nullable().optional(),
+  classPercentage: z.number().min(0).max(100).nullable().optional(),
+  admissionYear: z.number().int().min(1900).max(2200).nullable().optional(),
+  courseDuration: z.string().trim().max(80).nullable().optional(),
+  collegeTraining: z.boolean().default(false),
+  cityName: z.string().trim().max(160).nullable().optional(),
+  permanentAddress: z.string().trim().max(1000).nullable().optional(),
+  mailingAddress: z.string().trim().max(1000).nullable().optional(),
+  specialAllowance: z.boolean().default(false),
+  scholarshipAwarded: z.number().min(0).nullable().optional(),
+  instituteName: z.string().trim().max(250).nullable().optional(),
+  bankAccountNumber: z.string().trim().max(100).nullable().optional(),
+  wardHealthRecord: z.string().trim().max(500).nullable().optional(),
+  needyCase: z.string().trim().max(500).nullable().optional(),
+  reason: z.string().trim().max(1000).nullable().optional(),
+  status: z.enum(["active", "closed"]),
+  phone: z.string().trim().max(40).nullable().optional(),
+  ledgerNumber: z.string().trim().max(80).nullable().optional(),
+});
+
+const scholarshipAnnualSchema = z.object({
+  id: z.uuid().optional(),
+  sessionId: z.uuid().nullable().optional(),
+  studyYear: z.string().trim().min(1).max(80),
+  passed: z.boolean(),
+  percentage: z.number().min(0).max(100).nullable().optional(),
+  division: z.string().trim().max(80).nullable().optional(),
+  fees: z.number().min(0).nullable().optional(),
+  remarks: z.string().trim().max(1000).nullable().optional(),
+});
+
+const scholarshipSanctionSchema = z.object({
+  id: z.uuid().optional(),
+  sessionId: z.uuid().nullable().optional(),
+  amount: z.number().min(0),
+  sanctionedOn: isoDateSchema,
+  periodFrom: isoDateSchema.nullable().optional(),
+  periodTo: isoDateSchema.nullable().optional(),
+  paymentReference: z.string().trim().max(100).nullable().optional(),
+  inFavourOf: z.string().trim().max(200).nullable().optional(),
+  remarks: z.string().trim().max(1000).nullable().optional(),
+  lines: z
+    .array(
+      z.object({
+        headId: z.uuid(),
+        cityName: z.string().trim().max(160).nullable().optional(),
+        amount: z.number().min(0),
+        advanceOn: isoDateSchema.nullable().optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
+});
+
+const scholarshipActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("record"), value: scholarshipRecordSchema }),
+  z.object({ action: z.literal("annual"), value: scholarshipAnnualSchema }),
+  z.object({ action: z.literal("sanction"), value: scholarshipSanctionSchema }),
+]);
+
+const scholarshipSetupSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("courseCategory"),
+    id: z.uuid().optional(),
+    name: z.string().trim().min(1).max(120),
+  }),
+  z.object({
+    kind: z.literal("course"),
+    id: z.uuid().optional(),
+    categoryId: z.uuid().nullable().optional(),
+    name: z.string().trim().min(1).max(160),
+  }),
+  z.object({
+    kind: z.literal("head"),
+    id: z.uuid().optional(),
+    name: z.string().trim().min(1).max(120),
+  }),
+  z.object({
+    kind: z.literal("limit"),
+    id: z.uuid().optional(),
+    courseGroup: z.string().trim().min(1).max(160),
+    headName: z.string().trim().min(1).max(120),
+    amount: z.number().min(0).nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("cityAdvance"),
+    id: z.uuid().optional(),
+    sessionId: z.uuid().nullable().optional(),
+    cityName: z.string().trim().min(1).max(160),
+    amount: z.number().min(0),
+  }),
+]);
+
 const healthHistoryQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
   kind: z.enum(["all", "child", "elderly", "staff", "other"]).default("all"),
@@ -535,6 +651,21 @@ export const apiDispatcher = {
 
     if (url.pathname === "/api/health/history") {
       return getHealthHistory(request);
+    }
+
+    if (url.pathname === "/api/scholarships/setup") {
+      return handleScholarshipSetup(request);
+    }
+
+    if (url.pathname === "/api/scholarships/reports") {
+      return getScholarshipReport(request);
+    }
+
+    const scholarshipMatch = url.pathname.match(/^\/api\/scholarships\/([^/]+)$/);
+    if (scholarshipMatch) return handleScholarshipRecord(request, scholarshipMatch[1]);
+
+    if (url.pathname === "/api/scholarships") {
+      return handleScholarships(request);
     }
 
     if (url.pathname === "/api/health/tb") {
@@ -3484,6 +3615,754 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
     student,
     results: rows.results,
   });
+}
+
+async function handleScholarships(request: Request): Promise<Response> {
+  if (request.method === "GET") return getScholarships(request);
+  if (request.method === "POST") return createScholarship(request);
+  return methodNotAllowed("GET, POST");
+}
+
+async function getScholarshipReport(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "scholarship.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = scholarshipReportQuerySchema.safeParse({
+    report: url.searchParams.get("report"),
+    session: url.searchParams.get("session") ?? "all",
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Choose a valid scholarship report." }, { status: 400 });
+  const { report, session } = parsed.data;
+  const runtime = getRuntimeEnv();
+  const sessionCondition = session === "all" ? "" : " AND record.academic_session_id=?";
+  const bindings = session === "all" ? [context.organizationId] : [context.organizationId, session];
+  const sessionRow =
+    session === "all"
+      ? null
+      : await runtime.DATABASE.prepare(
+          "SELECT name FROM academic_session WHERE id=? AND organization_id=?",
+        )
+          .bind(session, context.organizationId)
+          .first<{ name: string }>();
+  if (session !== "all" && !sessionRow)
+    return Response.json({ error: "Academic session not found." }, { status: 404 });
+
+  let title = "Scholarship students";
+  let columns: Array<{ key: string; label: string; numeric?: boolean }> = [];
+  let rows: Record<string, unknown>[] = [];
+  if (report === "ledger") {
+    title = "Scholarship ledger";
+    columns = [
+      { key: "sanctionedOn", label: "Date" },
+      { key: "studentName", label: "Student" },
+      { key: "admissionNumber", label: "Admission no." },
+      { key: "courseName", label: "Course" },
+      { key: "headName", label: "Head" },
+      { key: "cityName", label: "City" },
+      { key: "amount", label: "Amount", numeric: true },
+      { key: "paymentReference", label: "Payment ref." },
+    ];
+    const ledgerCondition = session === "all" ? "" : " AND sanction.academic_session_id=?";
+    const result = await runtime.DATABASE.prepare(`SELECT sanction.sanctioned_on AS sanctionedOn,
+      record.student_name AS studentName,record.admission_number AS admissionNumber,course.name AS courseName,
+      head.name AS headName,line.city_name AS cityName,line.amount,sanction.payment_reference AS paymentReference
+      FROM scholarship_sanction_line line JOIN scholarship_sanction sanction ON sanction.id=line.sanction_id
+      JOIN scholarship_record record ON record.id=sanction.scholarship_id
+      LEFT JOIN scholarship_course course ON course.id=record.course_id
+      JOIN scholarship_head head ON head.id=line.head_id
+      WHERE sanction.organization_id=?${ledgerCondition}
+      ORDER BY sanction.sanctioned_on,record.student_name COLLATE NOCASE,head.name COLLATE NOCASE`)
+      .bind(...bindings)
+      .all<Record<string, unknown>>();
+    rows = result.results;
+  } else if (report === "placeWise") {
+    title = "Scholarship students · place-wise";
+    columns = [
+      { key: "cityName", label: "Place" },
+      { key: "students", label: "Students", numeric: true },
+      { key: "awardedAmount", label: "Awarded", numeric: true },
+      { key: "sanctionedAmount", label: "Sanctioned", numeric: true },
+    ];
+    const result =
+      await runtime.DATABASE.prepare(`SELECT coalesce(record.city_name,'Not recorded') AS cityName,
+      COUNT(*) AS students,coalesce(SUM(record.scholarship_awarded),0) AS awardedAmount,
+      coalesce(SUM((SELECT SUM(amount) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id)),0) AS sanctionedAmount
+      FROM scholarship_record record WHERE record.organization_id=?${sessionCondition}
+      GROUP BY coalesce(record.city_name,'Not recorded') ORDER BY students DESC,cityName COLLATE NOCASE`)
+        .bind(...bindings)
+        .all<Record<string, unknown>>();
+    rows = result.results;
+  } else if (report === "yearWise") {
+    title = "Scholarship students · year-wise";
+    columns = [
+      { key: "courseCategory", label: "Category" },
+      { key: "courseName", label: "Course" },
+      { key: "studyYear", label: "Study year" },
+      { key: "students", label: "Students", numeric: true },
+    ];
+    const result =
+      await runtime.DATABASE.prepare(`SELECT coalesce(category.name,'Uncategorised') AS courseCategory,
+      coalesce(course.name,'Course not recorded') AS courseName,
+      coalesce((SELECT annual.study_year FROM scholarship_annual_detail annual
+        WHERE annual.scholarship_id=record.id ORDER BY annual.created_at DESC,annual.id DESC LIMIT 1),'Not recorded') AS studyYear,
+      COUNT(*) AS students FROM scholarship_record record
+      LEFT JOIN scholarship_course course ON course.id=record.course_id
+      LEFT JOIN scholarship_course_category category ON category.id=course.category_id
+      WHERE record.organization_id=?${sessionCondition}
+      GROUP BY courseCategory,courseName,studyYear
+      ORDER BY courseCategory COLLATE NOCASE,courseName COLLATE NOCASE,studyYear COLLATE NOCASE`)
+        .bind(...bindings)
+        .all<Record<string, unknown>>();
+    rows = result.results;
+  } else {
+    const extraCondition =
+      report === "courseCompleted"
+        ? " AND record.status='closed' AND lower(coalesce(record.reason,''))='course completed'"
+        : "";
+    title =
+      report === "courseCompleted"
+        ? "Scholarship students · course completed"
+        : report === "newStudents"
+          ? "New scholarship students"
+          : "Scholarship students";
+    columns = [
+      { key: "studentName", label: "Student" },
+      { key: "admissionNumber", label: "Admission no." },
+      { key: "courseName", label: "Course" },
+      { key: "instituteName", label: "Institute" },
+      { key: "cityName", label: "City" },
+      { key: "status", label: "Status" },
+      { key: "scholarshipAwarded", label: "Awarded", numeric: true },
+    ];
+    const result = await runtime.DATABASE.prepare(`SELECT record.student_name AS studentName,
+      record.admission_number AS admissionNumber,course.name AS courseName,record.institute_name AS instituteName,
+      record.city_name AS cityName,record.status,record.scholarship_awarded AS scholarshipAwarded
+      FROM scholarship_record record LEFT JOIN scholarship_course course ON course.id=record.course_id
+      WHERE record.organization_id=?${sessionCondition}${extraCondition}
+      ORDER BY record.student_name COLLATE NOCASE`)
+      .bind(...bindings)
+      .all<Record<string, unknown>>();
+    rows = result.results;
+  }
+  return Response.json({
+    generatedAt: new Date().toISOString(),
+    report,
+    title,
+    sessionName: sessionRow?.name ?? "All sessions",
+    columns,
+    rows,
+  });
+}
+
+async function getScholarships(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "scholarship.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = scholarshipListQuerySchema.safeParse({
+    q: url.searchParams.get("q") ?? "",
+    status: url.searchParams.get("status") ?? "all",
+    course: url.searchParams.get("course") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success)
+    return Response.json({ error: "Check the scholarship filters." }, { status: 400 });
+  const { q, status, course, page, pageSize } = parsed.data;
+  const conditions = ["record.organization_id=?"];
+  const bindings: Array<string | number> = [context.organizationId];
+  if (status !== "all") {
+    conditions.push("record.status=?");
+    bindings.push(status);
+  }
+  if (course !== "all") {
+    conditions.push("record.course_id=?");
+    bindings.push(course);
+  }
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(
+      "(lower(record.student_name) LIKE ? ESCAPE '\\' OR lower(coalesce(record.admission_number,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(record.institute_name,'')) LIKE ? ESCAPE '\\')",
+    );
+    bindings.push(search, search, search);
+  }
+  const where = conditions.join(" AND ");
+  const runtime = getRuntimeEnv();
+  const [count, summary, rows] = await Promise.all([
+    runtime.DATABASE.prepare(`SELECT COUNT(*) total FROM scholarship_record record WHERE ${where}`)
+      .bind(...bindings)
+      .first<{ total: number }>(),
+    runtime.DATABASE.prepare(`SELECT COUNT(*) scholarships,SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) active,
+      (SELECT COUNT(*) FROM scholarship_sanction WHERE organization_id=?) sanctions,
+      (SELECT SUM(amount) FROM scholarship_sanction WHERE organization_id=?) sanctionedAmount
+      FROM scholarship_record WHERE organization_id=?`)
+      .bind(context.organizationId, context.organizationId, context.organizationId)
+      .first<Record<string, unknown>>(),
+    runtime.DATABASE.prepare(`SELECT record.id,record.person_id AS personId,record.student_name AS studentName,
+      record.admission_number AS admissionNumber,record.beneficiary_category AS beneficiaryCategory,
+      record.institute_name AS instituteName,record.city_name AS cityName,record.status,
+      record.admission_year AS admissionYear,record.course_duration AS courseDuration,
+      course.name AS courseName,category.name AS courseCategory,
+      (SELECT COUNT(*) FROM scholarship_annual_detail annual WHERE annual.scholarship_id=record.id) AS annualDetailCount,
+      (SELECT COUNT(*) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id) AS sanctionCount,
+      (SELECT coalesce(SUM(amount),0) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id) AS sanctionedAmount,
+      (SELECT MAX(sanctioned_on) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id) AS lastSanctionOn
+      FROM scholarship_record record LEFT JOIN scholarship_course course ON course.id=record.course_id
+      LEFT JOIN scholarship_course_category category ON category.id=course.category_id
+      WHERE ${where}
+      ORDER BY record.student_name COLLATE NOCASE LIMIT ? OFFSET ?`)
+      .bind(...bindings, pageSize, (page - 1) * pageSize)
+      .all<Record<string, unknown>>(),
+  ]);
+  const total = Number(count?.total ?? 0);
+  return Response.json({
+    summary: {
+      scholarships: Number(summary?.scholarships ?? 0),
+      active: Number(summary?.active ?? 0),
+      sanctions: Number(summary?.sanctions ?? 0),
+      sanctionedAmount: Number(summary?.sanctionedAmount ?? 0),
+    },
+    scholarships: rows.results,
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    capabilities: { manage: hasPermission(context, "scholarship.manage") },
+  });
+}
+
+async function createScholarship(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "scholarship.manage")) return forbidden();
+  const parsed = scholarshipRecordSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the scholarship record." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  if (!(await validScholarshipReferences(runtime.DATABASE, context.organizationId, parsed.data)))
+    return Response.json({ error: "Choose a valid person, session, and course." }, { status: 400 });
+  const id = crypto.randomUUID();
+  await runtime.DATABASE.batch([
+    scholarshipRecordWrite(runtime.DATABASE, "insert", context, id, parsed.data),
+    auditStatement(
+      runtime.DATABASE,
+      context,
+      "scholarship.record_created",
+      "scholarship_record",
+      id,
+    ),
+  ]);
+  return Response.json({ id }, { status: 201 });
+}
+
+async function handleScholarshipRecord(request: Request, scholarshipId: string): Promise<Response> {
+  if (!z.uuid().safeParse(scholarshipId).success)
+    return Response.json({ error: "Invalid scholarship record." }, { status: 400 });
+  if (request.method === "GET") return getScholarshipRecord(request, scholarshipId);
+  if (request.method === "PATCH") return updateScholarshipRecord(request, scholarshipId);
+  return methodNotAllowed("GET, PATCH");
+}
+
+async function getScholarshipRecord(request: Request, scholarshipId: string): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "scholarship.read")) return forbidden();
+  const runtime = getRuntimeEnv();
+  const record =
+    await runtime.DATABASE.prepare(`SELECT record.*,record.organization_id AS organizationId,
+    record.person_id AS personId,record.academic_session_id AS sessionId,record.course_id AS courseId,
+    record.beneficiary_category AS beneficiaryCategory,record.student_name AS studentName,
+    record.admission_number AS admissionNumber,record.father_name AS fatherName,record.date_of_birth AS dateOfBirth,
+    record.class_stream AS classStream,record.class_percentage AS classPercentage,record.admission_year AS admissionYear,
+    record.course_duration AS courseDuration,record.college_training AS collegeTraining,record.city_name AS cityName,
+    record.permanent_address AS permanentAddress,record.mailing_address AS mailingAddress,
+    record.special_allowance AS specialAllowance,record.scholarship_awarded AS scholarshipAwarded,
+    record.institute_name AS instituteName,record.bank_account_number AS bankAccountNumber,
+    record.ward_health_record AS wardHealthRecord,record.needy_case AS needyCase,
+    record.ledger_number AS ledgerNumber,course.name AS courseName,category.name AS courseCategory
+    FROM scholarship_record record LEFT JOIN scholarship_course course ON course.id=record.course_id
+    LEFT JOIN scholarship_course_category category ON category.id=course.category_id
+    WHERE record.id=? AND record.organization_id=?`)
+      .bind(scholarshipId, context.organizationId)
+      .first<Record<string, unknown>>();
+  if (!record) return Response.json({ error: "Scholarship record not found." }, { status: 404 });
+  const [annual, sanctions] = await Promise.all([
+    runtime.DATABASE.prepare(
+      `SELECT id,academic_session_id AS sessionId,study_year AS studyYear,passed,percentage,division,fees,remarks,source_system AS sourceSystem FROM scholarship_annual_detail WHERE organization_id=? AND scholarship_id=? ORDER BY study_year,created_at`,
+    )
+      .bind(context.organizationId, scholarshipId)
+      .all<Record<string, unknown>>(),
+    runtime.DATABASE.prepare(`SELECT sanction.id,sanction.academic_session_id AS sessionId,sanction.amount,
+      sanction.sanctioned_on AS sanctionedOn,sanction.period_from AS periodFrom,sanction.period_to AS periodTo,
+      sanction.payment_reference AS paymentReference,sanction.in_favour_of AS inFavourOf,sanction.remarks,
+      sanction.source_system AS sourceSystem,json_group_array(json_object('id',line.id,'headId',head.id,
+      'headName',head.name,'cityName',line.city_name,'amount',line.amount,'advanceOn',line.advance_on)) AS linesJson
+      FROM scholarship_sanction sanction LEFT JOIN scholarship_sanction_line line ON line.sanction_id=sanction.id
+      LEFT JOIN scholarship_head head ON head.id=line.head_id WHERE sanction.organization_id=? AND sanction.scholarship_id=?
+      GROUP BY sanction.id ORDER BY sanction.sanctioned_on DESC`)
+      .bind(context.organizationId, scholarshipId)
+      .all<Record<string, unknown>>(),
+  ]);
+  return Response.json({
+    record: {
+      ...record,
+      collegeTraining: Boolean(record.collegeTraining),
+      specialAllowance: Boolean(record.specialAllowance),
+    },
+    annualDetails: annual.results.map((item) => ({ ...item, passed: Boolean(item.passed) })),
+    sanctions: sanctions.results.map((item) => ({
+      ...item,
+      lines: JSON.parse(String(item.linesJson)),
+    })),
+    capabilities: { manage: hasPermission(context, "scholarship.manage") },
+  });
+}
+
+async function updateScholarshipRecord(request: Request, scholarshipId: string): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "scholarship.manage")) return forbidden();
+  const parsed = scholarshipActionSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the scholarship changes." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  const exists = await runtime.DATABASE.prepare(
+    "SELECT id,person_id AS personId FROM scholarship_record WHERE id=? AND organization_id=?",
+  )
+    .bind(scholarshipId, context.organizationId)
+    .first<{ id: string; personId: string | null }>();
+  if (!exists) return Response.json({ error: "Scholarship record not found." }, { status: 404 });
+  if (parsed.data.action === "record") {
+    if (
+      !(await validScholarshipReferences(
+        runtime.DATABASE,
+        context.organizationId,
+        parsed.data.value,
+      ))
+    )
+      return Response.json(
+        { error: "Choose a valid person, session, and course." },
+        { status: 400 },
+      );
+    await runtime.DATABASE.batch([
+      scholarshipRecordWrite(runtime.DATABASE, "update", context, scholarshipId, parsed.data.value),
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        "scholarship.record_updated",
+        "scholarship_record",
+        scholarshipId,
+      ),
+    ]);
+  } else if (parsed.data.action === "annual") {
+    const value = parsed.data.value;
+    if (
+      value.sessionId &&
+      !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId))
+    )
+      return Response.json({ error: "Choose a valid academic session." }, { status: 400 });
+    const id = value.id ?? crypto.randomUUID();
+    const existing = value.id
+      ? await runtime.DATABASE.prepare(
+          "SELECT id FROM scholarship_annual_detail WHERE id=? AND organization_id=? AND scholarship_id=?",
+        )
+          .bind(value.id, context.organizationId, scholarshipId)
+          .first()
+      : null;
+    if (value.id && !existing)
+      return Response.json({ error: "Annual detail not found." }, { status: 404 });
+    const statement = existing
+      ? runtime.DATABASE.prepare(
+          `UPDATE scholarship_annual_detail SET academic_session_id=?,study_year=?,passed=?,percentage=?,division=?,fees=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
+        ).bind(
+          value.sessionId ?? null,
+          value.studyYear,
+          value.passed ? 1 : 0,
+          value.percentage ?? null,
+          value.division ?? null,
+          value.fees ?? null,
+          value.remarks ?? null,
+          context.userId,
+          id,
+          context.organizationId,
+        )
+      : runtime.DATABASE.prepare(
+          `INSERT INTO scholarship_annual_detail (id,organization_id,scholarship_id,academic_session_id,study_year,passed,percentage,division,fees,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,'tsewa','scholarship_annual_detail',?,?,?)`,
+        ).bind(
+          id,
+          context.organizationId,
+          scholarshipId,
+          value.sessionId ?? null,
+          value.studyYear,
+          value.passed ? 1 : 0,
+          value.percentage ?? null,
+          value.division ?? null,
+          value.fees ?? null,
+          value.remarks ?? null,
+          id,
+          context.userId,
+          context.userId,
+        );
+    await runtime.DATABASE.batch([
+      statement,
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        existing ? "scholarship.annual_updated" : "scholarship.annual_created",
+        "scholarship_annual_detail",
+        id,
+        { scholarshipId },
+      ),
+    ]);
+  } else {
+    const value = parsed.data.value;
+    if (
+      value.sessionId &&
+      !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId))
+    )
+      return Response.json({ error: "Choose a valid academic session." }, { status: 400 });
+    const headRows = await runtime.DATABASE.prepare(
+      "SELECT id FROM scholarship_head WHERE organization_id=? AND is_active=1",
+    )
+      .bind(context.organizationId)
+      .all<{ id: string }>();
+    const headIds = new Set(headRows.results.map((item) => item.id));
+    if (value.lines.some((line) => !headIds.has(line.headId)))
+      return Response.json({ error: "Choose valid scholarship heads." }, { status: 400 });
+    const id = value.id ?? crypto.randomUUID();
+    const existing = value.id
+      ? await runtime.DATABASE.prepare(
+          "SELECT id FROM scholarship_sanction WHERE id=? AND organization_id=? AND scholarship_id=?",
+        )
+          .bind(value.id, context.organizationId, scholarshipId)
+          .first()
+      : null;
+    if (value.id && !existing)
+      return Response.json({ error: "Sanction not found." }, { status: 404 });
+    const statements: DrizzleStatement[] = [
+      existing
+        ? runtime.DATABASE.prepare(
+            `UPDATE scholarship_sanction SET academic_session_id=?,amount=?,sanctioned_on=?,period_from=?,period_to=?,payment_reference=?,in_favour_of=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
+          ).bind(
+            value.sessionId ?? null,
+            value.amount,
+            value.sanctionedOn,
+            value.periodFrom ?? null,
+            value.periodTo ?? null,
+            value.paymentReference ?? null,
+            value.inFavourOf ?? null,
+            value.remarks ?? null,
+            context.userId,
+            id,
+            context.organizationId,
+          )
+        : runtime.DATABASE.prepare(
+            `INSERT INTO scholarship_sanction (id,organization_id,scholarship_id,academic_session_id,amount,sanctioned_on,period_from,period_to,payment_reference,in_favour_of,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,'tsewa','scholarship_sanction',?,?,?)`,
+          ).bind(
+            id,
+            context.organizationId,
+            scholarshipId,
+            value.sessionId ?? null,
+            value.amount,
+            value.sanctionedOn,
+            value.periodFrom ?? null,
+            value.periodTo ?? null,
+            value.paymentReference ?? null,
+            value.inFavourOf ?? null,
+            value.remarks ?? null,
+            id,
+            context.userId,
+            context.userId,
+          ),
+    ];
+    if (existing)
+      statements.push(
+        runtime.DATABASE.prepare(
+          "DELETE FROM scholarship_sanction_line WHERE organization_id=? AND sanction_id=?",
+        ).bind(context.organizationId, id),
+      );
+    for (const line of value.lines) {
+      const lineId = crypto.randomUUID();
+      statements.push(
+        runtime.DATABASE.prepare(
+          `INSERT INTO scholarship_sanction_line (id,organization_id,sanction_id,scholarship_id,person_id,head_id,city_name,amount,advance_on,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,'tsewa','scholarship_sanction_line',?,?,?)`,
+        ).bind(
+          lineId,
+          context.organizationId,
+          id,
+          scholarshipId,
+          exists.personId,
+          line.headId,
+          line.cityName ?? null,
+          line.amount,
+          line.advanceOn ?? null,
+          lineId,
+          context.userId,
+          context.userId,
+        ),
+      );
+    }
+    statements.push(
+      auditStatement(
+        runtime.DATABASE,
+        context,
+        existing ? "scholarship.sanction_updated" : "scholarship.sanction_created",
+        "scholarship_sanction",
+        id,
+        { scholarshipId, lineCount: String(value.lines.length) },
+      ),
+    );
+    await runtime.DATABASE.batch(statements);
+  }
+  return Response.json({ id: scholarshipId });
+}
+
+async function handleScholarshipSetup(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "scholarship.read")) return forbidden();
+  const runtime = getRuntimeEnv();
+  if (request.method === "GET") {
+    const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    const [categories, courses, heads, limits, advances, sessions, people] = await Promise.all([
+      runtime.DATABASE.prepare(
+        "SELECT id,name,is_active AS isActive FROM scholarship_course_category WHERE organization_id=? ORDER BY name COLLATE NOCASE",
+      )
+        .bind(context.organizationId)
+        .all(),
+      runtime.DATABASE.prepare(
+        "SELECT id,category_id AS categoryId,name,is_active AS isActive FROM scholarship_course WHERE organization_id=? ORDER BY name COLLATE NOCASE",
+      )
+        .bind(context.organizationId)
+        .all(),
+      runtime.DATABASE.prepare(
+        "SELECT id,name,is_active AS isActive FROM scholarship_head WHERE organization_id=? ORDER BY name COLLATE NOCASE",
+      )
+        .bind(context.organizationId)
+        .all(),
+      runtime.DATABASE.prepare(
+        "SELECT id,course_group AS courseGroup,head_name AS headName,amount,is_active AS isActive FROM scholarship_limit WHERE organization_id=? ORDER BY course_group,head_name",
+      )
+        .bind(context.organizationId)
+        .all(),
+      runtime.DATABASE.prepare(
+        "SELECT id,academic_session_id AS sessionId,city_name AS cityName,amount FROM scholarship_city_advance WHERE organization_id=? ORDER BY city_name",
+      )
+        .bind(context.organizationId)
+        .all(),
+      runtime.DATABASE.prepare(
+        "SELECT id,name FROM academic_session WHERE organization_id=? ORDER BY starts_on DESC",
+      )
+        .bind(context.organizationId)
+        .all(),
+      runtime.DATABASE.prepare(
+        `SELECT id,display_name AS name,primary_identifier AS admissionNumber FROM person WHERE organization_id=? AND status='active' AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\' OR lower(primary_identifier) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 30`,
+      )
+        .bind(context.organizationId, q, search, search)
+        .all(),
+    ]);
+    return Response.json({
+      categories: categories.results,
+      courses: courses.results,
+      heads: heads.results,
+      limits: limits.results,
+      cityAdvances: advances.results,
+      sessions: sessions.results,
+      people: people.results,
+      capabilities: { manage: hasPermission(context, "scholarship.manage") },
+    });
+  }
+  if (request.method !== "POST") return methodNotAllowed("GET, POST");
+  if (!isSameOrigin(request) || !hasPermission(context, "scholarship.manage")) return forbidden();
+  const parsed = scholarshipSetupSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json({ error: "Check the scholarship setup values." }, { status: 400 });
+  const value = parsed.data;
+  if (value.kind === "course" && value.categoryId) {
+    const category = await runtime.DATABASE.prepare(
+      "SELECT id FROM scholarship_course_category WHERE id=? AND organization_id=?",
+    )
+      .bind(value.categoryId, context.organizationId)
+      .first();
+    if (!category)
+      return Response.json({ error: "Choose a valid course category." }, { status: 400 });
+  }
+  if (
+    value.kind === "cityAdvance" &&
+    value.sessionId &&
+    !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId))
+  )
+    return Response.json({ error: "Choose a valid academic session." }, { status: 400 });
+  const id = value.id ?? crypto.randomUUID();
+  const map =
+    value.kind === "courseCategory"
+      ? { table: "scholarship_course_category", columns: ["name"], values: [value.name] }
+      : value.kind === "course"
+        ? {
+            table: "scholarship_course",
+            columns: ["category_id", "name"],
+            values: [value.categoryId ?? null, value.name],
+          }
+        : value.kind === "head"
+          ? { table: "scholarship_head", columns: ["name"], values: [value.name] }
+          : value.kind === "limit"
+            ? {
+                table: "scholarship_limit",
+                columns: ["course_group", "head_name", "amount"],
+                values: [value.courseGroup, value.headName, value.amount ?? null],
+              }
+            : {
+                table: "scholarship_city_advance",
+                columns: ["academic_session_id", "city_name", "amount"],
+                values: [value.sessionId ?? null, value.cityName, value.amount],
+              };
+  const existing = value.id
+    ? await runtime.DATABASE.prepare(`SELECT id FROM ${map.table} WHERE id=? AND organization_id=?`)
+        .bind(value.id, context.organizationId)
+        .first()
+    : null;
+  if (value.id && !existing)
+    return Response.json({ error: "Setup record not found." }, { status: 404 });
+  const statement = existing
+    ? runtime.DATABASE.prepare(
+        `UPDATE ${map.table} SET ${map.columns.map((column) => `${column}=?`).join(",")},updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
+      ).bind(...map.values, context.userId, id, context.organizationId)
+    : runtime.DATABASE.prepare(
+        `INSERT INTO ${map.table} (id,organization_id,${map.columns.join(",")},source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?${map.columns.map(() => ",?").join("")},'tsewa',?,?,?,?)`,
+      ).bind(
+        id,
+        context.organizationId,
+        ...map.values,
+        map.table,
+        id,
+        context.userId,
+        context.userId,
+      );
+  await runtime.DATABASE.batch([
+    statement,
+    auditStatement(
+      runtime.DATABASE,
+      context,
+      `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
+      map.table,
+      id,
+    ),
+  ]);
+  return Response.json({ id }, { status: existing ? 200 : 201 });
+}
+
+function scholarshipRecordWrite(
+  database: QueryDatabase,
+  mode: "insert" | "update",
+  context: MembershipContext,
+  id: string,
+  value: z.infer<typeof scholarshipRecordSchema>,
+) {
+  const values = [
+    value.personId,
+    value.sessionId ?? null,
+    value.courseId,
+    value.beneficiaryCategory ?? null,
+    value.studentName,
+    value.admissionNumber ?? null,
+    value.fatherName ?? null,
+    value.gender ?? null,
+    value.dateOfBirth ?? null,
+    value.classStream ?? null,
+    value.classPercentage ?? null,
+    value.admissionYear ?? null,
+    value.courseDuration ?? null,
+    value.collegeTraining ? 1 : 0,
+    value.cityName ?? null,
+    value.permanentAddress ?? null,
+    value.mailingAddress ?? null,
+    value.specialAllowance ? 1 : 0,
+    value.scholarshipAwarded ?? null,
+    value.instituteName ?? null,
+    value.bankAccountNumber ?? null,
+    value.wardHealthRecord ?? null,
+    value.needyCase ?? null,
+    value.reason ?? null,
+    value.status,
+    value.phone ?? null,
+    value.ledgerNumber ?? null,
+  ];
+  const columns = [
+    "person_id",
+    "academic_session_id",
+    "course_id",
+    "beneficiary_category",
+    "student_name",
+    "admission_number",
+    "father_name",
+    "gender",
+    "date_of_birth",
+    "class_stream",
+    "class_percentage",
+    "admission_year",
+    "course_duration",
+    "college_training",
+    "city_name",
+    "permanent_address",
+    "mailing_address",
+    "special_allowance",
+    "scholarship_awarded",
+    "institute_name",
+    "bank_account_number",
+    "ward_health_record",
+    "needy_case",
+    "reason",
+    "status",
+    "phone",
+    "ledger_number",
+  ];
+  return mode === "update"
+    ? database
+        .prepare(
+          `UPDATE scholarship_record SET ${columns.map((column) => `${column}=?`).join(",")},updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
+        )
+        .bind(...values, context.userId, id, context.organizationId)
+    : database
+        .prepare(
+          `INSERT INTO scholarship_record (id,organization_id,${columns.join(",")},source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?${columns.map(() => ",?").join("")},'tsewa','scholarship_record',?,?,?)`,
+        )
+        .bind(id, context.organizationId, ...values, id, context.userId, context.userId);
+}
+
+async function validScholarshipReferences(
+  database: QueryDatabase,
+  organizationId: string,
+  value: z.infer<typeof scholarshipRecordSchema>,
+) {
+  const [person, course, session] = await Promise.all([
+    database
+      .prepare("SELECT id FROM person WHERE id=? AND organization_id=?")
+      .bind(value.personId, organizationId)
+      .first(),
+    database
+      .prepare("SELECT id FROM scholarship_course WHERE id=? AND organization_id=? AND is_active=1")
+      .bind(value.courseId, organizationId)
+      .first(),
+    value.sessionId
+      ? scholarshipSessionExists(database, organizationId, value.sessionId)
+      : Promise.resolve(true),
+  ]);
+  return Boolean(person && course && session);
+}
+async function scholarshipSessionExists(
+  database: QueryDatabase,
+  organizationId: string,
+  sessionId: string,
+) {
+  return Boolean(
+    await database
+      .prepare("SELECT id FROM academic_session WHERE id=? AND organization_id=?")
+      .bind(sessionId, organizationId)
+      .first(),
+  );
 }
 
 async function changeMarkSheetStatus(request: Request, markSheetId: string): Promise<Response> {

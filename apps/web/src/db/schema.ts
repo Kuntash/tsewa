@@ -1649,6 +1649,201 @@ export const healthMedicalSettlement = sqliteTable(
   ],
 );
 
+export const scholarshipImportBatch = sqliteTable("scholarship_import_batch", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sourceSystem: text("source_system").notNull(),
+  sourceDatabase: text("source_database").notNull(),
+  sourceFingerprint: text("source_fingerprint").notNull(),
+  status: text().notNull(),
+  scholarshipCount: integer("scholarship_count").default(0).notNull(),
+  annualDetailCount: integer("annual_detail_count").default(0).notNull(),
+  sanctionCount: integer("sanction_count").default(0).notNull(),
+  sanctionLineCount: integer("sanction_line_count").default(0).notNull(),
+  startedAt: text("started_at").notNull(),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+const scholarshipSourceColumns = () => ({
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importBatchId: text("import_batch_id").references(() => scholarshipImportBatch.id, {
+    onDelete: "set null",
+  }),
+  importedAt: text("imported_at"),
+  createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const scholarshipCourseCategory = sqliteTable("scholarship_course_category", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipCourse = sqliteTable("scholarship_course", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  categoryId: text("category_id").references(() => scholarshipCourseCategory.id, {
+    onDelete: "set null",
+  }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipHead = sqliteTable("scholarship_head", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipRecord = sqliteTable("scholarship_record", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  courseId: text("course_id").references(() => scholarshipCourse.id, { onDelete: "set null" }),
+  beneficiaryCategory: text("beneficiary_category"),
+  studentName: text("student_name").notNull(),
+  admissionNumber: text("admission_number"),
+  fatherName: text("father_name"),
+  gender: text(),
+  dateOfBirth: text("date_of_birth"),
+  classStream: text("class_stream"),
+  classPercentage: real("class_percentage"),
+  admissionYear: integer("admission_year"),
+  courseDuration: text("course_duration"),
+  collegeTraining: integer("college_training").default(0).notNull(),
+  cityName: text("city_name"),
+  permanentAddress: text("permanent_address"),
+  mailingAddress: text("mailing_address"),
+  specialAllowance: integer("special_allowance").default(0).notNull(),
+  scholarshipAwarded: real("scholarship_awarded"),
+  instituteName: text("institute_name"),
+  bankAccountNumber: text("bank_account_number"),
+  wardHealthRecord: text("ward_health_record"),
+  needyCase: text("needy_case"),
+  reason: text(),
+  status: text().default("active").notNull(),
+  phone: text(),
+  ledgerNumber: text("ledger_number"),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipAnnualDetail = sqliteTable("scholarship_annual_detail", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  scholarshipId: text("scholarship_id").references(() => scholarshipRecord.id, {
+    onDelete: "cascade",
+  }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  legacyScholarshipId: text("legacy_scholarship_id"),
+  studyYear: text("study_year").notNull(),
+  passed: integer().default(0).notNull(),
+  percentage: real(),
+  division: text(),
+  fees: real(),
+  remarks: text(),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipSanction = sqliteTable("scholarship_sanction", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  scholarshipId: text("scholarship_id")
+    .notNull()
+    .references(() => scholarshipRecord.id, { onDelete: "cascade" }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  amount: real().notNull(),
+  sanctionedOn: text("sanctioned_on").notNull(),
+  periodFrom: text("period_from"),
+  periodTo: text("period_to"),
+  paymentReference: text("payment_reference"),
+  inFavourOf: text("in_favour_of"),
+  remarks: text(),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipSanctionLine = sqliteTable("scholarship_sanction_line", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sanctionId: text("sanction_id").references(() => scholarshipSanction.id, { onDelete: "cascade" }),
+  scholarshipId: text("scholarship_id").references(() => scholarshipRecord.id, {
+    onDelete: "set null",
+  }),
+  personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+  headId: text("head_id")
+    .notNull()
+    .references(() => scholarshipHead.id, { onDelete: "restrict" }),
+  cityName: text("city_name"),
+  amount: real().notNull(),
+  advanceOn: text("advance_on"),
+  legacySanctionId: text("legacy_sanction_id"),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipCityAdvance = sqliteTable("scholarship_city_advance", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  academicSessionId: text("academic_session_id").references(() => academicSession.id, {
+    onDelete: "set null",
+  }),
+  cityName: text("city_name").notNull(),
+  amount: real().notNull(),
+  ...scholarshipSourceColumns(),
+});
+
+export const scholarshipLimit = sqliteTable("scholarship_limit", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  courseGroup: text("course_group").notNull(),
+  headName: text("head_name").notNull(),
+  amount: real(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...scholarshipSourceColumns(),
+});
+
 export const accessPermission = sqliteTable("access_permission", {
   key: text().primaryKey().notNull(),
   name: text().notNull(),

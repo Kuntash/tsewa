@@ -35,6 +35,8 @@
     "migration:results:import": "node scripts/import-historical-results.mjs",
     "migration:health:dry-run": "node scripts/health-history-dry-run.mjs",
     "migration:health:import": "node scripts/import-health-history.mjs",
+    "migration:scholarship:dry-run": "node scripts/scholarship-history-dry-run.mjs",
+    "migration:scholarship:import": "node scripts/import-scholarship-history.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

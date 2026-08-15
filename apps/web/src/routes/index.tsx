@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Award,
   Building2,
   CalendarDays,
   Check,
@@ -25,6 +26,7 @@ import { AccountSettings } from "@/components/account-settings";
 import { HealthOperations } from "@/components/health-operations";
 import { PeopleRegistry } from "@/components/people-registry";
 import { SchoolOperations } from "@/components/school-operations";
+import { ScholarshipOperations } from "@/components/scholarship-operations";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -435,7 +437,7 @@ function Launchpad({
   platform: PlatformState;
   user: { name: string; email: string; emailVerified: boolean };
 }) {
-  const [view, setView] = useState<"home" | "people" | "school" | "health">("home");
+  const [view, setView] = useState<"home" | "people" | "school" | "health" | "scholarship">("home");
   const [activeSessionId, setActiveSessionId] = useState(
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
   );
@@ -443,10 +445,41 @@ function Launchpad({
     (organization) => organization.id === platform.activeOrganizationId,
   );
   const modules = [
-    [Users, "People", "Personal details, family, placement, and documents"],
-    [GraduationCap, "School", "Students, classes, marks, and results"],
-    [HeartPulse, "Health", "Visits, treatment, and health history"],
-    [FileText, "Reports and documents", "Documents and reports"],
+    {
+      Icon: Users,
+      title: "People",
+      description: "Personal details, family, placement, and documents",
+      view: "people",
+      open: true,
+    },
+    {
+      Icon: GraduationCap,
+      title: "School",
+      description: "Students, classes, marks, and results",
+      view: "school",
+      open: true,
+    },
+    {
+      Icon: HeartPulse,
+      title: "Health",
+      description: "Visits, treatment, and health history",
+      view: "health",
+      open: true,
+    },
+    {
+      Icon: Award,
+      title: "Scholarships",
+      description: "Awards, progress, sanctions, advances, and reports",
+      view: "scholarship",
+      open: true,
+    },
+    {
+      Icon: FileText,
+      title: "Reports and documents",
+      description: "Documents and reports",
+      view: "home",
+      open: false,
+    },
   ] as const;
 
   if (view === "people") {
@@ -455,6 +488,12 @@ function Launchpad({
 
   if (view === "health") {
     return <HealthOperations onBack={() => setView("home")} />;
+  }
+
+  if (view === "scholarship") {
+    return (
+      <ScholarshipOperations activeSessionId={activeSessionId} onBack={() => setView("home")} />
+    );
   }
 
   async function changeSession(sessionId: string) {
@@ -557,11 +596,11 @@ function Launchpad({
         </h1>
         <p className="mt-3 text-muted-foreground">Choose an area to continue.</p>
         <div className="mt-9 grid gap-4 md:grid-cols-2">
-          {modules.map(([Icon, title, description], index) => {
+          {modules.map(({ Icon, title, description, open, view }) => {
             const card = (
               <Card
                 className={
-                  index < 3
+                  open
                     ? "h-full border-primary/25 transition-colors group-hover:border-primary/50"
                     : "opacity-70"
                 }
@@ -574,21 +613,18 @@ function Launchpad({
                     <CardTitle>{title}</CardTitle>
                     <CardDescription className="mt-1.5">{description}</CardDescription>
                   </div>
-                  <Badge
-                    className="ml-auto rounded-full"
-                    variant={index < 3 ? "default" : "secondary"}
-                  >
-                    {index < 3 ? "Open" : "Planned"}
+                  <Badge className="ml-auto rounded-full" variant={open ? "default" : "secondary"}>
+                    {open ? "Open" : "Planned"}
                   </Badge>
                 </CardHeader>
               </Card>
             );
 
-            return index < 3 ? (
+            return open ? (
               <button
                 className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 key={title}
-                onClick={() => setView(index === 0 ? "people" : index === 1 ? "school" : "health")}
+                onClick={() => setView(view)}
                 type="button"
               >
                 {card}
