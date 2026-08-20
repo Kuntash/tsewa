@@ -1,8 +1,9 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
 import type { Database } from "@/db/client";
-import type { DrizzleStatement, QueryDatabase } from "@/db/query";
+import type { QueryDatabase } from "@/db/query";
 import {
   academicAssessment,
   academicClassMaster,
@@ -14,15 +15,51 @@ import {
   academicSubject,
   academicSubjectHead,
   academicSubjectType,
+  academicTerm,
   accessGroup,
   accessGroupRole,
   accessPermission,
   accessRole,
   accessRolePermission,
   auditEvent,
+  houseMaster,
+  markSheet,
   organization,
   organizationInvitation,
   organizationMember,
+  person,
+  personFamilyProfile,
+  personFile,
+  personPlacement,
+  personRelationship,
+  schoolClassOffering,
+  schoolHouseMaster,
+  schoolMaster,
+  scholarshipAnnualDetail,
+  scholarshipCityAdvance,
+  scholarshipCourse,
+  scholarshipCourseCategory,
+  scholarshipHead,
+  scholarshipLimit,
+  scholarshipRecord,
+  scholarshipSanction,
+  scholarshipSanctionLine,
+  sponsorshipAssignment,
+  sponsorshipCorrespondenceType,
+  sponsorshipFund,
+  sponsorshipFundAllocation,
+  sponsorshipFundType,
+  sponsorshipIndividual,
+  sponsorshipLetter,
+  sponsorshipOrganization,
+  sponsorshipSponsorCategory,
+  sponsorshipSponsorType,
+  sponsorshipStatus,
+  sponsorshipVisitor,
+  sponsorshipVisitorType,
+  studentEnrollment,
+  studentEnrollmentChange,
+  studentMark,
   user,
   userPreference,
 } from "@/db/schema";
@@ -1326,42 +1363,73 @@ async function getSchoolOperationsSetup(request: Request): Promise<Response> {
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
   const [schools, classes, houses] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT id, name FROM school_master
-       WHERE organization_id = ? AND is_active = 1 ORDER BY name COLLATE NOCASE`,
-    )
-      .bind(scope.organizationId)
-      .all<{ id: string; name: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT class.id, ${classDisplayName("class")} AS name, offering.school_id AS schoolId
-       FROM school_class_offering offering
-       JOIN academic_class_master class ON class.id = offering.academic_class_id
-         AND class.organization_id = offering.organization_id
-       WHERE offering.organization_id = ? AND offering.academic_session_id = ?
-         AND offering.is_active = 1 AND class.is_active = 1
-       ORDER BY offering.school_id, coalesce(class.sort_order, 999),
-                coalesce(class.level, 999), name COLLATE NOCASE`,
-    )
-      .bind(scope.organizationId, scope.session.id)
-      .all<{ id: string; name: string; schoolId: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT house.id, house.name, school_house.school_id AS schoolId
-       FROM school_house_master school_house
-       JOIN house_master house ON house.id = school_house.house_id
-         AND house.organization_id = school_house.organization_id
-       WHERE school_house.organization_id = ? AND house.is_active = 1
-       ORDER BY school_house.school_id, house.name COLLATE NOCASE`,
-    )
-      .bind(scope.organizationId)
-      .all<{ id: string; name: string; schoolId: string }>(),
+    runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+      .from(schoolMaster)
+      .where(
+        and(eq(schoolMaster.organizationId, scope.organizationId), eq(schoolMaster.isActive, 1)),
+      )
+      .orderBy(asc(sql`lower(${schoolMaster.name})`)),
+    runtime.ORM.select({
+      id: academicClassMaster.id,
+      name: sql<string>`CASE
+        WHEN lower(trim(coalesce(${academicClassMaster.section}, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
+          AND lower(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})))
+            NOT LIKE '% ' || lower(trim(${academicClassMaster.section}))
+        THEN trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
+        ELSE trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
+      END`,
+      schoolId: schoolClassOffering.schoolId,
+    })
+      .from(schoolClassOffering)
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+          eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, scope.organizationId),
+          eq(schoolClassOffering.academicSessionId, scope.session.id),
+          eq(schoolClassOffering.isActive, 1),
+          eq(academicClassMaster.isActive, 1),
+        ),
+      )
+      .orderBy(
+        asc(schoolClassOffering.schoolId),
+        asc(sql`coalesce(${academicClassMaster.sortOrder}, 999)`),
+        asc(sql`coalesce(${academicClassMaster.level}, 999)`),
+        asc(sql`lower(${academicClassMaster.name})`),
+      ),
+    runtime.ORM.select({
+      id: houseMaster.id,
+      name: houseMaster.name,
+      schoolId: schoolHouseMaster.schoolId,
+    })
+      .from(schoolHouseMaster)
+      .innerJoin(
+        houseMaster,
+        and(
+          eq(houseMaster.id, schoolHouseMaster.houseId),
+          eq(houseMaster.organizationId, schoolHouseMaster.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(schoolHouseMaster.organizationId, scope.organizationId),
+          eq(houseMaster.isActive, 1),
+        ),
+      )
+      .orderBy(asc(schoolHouseMaster.schoolId), asc(sql`lower(${houseMaster.name})`)),
   ]);
 
   return Response.json({
     canEdit: hasPermission(scope, "school.enrollment.manage"),
     session: scope.session,
-    schools: schools.results,
-    classes: classes.results,
-    houses: houses.results,
+    schools,
+    classes,
+    houses,
   });
 }
 
@@ -1382,39 +1450,70 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   const { academicClassId, admissionNumber, admittedOn, displayName, houseId, schoolId } =
     parsed.data;
   const [school, offering, house, existingPerson] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT id FROM school_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
-    )
-      .bind(schoolId, scope.organizationId)
-      .first<{ id: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT offering.id FROM school_class_offering offering
-       JOIN academic_class_master class ON class.id = offering.academic_class_id
-         AND class.organization_id = offering.organization_id
-       WHERE offering.organization_id = ? AND offering.academic_session_id = ?
-         AND offering.school_id = ? AND offering.academic_class_id = ?
-         AND offering.is_active = 1 AND class.is_active = 1`,
-    )
-      .bind(scope.organizationId, scope.session.id, schoolId, academicClassId)
-      .first<{ id: string }>(),
+    runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+      .from(schoolMaster)
+      .where(
+        and(
+          eq(schoolMaster.id, schoolId),
+          eq(schoolMaster.organizationId, scope.organizationId),
+          eq(schoolMaster.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: schoolClassOffering.id })
+      .from(schoolClassOffering)
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+          eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, scope.organizationId),
+          eq(schoolClassOffering.academicSessionId, scope.session.id),
+          eq(schoolClassOffering.schoolId, schoolId),
+          eq(schoolClassOffering.academicClassId, academicClassId),
+          eq(schoolClassOffering.isActive, 1),
+          eq(academicClassMaster.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
     houseId
-      ? runtime.DATABASE.prepare(
-          `SELECT house.id FROM school_house_master school_house
-           JOIN house_master house ON house.id = school_house.house_id
-             AND house.organization_id = school_house.organization_id
-           WHERE school_house.organization_id = ? AND school_house.school_id = ?
-             AND house.id = ? AND house.is_active = 1`,
-        )
-          .bind(scope.organizationId, schoolId, houseId)
-          .first<{ id: string }>()
+      ? runtime.ORM.select({ id: houseMaster.id })
+          .from(schoolHouseMaster)
+          .innerJoin(
+            houseMaster,
+            and(
+              eq(houseMaster.id, schoolHouseMaster.houseId),
+              eq(houseMaster.organizationId, schoolHouseMaster.organizationId),
+            ),
+          )
+          .where(
+            and(
+              eq(schoolHouseMaster.organizationId, scope.organizationId),
+              eq(schoolHouseMaster.schoolId, schoolId),
+              eq(houseMaster.id, houseId),
+              eq(houseMaster.isActive, 1),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
       : Promise.resolve(null),
-    runtime.DATABASE.prepare(
-      `SELECT id FROM person
-       WHERE organization_id = ? AND identifier_kind = 'admission'
-         AND lower(primary_identifier) = lower(?)`,
-    )
-      .bind(scope.organizationId, admissionNumber)
-      .first<{ id: string }>(),
+    runtime.ORM.select({ id: person.id })
+      .from(person)
+      .where(
+        and(
+          eq(person.organizationId, scope.organizationId),
+          eq(person.identifierKind, "admission"),
+          eq(sql`lower(${person.primaryIdentifier})`, admissionNumber.toLowerCase()),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
 
   if (!school) return Response.json({ error: "Choose an active school." }, { status: 400 });
@@ -1429,67 +1528,58 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   const personId = crypto.randomUUID();
   const enrollmentId = crypto.randomUUID();
   const changeId = crypto.randomUUID();
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `INSERT INTO person
-        (id, organization_id, kind, status, identifier_kind, primary_identifier,
-         display_name, gender, date_of_birth, admitted_or_joined_on, campus_or_location,
-         source_system, source_table, source_id, created_by_user_id, updated_by_user_id)
-       VALUES (?, ?, 'child', 'active', 'admission', ?, ?, ?, ?, ?,
-         (SELECT name FROM school_master WHERE id = ?), 'tsewa', 'person', ?, ?, ?)`,
-    ).bind(
-      personId,
-      scope.organizationId,
-      admissionNumber,
+  await runtime.ORM.batch([
+    runtime.ORM.insert(person).values({
+      id: personId,
+      organizationId: scope.organizationId,
+      kind: "child",
+      status: "active",
+      identifierKind: "admission",
+      primaryIdentifier: admissionNumber,
       displayName,
-      parsed.data.gender ?? "unknown",
-      parsed.data.dateOfBirth ?? null,
-      admittedOn,
-      schoolId,
+      gender: parsed.data.gender ?? "unknown",
+      dateOfBirth: parsed.data.dateOfBirth ?? null,
+      admittedOrJoinedOn: admittedOn,
+      campusOrLocation: school.name,
+      sourceSystem: "tsewa",
+      sourceTable: "person",
+      sourceId: personId,
+      createdByUserId: scope.userId,
+      updatedByUserId: scope.userId,
+    }),
+    runtime.ORM.insert(studentEnrollment).values({
+      id: enrollmentId,
+      organizationId: scope.organizationId,
       personId,
-      scope.userId,
-      scope.userId,
-    ),
-    runtime.DATABASE.prepare(
-      `INSERT INTO student_enrollment
-        (id, organization_id, person_id, academic_session_id, school_id,
-         academic_class_id, house_id, school_class_offering_id, status, status_source,
-         started_on, roll_number, source_system, source_table, source_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'enrolled', 'explicit', ?, ?,
-         'tsewa', 'student_enrollment', ?)`,
-    ).bind(
-      enrollmentId,
-      scope.organizationId,
-      personId,
-      scope.session.id,
+      academicSessionId: scope.session.id,
       schoolId,
       academicClassId,
-      houseId ?? null,
-      offering.id,
-      admittedOn,
-      parsed.data.rollNumber || null,
-      enrollmentId,
-    ),
-    runtime.DATABASE.prepare(
-      `INSERT INTO student_enrollment_change
-        (id, organization_id, enrollment_id, person_id, academic_session_id,
-         change_type, effective_on, to_school_id, to_academic_class_id, to_house_id,
-         to_status, to_roll_number, created_by_user_id)
-       VALUES (?, ?, ?, ?, ?, 'admitted', ?, ?, ?, ?, 'enrolled', ?, ?)`,
-    ).bind(
-      changeId,
-      scope.organizationId,
+      houseId: houseId ?? null,
+      schoolClassOfferingId: offering.id,
+      status: "enrolled",
+      statusSource: "explicit",
+      startedOn: admittedOn,
+      rollNumber: parsed.data.rollNumber || null,
+      sourceSystem: "tsewa",
+      sourceTable: "student_enrollment",
+      sourceId: enrollmentId,
+    }),
+    runtime.ORM.insert(studentEnrollmentChange).values({
+      id: changeId,
+      organizationId: scope.organizationId,
       enrollmentId,
       personId,
-      scope.session.id,
-      admittedOn,
-      schoolId,
-      academicClassId,
-      houseId ?? null,
-      parsed.data.rollNumber || null,
-      scope.userId,
-    ),
-    auditStatement(runtime.DATABASE, scope, "student.admitted", "person", personId, {
+      academicSessionId: scope.session.id,
+      changeType: "admitted",
+      effectiveOn: admittedOn,
+      toSchoolId: schoolId,
+      toAcademicClassId: academicClassId,
+      toHouseId: houseId ?? null,
+      toStatus: "enrolled",
+      toRollNumber: parsed.data.rollNumber || null,
+      createdByUserId: scope.userId,
+    }),
+    auditInsert(runtime.ORM, scope, "student.admitted", "person", personId, {
       admissionNumber,
       academicSessionId: scope.session.id,
       schoolId,
@@ -1514,70 +1604,116 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
   const context = await getMembershipContext(request);
   if (!context) return unauthorized();
   const runtime = getRuntimeEnv();
-  const enrollment = await readStudentEnrollment(
-    runtime.DATABASE,
-    context.organizationId,
-    enrollmentId,
-  );
+  const enrollment = await readStudentEnrollment(runtime.ORM, context.organizationId, enrollmentId);
   if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
 
+  const fromSchool = alias(schoolMaster, "from_school");
+  const toSchool = alias(schoolMaster, "to_school");
+  const fromClass = alias(academicClassMaster, "from_class");
+  const toClass = alias(academicClassMaster, "to_class");
+  const fromHouse = alias(houseMaster, "from_house");
+  const toHouse = alias(houseMaster, "to_house");
+  const actor = alias(user, "actor");
   const [schools, classes, houses, changes] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT id, name FROM school_master
-       WHERE organization_id = ? AND is_active = 1 ORDER BY name COLLATE NOCASE`,
-    )
-      .bind(context.organizationId)
-      .all<{ id: string; name: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT class.id, ${classDisplayName("class")} AS name, offering.school_id AS schoolId
-       FROM school_class_offering offering
-       JOIN academic_class_master class ON class.id = offering.academic_class_id
-         AND class.organization_id = offering.organization_id
-       WHERE offering.organization_id = ? AND offering.academic_session_id = ?
-         AND offering.is_active = 1 AND class.is_active = 1
-       ORDER BY offering.school_id, coalesce(class.sort_order, 999),
-                coalesce(class.level, 999), name COLLATE NOCASE`,
-    )
-      .bind(context.organizationId, enrollment.academicSessionId)
-      .all<{ id: string; name: string; schoolId: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT house.id, house.name, school_house.school_id AS schoolId
-       FROM school_house_master school_house
-       JOIN house_master house ON house.id = school_house.house_id
-         AND house.organization_id = school_house.organization_id
-       WHERE school_house.organization_id = ? AND house.is_active = 1
-       ORDER BY school_house.school_id, house.name COLLATE NOCASE`,
-    )
-      .bind(context.organizationId)
-      .all<{ id: string; name: string; schoolId: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT change.id, change.change_type AS changeType,
-              change.effective_on AS effectiveOn, change.from_status AS fromStatus,
-              change.to_status AS toStatus, change.note, change.created_at AS createdAt,
-              from_school.name AS fromSchoolName, to_school.name AS toSchoolName,
-              ${classDisplayName("from_class")} AS fromClassName,
-              ${classDisplayName("to_class")} AS toClassName,
-              from_house.name AS fromHouseName, to_house.name AS toHouseName,
-              change.from_roll_number AS fromRollNumber,
-              change.to_roll_number AS toRollNumber,
-              actor.name AS changedBy
-       FROM student_enrollment_change change
-       LEFT JOIN school_master from_school ON from_school.id = change.from_school_id
-       LEFT JOIN school_master to_school ON to_school.id = change.to_school_id
-       LEFT JOIN academic_class_master from_class
-         ON from_class.id = change.from_academic_class_id
-       LEFT JOIN academic_class_master to_class ON to_class.id = change.to_academic_class_id
-       LEFT JOIN house_master from_house ON from_house.id = change.from_house_id
-       LEFT JOIN house_master to_house ON to_house.id = change.to_house_id
-       LEFT JOIN "user" actor ON actor.id = change.created_by_user_id
-       WHERE change.organization_id = ? AND change.enrollment_id = ?
-       ORDER BY change.effective_on DESC, change.created_at DESC`,
-    )
-      .bind(context.organizationId, enrollmentId)
-      .all(),
+    runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+      .from(schoolMaster)
+      .where(
+        and(eq(schoolMaster.organizationId, context.organizationId), eq(schoolMaster.isActive, 1)),
+      )
+      .orderBy(asc(sql`lower(${schoolMaster.name})`)),
+    runtime.ORM.select({
+      id: academicClassMaster.id,
+      name: sql<string>`CASE
+        WHEN lower(trim(coalesce(${academicClassMaster.section}, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
+          AND lower(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})))
+            NOT LIKE '% ' || lower(trim(${academicClassMaster.section}))
+        THEN trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
+        ELSE trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
+      END`,
+      schoolId: schoolClassOffering.schoolId,
+    })
+      .from(schoolClassOffering)
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+          eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, context.organizationId),
+          eq(schoolClassOffering.academicSessionId, enrollment.academicSessionId),
+          eq(schoolClassOffering.isActive, 1),
+          eq(academicClassMaster.isActive, 1),
+        ),
+      )
+      .orderBy(
+        asc(schoolClassOffering.schoolId),
+        asc(sql`coalesce(${academicClassMaster.sortOrder}, 999)`),
+        asc(sql`coalesce(${academicClassMaster.level}, 999)`),
+        asc(sql`lower(${academicClassMaster.name})`),
+      ),
+    runtime.ORM.select({
+      id: houseMaster.id,
+      name: houseMaster.name,
+      schoolId: schoolHouseMaster.schoolId,
+    })
+      .from(schoolHouseMaster)
+      .innerJoin(
+        houseMaster,
+        and(
+          eq(houseMaster.id, schoolHouseMaster.houseId),
+          eq(houseMaster.organizationId, schoolHouseMaster.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(schoolHouseMaster.organizationId, context.organizationId),
+          eq(houseMaster.isActive, 1),
+        ),
+      )
+      .orderBy(asc(schoolHouseMaster.schoolId), asc(sql`lower(${houseMaster.name})`)),
+    runtime.ORM.select({
+      id: studentEnrollmentChange.id,
+      changeType: studentEnrollmentChange.changeType,
+      effectiveOn: studentEnrollmentChange.effectiveOn,
+      fromStatus: studentEnrollmentChange.fromStatus,
+      toStatus: studentEnrollmentChange.toStatus,
+      note: studentEnrollmentChange.note,
+      createdAt: studentEnrollmentChange.createdAt,
+      fromSchoolName: fromSchool.name,
+      toSchoolName: toSchool.name,
+      fromClassName: sql<
+        string | null
+      >`CASE WHEN ${fromClass.id} IS NULL THEN NULL ELSE trim(coalesce(nullif(${fromClass.title}, ''), ${fromClass.name})) || CASE WHEN trim(coalesce(${fromClass.section}, '')) = '' THEN '' ELSE ' ' || trim(${fromClass.section}) END END`,
+      toClassName: sql<
+        string | null
+      >`CASE WHEN ${toClass.id} IS NULL THEN NULL ELSE trim(coalesce(nullif(${toClass.title}, ''), ${toClass.name})) || CASE WHEN trim(coalesce(${toClass.section}, '')) = '' THEN '' ELSE ' ' || trim(${toClass.section}) END END`,
+      fromHouseName: fromHouse.name,
+      toHouseName: toHouse.name,
+      fromRollNumber: studentEnrollmentChange.fromRollNumber,
+      toRollNumber: studentEnrollmentChange.toRollNumber,
+      changedBy: actor.name,
+    })
+      .from(studentEnrollmentChange)
+      .leftJoin(fromSchool, eq(fromSchool.id, studentEnrollmentChange.fromSchoolId))
+      .leftJoin(toSchool, eq(toSchool.id, studentEnrollmentChange.toSchoolId))
+      .leftJoin(fromClass, eq(fromClass.id, studentEnrollmentChange.fromAcademicClassId))
+      .leftJoin(toClass, eq(toClass.id, studentEnrollmentChange.toAcademicClassId))
+      .leftJoin(fromHouse, eq(fromHouse.id, studentEnrollmentChange.fromHouseId))
+      .leftJoin(toHouse, eq(toHouse.id, studentEnrollmentChange.toHouseId))
+      .leftJoin(actor, eq(actor.id, studentEnrollmentChange.createdByUserId))
+      .where(
+        and(
+          eq(studentEnrollmentChange.organizationId, context.organizationId),
+          eq(studentEnrollmentChange.enrollmentId, enrollmentId),
+        ),
+      )
+      .orderBy(desc(studentEnrollmentChange.effectiveOn), desc(studentEnrollmentChange.createdAt)),
   ]);
 
-  const classOptions = [...classes.results];
+  const classOptions = [...classes];
   if (!classOptions.some((item) => item.id === enrollment.academicClassId)) {
     classOptions.push({
       id: enrollment.academicClassId,
@@ -1585,7 +1721,7 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
       schoolId: enrollment.schoolId ?? "",
     });
   }
-  const houseOptions = [...houses.results];
+  const houseOptions = [...houses];
   if (
     enrollment.houseId &&
     enrollment.houseName &&
@@ -1605,11 +1741,11 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
         hasPermission(context, "school.enrollment.manage") && isOpenEnrollment(enrollment.status),
     },
     options: {
-      schools: schools.results,
+      schools,
       classes: classOptions,
       houses: houseOptions,
     },
-    changes: changes.results,
+    changes,
   });
 }
 
@@ -1625,11 +1761,7 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   }
 
   const runtime = getRuntimeEnv();
-  const enrollment = await readStudentEnrollment(
-    runtime.DATABASE,
-    context.organizationId,
-    enrollmentId,
-  );
+  const enrollment = await readStudentEnrollment(runtime.ORM, context.organizationId, enrollmentId);
   if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
   if (!isOpenEnrollment(enrollment.status)) {
     return Response.json({ error: "This enrollment has already ended." }, { status: 409 });
@@ -1670,31 +1802,58 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   let offeringId = enrollment.schoolClassOfferingId;
   if (keepsStudentEnrolled && targetSchoolId && targetClassId) {
     const [school, offering, house] = await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT id FROM school_master WHERE id = ? AND organization_id = ? AND is_active = 1`,
-      )
-        .bind(targetSchoolId, context.organizationId)
-        .first<{ id: string }>(),
-      runtime.DATABASE.prepare(
-        `SELECT offering.id FROM school_class_offering offering
-         JOIN academic_class_master class ON class.id = offering.academic_class_id
-           AND class.organization_id = offering.organization_id
-         WHERE offering.organization_id = ? AND offering.academic_session_id = ?
-           AND offering.school_id = ? AND offering.academic_class_id = ?
-           AND offering.is_active = 1 AND class.is_active = 1`,
-      )
-        .bind(context.organizationId, enrollment.academicSessionId, targetSchoolId, targetClassId)
-        .first<{ id: string }>(),
+      runtime.ORM.select({ id: schoolMaster.id })
+        .from(schoolMaster)
+        .where(
+          and(
+            eq(schoolMaster.id, targetSchoolId),
+            eq(schoolMaster.organizationId, context.organizationId),
+            eq(schoolMaster.isActive, 1),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
+      runtime.ORM.select({ id: schoolClassOffering.id })
+        .from(schoolClassOffering)
+        .innerJoin(
+          academicClassMaster,
+          and(
+            eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+            eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+          ),
+        )
+        .where(
+          and(
+            eq(schoolClassOffering.organizationId, context.organizationId),
+            eq(schoolClassOffering.academicSessionId, enrollment.academicSessionId),
+            eq(schoolClassOffering.schoolId, targetSchoolId),
+            eq(schoolClassOffering.academicClassId, targetClassId),
+            eq(schoolClassOffering.isActive, 1),
+            eq(academicClassMaster.isActive, 1),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
       targetHouseId
-        ? runtime.DATABASE.prepare(
-            `SELECT house.id FROM school_house_master school_house
-             JOIN house_master house ON house.id = school_house.house_id
-               AND house.organization_id = school_house.organization_id
-             WHERE school_house.organization_id = ? AND school_house.school_id = ?
-               AND house.id = ? AND house.is_active = 1`,
-          )
-            .bind(context.organizationId, targetSchoolId, targetHouseId)
-            .first<{ id: string }>()
+        ? runtime.ORM.select({ id: houseMaster.id })
+            .from(schoolHouseMaster)
+            .innerJoin(
+              houseMaster,
+              and(
+                eq(houseMaster.id, schoolHouseMaster.houseId),
+                eq(houseMaster.organizationId, schoolHouseMaster.organizationId),
+              ),
+            )
+            .where(
+              and(
+                eq(schoolHouseMaster.organizationId, context.organizationId),
+                eq(schoolHouseMaster.schoolId, targetSchoolId),
+                eq(houseMaster.id, targetHouseId),
+                eq(houseMaster.isActive, 1),
+              ),
+            )
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
         : Promise.resolve(null),
     ]);
     if (!school) return Response.json({ error: "Choose an active school." }, { status: 400 });
@@ -1716,86 +1875,72 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   const changeType =
     action === "internal_transfer" || action === "transferred_out" ? "transferred" : action;
   const changeId = crypto.randomUUID();
-  const statements = [
-    runtime.DATABASE.prepare(
-      `UPDATE student_enrollment SET school_id = ?, academic_class_id = ?, house_id = ?,
-         school_class_offering_id = ?, status = ?, status_source = 'explicit',
-         ended_on = ?, roll_number = ?,
-         updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND organization_id = ? AND status IN ('recorded', 'enrolled')`,
-    ).bind(
-      targetSchoolId,
-      targetClassId,
-      targetHouseId,
-      offeringId,
-      nextStatus,
-      keepsStudentEnrolled ? null : parsed.data.effectiveOn,
-      keepsStudentEnrolled
-        ? parsed.data.rollNumber === undefined
-          ? enrollment.rollNumber
-          : parsed.data.rollNumber
-        : enrollment.rollNumber,
+  const nextRollNumber = keepsStudentEnrolled
+    ? parsed.data.rollNumber === undefined
+      ? enrollment.rollNumber
+      : parsed.data.rollNumber
+    : enrollment.rollNumber;
+  const personIdToDeactivate =
+    !keepsStudentEnrolled && enrollment.academicSessionId === enrollment.latestSessionId
+      ? enrollment.personId
+      : "__no_person__";
+  await runtime.ORM.batch([
+    runtime.ORM.update(studentEnrollment)
+      .set({
+        schoolId: targetSchoolId,
+        academicClassId: targetClassId,
+        houseId: targetHouseId,
+        schoolClassOfferingId: offeringId,
+        status: nextStatus,
+        statusSource: "explicit",
+        endedOn: keepsStudentEnrolled ? null : parsed.data.effectiveOn,
+        rollNumber: nextRollNumber,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(studentEnrollment.id, enrollmentId),
+          eq(studentEnrollment.organizationId, context.organizationId),
+          inArray(studentEnrollment.status, ["recorded", "enrolled"]),
+        ),
+      ),
+    runtime.ORM.insert(studentEnrollmentChange).values({
+      id: changeId,
+      organizationId: context.organizationId,
       enrollmentId,
-      context.organizationId,
-    ),
-    runtime.DATABASE.prepare(
-      `INSERT INTO student_enrollment_change
-        (id, organization_id, enrollment_id, person_id, academic_session_id, change_type,
-         effective_on, from_school_id, to_school_id, from_academic_class_id,
-         to_academic_class_id, from_house_id, to_house_id, from_status, to_status,
-         from_roll_number, to_roll_number, note, created_by_user_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(
-      changeId,
-      context.organizationId,
-      enrollmentId,
-      enrollment.personId,
-      enrollment.academicSessionId,
+      personId: enrollment.personId,
+      academicSessionId: enrollment.academicSessionId,
       changeType,
-      parsed.data.effectiveOn,
-      enrollment.schoolId,
-      targetSchoolId,
-      enrollment.academicClassId,
-      targetClassId,
-      enrollment.houseId,
-      targetHouseId,
-      enrollment.status,
-      nextStatus,
-      enrollment.rollNumber,
-      keepsStudentEnrolled
-        ? parsed.data.rollNumber === undefined
-          ? enrollment.rollNumber
-          : parsed.data.rollNumber
-        : enrollment.rollNumber,
-      parsed.data.note || null,
-      context.userId,
-    ),
-  ];
-
-  if (!keepsStudentEnrolled && enrollment.academicSessionId === enrollment.latestSessionId) {
-    statements.push(
-      runtime.DATABASE.prepare(
-        `UPDATE person SET status = 'inactive', updated_by_user_id = ?,
-           updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?`,
-      ).bind(context.userId, enrollment.personId, context.organizationId),
-    );
-  }
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      `student.${changeType}`,
-      "student_enrollment",
-      enrollmentId,
-      {
-        personId: enrollment.personId,
-        effectiveOn: parsed.data.effectiveOn,
-        fromStatus: enrollment.status,
-        toStatus: nextStatus,
-      },
-    ),
-  );
-  await runtime.DATABASE.batch(statements);
+      effectiveOn: parsed.data.effectiveOn,
+      fromSchoolId: enrollment.schoolId,
+      toSchoolId: targetSchoolId,
+      fromAcademicClassId: enrollment.academicClassId,
+      toAcademicClassId: targetClassId,
+      fromHouseId: enrollment.houseId,
+      toHouseId: targetHouseId,
+      fromStatus: enrollment.status,
+      toStatus: nextStatus,
+      fromRollNumber: enrollment.rollNumber,
+      toRollNumber: nextRollNumber,
+      note: parsed.data.note || null,
+      createdByUserId: context.userId,
+    }),
+    runtime.ORM.update(person)
+      .set({
+        status: "inactive",
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(eq(person.id, personIdToDeactivate), eq(person.organizationId, context.organizationId)),
+      ),
+    auditInsert(runtime.ORM, context, `student.${changeType}`, "student_enrollment", enrollmentId, {
+      personId: enrollment.personId,
+      effectiveOn: parsed.data.effectiveOn,
+      fromStatus: enrollment.status,
+      toStatus: nextStatus,
+    }),
+  ]);
 
   return Response.json({ ok: true, status: nextStatus, changeId });
 }
@@ -1821,7 +1966,7 @@ async function correctEnrollmentEndDetails(
 
   const runtime = getRuntimeEnv();
   const enrollment = await readStudentEnrollment(
-    runtime.DATABASE,
+    runtime.ORM,
     context.organizationId,
     parsedId.data,
   );
@@ -1847,86 +1992,80 @@ async function correctEnrollmentEndDetails(
   }
 
   const changeType = enrollment.status === "withdrawn" ? "withdrawn" : "completed";
-  const existingChange = await runtime.DATABASE.prepare(
-    `SELECT id, effective_on AS effectiveOn, note
-     FROM student_enrollment_change
-     WHERE organization_id = ? AND enrollment_id = ? AND change_type = ?
-     ORDER BY created_at DESC LIMIT 1`,
-  )
-    .bind(context.organizationId, parsedId.data, changeType)
-    .first<{ id: string; effectiveOn: string; note: string | null }>();
+  const existingChange = await runtime.ORM.select({
+    id: studentEnrollmentChange.id,
+    effectiveOn: studentEnrollmentChange.effectiveOn,
+    note: studentEnrollmentChange.note,
+  })
+    .from(studentEnrollmentChange)
+    .where(
+      and(
+        eq(studentEnrollmentChange.organizationId, context.organizationId),
+        eq(studentEnrollmentChange.enrollmentId, parsedId.data),
+        eq(studentEnrollmentChange.changeType, changeType),
+      ),
+    )
+    .orderBy(desc(studentEnrollmentChange.createdAt))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
 
-  const statements = [
-    runtime.DATABASE.prepare(
-      `UPDATE student_enrollment SET ended_on = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND organization_id = ?`,
-    ).bind(parsed.data.effectiveOn, parsedId.data, context.organizationId),
-  ];
+  await runtime.ORM.update(studentEnrollment)
+    .set({ endedOn: parsed.data.effectiveOn, updatedAt: sql`CURRENT_TIMESTAMP` })
+    .where(
+      and(
+        eq(studentEnrollment.id, parsedId.data),
+        eq(studentEnrollment.organizationId, context.organizationId),
+      ),
+    );
 
   if (existingChange) {
-    statements.push(
-      runtime.DATABASE.prepare(
-        `UPDATE student_enrollment_change
-         SET effective_on = ?, note = ?
-         WHERE id = ? AND organization_id = ?`,
-      ).bind(
-        parsed.data.effectiveOn,
-        parsed.data.reason,
-        existingChange.id,
-        context.organizationId,
-      ),
-    );
+    await runtime.ORM.update(studentEnrollmentChange)
+      .set({ effectiveOn: parsed.data.effectiveOn, note: parsed.data.reason })
+      .where(
+        and(
+          eq(studentEnrollmentChange.id, existingChange.id),
+          eq(studentEnrollmentChange.organizationId, context.organizationId),
+        ),
+      );
   } else {
-    statements.push(
-      runtime.DATABASE.prepare(
-        `INSERT INTO student_enrollment_change
-          (id, organization_id, enrollment_id, person_id, academic_session_id, change_type,
-           effective_on, from_school_id, to_school_id, from_academic_class_id,
-           to_academic_class_id, from_house_id, to_house_id, from_status, to_status,
-           from_roll_number, to_roll_number, note, created_by_user_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(
-        crypto.randomUUID(),
-        context.organizationId,
-        parsedId.data,
-        enrollment.personId,
-        enrollment.academicSessionId,
-        changeType,
-        parsed.data.effectiveOn,
-        enrollment.schoolId,
-        enrollment.schoolId,
-        enrollment.academicClassId,
-        enrollment.academicClassId,
-        enrollment.houseId,
-        enrollment.houseId,
-        "enrolled",
-        enrollment.status,
-        enrollment.rollNumber,
-        enrollment.rollNumber,
-        parsed.data.reason,
-        context.userId,
-      ),
-    );
+    await runtime.ORM.insert(studentEnrollmentChange).values({
+      id: crypto.randomUUID(),
+      organizationId: context.organizationId,
+      enrollmentId: parsedId.data,
+      personId: enrollment.personId,
+      academicSessionId: enrollment.academicSessionId,
+      changeType,
+      effectiveOn: parsed.data.effectiveOn,
+      fromSchoolId: enrollment.schoolId,
+      toSchoolId: enrollment.schoolId,
+      fromAcademicClassId: enrollment.academicClassId,
+      toAcademicClassId: enrollment.academicClassId,
+      fromHouseId: enrollment.houseId,
+      toHouseId: enrollment.houseId,
+      fromStatus: "enrolled",
+      toStatus: enrollment.status,
+      fromRollNumber: enrollment.rollNumber,
+      toRollNumber: enrollment.rollNumber,
+      note: parsed.data.reason,
+      createdByUserId: context.userId,
+    });
   }
 
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "student.end_details_corrected",
-      "student_enrollment",
-      parsedId.data,
-      {
-        personId: enrollment.personId,
-        status: enrollment.status,
-        previousEffectiveOn: existingChange?.effectiveOn ?? enrollment.endedOn ?? "",
-        previousReason: existingChange?.note ?? "",
-        effectiveOn: parsed.data.effectiveOn,
-        reason: parsed.data.reason,
-      },
-    ),
+  await auditInsert(
+    runtime.ORM,
+    context,
+    "student.end_details_corrected",
+    "student_enrollment",
+    parsedId.data,
+    {
+      personId: enrollment.personId,
+      status: enrollment.status,
+      previousEffectiveOn: existingChange?.effectiveOn ?? enrollment.endedOn ?? "",
+      previousReason: existingChange?.note ?? "",
+      effectiveOn: parsed.data.effectiveOn,
+      reason: parsed.data.reason,
+    },
   );
-  await runtime.DATABASE.batch(statements);
 
   return Response.json({ ok: true });
 }
@@ -1960,42 +2099,89 @@ type StudentEnrollmentRecord = {
 };
 
 async function readStudentEnrollment(
-  database: QueryDatabase,
+  database: Database,
   organizationId: string,
   enrollmentId: string,
 ): Promise<StudentEnrollmentRecord | null> {
-  return database
-    .prepare(
-      `SELECT enrollment.id, enrollment.person_id AS personId,
-              person.display_name AS displayName,
-              person.primary_identifier AS admissionNumber,
-              enrollment.academic_session_id AS academicSessionId,
-              session.name AS sessionName, session.starts_on AS sessionStartsOn,
-              session.ends_on AS sessionEndsOn,
-              (SELECT latest.id FROM academic_session latest
-               WHERE latest.organization_id = enrollment.organization_id AND latest.is_active = 1
-               ORDER BY latest.starts_on DESC LIMIT 1) AS latestSessionId,
-              enrollment.school_id AS schoolId, school.name AS schoolName,
-              enrollment.academic_class_id AS academicClassId,
-              ${classDisplayName("class")} AS className,
-              enrollment.house_id AS houseId, house.name AS houseName,
-              enrollment.school_class_offering_id AS schoolClassOfferingId,
-              enrollment.roll_number AS rollNumber, enrollment.status,
-              enrollment.status_source AS statusSource, enrollment.started_on AS startedOn,
-              enrollment.ended_on AS endedOn
-       FROM student_enrollment enrollment
-       JOIN person ON person.id = enrollment.person_id
-         AND person.organization_id = enrollment.organization_id
-       JOIN academic_session session ON session.id = enrollment.academic_session_id
-         AND session.organization_id = enrollment.organization_id
-       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-         AND class.organization_id = enrollment.organization_id
-       LEFT JOIN school_master school ON school.id = enrollment.school_id
-       LEFT JOIN house_master house ON house.id = enrollment.house_id
-       WHERE enrollment.id = ? AND enrollment.organization_id = ?`,
-    )
-    .bind(enrollmentId, organizationId)
-    .first<StudentEnrollmentRecord>();
+  const [enrollment, latestSession] = await Promise.all([
+    database
+      .select({
+        id: studentEnrollment.id,
+        personId: studentEnrollment.personId,
+        displayName: person.displayName,
+        admissionNumber: person.primaryIdentifier,
+        academicSessionId: studentEnrollment.academicSessionId,
+        sessionName: academicSession.name,
+        sessionStartsOn: academicSession.startsOn,
+        sessionEndsOn: academicSession.endsOn,
+        schoolId: studentEnrollment.schoolId,
+        schoolName: schoolMaster.name,
+        academicClassId: studentEnrollment.academicClassId,
+        className: sql<string>`CASE
+          WHEN lower(trim(coalesce(${academicClassMaster.section}, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
+            AND lower(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})))
+              NOT LIKE '% ' || lower(trim(${academicClassMaster.section}))
+          THEN trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
+          ELSE trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
+        END`,
+        houseId: studentEnrollment.houseId,
+        houseName: houseMaster.name,
+        schoolClassOfferingId: studentEnrollment.schoolClassOfferingId,
+        rollNumber: studentEnrollment.rollNumber,
+        status: studentEnrollment.status,
+        statusSource: studentEnrollment.statusSource,
+        startedOn: studentEnrollment.startedOn,
+        endedOn: studentEnrollment.endedOn,
+      })
+      .from(studentEnrollment)
+      .innerJoin(
+        person,
+        and(
+          eq(person.id, studentEnrollment.personId),
+          eq(person.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .innerJoin(
+        academicSession,
+        and(
+          eq(academicSession.id, studentEnrollment.academicSessionId),
+          eq(academicSession.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, studentEnrollment.academicClassId),
+          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .leftJoin(schoolMaster, eq(schoolMaster.id, studentEnrollment.schoolId))
+      .leftJoin(houseMaster, eq(houseMaster.id, studentEnrollment.houseId))
+      .where(
+        and(
+          eq(studentEnrollment.id, enrollmentId),
+          eq(studentEnrollment.organizationId, organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    database
+      .select({ id: academicSession.id })
+      .from(academicSession)
+      .where(
+        and(eq(academicSession.organizationId, organizationId), eq(academicSession.isActive, 1)),
+      )
+      .orderBy(desc(academicSession.startsOn))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
+  if (!enrollment || !latestSession) return null;
+  return {
+    ...enrollment,
+    latestSessionId: latestSession.id,
+    status: enrollment.status as StudentEnrollmentRecord["status"],
+    statusSource: enrollment.statusSource as StudentEnrollmentRecord["statusSource"],
+  };
 }
 
 type SchoolStudentFilters = z.infer<typeof schoolStudentFiltersSchema>;
@@ -2285,27 +2471,22 @@ async function getSchoolMasterData(request: Request): Promise<Response> {
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
   const [classRows, houses] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT id, name, title, section, level, sort_order AS sortOrder, is_active AS isActive
-       FROM academic_class_master WHERE organization_id = ?
-       ORDER BY coalesce(sort_order, 999), coalesce(level, 999), name COLLATE NOCASE`,
-    )
-      .bind(scope.organizationId)
-      .all<AcademicClassRow>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, name, is_active AS isActive
-       FROM house_master WHERE organization_id = ?
-       ORDER BY is_active DESC, name COLLATE NOCASE`,
-    )
-      .bind(scope.organizationId)
-      .all<{ id: string; name: string; isActive: number }>(),
+    readAcademicClassRows(runtime.ORM, scope.organizationId),
+    runtime.ORM.select({
+      id: houseMaster.id,
+      name: houseMaster.name,
+      isActive: houseMaster.isActive,
+    })
+      .from(houseMaster)
+      .where(eq(houseMaster.organizationId, scope.organizationId))
+      .orderBy(desc(houseMaster.isActive), asc(sql`lower(${houseMaster.name})`)),
   ]);
 
   return Response.json({
     canEdit: hasPermission(scope, "school.setup.manage"),
     session: scope.session,
-    classes: groupAcademicClasses(classRows.results),
-    houses: houses.results.map((house) => ({ ...house, isActive: Boolean(house.isActive) })),
+    classes: groupAcademicClasses(classRows),
+    houses: houses.map((house) => ({ ...house, isActive: Boolean(house.isActive) })),
   });
 }
 
@@ -2319,7 +2500,7 @@ async function createAcademicClassMaster(request: Request): Promise<Response> {
   if (!parsed.success) return Response.json({ error: "Check the class details." }, { status: 400 });
 
   const runtime = getRuntimeEnv();
-  const rows = await readAcademicClassRows(runtime.DATABASE, context.organizationId);
+  const rows = await readAcademicClassRows(runtime.ORM, context.organizationId);
   const displayName = academicClassName(parsed.data.name, parsed.data.section);
   if (
     rows.some(
@@ -2330,23 +2511,21 @@ async function createAcademicClassMaster(request: Request): Promise<Response> {
   }
 
   const id = crypto.randomUUID();
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `INSERT INTO academic_class_master (
-         id, organization_id, name, level, section, title, sort_order, is_active,
-         source_system, source_table, source_id
-       ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 'tsewa', 'academic_class_master', ?)`,
-    ).bind(
+  await runtime.ORM.batch([
+    runtime.ORM.insert(academicClassMaster).values({
       id,
-      context.organizationId,
-      parsed.data.name,
-      parsed.data.level,
-      parsed.data.section,
-      parsed.data.sortOrder,
-      parsed.data.isActive ? 1 : 0,
-      id,
-    ),
-    auditStatement(runtime.DATABASE, context, "class.created", "academic_class_master", id, {
+      organizationId: context.organizationId,
+      name: parsed.data.name,
+      level: parsed.data.level,
+      section: parsed.data.section,
+      title: null,
+      sortOrder: parsed.data.sortOrder,
+      isActive: parsed.data.isActive ? 1 : 0,
+      sourceSystem: "tsewa",
+      sourceTable: "academic_class_master",
+      sourceId: id,
+    }),
+    auditInsert(runtime.ORM, context, "class.created", "academic_class_master", id, {
       name: displayName,
     }),
   ]);
@@ -2366,7 +2545,7 @@ async function updateAcademicClassMaster(request: Request, classId: string): Pro
   }
 
   const runtime = getRuntimeEnv();
-  const rows = await readAcademicClassRows(runtime.DATABASE, context.organizationId);
+  const rows = await readAcademicClassRows(runtime.ORM, context.organizationId);
   const selected = rows.find((row) => row.id === parsedId.data);
   if (!selected) return Response.json({ error: "Class not found" }, { status: 404 });
   const oldKey = canonicalMasterName(academicClassRowName(selected));
@@ -2381,36 +2560,32 @@ async function updateAcademicClassMaster(request: Request, classId: string): Pro
     return Response.json({ error: "This class and section already exists." }, { status: 409 });
   }
 
-  await runtime.DATABASE.batch([
-    ...group.map((row) =>
-      runtime.DATABASE.prepare(
-        `UPDATE academic_class_master
-         SET name = ?, title = NULL, section = ?, level = ?, sort_order = ?, is_active = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND organization_id = ?`,
-      ).bind(
-        parsed.data.name,
-        parsed.data.section,
-        parsed.data.level,
-        parsed.data.sortOrder,
-        parsed.data.isActive ? 1 : 0,
-        row.id,
-        context.organizationId,
+  await runtime.ORM.batch([
+    runtime.ORM.update(academicClassMaster)
+      .set({
+        name: parsed.data.name,
+        title: null,
+        section: parsed.data.section,
+        level: parsed.data.level,
+        sortOrder: parsed.data.sortOrder,
+        isActive: parsed.data.isActive ? 1 : 0,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(academicClassMaster.organizationId, context.organizationId),
+          inArray(
+            academicClassMaster.id,
+            group.map((row) => row.id),
+          ),
+        ),
       ),
-    ),
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "class.updated",
-      "academic_class_master",
-      selected.id,
-      {
-        previousName: academicClassRowName(selected),
-        name: newName,
-        matchingRecords: String(group.length),
-        active: String(parsed.data.isActive),
-      },
-    ),
+    auditInsert(runtime.ORM, context, "class.updated", "academic_class_master", selected.id, {
+      previousName: academicClassRowName(selected),
+      name: newName,
+      matchingRecords: String(group.length),
+      active: String(parsed.data.isActive),
+    }),
   ]);
   return Response.json({ ok: true, id: selected.id, updatedRows: group.length });
 }
@@ -2424,21 +2599,30 @@ async function createHouseMaster(request: Request): Promise<Response> {
   const parsed = houseMasterSchema.safeParse(await readJson(request));
   if (!parsed.success) return Response.json({ error: "Check the house details." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const duplicate = await runtime.DATABASE.prepare(
-    "SELECT id FROM house_master WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?))",
-  )
-    .bind(context.organizationId, parsed.data.name)
-    .first<{ id: string }>();
+  const duplicate = await runtime.ORM.select({ id: houseMaster.id })
+    .from(houseMaster)
+    .where(
+      and(
+        eq(houseMaster.organizationId, context.organizationId),
+        eq(sql`lower(trim(${houseMaster.name}))`, parsed.data.name.trim().toLowerCase()),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (duplicate)
     return Response.json({ error: "A house with this name already exists." }, { status: 409 });
   const id = crypto.randomUUID();
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `INSERT INTO house_master
-        (id, organization_id, name, is_active, source_system, source_table, source_id)
-       VALUES (?, ?, ?, ?, 'tsewa', 'house_master', ?)`,
-    ).bind(id, context.organizationId, parsed.data.name, parsed.data.isActive ? 1 : 0, id),
-    auditStatement(runtime.DATABASE, context, "house.created", "house_master", id, {
+  await runtime.ORM.batch([
+    runtime.ORM.insert(houseMaster).values({
+      id,
+      organizationId: context.organizationId,
+      name: parsed.data.name,
+      isActive: parsed.data.isActive ? 1 : 0,
+      sourceSystem: "tsewa",
+      sourceTable: "house_master",
+      sourceId: id,
+    }),
+    auditInsert(runtime.ORM, context, "house.created", "house_master", id, {
       name: parsed.data.name,
     }),
   ]);
@@ -2457,26 +2641,45 @@ async function updateHouseMaster(request: Request, houseId: string): Promise<Res
     return Response.json({ error: "Check the house details." }, { status: 400 });
   const runtime = getRuntimeEnv();
   const [house, duplicate] = await Promise.all([
-    runtime.DATABASE.prepare(
-      "SELECT id, name FROM house_master WHERE id = ? AND organization_id = ?",
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{ id: string; name: string }>(),
-    runtime.DATABASE.prepare(
-      "SELECT id FROM house_master WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?)) AND id <> ?",
-    )
-      .bind(context.organizationId, parsed.data.name, parsedId.data)
-      .first<{ id: string }>(),
+    runtime.ORM.select({ id: houseMaster.id, name: houseMaster.name })
+      .from(houseMaster)
+      .where(
+        and(
+          eq(houseMaster.id, parsedId.data),
+          eq(houseMaster.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: houseMaster.id })
+      .from(houseMaster)
+      .where(
+        and(
+          eq(houseMaster.organizationId, context.organizationId),
+          eq(sql`lower(trim(${houseMaster.name}))`, parsed.data.name.trim().toLowerCase()),
+          ne(houseMaster.id, parsedId.data),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
   if (!house) return Response.json({ error: "House not found" }, { status: 404 });
   if (duplicate)
     return Response.json({ error: "A house with this name already exists." }, { status: 409 });
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE house_master SET name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND organization_id = ?`,
-    ).bind(parsed.data.name, parsed.data.isActive ? 1 : 0, parsedId.data, context.organizationId),
-    auditStatement(runtime.DATABASE, context, "house.updated", "house_master", parsedId.data, {
+  await runtime.ORM.batch([
+    runtime.ORM.update(houseMaster)
+      .set({
+        name: parsed.data.name,
+        isActive: parsed.data.isActive ? 1 : 0,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(houseMaster.id, parsedId.data),
+          eq(houseMaster.organizationId, context.organizationId),
+        ),
+      ),
+    auditInsert(runtime.ORM, context, "house.updated", "house_master", parsedId.data, {
       previousName: house.name,
       name: parsed.data.name,
       active: String(parsed.data.isActive),
@@ -2485,15 +2688,24 @@ async function updateHouseMaster(request: Request, houseId: string): Promise<Res
   return Response.json({ ok: true, id: parsedId.data });
 }
 
-async function readAcademicClassRows(database: QueryDatabase, organizationId: string) {
-  const result = await database
-    .prepare(
-      `SELECT id, name, title, section, level, sort_order AS sortOrder, is_active AS isActive
-     FROM academic_class_master WHERE organization_id = ?`,
-    )
-    .bind(organizationId)
-    .all<AcademicClassRow>();
-  return result.results;
+async function readAcademicClassRows(database: Database, organizationId: string) {
+  return database
+    .select({
+      id: academicClassMaster.id,
+      name: academicClassMaster.name,
+      title: academicClassMaster.title,
+      section: academicClassMaster.section,
+      level: academicClassMaster.level,
+      sortOrder: academicClassMaster.sortOrder,
+      isActive: academicClassMaster.isActive,
+    })
+    .from(academicClassMaster)
+    .where(eq(academicClassMaster.organizationId, organizationId))
+    .orderBy(
+      asc(sql`coalesce(${academicClassMaster.sortOrder}, 999)`),
+      asc(sql`coalesce(${academicClassMaster.level}, 999)`),
+      asc(sql`lower(${academicClassMaster.name})`),
+    );
 }
 
 function groupAcademicClasses(rows: AcademicClassRow[]) {
@@ -2557,32 +2769,34 @@ async function createSchoolMaster(request: Request): Promise<Response> {
   }
 
   const runtime = getRuntimeEnv();
-  const duplicate = await runtime.DATABASE.prepare(
-    "SELECT id FROM school_master WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?))",
-  )
-    .bind(context.organizationId, parsed.data.name)
-    .first<{ id: string }>();
+  const duplicate = await runtime.ORM.select({ id: schoolMaster.id })
+    .from(schoolMaster)
+    .where(
+      and(
+        eq(schoolMaster.organizationId, context.organizationId),
+        eq(sql`lower(trim(${schoolMaster.name}))`, parsed.data.name.trim().toLowerCase()),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (duplicate) {
     return Response.json({ error: "A school with this name already exists." }, { status: 409 });
   }
 
   const id = crypto.randomUUID();
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `INSERT INTO school_master (
-         id, organization_id, name, location_name, affiliation_number, is_active,
-         source_system, source_table, source_id
-       ) VALUES (?, ?, ?, ?, ?, ?, 'tsewa', 'school_master', ?)`,
-    ).bind(
+  await runtime.ORM.batch([
+    runtime.ORM.insert(schoolMaster).values({
       id,
-      context.organizationId,
-      parsed.data.name,
-      parsed.data.locationName,
-      parsed.data.affiliationNumber,
-      parsed.data.isActive ? 1 : 0,
-      id,
-    ),
-    auditStatement(runtime.DATABASE, context, "school.created", "school_master", id, {
+      organizationId: context.organizationId,
+      name: parsed.data.name,
+      locationName: parsed.data.locationName,
+      affiliationNumber: parsed.data.affiliationNumber,
+      isActive: parsed.data.isActive ? 1 : 0,
+      sourceSystem: "tsewa",
+      sourceTable: "school_master",
+      sourceId: id,
+    }),
+    auditInsert(runtime.ORM, context, "school.created", "school_master", id, {
       name: parsed.data.name,
     }),
   ]);
@@ -2605,38 +2819,49 @@ async function updateSchoolMaster(request: Request, schoolId: string): Promise<R
 
   const runtime = getRuntimeEnv();
   const [school, duplicate] = await Promise.all([
-    runtime.DATABASE.prepare(
-      "SELECT id, name FROM school_master WHERE id = ? AND organization_id = ?",
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{ id: string; name: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id FROM school_master
-       WHERE organization_id = ? AND lower(trim(name)) = lower(trim(?)) AND id <> ?`,
-    )
-      .bind(context.organizationId, parsed.data.name, parsedId.data)
-      .first<{ id: string }>(),
+    runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+      .from(schoolMaster)
+      .where(
+        and(
+          eq(schoolMaster.id, parsedId.data),
+          eq(schoolMaster.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: schoolMaster.id })
+      .from(schoolMaster)
+      .where(
+        and(
+          eq(schoolMaster.organizationId, context.organizationId),
+          eq(sql`lower(trim(${schoolMaster.name}))`, parsed.data.name.trim().toLowerCase()),
+          ne(schoolMaster.id, parsedId.data),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
   if (!school) return Response.json({ error: "School not found" }, { status: 404 });
   if (duplicate) {
     return Response.json({ error: "A school with this name already exists." }, { status: 409 });
   }
 
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE school_master
-       SET name = ?, location_name = ?, affiliation_number = ?, is_active = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND organization_id = ?`,
-    ).bind(
-      parsed.data.name,
-      parsed.data.locationName,
-      parsed.data.affiliationNumber,
-      parsed.data.isActive ? 1 : 0,
-      parsedId.data,
-      context.organizationId,
-    ),
-    auditStatement(runtime.DATABASE, context, "school.updated", "school_master", parsedId.data, {
+  await runtime.ORM.batch([
+    runtime.ORM.update(schoolMaster)
+      .set({
+        name: parsed.data.name,
+        locationName: parsed.data.locationName,
+        affiliationNumber: parsed.data.affiliationNumber,
+        isActive: parsed.data.isActive ? 1 : 0,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(schoolMaster.id, parsedId.data),
+          eq(schoolMaster.organizationId, context.organizationId),
+        ),
+      ),
+    auditInsert(runtime.ORM, context, "school.updated", "school_master", parsedId.data, {
       previousName: school.name,
       name: parsed.data.name,
       active: String(parsed.data.isActive),
@@ -2665,23 +2890,31 @@ async function getSchoolAssignments(request: Request, schoolId: string): Promise
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
-  const school = await runtime.DATABASE.prepare(
-    "SELECT id, name FROM school_master WHERE id = ? AND organization_id = ?",
-  )
-    .bind(schoolId, scope.organizationId)
-    .first<{ id: string; name: string }>();
+  const school = await runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+    .from(schoolMaster)
+    .where(
+      and(eq(schoolMaster.id, schoolId), eq(schoolMaster.organizationId, scope.organizationId)),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!school) return Response.json({ error: "School not found." }, { status: 404 });
 
   const [classRows, offerings, enrollmentClasses, houses, schoolHouses, enrollmentHouses] =
     await Promise.all([
-      readAcademicClassRows(runtime.DATABASE, scope.organizationId),
-      runtime.DATABASE.prepare(
-        `SELECT id, academic_class_id AS academicClassId, is_active AS isActive
-         FROM school_class_offering
-         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?`,
-      )
-        .bind(scope.organizationId, scope.session.id, schoolId)
-        .all<{ id: string; academicClassId: string; isActive: number }>(),
+      readAcademicClassRows(runtime.ORM, scope.organizationId),
+      runtime.ORM.select({
+        id: schoolClassOffering.id,
+        academicClassId: schoolClassOffering.academicClassId,
+        isActive: schoolClassOffering.isActive,
+      })
+        .from(schoolClassOffering)
+        .where(
+          and(
+            eq(schoolClassOffering.organizationId, scope.organizationId),
+            eq(schoolClassOffering.academicSessionId, scope.session.id),
+            eq(schoolClassOffering.schoolId, schoolId),
+          ),
+        ),
       runtime.DATABASE.prepare(
         `SELECT academic_class_id AS academicClassId, COUNT(*) AS students
          FROM student_enrollment
@@ -2690,18 +2923,22 @@ async function getSchoolAssignments(request: Request, schoolId: string): Promise
       )
         .bind(scope.organizationId, scope.session.id, schoolId)
         .all<{ academicClassId: string; students: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT id, name, is_active AS isActive FROM house_master
-         WHERE organization_id = ? ORDER BY is_active DESC, name COLLATE NOCASE`,
-      )
-        .bind(scope.organizationId)
-        .all<{ id: string; name: string; isActive: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT house_id AS houseId FROM school_house_master
-         WHERE organization_id = ? AND school_id = ?`,
-      )
-        .bind(scope.organizationId, schoolId)
-        .all<{ houseId: string }>(),
+      runtime.ORM.select({
+        id: houseMaster.id,
+        name: houseMaster.name,
+        isActive: houseMaster.isActive,
+      })
+        .from(houseMaster)
+        .where(eq(houseMaster.organizationId, scope.organizationId))
+        .orderBy(desc(houseMaster.isActive), asc(sql`lower(${houseMaster.name})`)),
+      runtime.ORM.select({ houseId: schoolHouseMaster.houseId })
+        .from(schoolHouseMaster)
+        .where(
+          and(
+            eq(schoolHouseMaster.organizationId, scope.organizationId),
+            eq(schoolHouseMaster.schoolId, schoolId),
+          ),
+        ),
       runtime.DATABASE.prepare(
         `SELECT house_id AS houseId, COUNT(*) AS students FROM student_enrollment
          WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
@@ -2712,12 +2949,12 @@ async function getSchoolAssignments(request: Request, schoolId: string): Promise
     ]);
 
   const activeOfferingIds = new Set(
-    offerings.results.filter((item) => Boolean(item.isActive)).map((item) => item.academicClassId),
+    offerings.filter((item) => Boolean(item.isActive)).map((item) => item.academicClassId),
   );
   const classStudentCounts = new Map(
     enrollmentClasses.results.map((item) => [item.academicClassId, Number(item.students)]),
   );
-  const assignedHouseIds = new Set(schoolHouses.results.map((item) => item.houseId));
+  const assignedHouseIds = new Set(schoolHouses.map((item) => item.houseId));
   const houseStudentCounts = new Map(
     enrollmentHouses.results.map((item) => [item.houseId, Number(item.students)]),
   );
@@ -2740,7 +2977,7 @@ async function getSchoolAssignments(request: Request, schoolId: string): Promise
         (left, right) =>
           (left.sortOrder ?? 999) - (right.sortOrder ?? 999) || left.name.localeCompare(right.name),
       ),
-    houses: houses.results
+    houses: houses
       .map((house) => ({
         ...house,
         assigned: assignedHouseIds.has(house.id),
@@ -2761,23 +2998,31 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
   if (!scope) return forbidden();
   if (!hasPermission(scope, "school.setup.manage")) return forbidden();
   const runtime = getRuntimeEnv();
-  const school = await runtime.DATABASE.prepare(
-    "SELECT id, name FROM school_master WHERE id = ? AND organization_id = ?",
-  )
-    .bind(schoolId, scope.organizationId)
-    .first<{ id: string; name: string }>();
+  const school = await runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+    .from(schoolMaster)
+    .where(
+      and(eq(schoolMaster.id, schoolId), eq(schoolMaster.organizationId, scope.organizationId)),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!school) return Response.json({ error: "School not found." }, { status: 404 });
 
   const [classRows, offerings, enrollmentClasses, houses, schoolHouses, enrollmentHouses] =
     await Promise.all([
-      readAcademicClassRows(runtime.DATABASE, scope.organizationId),
-      runtime.DATABASE.prepare(
-        `SELECT id, academic_class_id AS academicClassId, is_active AS isActive
-         FROM school_class_offering
-         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?`,
-      )
-        .bind(scope.organizationId, scope.session.id, schoolId)
-        .all<{ id: string; academicClassId: string; isActive: number }>(),
+      readAcademicClassRows(runtime.ORM, scope.organizationId),
+      runtime.ORM.select({
+        id: schoolClassOffering.id,
+        academicClassId: schoolClassOffering.academicClassId,
+        isActive: schoolClassOffering.isActive,
+      })
+        .from(schoolClassOffering)
+        .where(
+          and(
+            eq(schoolClassOffering.organizationId, scope.organizationId),
+            eq(schoolClassOffering.academicSessionId, scope.session.id),
+            eq(schoolClassOffering.schoolId, schoolId),
+          ),
+        ),
       runtime.DATABASE.prepare(
         `SELECT academic_class_id AS academicClassId, COUNT(*) AS students
          FROM student_enrollment
@@ -2786,17 +3031,21 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
       )
         .bind(scope.organizationId, scope.session.id, schoolId)
         .all<{ academicClassId: string; students: number }>(),
-      runtime.DATABASE.prepare(
-        "SELECT id, name, is_active AS isActive FROM house_master WHERE organization_id = ?",
-      )
-        .bind(scope.organizationId)
-        .all<{ id: string; name: string; isActive: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT id, house_id AS houseId FROM school_house_master
-         WHERE organization_id = ? AND school_id = ?`,
-      )
-        .bind(scope.organizationId, schoolId)
-        .all<{ id: string; houseId: string }>(),
+      runtime.ORM.select({
+        id: houseMaster.id,
+        name: houseMaster.name,
+        isActive: houseMaster.isActive,
+      })
+        .from(houseMaster)
+        .where(eq(houseMaster.organizationId, scope.organizationId)),
+      runtime.ORM.select({ id: schoolHouseMaster.id, houseId: schoolHouseMaster.houseId })
+        .from(schoolHouseMaster)
+        .where(
+          and(
+            eq(schoolHouseMaster.organizationId, scope.organizationId),
+            eq(schoolHouseMaster.schoolId, schoolId),
+          ),
+        ),
       runtime.DATABASE.prepare(
         `SELECT house_id AS houseId, COUNT(*) AS students FROM student_enrollment
          WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
@@ -2812,7 +3061,7 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
     display: groupAcademicClasses(group)[0],
   }));
   const classesById = new Map(displayedClasses.map((item) => [item.display.id, item]));
-  const housesById = new Map(houses.results.map((house) => [house.id, house]));
+  const housesById = new Map(houses.map((house) => [house.id, house]));
   const selectedClassIds = new Set(parsed.data.classIds);
   const selectedHouseIds = new Set(parsed.data.houseIds);
   if (
@@ -2822,13 +3071,12 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
     return Response.json({ error: "Choose only active classes and houses." }, { status: 400 });
   }
 
-  const offeringByClassId = new Map<string, (typeof offerings.results)[number]>();
-  for (const offering of offerings.results)
-    offeringByClassId.set(offering.academicClassId, offering);
+  const offeringByClassId = new Map<string, (typeof offerings)[number]>();
+  for (const offering of offerings) offeringByClassId.set(offering.academicClassId, offering);
   const classStudentCounts = new Map(
     enrollmentClasses.results.map((item) => [item.academicClassId, Number(item.students)]),
   );
-  const schoolHouseByHouseId = new Map(schoolHouses.results.map((item) => [item.houseId, item]));
+  const schoolHouseByHouseId = new Map(schoolHouses.map((item) => [item.houseId, item]));
   const houseStudentCounts = new Map(
     enrollmentHouses.results.map((item) => [item.houseId, Number(item.students)]),
   );
@@ -2841,7 +3089,7 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
         group.some((row) => (classStudentCounts.get(row.id) ?? 0) > 0),
     )
     .map(({ display }) => display.name);
-  const blockedHouses = houses.results
+  const blockedHouses = houses
     .filter(
       (house) =>
         !selectedHouseIds.has(house.id) &&
@@ -2857,7 +3105,6 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
     );
   }
 
-  const statements: DrizzleStatement[] = [];
   for (const { display, group } of displayedClasses) {
     const shouldAssign = selectedClassIds.has(display.id);
     const current = group.map((row) => offeringByClassId.get(row.id)).filter(Boolean);
@@ -2865,69 +3112,61 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
       const representative = offeringByClassId.get(display.id);
       if (representative) {
         if (!representative.isActive) {
-          statements.push(
-            runtime.DATABASE.prepare(
-              "UPDATE school_class_offering SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            ).bind(representative.id),
-          );
+          await runtime.ORM.update(schoolClassOffering)
+            .set({ isActive: 1, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(eq(schoolClassOffering.id, representative.id));
         }
       } else {
         const id = crypto.randomUUID();
-        statements.push(
-          runtime.DATABASE.prepare(
-            `INSERT INTO school_class_offering
-              (id, organization_id, academic_session_id, school_id, academic_class_id, origin,
-               source_system, source_table, source_id)
-             VALUES (?, ?, ?, ?, ?, 'manual', 'tsewa', 'school_class_offering', ?)`,
-          ).bind(id, scope.organizationId, scope.session.id, schoolId, display.id, id),
-        );
+        await runtime.ORM.insert(schoolClassOffering).values({
+          id,
+          organizationId: scope.organizationId,
+          academicSessionId: scope.session.id,
+          schoolId,
+          academicClassId: display.id,
+          origin: "manual",
+          sourceSystem: "tsewa",
+          sourceTable: "school_class_offering",
+          sourceId: id,
+        });
       }
     } else {
       for (const offering of current) {
         if (offering?.isActive) {
-          statements.push(
-            runtime.DATABASE.prepare(
-              "UPDATE school_class_offering SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            ).bind(offering.id),
-          );
+          await runtime.ORM.update(schoolClassOffering)
+            .set({ isActive: 0, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(eq(schoolClassOffering.id, offering.id));
         }
       }
     }
   }
-  for (const house of houses.results) {
+  for (const house of houses) {
     const current = schoolHouseByHouseId.get(house.id);
     if (selectedHouseIds.has(house.id) && !current) {
       const id = crypto.randomUUID();
-      statements.push(
-        runtime.DATABASE.prepare(
-          `INSERT INTO school_house_master
-            (id, organization_id, school_id, house_id, source_system, source_table, source_id)
-           VALUES (?, ?, ?, ?, 'tsewa', 'school_house_master', ?)`,
-        ).bind(id, scope.organizationId, schoolId, house.id, id),
-      );
+      await runtime.ORM.insert(schoolHouseMaster).values({
+        id,
+        organizationId: scope.organizationId,
+        schoolId,
+        houseId: house.id,
+        sourceSystem: "tsewa",
+        sourceTable: "school_house_master",
+        sourceId: id,
+      });
     } else if (!selectedHouseIds.has(house.id) && current) {
-      statements.push(
-        runtime.DATABASE.prepare(
-          "DELETE FROM school_house_master WHERE id = ? AND organization_id = ?",
-        ).bind(current.id, scope.organizationId),
+      await runtime.ORM.delete(schoolHouseMaster).where(
+        and(
+          eq(schoolHouseMaster.id, current.id),
+          eq(schoolHouseMaster.organizationId, scope.organizationId),
+        ),
       );
     }
   }
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      scope,
-      "school.assignments_updated",
-      "school_master",
-      schoolId,
-      {
-        academicSessionId: scope.session.id,
-        classes: String(selectedClassIds.size),
-        houses: String(selectedHouseIds.size),
-      },
-    ),
-  );
-  await runtime.DATABASE.batch(statements);
+  await auditInsert(runtime.ORM, scope, "school.assignments_updated", "school_master", schoolId, {
+    academicSessionId: scope.session.id,
+    classes: String(selectedClassIds.size),
+    houses: String(selectedHouseIds.size),
+  });
   return Response.json({
     ok: true,
     schoolName: school.name,
@@ -4025,10 +4264,17 @@ async function createAcademicResultCatalog(request: Request): Promise<Response> 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
   const runtime = getRuntimeEnv();
-  const duplicateSubject = await runtime.DATABASE.prepare(`SELECT id FROM academic_subject
-    WHERE organization_id=? AND academic_session_id=? AND lower(name)=lower(?)`)
-    .bind(scope.organizationId, scope.session.id, parsed.data.subject.name)
-    .first<{ id: string }>();
+  const duplicateSubject = await runtime.ORM.select({ id: academicSubject.id })
+    .from(academicSubject)
+    .where(
+      and(
+        eq(academicSubject.organizationId, scope.organizationId),
+        eq(academicSubject.academicSessionId, scope.session.id),
+        eq(sql`lower(${academicSubject.name})`, parsed.data.subject.name.toLowerCase()),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (duplicateSubject)
     return Response.json(
       { error: "That subject already exists for this session." },
@@ -4041,71 +4287,71 @@ async function createAcademicResultCatalog(request: Request): Promise<Response> 
       return Response.json({ error: "Assessment names must be unique." }, { status: 400 });
     duplicateAssessmentNames.add(key);
   }
-  const existingTerm = await runtime.DATABASE.prepare(`SELECT id FROM academic_term
-    WHERE organization_id=? AND lower(name)=lower(?)`)
-    .bind(scope.organizationId, parsed.data.term.name)
-    .first<{ id: string }>();
+  const existingTerm = await runtime.ORM.select({ id: academicTerm.id })
+    .from(academicTerm)
+    .where(
+      and(
+        eq(academicTerm.organizationId, scope.organizationId),
+        eq(sql`lower(${academicTerm.name})`, parsed.data.term.name.toLowerCase()),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   const termId = existingTerm?.id ?? crypto.randomUUID();
   const subjectId = crypto.randomUUID();
-  const statements: DrizzleStatement[] = [];
-  if (!existingTerm)
-    statements.push(
-      runtime.DATABASE.prepare(`INSERT INTO academic_term
-    (id,organization_id,name,is_active,source_system,source_table,source_id)
-    VALUES (?,?,?,1,'tsewa','academic_term',?)`).bind(
-        termId,
-        scope.organizationId,
-        parsed.data.term.name,
-        termId,
-      ),
-    );
-  statements.push(
-    runtime.DATABASE.prepare(`INSERT INTO academic_subject
-    (id,organization_id,academic_session_id,name,short_name,is_optional,passing_percentage,
-     is_active,source_system,source_table,source_id)
-    VALUES (?,?,?,?,?,?,?,1,'tsewa','academic_subject',?)`).bind(
-      subjectId,
-      scope.organizationId,
-      scope.session.id,
-      parsed.data.subject.name,
-      parsed.data.subject.shortName ?? null,
-      parsed.data.subject.isOptional ? 1 : 0,
-      parsed.data.subject.passingPercentage ?? null,
-      subjectId,
-    ),
-  );
+  if (!existingTerm) {
+    await runtime.ORM.insert(academicTerm).values({
+      id: termId,
+      organizationId: scope.organizationId,
+      name: parsed.data.term.name,
+      isActive: 1,
+      sourceSystem: "tsewa",
+      sourceTable: "academic_term",
+      sourceId: termId,
+    });
+  }
+  await runtime.ORM.insert(academicSubject).values({
+    id: subjectId,
+    organizationId: scope.organizationId,
+    academicSessionId: scope.session.id,
+    name: parsed.data.subject.name,
+    shortName: parsed.data.subject.shortName ?? null,
+    isOptional: parsed.data.subject.isOptional ? 1 : 0,
+    passingPercentage: parsed.data.subject.passingPercentage ?? null,
+    isActive: 1,
+    sourceSystem: "tsewa",
+    sourceTable: "academic_subject",
+    sourceId: subjectId,
+  });
   const assessments = parsed.data.assessments.map((item) => ({
     id: crypto.randomUUID(),
     name: item.name,
   }));
-  for (const assessment of assessments)
-    statements.push(
-      runtime.DATABASE.prepare(`INSERT INTO academic_assessment
-    (id,organization_id,academic_session_id,term_id,name,is_active,source_system,source_table,source_id)
-    VALUES (?,?,?,?,?,1,'tsewa','academic_assessment',?)`).bind(
-        assessment.id,
-        scope.organizationId,
-        scope.session.id,
-        termId,
-        assessment.name,
-        assessment.id,
-      ),
-    );
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      scope,
-      "academic.result_catalog_created",
-      "academic_subject",
-      subjectId,
-      {
-        sessionId: scope.session.id,
-        termId,
-        assessmentCount: String(assessments.length),
-      },
-    ),
+  await runtime.ORM.insert(academicAssessment).values(
+    assessments.map((assessment) => ({
+      id: assessment.id,
+      organizationId: scope.organizationId,
+      academicSessionId: scope.session.id,
+      termId,
+      name: assessment.name,
+      isActive: 1,
+      sourceSystem: "tsewa",
+      sourceTable: "academic_assessment",
+      sourceId: assessment.id,
+    })),
   );
-  await runtime.DATABASE.batch(statements);
+  await auditInsert(
+    runtime.ORM,
+    scope,
+    "academic.result_catalog_created",
+    "academic_subject",
+    subjectId,
+    {
+      sessionId: scope.session.id,
+      termId,
+      assessmentCount: String(assessments.length),
+    },
+  );
   return Response.json({ subjectId, termId, assessments }, { status: 201 });
 }
 
@@ -4128,53 +4374,105 @@ async function createMarkSheet(request: Request): Promise<Response> {
     configuredSubjects,
     configuredLimits,
   ] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT id FROM school_class_offering WHERE organization_id=?
-      AND academic_session_id=? AND school_id=? AND academic_class_id=? AND is_active=1`)
-      .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
-      .first<{ id: string }>(),
-    runtime.DATABASE.prepare(`SELECT id FROM academic_subject WHERE id=? AND organization_id=?
-      AND academic_session_id=? AND is_active=1`)
-      .bind(data.subjectId, scope.organizationId, scope.session.id)
-      .first<{ id: string }>(),
-    runtime.DATABASE.prepare(
-      "SELECT id FROM academic_term WHERE id=? AND organization_id=? AND is_active=1",
-    )
-      .bind(data.termId, scope.organizationId)
-      .first<{ id: string }>(),
-    runtime.DATABASE.prepare(`SELECT id FROM academic_assessment WHERE organization_id=?
-      AND academic_session_id=? AND term_id=? AND is_active=1`)
-      .bind(scope.organizationId, scope.session.id, data.termId)
-      .all<{ id: string }>(),
-    runtime.DATABASE.prepare(`SELECT person_id AS personId FROM student_enrollment WHERE organization_id=?
-      AND academic_session_id=? AND school_id=? AND academic_class_id=? AND status IN ('recorded','enrolled')`)
-      .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
-      .all<{ personId: string }>(),
-    runtime.DATABASE.prepare(`SELECT id FROM mark_sheet WHERE organization_id=? AND academic_session_id=?
-      AND school_id=? AND academic_class_id=? AND subject_id=? AND term_id=?`)
-      .bind(
-        scope.organizationId,
-        scope.session.id,
-        data.schoolId,
-        data.academicClassId,
-        data.subjectId,
-        data.termId,
+    runtime.ORM.select({ id: schoolClassOffering.id })
+      .from(schoolClassOffering)
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, scope.organizationId),
+          eq(schoolClassOffering.academicSessionId, scope.session.id),
+          eq(schoolClassOffering.schoolId, data.schoolId),
+          eq(schoolClassOffering.academicClassId, data.academicClassId),
+          eq(schoolClassOffering.isActive, 1),
+        ),
       )
-      .first<{ id: string }>(),
-    runtime.DATABASE.prepare(`SELECT subject_id AS subjectId FROM academic_class_subject
-      WHERE organization_id=? AND academic_session_id=? AND academic_class_id=?`)
-      .bind(scope.organizationId, scope.session.id, data.academicClassId)
-      .all<{ subjectId: string }>(),
-    runtime.DATABASE.prepare(`SELECT assessment_id AS assessmentId,maximum_marks AS maximumMarks
-      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?
-      AND academic_class_id=? AND subject_id=?`)
-      .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId)
-      .all<{ assessmentId: string; maximumMarks: number }>(),
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: academicSubject.id })
+      .from(academicSubject)
+      .where(
+        and(
+          eq(academicSubject.id, data.subjectId),
+          eq(academicSubject.organizationId, scope.organizationId),
+          eq(academicSubject.academicSessionId, scope.session.id),
+          eq(academicSubject.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: academicTerm.id })
+      .from(academicTerm)
+      .where(
+        and(
+          eq(academicTerm.id, data.termId),
+          eq(academicTerm.organizationId, scope.organizationId),
+          eq(academicTerm.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: academicAssessment.id })
+      .from(academicAssessment)
+      .where(
+        and(
+          eq(academicAssessment.organizationId, scope.organizationId),
+          eq(academicAssessment.academicSessionId, scope.session.id),
+          eq(academicAssessment.termId, data.termId),
+          eq(academicAssessment.isActive, 1),
+        ),
+      ),
+    runtime.ORM.select({ personId: studentEnrollment.personId })
+      .from(studentEnrollment)
+      .where(
+        and(
+          eq(studentEnrollment.organizationId, scope.organizationId),
+          eq(studentEnrollment.academicSessionId, scope.session.id),
+          eq(studentEnrollment.schoolId, data.schoolId),
+          eq(studentEnrollment.academicClassId, data.academicClassId),
+          inArray(studentEnrollment.status, ["recorded", "enrolled"]),
+        ),
+      ),
+    runtime.ORM.select({ id: markSheet.id })
+      .from(markSheet)
+      .where(
+        and(
+          eq(markSheet.organizationId, scope.organizationId),
+          eq(markSheet.academicSessionId, scope.session.id),
+          eq(markSheet.schoolId, data.schoolId),
+          eq(markSheet.academicClassId, data.academicClassId),
+          eq(markSheet.subjectId, data.subjectId),
+          eq(markSheet.termId, data.termId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ subjectId: academicClassSubject.subjectId })
+      .from(academicClassSubject)
+      .where(
+        and(
+          eq(academicClassSubject.organizationId, scope.organizationId),
+          eq(academicClassSubject.academicSessionId, scope.session.id),
+          eq(academicClassSubject.academicClassId, data.academicClassId),
+        ),
+      ),
+    runtime.ORM.select({
+      assessmentId: academicClassSubjectAssessment.assessmentId,
+      maximumMarks: academicClassSubjectAssessment.maximumMarks,
+    })
+      .from(academicClassSubjectAssessment)
+      .where(
+        and(
+          eq(academicClassSubjectAssessment.organizationId, scope.organizationId),
+          eq(academicClassSubjectAssessment.academicSessionId, scope.session.id),
+          eq(academicClassSubjectAssessment.academicClassId, data.academicClassId),
+          eq(academicClassSubjectAssessment.subjectId, data.subjectId),
+        ),
+      ),
   ]);
   if (!offering || !subject || !term)
     return Response.json({ error: "Choose valid result setup values." }, { status: 400 });
   if (
-    configuredSubjects.results.length &&
-    !configuredSubjects.results.some((row) => row.subjectId === data.subjectId)
+    configuredSubjects.length &&
+    !configuredSubjects.some((row) => row.subjectId === data.subjectId)
   )
     return Response.json({ error: "That subject is not assigned to this class." }, { status: 400 });
   if (existing)
@@ -4182,13 +4480,13 @@ async function createMarkSheet(request: Request): Promise<Response> {
       { error: "A mark sheet already exists for this class, subject, and term.", id: existing.id },
       { status: 409 },
     );
-  const assessmentIds = new Set(assessments.results.map((row) => row.id));
+  const assessmentIds = new Set(assessments.map((row) => row.id));
   const maximumByAssessment = new Map(
-    configuredLimits.results
+    configuredLimits
       .filter((row) => row.maximumMarks !== null)
       .map((row) => [row.assessmentId, Number(row.maximumMarks)]),
   );
-  const rosterIds = new Set(roster.results.map((row) => row.personId));
+  const rosterIds = new Set(roster.map((row) => row.personId));
   if (
     data.marks.some(
       (mark) => !assessmentIds.has(mark.assessmentId) || !rosterIds.has(mark.personId),
@@ -4211,61 +4509,50 @@ async function createMarkSheet(request: Request): Promise<Response> {
       { status: 400 },
     );
   const markSheetId = crypto.randomUUID();
-  const statements: DrizzleStatement[] = [
-    runtime.DATABASE.prepare(`INSERT INTO mark_sheet
-    (id,organization_id,academic_session_id,school_id,academic_class_id,subject_id,term_id,
-     recorded_on,is_verified,status,maximum_marks,source_system,source_table,source_id,
-     created_by_user_id,updated_by_user_id)
-    VALUES (?,?,?,?,?,?,?,?,0,'draft',?,'tsewa','mark_sheet',?,?,?)`).bind(
-      markSheetId,
-      scope.organizationId,
-      scope.session.id,
-      data.schoolId,
-      data.academicClassId,
-      data.subjectId,
-      data.termId,
-      data.recordedOn,
-      data.maximumMarks ?? null,
-      markSheetId,
-      scope.userId,
-      scope.userId,
+  await runtime.ORM.batch([
+    runtime.ORM.insert(markSheet).values({
+      id: markSheetId,
+      organizationId: scope.organizationId,
+      academicSessionId: scope.session.id,
+      schoolId: data.schoolId,
+      academicClassId: data.academicClassId,
+      subjectId: data.subjectId,
+      termId: data.termId,
+      recordedOn: data.recordedOn,
+      isVerified: 0,
+      status: "draft",
+      maximumMarks: data.maximumMarks ?? null,
+      sourceSystem: "tsewa",
+      sourceTable: "mark_sheet",
+      sourceId: markSheetId,
+      createdByUserId: scope.userId,
+      updatedByUserId: scope.userId,
+    }),
+    runtime.ORM.insert(studentMark).values(
+      data.marks.map((mark) => {
+        const id = crypto.randomUUID();
+        return {
+          id,
+          organizationId: scope.organizationId,
+          markSheetId,
+          personId: mark.personId,
+          assessmentId: mark.assessmentId,
+          marks: mark.marks,
+          maximumMarks: mark.maximumMarks,
+          note: mark.note ?? null,
+          sourceSystem: "tsewa",
+          sourceTable: "student_mark",
+          sourceId: id,
+          createdByUserId: scope.userId,
+          updatedByUserId: scope.userId,
+        };
+      }),
     ),
-  ];
-  for (const mark of data.marks) {
-    const id = crypto.randomUUID();
-    statements.push(
-      runtime.DATABASE.prepare(`INSERT INTO student_mark
-      (id,organization_id,mark_sheet_id,person_id,assessment_id,marks,maximum_marks,note,
-       source_system,source_table,source_id,created_by_user_id,updated_by_user_id)
-      VALUES (?,?,?,?,?,?,?,?,'tsewa','student_mark',?,?,?)`).bind(
-        id,
-        scope.organizationId,
-        markSheetId,
-        mark.personId,
-        mark.assessmentId,
-        mark.marks,
-        mark.maximumMarks,
-        mark.note ?? null,
-        id,
-        scope.userId,
-        scope.userId,
-      ),
-    );
-  }
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      scope,
-      "academic.mark_sheet_created",
-      "mark_sheet",
-      markSheetId,
-      {
-        sessionId: scope.session.id,
-        entryCount: String(data.marks.length),
-      },
-    ),
-  );
-  await runtime.DATABASE.batch(statements);
+    auditInsert(runtime.ORM, scope, "academic.mark_sheet_created", "mark_sheet", markSheetId, {
+      sessionId: scope.session.id,
+      entryCount: String(data.marks.length),
+    }),
+  ]);
   return Response.json({ id: markSheetId, status: "draft" }, { status: 201 });
 }
 
@@ -4282,39 +4569,42 @@ async function getMarkSheet(request: Request, markSheetId: string): Promise<Resp
   if (!context) return unauthorized();
   if (!hasPermission(context, "school.results.read")) return forbidden();
   const runtime = getRuntimeEnv();
-  const sheet = await runtime.DATABASE.prepare(`SELECT id,academic_session_id AS sessionId,
-    school_id AS schoolId,academic_class_id AS academicClassId,subject_id AS subjectId,
-    term_id AS termId,recorded_on AS recordedOn,maximum_marks AS maximumMarks,status,
-    source_system AS sourceSystem FROM mark_sheet WHERE id=? AND organization_id=?`)
-    .bind(markSheetId, context.organizationId)
-    .first<{
-      id: string;
-      sessionId: string;
-      schoolId: string;
-      academicClassId: string;
-      subjectId: string;
-      termId: string;
-      recordedOn: string | null;
-      maximumMarks: number | null;
-      status: string;
-      sourceSystem: string;
-    }>();
+  const sheet = await runtime.ORM.select({
+    id: markSheet.id,
+    sessionId: markSheet.academicSessionId,
+    schoolId: markSheet.schoolId,
+    academicClassId: markSheet.academicClassId,
+    subjectId: markSheet.subjectId,
+    termId: markSheet.termId,
+    recordedOn: markSheet.recordedOn,
+    maximumMarks: markSheet.maximumMarks,
+    status: markSheet.status,
+    sourceSystem: markSheet.sourceSystem,
+  })
+    .from(markSheet)
+    .where(and(eq(markSheet.id, markSheetId), eq(markSheet.organizationId, context.organizationId)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
-  const marks = await runtime.DATABASE.prepare(`SELECT id,person_id AS personId,
-    assessment_id AS assessmentId,marks,maximum_marks AS maximumMarks,note
-    FROM student_mark WHERE organization_id=? AND mark_sheet_id=? AND is_active=1`)
-    .bind(context.organizationId, markSheetId)
-    .all<{
-      id: string;
-      personId: string;
-      assessmentId: string;
-      marks: number | null;
-      maximumMarks: number | null;
-      note: string | null;
-    }>();
+  const marks = await runtime.ORM.select({
+    id: studentMark.id,
+    personId: studentMark.personId,
+    assessmentId: studentMark.assessmentId,
+    marks: studentMark.marks,
+    maximumMarks: studentMark.maximumMarks,
+    note: studentMark.note,
+  })
+    .from(studentMark)
+    .where(
+      and(
+        eq(studentMark.organizationId, context.organizationId),
+        eq(studentMark.markSheetId, markSheetId),
+        eq(studentMark.isActive, 1),
+      ),
+    );
   return Response.json({
     sheet,
-    marks: marks.results,
+    marks,
     capabilities: {
       edit:
         hasPermission(context, "school.results.manage") &&
@@ -4332,19 +4622,25 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
   const runtime = getRuntimeEnv();
-  const sheet = await runtime.DATABASE.prepare(`SELECT id,status,source_system AS sourceSystem,
-    school_id AS schoolId,academic_class_id AS academicClassId,subject_id AS subjectId,term_id AS termId
-    FROM mark_sheet WHERE id=? AND organization_id=? AND academic_session_id=?`)
-    .bind(markSheetId, scope.organizationId, scope.session.id)
-    .first<{
-      id: string;
-      status: string;
-      sourceSystem: string;
-      schoolId: string;
-      academicClassId: string;
-      subjectId: string;
-      termId: string;
-    }>();
+  const sheet = await runtime.ORM.select({
+    id: markSheet.id,
+    status: markSheet.status,
+    sourceSystem: markSheet.sourceSystem,
+    schoolId: markSheet.schoolId,
+    academicClassId: markSheet.academicClassId,
+    subjectId: markSheet.subjectId,
+    termId: markSheet.termId,
+  })
+    .from(markSheet)
+    .where(
+      and(
+        eq(markSheet.id, markSheetId),
+        eq(markSheet.organizationId, scope.organizationId),
+        eq(markSheet.academicSessionId, scope.session.id),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
   if (sheet.sourceSystem.toLowerCase() !== "tsewa" || sheet.status !== "draft")
     return Response.json({ error: "Only Tsewa draft mark sheets can be edited." }, { status: 409 });
@@ -4358,26 +4654,56 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
     return Response.json({ error: "A mark sheet's scope cannot be changed." }, { status: 409 });
 
   const [assessments, roster, currentMarks, configuredLimits] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT id FROM academic_assessment WHERE organization_id=?
-      AND academic_session_id=? AND term_id=? AND is_active=1`)
-      .bind(scope.organizationId, scope.session.id, data.termId)
-      .all<{ id: string }>(),
-    runtime.DATABASE.prepare(`SELECT person_id AS personId FROM student_enrollment WHERE organization_id=?
-      AND academic_session_id=? AND school_id=? AND academic_class_id=? AND status IN ('recorded','enrolled')`)
-      .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
-      .all<{ personId: string }>(),
-    runtime.DATABASE.prepare(`SELECT id,person_id AS personId,assessment_id AS assessmentId
-      FROM student_mark WHERE organization_id=? AND mark_sheet_id=? AND is_active=1`)
-      .bind(scope.organizationId, markSheetId)
-      .all<{ id: string; personId: string; assessmentId: string }>(),
-    runtime.DATABASE.prepare(`SELECT assessment_id AS assessmentId,maximum_marks AS maximumMarks
-      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?
-      AND academic_class_id=? AND subject_id=?`)
-      .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId)
-      .all<{ assessmentId: string; maximumMarks: number | null }>(),
+    runtime.ORM.select({ id: academicAssessment.id })
+      .from(academicAssessment)
+      .where(
+        and(
+          eq(academicAssessment.organizationId, scope.organizationId),
+          eq(academicAssessment.academicSessionId, scope.session.id),
+          eq(academicAssessment.termId, data.termId),
+          eq(academicAssessment.isActive, 1),
+        ),
+      ),
+    runtime.ORM.select({ personId: studentEnrollment.personId })
+      .from(studentEnrollment)
+      .where(
+        and(
+          eq(studentEnrollment.organizationId, scope.organizationId),
+          eq(studentEnrollment.academicSessionId, scope.session.id),
+          eq(studentEnrollment.schoolId, data.schoolId),
+          eq(studentEnrollment.academicClassId, data.academicClassId),
+          inArray(studentEnrollment.status, ["recorded", "enrolled"]),
+        ),
+      ),
+    runtime.ORM.select({
+      id: studentMark.id,
+      personId: studentMark.personId,
+      assessmentId: studentMark.assessmentId,
+    })
+      .from(studentMark)
+      .where(
+        and(
+          eq(studentMark.organizationId, scope.organizationId),
+          eq(studentMark.markSheetId, markSheetId),
+          eq(studentMark.isActive, 1),
+        ),
+      ),
+    runtime.ORM.select({
+      assessmentId: academicClassSubjectAssessment.assessmentId,
+      maximumMarks: academicClassSubjectAssessment.maximumMarks,
+    })
+      .from(academicClassSubjectAssessment)
+      .where(
+        and(
+          eq(academicClassSubjectAssessment.organizationId, scope.organizationId),
+          eq(academicClassSubjectAssessment.academicSessionId, scope.session.id),
+          eq(academicClassSubjectAssessment.academicClassId, data.academicClassId),
+          eq(academicClassSubjectAssessment.subjectId, data.subjectId),
+        ),
+      ),
   ]);
-  const assessmentIds = new Set(assessments.results.map((row) => row.id));
-  const rosterIds = new Set(roster.results.map((row) => row.personId));
+  const assessmentIds = new Set(assessments.map((row) => row.id));
+  const rosterIds = new Set(roster.map((row) => row.personId));
   if (
     data.marks.some(
       (mark) => !assessmentIds.has(mark.assessmentId) || !rosterIds.has(mark.personId),
@@ -4388,7 +4714,7 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
       { status: 400 },
     );
   const configuredMaximums = new Map(
-    configuredLimits.results
+    configuredLimits
       .filter((item) => item.maximumMarks !== null)
       .map((item) => [item.assessmentId, Number(item.maximumMarks)]),
   );
@@ -4405,80 +4731,77 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
     );
 
   const existingByKey = new Map(
-    currentMarks.results.map((mark) => [`${mark.personId}:${mark.assessmentId}`, mark]),
+    currentMarks.map((mark) => [`${mark.personId}:${mark.assessmentId}`, mark]),
   );
   const submittedKeys = new Set(data.marks.map((mark) => `${mark.personId}:${mark.assessmentId}`));
-  const statements: DrizzleStatement[] = [
-    runtime.DATABASE.prepare(`UPDATE mark_sheet SET recorded_on=?,maximum_marks=?,updated_by_user_id=?,
-      updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
-      data.recordedOn,
-      data.maximumMarks ?? null,
-      scope.userId,
-      markSheetId,
-      scope.organizationId,
-    ),
-  ];
+  await runtime.ORM.update(markSheet)
+    .set({
+      recordedOn: data.recordedOn,
+      maximumMarks: data.maximumMarks ?? null,
+      updatedByUserId: scope.userId,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .where(and(eq(markSheet.id, markSheetId), eq(markSheet.organizationId, scope.organizationId)));
+  const newMarks: Array<typeof studentMark.$inferInsert> = [];
   for (const mark of data.marks) {
     const key = `${mark.personId}:${mark.assessmentId}`;
     const existing = existingByKey.get(key);
     if (existing) {
-      statements.push(
-        runtime.DATABASE.prepare(`UPDATE student_mark SET marks=?,maximum_marks=?,note=?,
-          updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
-          mark.marks,
-          mark.maximumMarks,
-          mark.note ?? null,
-          scope.userId,
-          existing.id,
-          scope.organizationId,
-        ),
-      );
+      await runtime.ORM.update(studentMark)
+        .set({
+          marks: mark.marks,
+          maximumMarks: mark.maximumMarks,
+          note: mark.note ?? null,
+          updatedByUserId: scope.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(studentMark.id, existing.id),
+            eq(studentMark.organizationId, scope.organizationId),
+          ),
+        );
     } else {
       const id = crypto.randomUUID();
-      statements.push(
-        runtime.DATABASE.prepare(`INSERT INTO student_mark
-          (id,organization_id,mark_sheet_id,person_id,assessment_id,marks,maximum_marks,note,
-           source_system,source_table,source_id,created_by_user_id,updated_by_user_id)
-          VALUES (?,?,?,?,?,?,?,?,'tsewa','student_mark',?,?,?)`).bind(
-          id,
-          scope.organizationId,
-          markSheetId,
-          mark.personId,
-          mark.assessmentId,
-          mark.marks,
-          mark.maximumMarks,
-          mark.note ?? null,
-          id,
-          scope.userId,
-          scope.userId,
-        ),
-      );
+      newMarks.push({
+        id,
+        organizationId: scope.organizationId,
+        markSheetId,
+        personId: mark.personId,
+        assessmentId: mark.assessmentId,
+        marks: mark.marks,
+        maximumMarks: mark.maximumMarks,
+        note: mark.note ?? null,
+        sourceSystem: "tsewa",
+        sourceTable: "student_mark",
+        sourceId: id,
+        createdByUserId: scope.userId,
+        updatedByUserId: scope.userId,
+      });
     }
   }
-  for (const mark of currentMarks.results) {
-    if (submittedKeys.has(`${mark.personId}:${mark.assessmentId}`)) continue;
-    statements.push(
-      runtime.DATABASE.prepare(`UPDATE student_mark SET is_active=0,removed_at=CURRENT_TIMESTAMP,
-        updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
-        scope.userId,
-        mark.id,
-        scope.organizationId,
-      ),
-    );
+  if (newMarks.length) await runtime.ORM.insert(studentMark).values(newMarks);
+  const removedMarkIds = currentMarks
+    .filter((mark) => !submittedKeys.has(`${mark.personId}:${mark.assessmentId}`))
+    .map((mark) => mark.id);
+  if (removedMarkIds.length) {
+    await runtime.ORM.update(studentMark)
+      .set({
+        isActive: 0,
+        removedAt: sql`CURRENT_TIMESTAMP`,
+        updatedByUserId: scope.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(studentMark.organizationId, scope.organizationId),
+          inArray(studentMark.id, removedMarkIds),
+        ),
+      );
   }
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      scope,
-      "academic.mark_sheet_updated",
-      "mark_sheet",
-      markSheetId,
-      {
-        entryCount: String(data.marks.length),
-      },
-    ),
-  );
-  await runtime.DATABASE.batch(statements);
+  await auditInsert(runtime.ORM, scope, "academic.mark_sheet_updated", "mark_sheet", markSheetId, {
+    entryCount: String(data.marks.length),
+  });
   return Response.json({ id: markSheetId, status: "draft" });
 }
 
@@ -4858,18 +5181,12 @@ async function createScholarship(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Check the scholarship record." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  if (!(await validScholarshipReferences(runtime.DATABASE, context.organizationId, parsed.data)))
+  if (!(await validScholarshipReferences(runtime.ORM, context.organizationId, parsed.data)))
     return Response.json({ error: "Choose a valid person, session, and course." }, { status: 400 });
   const id = crypto.randomUUID();
-  await runtime.DATABASE.batch([
-    scholarshipRecordWrite(runtime.DATABASE, "insert", context, id, parsed.data),
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "scholarship.record_created",
-      "scholarship_record",
-      id,
-    ),
+  await runtime.ORM.batch([
+    scholarshipRecordWrite(runtime.ORM, "insert", context, id, parsed.data),
+    auditInsert(runtime.ORM, context, "scholarship.record_created", "scholarship_record", id),
   ]);
   return Response.json({ id }, { status: 201 });
 }
@@ -4946,28 +5263,30 @@ async function updateScholarshipRecord(request: Request, scholarshipId: string):
   if (!parsed.success)
     return Response.json({ error: "Check the scholarship changes." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const exists = await runtime.DATABASE.prepare(
-    "SELECT id,person_id AS personId FROM scholarship_record WHERE id=? AND organization_id=?",
-  )
-    .bind(scholarshipId, context.organizationId)
-    .first<{ id: string; personId: string | null }>();
+  const exists = await runtime.ORM.select({
+    id: scholarshipRecord.id,
+    personId: scholarshipRecord.personId,
+  })
+    .from(scholarshipRecord)
+    .where(
+      and(
+        eq(scholarshipRecord.id, scholarshipId),
+        eq(scholarshipRecord.organizationId, context.organizationId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!exists) return Response.json({ error: "Scholarship record not found." }, { status: 404 });
   if (parsed.data.action === "record") {
-    if (
-      !(await validScholarshipReferences(
-        runtime.DATABASE,
-        context.organizationId,
-        parsed.data.value,
-      ))
-    )
+    if (!(await validScholarshipReferences(runtime.ORM, context.organizationId, parsed.data.value)))
       return Response.json(
         { error: "Choose a valid person, session, and course." },
         { status: 400 },
       );
-    await runtime.DATABASE.batch([
-      scholarshipRecordWrite(runtime.DATABASE, "update", context, scholarshipId, parsed.data.value),
-      auditStatement(
-        runtime.DATABASE,
+    await runtime.ORM.batch([
+      scholarshipRecordWrite(runtime.ORM, "update", context, scholarshipId, parsed.data.value),
+      auditInsert(
+        runtime.ORM,
         context,
         "scholarship.record_updated",
         "scholarship_record",
@@ -4978,55 +5297,62 @@ async function updateScholarshipRecord(request: Request, scholarshipId: string):
     const value = parsed.data.value;
     if (
       value.sessionId &&
-      !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId))
+      !(await scholarshipSessionExists(runtime.ORM, context.organizationId, value.sessionId))
     )
       return Response.json({ error: "Choose a valid academic session." }, { status: 400 });
     const id = value.id ?? crypto.randomUUID();
     const existing = value.id
-      ? await runtime.DATABASE.prepare(
-          "SELECT id FROM scholarship_annual_detail WHERE id=? AND organization_id=? AND scholarship_id=?",
-        )
-          .bind(value.id, context.organizationId, scholarshipId)
-          .first()
+      ? await runtime.ORM.select({ id: scholarshipAnnualDetail.id })
+          .from(scholarshipAnnualDetail)
+          .where(
+            and(
+              eq(scholarshipAnnualDetail.id, value.id),
+              eq(scholarshipAnnualDetail.organizationId, context.organizationId),
+              eq(scholarshipAnnualDetail.scholarshipId, scholarshipId),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
       : null;
     if (value.id && !existing)
       return Response.json({ error: "Annual detail not found." }, { status: 404 });
+    const annualValues = {
+      academicSessionId: value.sessionId ?? null,
+      studyYear: value.studyYear,
+      passed: value.passed ? 1 : 0,
+      percentage: value.percentage ?? null,
+      division: value.division ?? null,
+      fees: value.fees ?? null,
+      remarks: value.remarks ?? null,
+    };
     const statement = existing
-      ? runtime.DATABASE.prepare(
-          `UPDATE scholarship_annual_detail SET academic_session_id=?,study_year=?,passed=?,percentage=?,division=?,fees=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
-        ).bind(
-          value.sessionId ?? null,
-          value.studyYear,
-          value.passed ? 1 : 0,
-          value.percentage ?? null,
-          value.division ?? null,
-          value.fees ?? null,
-          value.remarks ?? null,
-          context.userId,
+      ? runtime.ORM.update(scholarshipAnnualDetail)
+          .set({
+            ...annualValues,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(scholarshipAnnualDetail.id, id),
+              eq(scholarshipAnnualDetail.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(scholarshipAnnualDetail).values({
           id,
-          context.organizationId,
-        )
-      : runtime.DATABASE.prepare(
-          `INSERT INTO scholarship_annual_detail (id,organization_id,scholarship_id,academic_session_id,study_year,passed,percentage,division,fees,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,'tsewa','scholarship_annual_detail',?,?,?)`,
-        ).bind(
-          id,
-          context.organizationId,
+          organizationId: context.organizationId,
           scholarshipId,
-          value.sessionId ?? null,
-          value.studyYear,
-          value.passed ? 1 : 0,
-          value.percentage ?? null,
-          value.division ?? null,
-          value.fees ?? null,
-          value.remarks ?? null,
-          id,
-          context.userId,
-          context.userId,
-        );
-    await runtime.DATABASE.batch([
+          ...annualValues,
+          sourceSystem: "tsewa",
+          sourceTable: "scholarship_annual_detail",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    await runtime.ORM.batch([
       statement,
-      auditStatement(
-        runtime.DATABASE,
+      auditInsert(
+        runtime.ORM,
         context,
         existing ? "scholarship.annual_updated" : "scholarship.annual_created",
         "scholarship_annual_detail",
@@ -5038,101 +5364,115 @@ async function updateScholarshipRecord(request: Request, scholarshipId: string):
     const value = parsed.data.value;
     if (
       value.sessionId &&
-      !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId))
+      !(await scholarshipSessionExists(runtime.ORM, context.organizationId, value.sessionId))
     )
       return Response.json({ error: "Choose a valid academic session." }, { status: 400 });
-    const headRows = await runtime.DATABASE.prepare(
-      "SELECT id FROM scholarship_head WHERE organization_id=? AND is_active=1",
-    )
-      .bind(context.organizationId)
-      .all<{ id: string }>();
-    const headIds = new Set(headRows.results.map((item) => item.id));
+    const headRows = await runtime.ORM.select({ id: scholarshipHead.id })
+      .from(scholarshipHead)
+      .where(
+        and(
+          eq(scholarshipHead.organizationId, context.organizationId),
+          eq(scholarshipHead.isActive, 1),
+        ),
+      );
+    const headIds = new Set(headRows.map((item) => item.id));
     if (value.lines.some((line) => !headIds.has(line.headId)))
       return Response.json({ error: "Choose valid scholarship heads." }, { status: 400 });
     const id = value.id ?? crypto.randomUUID();
     const existing = value.id
-      ? await runtime.DATABASE.prepare(
-          "SELECT id FROM scholarship_sanction WHERE id=? AND organization_id=? AND scholarship_id=?",
-        )
-          .bind(value.id, context.organizationId, scholarshipId)
-          .first()
+      ? await runtime.ORM.select({ id: scholarshipSanction.id })
+          .from(scholarshipSanction)
+          .where(
+            and(
+              eq(scholarshipSanction.id, value.id),
+              eq(scholarshipSanction.organizationId, context.organizationId),
+              eq(scholarshipSanction.scholarshipId, scholarshipId),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
       : null;
     if (value.id && !existing)
       return Response.json({ error: "Sanction not found." }, { status: 404 });
-    const statements: DrizzleStatement[] = [
-      existing
-        ? runtime.DATABASE.prepare(
-            `UPDATE scholarship_sanction SET academic_session_id=?,amount=?,sanctioned_on=?,period_from=?,period_to=?,payment_reference=?,in_favour_of=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
-          ).bind(
-            value.sessionId ?? null,
-            value.amount,
-            value.sanctionedOn,
-            value.periodFrom ?? null,
-            value.periodTo ?? null,
-            value.paymentReference ?? null,
-            value.inFavourOf ?? null,
-            value.remarks ?? null,
-            context.userId,
-            id,
-            context.organizationId,
+    const sanctionValues = {
+      academicSessionId: value.sessionId ?? null,
+      amount: value.amount,
+      sanctionedOn: value.sanctionedOn,
+      periodFrom: value.periodFrom ?? null,
+      periodTo: value.periodTo ?? null,
+      paymentReference: value.paymentReference ?? null,
+      inFavourOf: value.inFavourOf ?? null,
+      remarks: value.remarks ?? null,
+    };
+    const sanctionStatement = existing
+      ? runtime.ORM.update(scholarshipSanction)
+          .set({
+            ...sanctionValues,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(scholarshipSanction.id, id),
+              eq(scholarshipSanction.organizationId, context.organizationId),
+            ),
           )
-        : runtime.DATABASE.prepare(
-            `INSERT INTO scholarship_sanction (id,organization_id,scholarship_id,academic_session_id,amount,sanctioned_on,period_from,period_to,payment_reference,in_favour_of,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,'tsewa','scholarship_sanction',?,?,?)`,
-          ).bind(
-            id,
-            context.organizationId,
-            scholarshipId,
-            value.sessionId ?? null,
-            value.amount,
-            value.sanctionedOn,
-            value.periodFrom ?? null,
-            value.periodTo ?? null,
-            value.paymentReference ?? null,
-            value.inFavourOf ?? null,
-            value.remarks ?? null,
-            id,
-            context.userId,
-            context.userId,
-          ),
-    ];
-    if (existing)
-      statements.push(
-        runtime.DATABASE.prepare(
-          "DELETE FROM scholarship_sanction_line WHERE organization_id=? AND sanction_id=?",
-        ).bind(context.organizationId, id),
-      );
-    for (const line of value.lines) {
-      const lineId = crypto.randomUUID();
-      statements.push(
-        runtime.DATABASE.prepare(
-          `INSERT INTO scholarship_sanction_line (id,organization_id,sanction_id,scholarship_id,person_id,head_id,city_name,amount,advance_on,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,'tsewa','scholarship_sanction_line',?,?,?)`,
-        ).bind(
-          lineId,
-          context.organizationId,
+      : runtime.ORM.insert(scholarshipSanction).values({
           id,
+          organizationId: context.organizationId,
           scholarshipId,
-          exists.personId,
-          line.headId,
-          line.cityName ?? null,
-          line.amount,
-          line.advanceOn ?? null,
-          lineId,
-          context.userId,
-          context.userId,
-        ),
-      );
-    }
-    statements.push(
-      auditStatement(
-        runtime.DATABASE,
-        context,
-        existing ? "scholarship.sanction_updated" : "scholarship.sanction_created",
-        "scholarship_sanction",
-        id,
-        { scholarshipId, lineCount: String(value.lines.length) },
+          ...sanctionValues,
+          sourceSystem: "tsewa",
+          sourceTable: "scholarship_sanction",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    const deleteLinesStatement = runtime.ORM.delete(scholarshipSanctionLine).where(
+      and(
+        eq(scholarshipSanctionLine.organizationId, context.organizationId),
+        eq(scholarshipSanctionLine.sanctionId, id),
       ),
     );
-    await runtime.DATABASE.batch(statements);
+    const audit = auditInsert(
+      runtime.ORM,
+      context,
+      existing ? "scholarship.sanction_updated" : "scholarship.sanction_created",
+      "scholarship_sanction",
+      id,
+      { scholarshipId, lineCount: String(value.lines.length) },
+    );
+    if (value.lines.length > 0) {
+      const insertLinesStatement = runtime.ORM.insert(scholarshipSanctionLine).values(
+        value.lines.map((line) => {
+          const lineId = crypto.randomUUID();
+          return {
+            id: lineId,
+            organizationId: context.organizationId,
+            sanctionId: id,
+            scholarshipId,
+            personId: exists.personId,
+            headId: line.headId,
+            cityName: line.cityName ?? null,
+            amount: line.amount,
+            advanceOn: line.advanceOn ?? null,
+            sourceSystem: "tsewa",
+            sourceTable: "scholarship_sanction_line",
+            sourceId: lineId,
+            createdByUserId: context.userId,
+            updatedByUserId: context.userId,
+          };
+        }),
+      );
+      await runtime.ORM.batch([
+        sanctionStatement,
+        deleteLinesStatement,
+        insertLinesStatement,
+        audit,
+      ]);
+    } else {
+      await runtime.ORM.batch([sanctionStatement, deleteLinesStatement, audit]);
+    }
   }
   return Response.json({ id: scholarshipId });
 }
@@ -5200,75 +5540,266 @@ async function handleScholarshipSetup(request: Request): Promise<Response> {
     return Response.json({ error: "Check the scholarship setup values." }, { status: 400 });
   const value = parsed.data;
   if (value.kind === "course" && value.categoryId) {
-    const category = await runtime.DATABASE.prepare(
-      "SELECT id FROM scholarship_course_category WHERE id=? AND organization_id=?",
-    )
-      .bind(value.categoryId, context.organizationId)
-      .first();
+    const category = await runtime.ORM.select({ id: scholarshipCourseCategory.id })
+      .from(scholarshipCourseCategory)
+      .where(
+        and(
+          eq(scholarshipCourseCategory.id, value.categoryId),
+          eq(scholarshipCourseCategory.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
     if (!category)
       return Response.json({ error: "Choose a valid course category." }, { status: 400 });
   }
   if (
     value.kind === "cityAdvance" &&
     value.sessionId &&
-    !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId))
+    !(await scholarshipSessionExists(runtime.ORM, context.organizationId, value.sessionId))
   )
     return Response.json({ error: "Choose a valid academic session." }, { status: 400 });
   const id = value.id ?? crypto.randomUUID();
-  const map =
-    value.kind === "courseCategory"
-      ? { table: "scholarship_course_category", columns: ["name"], values: [value.name] }
-      : value.kind === "course"
-        ? {
-            table: "scholarship_course",
-            columns: ["category_id", "name"],
-            values: [value.categoryId ?? null, value.name],
-          }
-        : value.kind === "head"
-          ? { table: "scholarship_head", columns: ["name"], values: [value.name] }
-          : value.kind === "limit"
-            ? {
-                table: "scholarship_limit",
-                columns: ["course_group", "head_name", "amount"],
-                values: [value.courseGroup, value.headName, value.amount ?? null],
-              }
-            : {
-                table: "scholarship_city_advance",
-                columns: ["academic_session_id", "city_name", "amount"],
-                values: [value.sessionId ?? null, value.cityName, value.amount],
-              };
-  const existing = value.id
-    ? await runtime.DATABASE.prepare(`SELECT id FROM ${map.table} WHERE id=? AND organization_id=?`)
-        .bind(value.id, context.organizationId)
-        .first()
-    : null;
-  if (value.id && !existing)
-    return Response.json({ error: "Setup record not found." }, { status: 404 });
-  const statement = existing
-    ? runtime.DATABASE.prepare(
-        `UPDATE ${map.table} SET ${map.columns.map((column) => `${column}=?`).join(",")},updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
-      ).bind(...map.values, context.userId, id, context.organizationId)
-    : runtime.DATABASE.prepare(
-        `INSERT INTO ${map.table} (id,organization_id,${map.columns.join(",")},source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?${map.columns.map(() => ",?").join("")},'tsewa',?,?,?,?)`,
-      ).bind(
+  const sourceValues = {
+    id,
+    organizationId: context.organizationId,
+    sourceSystem: "tsewa",
+    sourceId: id,
+    createdByUserId: context.userId,
+    updatedByUserId: context.userId,
+  };
+  let existing = false;
+  let tableName: string;
+  if (value.kind === "courseCategory") {
+    tableName = "scholarship_course_category";
+    existing = Boolean(
+      value.id &&
+      (
+        await runtime.ORM.select({ id: scholarshipCourseCategory.id })
+          .from(scholarshipCourseCategory)
+          .where(
+            and(
+              eq(scholarshipCourseCategory.id, id),
+              eq(scholarshipCourseCategory.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing)
+      return Response.json({ error: "Setup record not found." }, { status: 404 });
+    const statement = existing
+      ? runtime.ORM.update(scholarshipCourseCategory)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(scholarshipCourseCategory.id, id),
+              eq(scholarshipCourseCategory.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(scholarshipCourseCategory).values({
+          ...sourceValues,
+          name: value.name,
+          sourceTable: tableName,
+        });
+    await runtime.ORM.batch([
+      statement,
+      auditInsert(
+        runtime.ORM,
+        context,
+        `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
+        tableName,
         id,
-        context.organizationId,
-        ...map.values,
-        map.table,
+      ),
+    ]);
+  } else if (value.kind === "course") {
+    tableName = "scholarship_course";
+    existing = Boolean(
+      value.id &&
+      (
+        await runtime.ORM.select({ id: scholarshipCourse.id })
+          .from(scholarshipCourse)
+          .where(
+            and(
+              eq(scholarshipCourse.id, id),
+              eq(scholarshipCourse.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing)
+      return Response.json({ error: "Setup record not found." }, { status: 404 });
+    const values = { categoryId: value.categoryId ?? null, name: value.name };
+    const statement = existing
+      ? runtime.ORM.update(scholarshipCourse)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(scholarshipCourse.id, id),
+              eq(scholarshipCourse.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(scholarshipCourse).values({
+          ...sourceValues,
+          ...values,
+          sourceTable: tableName,
+        });
+    await runtime.ORM.batch([
+      statement,
+      auditInsert(
+        runtime.ORM,
+        context,
+        `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
+        tableName,
         id,
-        context.userId,
-        context.userId,
-      );
-  await runtime.DATABASE.batch([
-    statement,
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
-      map.table,
-      id,
-    ),
-  ]);
+      ),
+    ]);
+  } else if (value.kind === "head") {
+    tableName = "scholarship_head";
+    existing = Boolean(
+      value.id &&
+      (
+        await runtime.ORM.select({ id: scholarshipHead.id })
+          .from(scholarshipHead)
+          .where(
+            and(
+              eq(scholarshipHead.id, id),
+              eq(scholarshipHead.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing)
+      return Response.json({ error: "Setup record not found." }, { status: 404 });
+    const statement = existing
+      ? runtime.ORM.update(scholarshipHead)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(scholarshipHead.id, id),
+              eq(scholarshipHead.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(scholarshipHead).values({
+          ...sourceValues,
+          name: value.name,
+          sourceTable: tableName,
+        });
+    await runtime.ORM.batch([
+      statement,
+      auditInsert(
+        runtime.ORM,
+        context,
+        `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
+        tableName,
+        id,
+      ),
+    ]);
+  } else if (value.kind === "limit") {
+    tableName = "scholarship_limit";
+    existing = Boolean(
+      value.id &&
+      (
+        await runtime.ORM.select({ id: scholarshipLimit.id })
+          .from(scholarshipLimit)
+          .where(
+            and(
+              eq(scholarshipLimit.id, id),
+              eq(scholarshipLimit.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing)
+      return Response.json({ error: "Setup record not found." }, { status: 404 });
+    const values = {
+      courseGroup: value.courseGroup,
+      headName: value.headName,
+      amount: value.amount ?? null,
+    };
+    const statement = existing
+      ? runtime.ORM.update(scholarshipLimit)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(scholarshipLimit.id, id),
+              eq(scholarshipLimit.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(scholarshipLimit).values({
+          ...sourceValues,
+          ...values,
+          sourceTable: tableName,
+        });
+    await runtime.ORM.batch([
+      statement,
+      auditInsert(
+        runtime.ORM,
+        context,
+        `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
+        tableName,
+        id,
+      ),
+    ]);
+  } else {
+    tableName = "scholarship_city_advance";
+    existing = Boolean(
+      value.id &&
+      (
+        await runtime.ORM.select({ id: scholarshipCityAdvance.id })
+          .from(scholarshipCityAdvance)
+          .where(
+            and(
+              eq(scholarshipCityAdvance.id, id),
+              eq(scholarshipCityAdvance.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing)
+      return Response.json({ error: "Setup record not found." }, { status: 404 });
+    const values = {
+      academicSessionId: value.sessionId ?? null,
+      cityName: value.cityName,
+      amount: value.amount,
+    };
+    const statement = existing
+      ? runtime.ORM.update(scholarshipCityAdvance)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(scholarshipCityAdvance.id, id),
+              eq(scholarshipCityAdvance.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(scholarshipCityAdvance).values({
+          ...sourceValues,
+          ...values,
+          sourceTable: tableName,
+        });
+    await runtime.ORM.batch([
+      statement,
+      auditInsert(
+        runtime.ORM,
+        context,
+        `scholarship.${value.kind}_${existing ? "updated" : "created"}`,
+        tableName,
+        id,
+      ),
+    ]);
+  }
   return Response.json({ id }, { status: existing ? 200 : 201 });
 }
 
@@ -5690,14 +6221,6 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
   const value = parsed.data;
   const runtime = getRuntimeEnv();
   const id = value.id ?? crypto.randomUUID();
-  const catalogTables: Record<string, string> = {
-    sponsorType: "sponsorship_sponsor_type",
-    sponsorCategory: "sponsorship_sponsor_category",
-    status: "sponsorship_status",
-    fundType: "sponsorship_fund_type",
-    correspondenceType: "sponsorship_correspondence_type",
-    visitorType: "sponsorship_visitor_type",
-  };
   if (
     value.kind === "sponsorType" ||
     value.kind === "sponsorCategory" ||
@@ -5706,84 +6229,57 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
     value.kind === "correspondenceType" ||
     value.kind === "visitorType"
   ) {
-    const catalogTable = catalogTables[value.kind];
-    const existing = value.id
-      ? await sponsorshipEntityExists(
-          runtime.DATABASE,
-          catalogTable,
-          value.id,
-          context.organizationId,
-        )
-      : false;
-    if (value.id && !existing)
-      return Response.json({ error: "Setup record not found." }, { status: 404 });
-    const statement = existing
-      ? runtime.DATABASE.prepare(
-          `UPDATE ${catalogTable} SET name=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
-        ).bind(value.name, context.userId, id, context.organizationId)
-      : runtime.DATABASE.prepare(
-          `INSERT INTO ${catalogTable} (id,organization_id,name,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,? ,?,'tsewa',?,?,?,?)`,
-        ).bind(
-          id,
-          context.organizationId,
-          value.name,
-          catalogTable,
-          id,
-          context.userId,
-          context.userId,
-        );
-    await runtime.DATABASE.batch([
-      statement,
-      auditStatement(
-        runtime.DATABASE,
-        context,
-        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
-        catalogTable,
-        id,
-      ),
-    ]);
-    return Response.json({ id }, { status: existing ? 200 : 201 });
+    const result = await writeSponsorshipCatalog(runtime.ORM, context, value, id);
+    if (!result.found) return Response.json({ error: "Setup record not found." }, { status: 404 });
+    return Response.json({ id }, { status: result.existing ? 200 : 201 });
   }
   if (value.kind === "organization") {
     const existing = value.id
-      ? await sponsorshipEntityExists(
-          runtime.DATABASE,
-          "sponsorship_organization",
-          value.id,
-          context.organizationId,
+      ? Boolean(
+          (
+            await runtime.ORM.select({ id: sponsorshipOrganization.id })
+              .from(sponsorshipOrganization)
+              .where(
+                and(
+                  eq(sponsorshipOrganization.id, value.id),
+                  eq(sponsorshipOrganization.organizationId, context.organizationId),
+                ),
+              )
+              .limit(1)
+          )[0],
         )
       : false;
     if (value.id && !existing)
       return Response.json({ error: "Sponsor organization not found." }, { status: 404 });
+    const values = {
+      name: value.name,
+      countryName: value.countryName ?? null,
+      supportsChildren: value.supportsChildren ? 1 : 0,
+      supportsElderly: value.supportsElderly ? 1 : 0,
+    };
     const statement = existing
-      ? runtime.DATABASE.prepare(
-          "UPDATE sponsorship_organization SET name=?,country_name=?,supports_children=?,supports_elderly=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
-        ).bind(
-          value.name,
-          value.countryName ?? null,
-          value.supportsChildren ? 1 : 0,
-          value.supportsElderly ? 1 : 0,
-          context.userId,
+      ? runtime.ORM.update(sponsorshipOrganization)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(sponsorshipOrganization.id, id),
+              eq(sponsorshipOrganization.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(sponsorshipOrganization).values({
           id,
-          context.organizationId,
-        )
-      : runtime.DATABASE.prepare(
-          "INSERT INTO sponsorship_organization (id,organization_id,name,country_name,supports_children,supports_elderly,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,'tsewa','sponsorship_organization',?,?,?)",
-        ).bind(
-          id,
-          context.organizationId,
-          value.name,
-          value.countryName ?? null,
-          value.supportsChildren ? 1 : 0,
-          value.supportsElderly ? 1 : 0,
-          id,
-          context.userId,
-          context.userId,
-        );
-    await runtime.DATABASE.batch([
+          organizationId: context.organizationId,
+          ...values,
+          sourceSystem: "tsewa",
+          sourceTable: "sponsorship_organization",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    await runtime.ORM.batch([
       statement,
-      auditStatement(
-        runtime.DATABASE,
+      auditInsert(
+        runtime.ORM,
         context,
         `sponsorship.organization_${existing ? "updated" : "created"}`,
         "sponsorship_organization",
@@ -5793,51 +6289,97 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
     return Response.json({ id }, { status: existing ? 200 : 201 });
   }
   if (value.kind === "individual") {
-    for (const [table, reference] of [
-      ["sponsorship_organization", value.sponsorOrganizationId],
-      ["sponsorship_sponsor_type", value.sponsorTypeId],
-      ["sponsorship_sponsor_category", value.sponsorCategoryId],
-    ] as const)
-      if (
-        reference &&
-        !(await sponsorshipEntityExists(runtime.DATABASE, table, reference, context.organizationId))
-      )
-        return Response.json({ error: "Choose valid sponsor setup values." }, { status: 400 });
+    const referenceChecks = await Promise.all([
+      value.sponsorOrganizationId
+        ? runtime.ORM.select({ id: sponsorshipOrganization.id })
+            .from(sponsorshipOrganization)
+            .where(
+              and(
+                eq(sponsorshipOrganization.id, value.sponsorOrganizationId),
+                eq(sponsorshipOrganization.organizationId, context.organizationId),
+              ),
+            )
+            .limit(1)
+        : Promise.resolve([{ id: "optional" }]),
+      value.sponsorTypeId
+        ? runtime.ORM.select({ id: sponsorshipSponsorType.id })
+            .from(sponsorshipSponsorType)
+            .where(
+              and(
+                eq(sponsorshipSponsorType.id, value.sponsorTypeId),
+                eq(sponsorshipSponsorType.organizationId, context.organizationId),
+              ),
+            )
+            .limit(1)
+        : Promise.resolve([{ id: "optional" }]),
+      value.sponsorCategoryId
+        ? runtime.ORM.select({ id: sponsorshipSponsorCategory.id })
+            .from(sponsorshipSponsorCategory)
+            .where(
+              and(
+                eq(sponsorshipSponsorCategory.id, value.sponsorCategoryId),
+                eq(sponsorshipSponsorCategory.organizationId, context.organizationId),
+              ),
+            )
+            .limit(1)
+        : Promise.resolve([{ id: "optional" }]),
+    ]);
+    if (referenceChecks.some((rows) => rows.length === 0))
+      return Response.json({ error: "Choose valid sponsor setup values." }, { status: 400 });
     const existing = value.id
-      ? await sponsorshipEntityExists(
-          runtime.DATABASE,
-          "sponsorship_individual",
-          value.id,
-          context.organizationId,
+      ? Boolean(
+          (
+            await runtime.ORM.select({ id: sponsorshipIndividual.id })
+              .from(sponsorshipIndividual)
+              .where(
+                and(
+                  eq(sponsorshipIndividual.id, value.id),
+                  eq(sponsorshipIndividual.organizationId, context.organizationId),
+                ),
+              )
+              .limit(1)
+          )[0],
         )
       : false;
     if (value.id && !existing)
       return Response.json({ error: "Individual sponsor not found." }, { status: 404 });
     const displayName = sponsorshipDisplayName([value.firstName, value.middleName, value.lastName]);
-    const bindings = [
-      value.sponsorOrganizationId ?? null,
-      value.sponsorTypeId ?? null,
-      value.sponsorCategoryId ?? null,
-      value.firstName,
-      value.middleName ?? null,
-      value.lastName ?? null,
+    const values = {
+      sponsorOrganizationId: value.sponsorOrganizationId ?? null,
+      sponsorTypeId: value.sponsorTypeId ?? null,
+      sponsorCategoryId: value.sponsorCategoryId ?? null,
+      firstName: value.firstName,
+      middleName: value.middleName ?? null,
+      lastName: value.lastName ?? null,
       displayName,
-      value.address ?? null,
-      value.countryName ?? null,
-      value.email ?? null,
-      value.phone ?? null,
-    ];
+      address: value.address ?? null,
+      countryName: value.countryName ?? null,
+      email: value.email ?? null,
+      phone: value.phone ?? null,
+    };
     const statement = existing
-      ? runtime.DATABASE.prepare(
-          "UPDATE sponsorship_individual SET sponsor_organization_id=?,sponsor_type_id=?,sponsor_category_id=?,first_name=?,middle_name=?,last_name=?,display_name=?,address=?,country_name=?,email=?,phone=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
-        ).bind(...bindings, context.userId, id, context.organizationId)
-      : runtime.DATABASE.prepare(
-          "INSERT INTO sponsorship_individual (id,organization_id,sponsor_organization_id,sponsor_type_id,sponsor_category_id,first_name,middle_name,last_name,display_name,address,country_name,email,phone,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_individual',?,?,?)",
-        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId);
-    await runtime.DATABASE.batch([
+      ? runtime.ORM.update(sponsorshipIndividual)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(sponsorshipIndividual.id, id),
+              eq(sponsorshipIndividual.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(sponsorshipIndividual).values({
+          id,
+          organizationId: context.organizationId,
+          ...values,
+          sourceSystem: "tsewa",
+          sourceTable: "sponsorship_individual",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    await runtime.ORM.batch([
       statement,
-      auditStatement(
-        runtime.DATABASE,
+      auditInsert(
+        runtime.ORM,
         context,
         `sponsorship.individual_${existing ? "updated" : "created"}`,
         "sponsorship_individual",
@@ -5849,77 +6391,78 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
   if (value.kind === "assignment") {
     if (
       !(await sponsorshipEntityExists(
-        runtime.DATABASE,
+        runtime.ORM,
         "person",
         value.personId,
         context.organizationId,
       )) ||
       !(await sponsorshipEntityExists(
-        runtime.DATABASE,
+        runtime.ORM,
         "sponsorship_individual",
         value.sponsorIndividualId,
         context.organizationId,
       )) ||
       !(await sponsorshipEntityExists(
-        runtime.DATABASE,
+        runtime.ORM,
         "sponsorship_status",
         value.statusId,
         context.organizationId,
       )) ||
       (value.sessionId &&
-        !(await scholarshipSessionExists(
-          runtime.DATABASE,
-          context.organizationId,
-          value.sessionId,
-        )))
+        !(await scholarshipSessionExists(runtime.ORM, context.organizationId, value.sessionId)))
     )
       return Response.json(
         { error: "Choose a valid person, sponsor, status, and session." },
         { status: 400 },
       );
     const existing = value.id
-      ? await sponsorshipEntityExists(
-          runtime.DATABASE,
-          "sponsorship_assignment",
-          value.id,
-          context.organizationId,
+      ? Boolean(
+          (
+            await runtime.ORM.select({ id: sponsorshipAssignment.id })
+              .from(sponsorshipAssignment)
+              .where(
+                and(
+                  eq(sponsorshipAssignment.id, value.id),
+                  eq(sponsorshipAssignment.organizationId, context.organizationId),
+                ),
+              )
+              .limit(1)
+          )[0],
         )
       : false;
     if (value.id && !existing)
       return Response.json({ error: "Sponsor assignment not found." }, { status: 404 });
+    const values = {
+      personId: value.personId,
+      sponsorIndividualId: value.sponsorIndividualId,
+      sponsorshipStatusId: value.statusId,
+      academicSessionId: value.sessionId ?? null,
+      statusOn: value.statusOn,
+      remarks: value.remarks ?? null,
+    };
     const statement = existing
-      ? runtime.DATABASE.prepare(
-          "UPDATE sponsorship_assignment SET person_id=?,sponsor_individual_id=?,sponsorship_status_id=?,academic_session_id=?,status_on=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
-        ).bind(
-          value.personId,
-          value.sponsorIndividualId,
-          value.statusId,
-          value.sessionId ?? null,
-          value.statusOn,
-          value.remarks ?? null,
-          context.userId,
+      ? runtime.ORM.update(sponsorshipAssignment)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(sponsorshipAssignment.id, id),
+              eq(sponsorshipAssignment.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(sponsorshipAssignment).values({
           id,
-          context.organizationId,
-        )
-      : runtime.DATABASE.prepare(
-          "INSERT INTO sponsorship_assignment (id,organization_id,person_id,sponsor_individual_id,sponsorship_status_id,academic_session_id,status_on,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,'tsewa','sponsorship_assignment',?,?,?)",
-        ).bind(
-          id,
-          context.organizationId,
-          value.personId,
-          value.sponsorIndividualId,
-          value.statusId,
-          value.sessionId ?? null,
-          value.statusOn,
-          value.remarks ?? null,
-          id,
-          context.userId,
-          context.userId,
-        );
-    await runtime.DATABASE.batch([
+          organizationId: context.organizationId,
+          ...values,
+          sourceSystem: "tsewa",
+          sourceTable: "sponsorship_assignment",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    await runtime.ORM.batch([
       statement,
-      auditStatement(
-        runtime.DATABASE,
+      auditInsert(
+        runtime.ORM,
         context,
         `sponsorship.assignment_${existing ? "updated" : "created"}`,
         "sponsorship_assignment",
@@ -5932,7 +6475,7 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
     if (
       value.visitorTypeId &&
       !(await sponsorshipEntityExists(
-        runtime.DATABASE,
+        runtime.ORM,
         "sponsorship_visitor_type",
         value.visitorTypeId,
         context.organizationId,
@@ -5940,44 +6483,63 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
     )
       return Response.json({ error: "Choose a valid visitor type." }, { status: 400 });
     const existing = value.id
-      ? await sponsorshipEntityExists(
-          runtime.DATABASE,
-          "sponsorship_visitor",
-          value.id,
-          context.organizationId,
+      ? Boolean(
+          (
+            await runtime.ORM.select({ id: sponsorshipVisitor.id })
+              .from(sponsorshipVisitor)
+              .where(
+                and(
+                  eq(sponsorshipVisitor.id, value.id),
+                  eq(sponsorshipVisitor.organizationId, context.organizationId),
+                ),
+              )
+              .limit(1)
+          )[0],
         )
       : false;
     if (value.id && !existing)
       return Response.json({ error: "Visitor not found." }, { status: 404 });
     const displayName = sponsorshipDisplayName([value.firstName, value.middleName, value.lastName]);
-    const bindings = [
-      value.visitorTypeId ?? null,
-      value.firstName,
-      value.middleName ?? null,
-      value.lastName ?? null,
+    const values = {
+      visitorTypeId: value.visitorTypeId ?? null,
+      firstName: value.firstName,
+      middleName: value.middleName ?? null,
+      lastName: value.lastName ?? null,
       displayName,
-      value.address ?? null,
-      value.countryName ?? null,
-      value.email ?? null,
-      value.phone ?? null,
-      value.relatedPersonName ?? null,
-      value.visitedOn,
-      value.mementoQuantity ?? null,
-      value.giftsPresented ?? null,
-      value.visitSummary ?? null,
-      value.comments ?? null,
-    ];
+      address: value.address ?? null,
+      countryName: value.countryName ?? null,
+      email: value.email ?? null,
+      phone: value.phone ?? null,
+      relatedPersonName: value.relatedPersonName ?? null,
+      visitedOn: value.visitedOn,
+      mementoQuantity: value.mementoQuantity ?? null,
+      giftsPresented: value.giftsPresented ?? null,
+      visitSummary: value.visitSummary ?? null,
+      comments: value.comments ?? null,
+    };
     const statement = existing
-      ? runtime.DATABASE.prepare(
-          "UPDATE sponsorship_visitor SET visitor_type_id=?,first_name=?,middle_name=?,last_name=?,display_name=?,address=?,country_name=?,email=?,phone=?,related_person_name=?,visited_on=?,memento_quantity=?,gifts_presented=?,visit_summary=?,comments=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
-        ).bind(...bindings, context.userId, id, context.organizationId)
-      : runtime.DATABASE.prepare(
-          "INSERT INTO sponsorship_visitor (id,organization_id,visitor_type_id,first_name,middle_name,last_name,display_name,address,country_name,email,phone,related_person_name,visited_on,memento_quantity,gifts_presented,visit_summary,comments,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_visitor',?,?,?)",
-        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId);
-    await runtime.DATABASE.batch([
+      ? runtime.ORM.update(sponsorshipVisitor)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(sponsorshipVisitor.id, id),
+              eq(sponsorshipVisitor.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(sponsorshipVisitor).values({
+          id,
+          organizationId: context.organizationId,
+          ...values,
+          sourceSystem: "tsewa",
+          sourceTable: "sponsorship_visitor",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    await runtime.ORM.batch([
       statement,
-      auditStatement(
-        runtime.DATABASE,
+      auditInsert(
+        runtime.ORM,
         context,
         `sponsorship.visitor_${existing ? "updated" : "created"}`,
         "sponsorship_visitor",
@@ -5989,66 +6551,81 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
   if (value.kind === "correspondence") {
     if (
       !(await sponsorshipEntityExists(
-        runtime.DATABASE,
+        runtime.ORM,
         "sponsorship_correspondence_type",
         value.correspondenceTypeId,
         context.organizationId,
       )) ||
       (value.sponsorIndividualId &&
         !(await sponsorshipEntityExists(
-          runtime.DATABASE,
+          runtime.ORM,
           "sponsorship_individual",
           value.sponsorIndividualId,
           context.organizationId,
         ))) ||
       (value.personId &&
         !(await sponsorshipEntityExists(
-          runtime.DATABASE,
+          runtime.ORM,
           "person",
           value.personId,
           context.organizationId,
         ))) ||
       (value.sessionId &&
-        !(await scholarshipSessionExists(
-          runtime.DATABASE,
-          context.organizationId,
-          value.sessionId,
-        )))
+        !(await scholarshipSessionExists(runtime.ORM, context.organizationId, value.sessionId)))
     )
       return Response.json({ error: "Choose valid correspondence references." }, { status: 400 });
     const existing = value.id
-      ? await sponsorshipEntityExists(
-          runtime.DATABASE,
-          "sponsorship_letter",
-          value.id,
-          context.organizationId,
+      ? Boolean(
+          (
+            await runtime.ORM.select({ id: sponsorshipLetter.id })
+              .from(sponsorshipLetter)
+              .where(
+                and(
+                  eq(sponsorshipLetter.id, value.id),
+                  eq(sponsorshipLetter.organizationId, context.organizationId),
+                ),
+              )
+              .limit(1)
+          )[0],
         )
       : false;
     if (value.id && !existing)
       return Response.json({ error: "Correspondence not found." }, { status: 404 });
-    const bindings = [
-      value.correspondenceTypeId,
-      value.sponsorIndividualId ?? null,
-      value.personId ?? null,
-      value.sessionId ?? null,
-      value.sender ?? null,
-      value.receiver ?? null,
-      value.receivedOn,
-      value.repliedOn ?? null,
-      value.replyDueOn ?? null,
-      value.remarks ?? null,
-    ];
+    const values = {
+      correspondenceTypeId: value.correspondenceTypeId,
+      sponsorIndividualId: value.sponsorIndividualId ?? null,
+      personId: value.personId ?? null,
+      academicSessionId: value.sessionId ?? null,
+      sender: value.sender ?? null,
+      receiver: value.receiver ?? null,
+      receivedOn: value.receivedOn,
+      repliedOn: value.repliedOn ?? null,
+      replyDueOn: value.replyDueOn ?? null,
+      remarks: value.remarks ?? null,
+    };
     const statement = existing
-      ? runtime.DATABASE.prepare(
-          "UPDATE sponsorship_letter SET correspondence_type_id=?,sponsor_individual_id=?,person_id=?,academic_session_id=?,sender=?,receiver=?,received_on=?,replied_on=?,reply_due_on=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
-        ).bind(...bindings, context.userId, id, context.organizationId)
-      : runtime.DATABASE.prepare(
-          "INSERT INTO sponsorship_letter (id,organization_id,correspondence_type_id,sponsor_individual_id,person_id,academic_session_id,sender,receiver,received_on,replied_on,reply_due_on,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_letter',?,?,?)",
-        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId);
-    await runtime.DATABASE.batch([
+      ? runtime.ORM.update(sponsorshipLetter)
+          .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+          .where(
+            and(
+              eq(sponsorshipLetter.id, id),
+              eq(sponsorshipLetter.organizationId, context.organizationId),
+            ),
+          )
+      : runtime.ORM.insert(sponsorshipLetter).values({
+          id,
+          organizationId: context.organizationId,
+          ...values,
+          sourceSystem: "tsewa",
+          sourceTable: "sponsorship_letter",
+          sourceId: id,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        });
+    await runtime.ORM.batch([
       statement,
-      auditStatement(
-        runtime.DATABASE,
+      auditInsert(
+        runtime.ORM,
         context,
         `sponsorship.correspondence_${existing ? "updated" : "created"}`,
         "sponsorship_letter",
@@ -6061,13 +6638,13 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
     return Response.json({ error: "Unsupported sponsorship record." }, { status: 400 });
   if (
     !(await sponsorshipEntityExists(
-      runtime.DATABASE,
+      runtime.ORM,
       "sponsorship_fund_type",
       value.fundTypeId,
       context.organizationId,
     )) ||
     (value.sessionId &&
-      !(await scholarshipSessionExists(runtime.DATABASE, context.organizationId, value.sessionId)))
+      !(await scholarshipSessionExists(runtime.ORM, context.organizationId, value.sessionId)))
   )
     return Response.json({ error: "Choose a valid fund type and session." }, { status: 400 });
   const partyTable =
@@ -6078,7 +6655,7 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
         : "sponsorship_visitor";
   if (
     !(await sponsorshipEntityExists(
-      runtime.DATABASE,
+      runtime.ORM,
       partyTable,
       value.sponsorPartyId,
       context.organizationId,
@@ -6087,10 +6664,10 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
     return Response.json({ error: "Choose a valid remittance source." }, { status: 400 });
   const people = new Set(
     (
-      await runtime.DATABASE.prepare("SELECT id FROM person WHERE organization_id=?")
-        .bind(context.organizationId)
-        .all<{ id: string }>()
-    ).results.map((item) => item.id),
+      await runtime.ORM.select({ id: person.id })
+        .from(person)
+        .where(eq(person.organizationId, context.organizationId))
+    ).map((item) => item.id),
   );
   if (value.allocations.some((item) => !people.has(item.personId)))
     return Response.json({ error: "Choose valid allocation beneficiaries." }, { status: 400 });
@@ -6100,11 +6677,18 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
       { status: 400 },
     );
   const existing = value.id
-    ? await sponsorshipEntityExists(
-        runtime.DATABASE,
-        "sponsorship_fund",
-        value.id,
-        context.organizationId,
+    ? Boolean(
+        (
+          await runtime.ORM.select({ id: sponsorshipFund.id })
+            .from(sponsorshipFund)
+            .where(
+              and(
+                eq(sponsorshipFund.id, value.id),
+                eq(sponsorshipFund.organizationId, context.organizationId),
+              ),
+            )
+            .limit(1)
+        )[0],
       )
     : false;
   if (value.id && !existing)
@@ -6112,209 +6696,590 @@ async function writeSponsorshipRecord(request: Request): Promise<Response> {
   const individualId = value.sponsorKind === "individual" ? value.sponsorPartyId : null;
   const organizationId = value.sponsorKind === "organization" ? value.sponsorPartyId : null;
   const visitorId = value.sponsorKind === "visitor" ? value.sponsorPartyId : null;
-  const bindings = [
-    value.fundTypeId,
-    value.sessionId ?? null,
-    value.sponsorKind,
-    individualId,
-    organizationId,
+  const values = {
+    fundTypeId: value.fundTypeId,
+    academicSessionId: value.sessionId ?? null,
+    sponsorKind: value.sponsorKind,
+    sponsorIndividualId: individualId,
+    sponsorOrganizationId: organizationId,
     visitorId,
-    value.receivedOn,
-    value.periodFrom ?? null,
-    value.periodTo ?? null,
-    value.amount,
-    value.receiptNumber ?? null,
-    value.remarks ?? null,
-  ];
-  const statements: DrizzleStatement[] = [
-    existing
-      ? runtime.DATABASE.prepare(
-          "UPDATE sponsorship_fund SET fund_type_id=?,academic_session_id=?,sponsor_kind=?,sponsor_individual_id=?,sponsor_organization_id=?,visitor_id=?,received_on=?,period_from=?,period_to=?,amount=?,receipt_number=?,remarks=?,updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
-        ).bind(...bindings, context.userId, id, context.organizationId)
-      : runtime.DATABASE.prepare(
-          "INSERT INTO sponsorship_fund (id,organization_id,fund_type_id,academic_session_id,sponsor_kind,sponsor_individual_id,sponsor_organization_id,visitor_id,received_on,period_from,period_to,amount,receipt_number,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_fund',?,?,?)",
-        ).bind(id, context.organizationId, ...bindings, id, context.userId, context.userId),
-  ];
-  if (existing)
-    statements.push(
-      runtime.DATABASE.prepare(
-        "DELETE FROM sponsorship_fund_allocation WHERE fund_id=? AND organization_id=?",
-      ).bind(id, context.organizationId),
-    );
-  for (const allocation of value.allocations) {
-    const allocationId = crypto.randomUUID();
-    statements.push(
-      runtime.DATABASE.prepare(
-        "INSERT INTO sponsorship_fund_allocation (id,organization_id,fund_id,person_id,academic_session_id,amount,period_from,period_to,remarks,source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,?,?,?,?,'tsewa','sponsorship_fund_allocation',?,?,?)",
-      ).bind(
-        allocationId,
-        context.organizationId,
+    receivedOn: value.receivedOn,
+    periodFrom: value.periodFrom ?? null,
+    periodTo: value.periodTo ?? null,
+    amount: value.amount,
+    receiptNumber: value.receiptNumber ?? null,
+    remarks: value.remarks ?? null,
+  };
+  const fundStatement = existing
+    ? runtime.ORM.update(sponsorshipFund)
+        .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(
+            eq(sponsorshipFund.id, id),
+            eq(sponsorshipFund.organizationId, context.organizationId),
+          ),
+        )
+    : runtime.ORM.insert(sponsorshipFund).values({
         id,
-        allocation.personId,
-        value.sessionId ?? null,
-        allocation.amount,
-        value.periodFrom ?? null,
-        value.periodTo ?? null,
-        allocation.remarks ?? null,
-        allocationId,
-        context.userId,
-        context.userId,
-      ),
-    );
-  }
-  statements.push(
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      `sponsorship.fund_${existing ? "updated" : "created"}`,
-      "sponsorship_fund",
-      id,
-      { allocationCount: String(value.allocations.length) },
+        organizationId: context.organizationId,
+        ...values,
+        sourceSystem: "tsewa",
+        sourceTable: "sponsorship_fund",
+        sourceId: id,
+        createdByUserId: context.userId,
+        updatedByUserId: context.userId,
+      });
+  const deleteAllocations = runtime.ORM.delete(sponsorshipFundAllocation).where(
+    and(
+      eq(sponsorshipFundAllocation.fundId, id),
+      eq(sponsorshipFundAllocation.organizationId, context.organizationId),
     ),
   );
-  await runtime.DATABASE.batch(statements);
+  const audit = auditInsert(
+    runtime.ORM,
+    context,
+    `sponsorship.fund_${existing ? "updated" : "created"}`,
+    "sponsorship_fund",
+    id,
+    { allocationCount: String(value.allocations.length) },
+  );
+  if (value.allocations.length > 0) {
+    const insertAllocations = runtime.ORM.insert(sponsorshipFundAllocation).values(
+      value.allocations.map((allocation) => {
+        const allocationId = crypto.randomUUID();
+        return {
+          id: allocationId,
+          organizationId: context.organizationId,
+          fundId: id,
+          personId: allocation.personId,
+          academicSessionId: value.sessionId ?? null,
+          amount: allocation.amount,
+          periodFrom: value.periodFrom ?? null,
+          periodTo: value.periodTo ?? null,
+          remarks: allocation.remarks ?? null,
+          sourceSystem: "tsewa",
+          sourceTable: "sponsorship_fund_allocation",
+          sourceId: allocationId,
+          createdByUserId: context.userId,
+          updatedByUserId: context.userId,
+        };
+      }),
+    );
+    await runtime.ORM.batch([fundStatement, deleteAllocations, insertAllocations, audit]);
+  } else {
+    await runtime.ORM.batch([fundStatement, deleteAllocations, audit]);
+  }
   return Response.json({ id }, { status: existing ? 200 : 201 });
 }
 
+type SponsorshipCatalogValue = Extract<
+  z.infer<typeof sponsorshipMutationSchema>,
+  {
+    kind:
+      | "sponsorType"
+      | "sponsorCategory"
+      | "status"
+      | "fundType"
+      | "correspondenceType"
+      | "visitorType";
+  }
+>;
+
+async function writeSponsorshipCatalog(
+  database: Database,
+  context: MembershipContext,
+  value: SponsorshipCatalogValue,
+  id: string,
+): Promise<{ found: boolean; existing: boolean }> {
+  const source = {
+    id,
+    organizationId: context.organizationId,
+    name: value.name,
+    sourceSystem: "tsewa",
+    sourceId: id,
+    createdByUserId: context.userId,
+    updatedByUserId: context.userId,
+  };
+  if (value.kind === "sponsorType") {
+    const existing = Boolean(
+      value.id &&
+      (
+        await database
+          .select({ id: sponsorshipSponsorType.id })
+          .from(sponsorshipSponsorType)
+          .where(
+            and(
+              eq(sponsorshipSponsorType.id, id),
+              eq(sponsorshipSponsorType.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing) return { found: false, existing };
+    const statement = existing
+      ? database
+          .update(sponsorshipSponsorType)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(sponsorshipSponsorType.id, id),
+              eq(sponsorshipSponsorType.organizationId, context.organizationId),
+            ),
+          )
+      : database
+          .insert(sponsorshipSponsorType)
+          .values({ ...source, sourceTable: "sponsorship_sponsor_type" });
+    await database.batch([
+      statement,
+      auditInsert(
+        database,
+        context,
+        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+        "sponsorship_sponsor_type",
+        id,
+      ),
+    ]);
+    return { found: true, existing };
+  }
+  if (value.kind === "sponsorCategory") {
+    const existing = Boolean(
+      value.id &&
+      (
+        await database
+          .select({ id: sponsorshipSponsorCategory.id })
+          .from(sponsorshipSponsorCategory)
+          .where(
+            and(
+              eq(sponsorshipSponsorCategory.id, id),
+              eq(sponsorshipSponsorCategory.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing) return { found: false, existing };
+    const statement = existing
+      ? database
+          .update(sponsorshipSponsorCategory)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(sponsorshipSponsorCategory.id, id),
+              eq(sponsorshipSponsorCategory.organizationId, context.organizationId),
+            ),
+          )
+      : database
+          .insert(sponsorshipSponsorCategory)
+          .values({ ...source, sourceTable: "sponsorship_sponsor_category" });
+    await database.batch([
+      statement,
+      auditInsert(
+        database,
+        context,
+        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+        "sponsorship_sponsor_category",
+        id,
+      ),
+    ]);
+    return { found: true, existing };
+  }
+  if (value.kind === "status") {
+    const existing = Boolean(
+      value.id &&
+      (
+        await database
+          .select({ id: sponsorshipStatus.id })
+          .from(sponsorshipStatus)
+          .where(
+            and(
+              eq(sponsorshipStatus.id, id),
+              eq(sponsorshipStatus.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing) return { found: false, existing };
+    const statement = existing
+      ? database
+          .update(sponsorshipStatus)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(sponsorshipStatus.id, id),
+              eq(sponsorshipStatus.organizationId, context.organizationId),
+            ),
+          )
+      : database.insert(sponsorshipStatus).values({ ...source, sourceTable: "sponsorship_status" });
+    await database.batch([
+      statement,
+      auditInsert(
+        database,
+        context,
+        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+        "sponsorship_status",
+        id,
+      ),
+    ]);
+    return { found: true, existing };
+  }
+  if (value.kind === "fundType") {
+    const existing = Boolean(
+      value.id &&
+      (
+        await database
+          .select({ id: sponsorshipFundType.id })
+          .from(sponsorshipFundType)
+          .where(
+            and(
+              eq(sponsorshipFundType.id, id),
+              eq(sponsorshipFundType.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing) return { found: false, existing };
+    const statement = existing
+      ? database
+          .update(sponsorshipFundType)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(sponsorshipFundType.id, id),
+              eq(sponsorshipFundType.organizationId, context.organizationId),
+            ),
+          )
+      : database
+          .insert(sponsorshipFundType)
+          .values({ ...source, sourceTable: "sponsorship_fund_type" });
+    await database.batch([
+      statement,
+      auditInsert(
+        database,
+        context,
+        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+        "sponsorship_fund_type",
+        id,
+      ),
+    ]);
+    return { found: true, existing };
+  }
+  if (value.kind === "correspondenceType") {
+    const existing = Boolean(
+      value.id &&
+      (
+        await database
+          .select({ id: sponsorshipCorrespondenceType.id })
+          .from(sponsorshipCorrespondenceType)
+          .where(
+            and(
+              eq(sponsorshipCorrespondenceType.id, id),
+              eq(sponsorshipCorrespondenceType.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+      )[0],
+    );
+    if (value.id && !existing) return { found: false, existing };
+    const statement = existing
+      ? database
+          .update(sponsorshipCorrespondenceType)
+          .set({
+            name: value.name,
+            updatedByUserId: context.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(
+            and(
+              eq(sponsorshipCorrespondenceType.id, id),
+              eq(sponsorshipCorrespondenceType.organizationId, context.organizationId),
+            ),
+          )
+      : database
+          .insert(sponsorshipCorrespondenceType)
+          .values({ ...source, sourceTable: "sponsorship_correspondence_type" });
+    await database.batch([
+      statement,
+      auditInsert(
+        database,
+        context,
+        `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+        "sponsorship_correspondence_type",
+        id,
+      ),
+    ]);
+    return { found: true, existing };
+  }
+  const existing = Boolean(
+    value.id &&
+    (
+      await database
+        .select({ id: sponsorshipVisitorType.id })
+        .from(sponsorshipVisitorType)
+        .where(
+          and(
+            eq(sponsorshipVisitorType.id, id),
+            eq(sponsorshipVisitorType.organizationId, context.organizationId),
+          ),
+        )
+        .limit(1)
+    )[0],
+  );
+  if (value.id && !existing) return { found: false, existing };
+  const statement = existing
+    ? database
+        .update(sponsorshipVisitorType)
+        .set({
+          name: value.name,
+          updatedByUserId: context.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(sponsorshipVisitorType.id, id),
+            eq(sponsorshipVisitorType.organizationId, context.organizationId),
+          ),
+        )
+    : database
+        .insert(sponsorshipVisitorType)
+        .values({ ...source, sourceTable: "sponsorship_visitor_type" });
+  await database.batch([
+    statement,
+    auditInsert(
+      database,
+      context,
+      `sponsorship.${value.kind}_${existing ? "updated" : "created"}`,
+      "sponsorship_visitor_type",
+      id,
+    ),
+  ]);
+  return { found: true, existing };
+}
+
 async function sponsorshipEntityExists(
-  database: QueryDatabase,
-  table: string,
+  database: Database,
+  table:
+    | "person"
+    | "sponsorship_organization"
+    | "sponsorship_sponsor_type"
+    | "sponsorship_sponsor_category"
+    | "sponsorship_status"
+    | "sponsorship_individual"
+    | "sponsorship_fund_type"
+    | "sponsorship_visitor_type"
+    | "sponsorship_visitor"
+    | "sponsorship_correspondence_type",
   id: string,
   organizationId: string,
 ): Promise<boolean> {
-  const allowed = new Set([
-    "person",
-    "sponsorship_organization",
-    "sponsorship_sponsor_type",
-    "sponsorship_sponsor_category",
-    "sponsorship_status",
-    "sponsorship_individual",
-    "sponsorship_assignment",
-    "sponsorship_fund_type",
-    "sponsorship_visitor_type",
-    "sponsorship_visitor",
-    "sponsorship_fund",
-    "sponsorship_correspondence_type",
-    "sponsorship_letter",
-  ]);
-  if (!allowed.has(table)) return false;
-  return Boolean(
-    await database
-      .prepare(`SELECT id FROM ${table} WHERE id=? AND organization_id=?`)
-      .bind(id, organizationId)
-      .first(),
+  if (table === "person")
+    return (
+      (await database.$count(
+        person,
+        and(eq(person.id, id), eq(person.organizationId, organizationId)),
+      )) > 0
+    );
+  if (table === "sponsorship_organization")
+    return (
+      (await database.$count(
+        sponsorshipOrganization,
+        and(
+          eq(sponsorshipOrganization.id, id),
+          eq(sponsorshipOrganization.organizationId, organizationId),
+        ),
+      )) > 0
+    );
+  if (table === "sponsorship_sponsor_type")
+    return (
+      (await database.$count(
+        sponsorshipSponsorType,
+        and(
+          eq(sponsorshipSponsorType.id, id),
+          eq(sponsorshipSponsorType.organizationId, organizationId),
+        ),
+      )) > 0
+    );
+  if (table === "sponsorship_sponsor_category")
+    return (
+      (await database.$count(
+        sponsorshipSponsorCategory,
+        and(
+          eq(sponsorshipSponsorCategory.id, id),
+          eq(sponsorshipSponsorCategory.organizationId, organizationId),
+        ),
+      )) > 0
+    );
+  if (table === "sponsorship_status")
+    return (
+      (await database.$count(
+        sponsorshipStatus,
+        and(eq(sponsorshipStatus.id, id), eq(sponsorshipStatus.organizationId, organizationId)),
+      )) > 0
+    );
+  if (table === "sponsorship_individual")
+    return (
+      (await database.$count(
+        sponsorshipIndividual,
+        and(
+          eq(sponsorshipIndividual.id, id),
+          eq(sponsorshipIndividual.organizationId, organizationId),
+        ),
+      )) > 0
+    );
+  if (table === "sponsorship_fund_type")
+    return (
+      (await database.$count(
+        sponsorshipFundType,
+        and(eq(sponsorshipFundType.id, id), eq(sponsorshipFundType.organizationId, organizationId)),
+      )) > 0
+    );
+  if (table === "sponsorship_visitor_type")
+    return (
+      (await database.$count(
+        sponsorshipVisitorType,
+        and(
+          eq(sponsorshipVisitorType.id, id),
+          eq(sponsorshipVisitorType.organizationId, organizationId),
+        ),
+      )) > 0
+    );
+  if (table === "sponsorship_visitor")
+    return (
+      (await database.$count(
+        sponsorshipVisitor,
+        and(eq(sponsorshipVisitor.id, id), eq(sponsorshipVisitor.organizationId, organizationId)),
+      )) > 0
+    );
+  return (
+    (await database.$count(
+      sponsorshipCorrespondenceType,
+      and(
+        eq(sponsorshipCorrespondenceType.id, id),
+        eq(sponsorshipCorrespondenceType.organizationId, organizationId),
+      ),
+    )) > 0
   );
 }
 
 function scholarshipRecordWrite(
-  database: QueryDatabase,
+  database: Database,
   mode: "insert" | "update",
   context: MembershipContext,
   id: string,
   value: z.infer<typeof scholarshipRecordSchema>,
 ) {
-  const values = [
-    value.personId,
-    value.sessionId ?? null,
-    value.courseId,
-    value.beneficiaryCategory ?? null,
-    value.studentName,
-    value.admissionNumber ?? null,
-    value.fatherName ?? null,
-    value.gender ?? null,
-    value.dateOfBirth ?? null,
-    value.classStream ?? null,
-    value.classPercentage ?? null,
-    value.admissionYear ?? null,
-    value.courseDuration ?? null,
-    value.collegeTraining ? 1 : 0,
-    value.cityName ?? null,
-    value.permanentAddress ?? null,
-    value.mailingAddress ?? null,
-    value.specialAllowance ? 1 : 0,
-    value.scholarshipAwarded ?? null,
-    value.instituteName ?? null,
-    value.bankAccountNumber ?? null,
-    value.wardHealthRecord ?? null,
-    value.needyCase ?? null,
-    value.reason ?? null,
-    value.status,
-    value.phone ?? null,
-    value.ledgerNumber ?? null,
-  ];
-  const columns = [
-    "person_id",
-    "academic_session_id",
-    "course_id",
-    "beneficiary_category",
-    "student_name",
-    "admission_number",
-    "father_name",
-    "gender",
-    "date_of_birth",
-    "class_stream",
-    "class_percentage",
-    "admission_year",
-    "course_duration",
-    "college_training",
-    "city_name",
-    "permanent_address",
-    "mailing_address",
-    "special_allowance",
-    "scholarship_awarded",
-    "institute_name",
-    "bank_account_number",
-    "ward_health_record",
-    "needy_case",
-    "reason",
-    "status",
-    "phone",
-    "ledger_number",
-  ];
+  const values = {
+    personId: value.personId,
+    academicSessionId: value.sessionId ?? null,
+    courseId: value.courseId,
+    beneficiaryCategory: value.beneficiaryCategory ?? null,
+    studentName: value.studentName,
+    admissionNumber: value.admissionNumber ?? null,
+    fatherName: value.fatherName ?? null,
+    gender: value.gender ?? null,
+    dateOfBirth: value.dateOfBirth ?? null,
+    classStream: value.classStream ?? null,
+    classPercentage: value.classPercentage ?? null,
+    admissionYear: value.admissionYear ?? null,
+    courseDuration: value.courseDuration ?? null,
+    collegeTraining: value.collegeTraining ? 1 : 0,
+    cityName: value.cityName ?? null,
+    permanentAddress: value.permanentAddress ?? null,
+    mailingAddress: value.mailingAddress ?? null,
+    specialAllowance: value.specialAllowance ? 1 : 0,
+    scholarshipAwarded: value.scholarshipAwarded ?? null,
+    instituteName: value.instituteName ?? null,
+    bankAccountNumber: value.bankAccountNumber ?? null,
+    wardHealthRecord: value.wardHealthRecord ?? null,
+    needyCase: value.needyCase ?? null,
+    reason: value.reason ?? null,
+    status: value.status,
+    phone: value.phone ?? null,
+    ledgerNumber: value.ledgerNumber ?? null,
+  };
   return mode === "update"
     ? database
-        .prepare(
-          `UPDATE scholarship_record SET ${columns.map((column) => `${column}=?`).join(",")},updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`,
+        .update(scholarshipRecord)
+        .set({ ...values, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(
+            eq(scholarshipRecord.id, id),
+            eq(scholarshipRecord.organizationId, context.organizationId),
+          ),
         )
-        .bind(...values, context.userId, id, context.organizationId)
-    : database
-        .prepare(
-          `INSERT INTO scholarship_record (id,organization_id,${columns.join(",")},source_system,source_table,source_id,created_by_user_id,updated_by_user_id) VALUES (?,?${columns.map(() => ",?").join("")},'tsewa','scholarship_record',?,?,?)`,
-        )
-        .bind(id, context.organizationId, ...values, id, context.userId, context.userId);
+    : database.insert(scholarshipRecord).values({
+        id,
+        organizationId: context.organizationId,
+        ...values,
+        sourceSystem: "tsewa",
+        sourceTable: "scholarship_record",
+        sourceId: id,
+        createdByUserId: context.userId,
+        updatedByUserId: context.userId,
+      });
 }
 
 async function validScholarshipReferences(
-  database: QueryDatabase,
+  database: Database,
   organizationId: string,
   value: z.infer<typeof scholarshipRecordSchema>,
 ) {
-  const [person, course, session] = await Promise.all([
+  const [personReference, course, session] = await Promise.all([
     database
-      .prepare("SELECT id FROM person WHERE id=? AND organization_id=?")
-      .bind(value.personId, organizationId)
-      .first(),
+      .select({ id: person.id })
+      .from(person)
+      .where(and(eq(person.id, value.personId), eq(person.organizationId, organizationId)))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
     database
-      .prepare("SELECT id FROM scholarship_course WHERE id=? AND organization_id=? AND is_active=1")
-      .bind(value.courseId, organizationId)
-      .first(),
+      .select({ id: scholarshipCourse.id })
+      .from(scholarshipCourse)
+      .where(
+        and(
+          eq(scholarshipCourse.id, value.courseId),
+          eq(scholarshipCourse.organizationId, organizationId),
+          eq(scholarshipCourse.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
     value.sessionId
       ? scholarshipSessionExists(database, organizationId, value.sessionId)
       : Promise.resolve(true),
   ]);
-  return Boolean(person && course && session);
+  return Boolean(personReference && course && session);
 }
 async function scholarshipSessionExists(
-  database: QueryDatabase,
+  database: Database,
   organizationId: string,
   sessionId: string,
 ) {
-  return Boolean(
-    await database
-      .prepare("SELECT id FROM academic_session WHERE id=? AND organization_id=?")
-      .bind(sessionId, organizationId)
-      .first(),
-  );
+  return database
+    .select({ id: academicSession.id })
+    .from(academicSession)
+    .where(
+      and(eq(academicSession.id, sessionId), eq(academicSession.organizationId, organizationId)),
+    )
+    .limit(1)
+    .then((rows) => Boolean(rows[0]));
 }
 
 async function changeMarkSheetStatus(request: Request, markSheetId: string): Promise<Response> {
@@ -6329,11 +7294,19 @@ async function changeMarkSheetStatus(request: Request, markSheetId: string): Pro
   if (!parsed.success)
     return Response.json({ error: "Choose a valid status action." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const sheet = await runtime.DATABASE.prepare(
-    "SELECT id,status,source_system AS sourceSystem FROM mark_sheet WHERE id=? AND organization_id=?",
-  )
-    .bind(markSheetId, context.organizationId)
-    .first<{ id: string; status: string; sourceSystem: string }>();
+  const sheet = await runtime.ORM.select({
+    id: markSheet.id,
+    status: markSheet.status,
+    sourceSystem: markSheet.sourceSystem,
+    verifiedAt: markSheet.verifiedAt,
+    verifiedByUserId: markSheet.verifiedByUserId,
+    finalizedAt: markSheet.finalizedAt,
+    finalizedByUserId: markSheet.finalizedByUserId,
+  })
+    .from(markSheet)
+    .where(and(eq(markSheet.id, markSheetId), eq(markSheet.organizationId, context.organizationId)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
   if (sheet.sourceSystem.toLowerCase() !== "tsewa") {
     return Response.json(
@@ -6351,31 +7324,43 @@ async function changeMarkSheetStatus(request: Request, markSheetId: string): Pro
       { status: 409 },
     );
   const verified = transition === "verified" || transition === "final";
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(`UPDATE mark_sheet SET status=?,is_verified=?,
-      verified_at=CASE WHEN ?='verified' THEN CURRENT_TIMESTAMP WHEN ?='draft' THEN NULL ELSE verified_at END,
-      verified_by_user_id=CASE WHEN ?='verified' THEN ? WHEN ?='draft' THEN NULL ELSE verified_by_user_id END,
-      finalized_at=CASE WHEN ?='final' THEN CURRENT_TIMESTAMP WHEN ?='draft' THEN NULL ELSE finalized_at END,
-      finalized_by_user_id=CASE WHEN ?='final' THEN ? WHEN ?='draft' THEN NULL ELSE finalized_by_user_id END,
-      updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?`).bind(
-      transition,
-      verified ? 1 : 0,
-      transition,
-      transition,
-      transition,
-      context.userId,
-      transition,
-      transition,
-      transition,
-      transition,
-      context.userId,
-      transition,
-      context.userId,
-      markSheetId,
-      context.organizationId,
-    ),
-    auditStatement(
-      runtime.DATABASE,
+  await runtime.ORM.batch([
+    runtime.ORM.update(markSheet)
+      .set({
+        status: transition,
+        isVerified: verified ? 1 : 0,
+        verifiedAt:
+          transition === "verified"
+            ? sql`CURRENT_TIMESTAMP`
+            : transition === "draft"
+              ? null
+              : sheet.verifiedAt,
+        verifiedByUserId:
+          transition === "verified"
+            ? context.userId
+            : transition === "draft"
+              ? null
+              : sheet.verifiedByUserId,
+        finalizedAt:
+          transition === "final"
+            ? sql`CURRENT_TIMESTAMP`
+            : transition === "draft"
+              ? null
+              : sheet.finalizedAt,
+        finalizedByUserId:
+          transition === "final"
+            ? context.userId
+            : transition === "draft"
+              ? null
+              : sheet.finalizedByUserId,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(eq(markSheet.id, markSheetId), eq(markSheet.organizationId, context.organizationId)),
+      ),
+    auditInsert(
+      runtime.ORM,
       context,
       `academic.mark_sheet_${transition}`,
       "mark_sheet",
@@ -6734,12 +7719,22 @@ async function getSchoolSessionScope(request: Request, sessionId: string) {
   if (!context) return null;
   if (!hasPermission(context, "school.read")) return null;
   const runtime = getRuntimeEnv();
-  const session = await runtime.DATABASE.prepare(
-    `SELECT id, name, starts_on AS startsOn, ends_on AS endsOn
-     FROM academic_session WHERE id = ? AND organization_id = ? AND is_active = 1`,
-  )
-    .bind(sessionId, context.organizationId)
-    .first<{ id: string; name: string; startsOn: string; endsOn: string }>();
+  const session = await runtime.ORM.select({
+    id: academicSession.id,
+    name: academicSession.name,
+    startsOn: academicSession.startsOn,
+    endsOn: academicSession.endsOn,
+  })
+    .from(academicSession)
+    .where(
+      and(
+        eq(academicSession.id, sessionId),
+        eq(academicSession.organizationId, context.organizationId),
+        eq(academicSession.isActive, 1),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   return session ? { ...context, session } : null;
 }
 
@@ -7245,41 +8240,36 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   if (!hasPermission(context, "people.update")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const current = await runtime.DATABASE.prepare(
-    `SELECT id, identifier_kind AS identifierKind,
-            primary_identifier AS primaryIdentifier, display_name AS displayName,
-            gender, date_of_birth AS dateOfBirth,
-            admitted_or_joined_on AS admittedOrJoinedOn,
-            campus_or_location AS campusOrLocation, nationality, source_system AS sourceSystem
-     FROM person WHERE id = ? AND organization_id = ?`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<{
-      id: string;
-      identifierKind: "admission" | "staff";
-      primaryIdentifier: string;
-      displayName: string;
-      gender: "female" | "male" | "other" | "unknown" | null;
-      dateOfBirth: string | null;
-      admittedOrJoinedOn: string | null;
-      campusOrLocation: string | null;
-      nationality: string | null;
-      sourceSystem: string;
-    }>();
+  const current = await runtime.ORM.select({
+    id: person.id,
+    identifierKind: person.identifierKind,
+    primaryIdentifier: person.primaryIdentifier,
+    displayName: person.displayName,
+    gender: person.gender,
+    dateOfBirth: person.dateOfBirth,
+    admittedOrJoinedOn: person.admittedOrJoinedOn,
+    campusOrLocation: person.campusOrLocation,
+    nationality: person.nationality,
+    sourceSystem: person.sourceSystem,
+  })
+    .from(person)
+    .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
 
   if (!current) return Response.json({ error: "Person not found" }, { status: 404 });
-  const duplicate = await runtime.DATABASE.prepare(
-    `SELECT id FROM person
-     WHERE organization_id = ? AND identifier_kind = ? AND id <> ?
-       AND lower(primary_identifier) = lower(?)`,
-  )
-    .bind(
-      context.organizationId,
-      current.identifierKind,
-      parsedId.data,
-      parsed.data.primaryIdentifier,
+  const duplicate = await runtime.ORM.select({ id: person.id })
+    .from(person)
+    .where(
+      and(
+        eq(person.organizationId, context.organizationId),
+        eq(person.identifierKind, current.identifierKind),
+        ne(person.id, parsedId.data),
+        eq(sql`lower(${person.primaryIdentifier})`, parsed.data.primaryIdentifier.toLowerCase()),
+      ),
     )
-    .first<{ id: string }>();
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (duplicate) {
     const label = current.identifierKind === "staff" ? "staff number" : "admission number";
     return Response.json({ error: `That ${label} is already in use.` }, { status: 409 });
@@ -7305,26 +8295,23 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   }
 
   try {
-    await runtime.DATABASE.batch([
-      runtime.DATABASE.prepare(
-        `UPDATE person
-         SET primary_identifier = ?, display_name = ?, gender = ?, date_of_birth = ?,
-             admitted_or_joined_on = ?, campus_or_location = ?, nationality = ?,
-             updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND organization_id = ?`,
-      ).bind(
-        next.primaryIdentifier,
-        next.displayName,
-        next.gender,
-        next.dateOfBirth,
-        next.admittedOrJoinedOn,
-        next.campusOrLocation,
-        next.nationality,
-        context.userId,
-        parsedId.data,
-        context.organizationId,
-      ),
-      auditStatement(runtime.DATABASE, context, "person.details_updated", "person", parsedId.data, {
+    await runtime.ORM.batch([
+      runtime.ORM.update(person)
+        .set({
+          primaryIdentifier: next.primaryIdentifier,
+          displayName: next.displayName,
+          gender: next.gender,
+          dateOfBirth: next.dateOfBirth,
+          admittedOrJoinedOn: next.admittedOrJoinedOn,
+          campusOrLocation: next.campusOrLocation,
+          nationality: next.nationality,
+          updatedByUserId: context.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)),
+        ),
+      auditInsert(runtime.ORM, context, "person.details_updated", "person", parsedId.data, {
         changedFields: changedFields.join(","),
         sourceSystem: current.sourceSystem,
       }),
@@ -7354,28 +8341,33 @@ async function addHomePlacement(request: Request, personId: string): Promise<Res
   if (!hasPermission(context, "people.placement.manage")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const [person, current] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT id, kind FROM person WHERE id = ? AND organization_id = ?`)
-      .bind(parsedId.data, context.organizationId)
-      .first<{ id: string; kind: "child" | "elderly" | "staff" }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, home_name AS homeName, location_name AS locationName,
-              placement_type AS placementType, started_on AS startedOn
-       FROM person_placement
-       WHERE person_id = ? AND organization_id = ? AND is_current = 1`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{
-        id: string;
-        homeName: string;
-        locationName: string | null;
-        placementType: string | null;
-        startedOn: string;
-      }>(),
+  const [personRecord, current] = await Promise.all([
+    runtime.ORM.select({ id: person.id, kind: person.kind })
+      .from(person)
+      .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({
+      id: personPlacement.id,
+      homeName: personPlacement.homeName,
+      locationName: personPlacement.locationName,
+      placementType: personPlacement.placementType,
+      startedOn: personPlacement.startedOn,
+    })
+      .from(personPlacement)
+      .where(
+        and(
+          eq(personPlacement.personId, parsedId.data),
+          eq(personPlacement.organizationId, context.organizationId),
+          eq(personPlacement.isCurrent, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
 
-  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
-  if (person.kind === "staff") {
+  if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
+  if (personRecord.kind === "staff") {
     return Response.json({ error: "Home placement is not used for staff." }, { status: 400 });
   }
 
@@ -7391,65 +8383,56 @@ async function addHomePlacement(request: Request, personId: string): Promise<Res
   }
 
   const placementId = crypto.randomUUID();
-  const statements: DrizzleStatement[] = [];
-  if (current) {
-    statements.push(
-      runtime.DATABASE.prepare(
-        `UPDATE person_placement
-         SET is_current = 0, ended_on = ?, updated_by_user_id = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND organization_id = ? AND is_current = 1`,
-      ).bind(placement.startedOn, context.userId, current.id, context.organizationId),
-    );
-  }
-  statements.push(
-    runtime.DATABASE.prepare(
-      `INSERT INTO person_placement (
-         id, organization_id, person_id, home_name, location_name, placement_type,
-         started_on, reason, remarks, is_current, source_system, source_table,
-         source_id, created_by_user_id, updated_by_user_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'tsewa', 'person_placement', ?, ?, ?)`,
-    ).bind(
+  const previousPlacementId = current?.id ?? "__no_placement__";
+  const statements = [
+    runtime.ORM.update(personPlacement)
+      .set({
+        isCurrent: 0,
+        endedOn: placement.startedOn,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(personPlacement.id, previousPlacementId),
+          eq(personPlacement.organizationId, context.organizationId),
+          eq(personPlacement.isCurrent, 1),
+        ),
+      ),
+    runtime.ORM.insert(personPlacement).values({
+      id: placementId,
+      organizationId: context.organizationId,
+      personId: parsedId.data,
+      homeName: placement.homeName,
+      locationName: placement.locationName,
+      placementType: placement.placementType,
+      startedOn: placement.startedOn,
+      reason: placement.reason,
+      remarks: placement.remarks,
+      isCurrent: 1,
+      sourceSystem: "tsewa",
+      sourceTable: "person_placement",
+      sourceId: placementId,
+      createdByUserId: context.userId,
+      updatedByUserId: context.userId,
+    }),
+    runtime.ORM.update(person)
+      .set({
+        campusOrLocation: placement.locationName ?? placement.homeName,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId))),
+    auditInsert(runtime.ORM, context, "person.home_placement_changed", "person", parsedId.data, {
       placementId,
-      context.organizationId,
-      parsedId.data,
-      placement.homeName,
-      placement.locationName,
-      placement.placementType,
-      placement.startedOn,
-      placement.reason,
-      placement.remarks,
-      placementId,
-      context.userId,
-      context.userId,
-    ),
-    runtime.DATABASE.prepare(
-      `UPDATE person
-       SET campus_or_location = ?, updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND organization_id = ?`,
-    ).bind(
-      placement.locationName ?? placement.homeName,
-      context.userId,
-      parsedId.data,
-      context.organizationId,
-    ),
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "person.home_placement_changed",
-      "person",
-      parsedId.data,
-      {
-        placementId,
-        previousPlacementId: current?.id ?? "none",
-        homeName: placement.homeName,
-        startedOn: placement.startedOn,
-      },
-    ),
-  );
+      previousPlacementId: current?.id ?? "none",
+      homeName: placement.homeName,
+      startedOn: placement.startedOn,
+    }),
+  ] as const;
 
   try {
-    await runtime.DATABASE.batch(statements);
+    await runtime.ORM.batch(statements);
   } catch (error) {
     if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
       return Response.json(
@@ -7478,30 +8461,19 @@ async function updatePersonFamily(request: Request, personId: string): Promise<R
   if (!hasPermission(context, "people.family.manage")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const person = await runtime.DATABASE.prepare(
-    `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<{ id: string }>();
-  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+  const personRecord = await runtime.ORM.select({ id: person.id })
+    .from(person)
+    .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
 
-  const current = await runtime.DATABASE.prepare(
-    `SELECT id, source_system AS sourceSystem,
-            parentage_status AS parentageStatus, mother_name AS motherName,
-            father_name AS fatherName, mother_occupation AS motherOccupation,
-            father_occupation AS fatherOccupation, parents_phone AS parentsPhone,
-            parents_permanent_address AS parentsPermanentAddress,
-            guardian_1_name AS guardian1Name, guardian_1_address AS guardian1Address,
-            guardian_1_email AS guardian1Email, guardian_1_phone AS guardian1Phone,
-            guardian_1_mobile AS guardian1Mobile, guardian_2_name AS guardian2Name,
-            guardian_2_address AS guardian2Address, guardian_2_email AS guardian2Email,
-            guardian_2_phone AS guardian2Phone, guardian_2_mobile AS guardian2Mobile,
-            marital_status AS maritalStatus, spouse_name AS spouseName,
-            number_of_children AS numberOfChildren
-     FROM person_family_profile WHERE person_id = ? AND organization_id = ?`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<FamilyDetailsRecord>();
+  const current = await runtime.ORM.query.personFamilyProfile.findFirst({
+    where: and(
+      eq(personFamilyProfile.personId, parsedId.data),
+      eq(personFamilyProfile.organizationId, context.organizationId),
+    ),
+  });
 
   const familyFieldNames = Object.keys(parsed.data) as Array<keyof typeof parsed.data>;
   const changedFields = familyFieldNames.filter(
@@ -7513,63 +8485,23 @@ async function updatePersonFamily(request: Request, personId: string): Promise<R
 
   const profileId = current?.id ?? crypto.randomUUID();
   const details = parsed.data;
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `INSERT INTO person_family_profile (
-         id, organization_id, person_id, parentage_status, mother_name, father_name,
-         mother_occupation, father_occupation, parents_phone, parents_permanent_address,
-         guardian_1_name, guardian_1_address, guardian_1_email, guardian_1_phone,
-         guardian_1_mobile, guardian_2_name, guardian_2_address, guardian_2_email,
-         guardian_2_phone, guardian_2_mobile, marital_status, spouse_name,
-         number_of_children, source_system, source_table, source_id, updated_by_user_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-         'tsewa', 'person_family_profile', ?, ?)
-       ON CONFLICT(organization_id, person_id) DO UPDATE SET
-         parentage_status = excluded.parentage_status, mother_name = excluded.mother_name,
-         father_name = excluded.father_name, mother_occupation = excluded.mother_occupation,
-         father_occupation = excluded.father_occupation, parents_phone = excluded.parents_phone,
-         parents_permanent_address = excluded.parents_permanent_address,
-         guardian_1_name = excluded.guardian_1_name,
-         guardian_1_address = excluded.guardian_1_address,
-         guardian_1_email = excluded.guardian_1_email,
-         guardian_1_phone = excluded.guardian_1_phone,
-         guardian_1_mobile = excluded.guardian_1_mobile,
-         guardian_2_name = excluded.guardian_2_name,
-         guardian_2_address = excluded.guardian_2_address,
-         guardian_2_email = excluded.guardian_2_email,
-         guardian_2_phone = excluded.guardian_2_phone,
-         guardian_2_mobile = excluded.guardian_2_mobile,
-         marital_status = excluded.marital_status, spouse_name = excluded.spouse_name,
-         number_of_children = excluded.number_of_children,
-         updated_by_user_id = excluded.updated_by_user_id, updated_at = CURRENT_TIMESTAMP`,
-    ).bind(
-      profileId,
-      context.organizationId,
-      parsedId.data,
-      details.parentageStatus,
-      details.motherName,
-      details.fatherName,
-      details.motherOccupation,
-      details.fatherOccupation,
-      details.parentsPhone,
-      details.parentsPermanentAddress,
-      details.guardian1Name,
-      details.guardian1Address,
-      details.guardian1Email,
-      details.guardian1Phone,
-      details.guardian1Mobile,
-      details.guardian2Name,
-      details.guardian2Address,
-      details.guardian2Email,
-      details.guardian2Phone,
-      details.guardian2Mobile,
-      details.maritalStatus,
-      details.spouseName,
-      details.numberOfChildren,
-      profileId,
-      context.userId,
-    ),
-    auditStatement(runtime.DATABASE, context, "person.family_updated", "person", parsedId.data, {
+  await runtime.ORM.batch([
+    runtime.ORM.insert(personFamilyProfile)
+      .values({
+        id: profileId,
+        organizationId: context.organizationId,
+        personId: parsedId.data,
+        ...details,
+        sourceSystem: "tsewa",
+        sourceTable: "person_family_profile",
+        sourceId: profileId,
+        updatedByUserId: context.userId,
+      })
+      .onConflictDoUpdate({
+        target: [personFamilyProfile.organizationId, personFamilyProfile.personId],
+        set: { ...details, updatedByUserId: context.userId, updatedAt: sql`CURRENT_TIMESTAMP` },
+      }),
+    auditInsert(runtime.ORM, context, "person.family_updated", "person", parsedId.data, {
       changedFields: changedFields.join(","),
       sourceSystem: current?.sourceSystem ?? "tsewa",
     }),
@@ -7577,11 +8509,6 @@ async function updatePersonFamily(request: Request, personId: string): Promise<R
 
   return Response.json({ personId: parsedId.data, changedFields });
 }
-
-type FamilyDetailsRecord = z.infer<typeof personFamilyDetailsSchema> & {
-  id: string;
-  sourceSystem: string;
-};
 
 async function getSiblingOptions(request: Request, personId: string): Promise<Response> {
   if (request.method !== "GET") return methodNotAllowed("GET");
@@ -7658,12 +8585,12 @@ async function addSiblingRelationship(request: Request, personId: string): Promi
   if (!context) return unauthorized();
   if (!hasPermission(context, "people.family.manage")) return forbidden();
   const runtime = getRuntimeEnv();
-  const person = await runtime.DATABASE.prepare(
-    `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<{ id: string }>();
-  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+  const personRecord = await runtime.ORM.select({ id: person.id })
+    .from(person)
+    .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
 
   let relatedPersonId: string;
   let createdPersonId: string | null = null;
@@ -7671,20 +8598,30 @@ async function addSiblingRelationship(request: Request, personId: string): Promi
     if (parsed.data.relatedPersonId === parsedId.data) {
       return Response.json({ error: "A person cannot be their own sibling." }, { status: 400 });
     }
-    const related = await runtime.DATABASE.prepare(
-      `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
-    )
-      .bind(parsed.data.relatedPersonId, context.organizationId)
-      .first<{ id: string }>();
+    const related = await runtime.ORM.select({ id: person.id })
+      .from(person)
+      .where(
+        and(
+          eq(person.id, parsed.data.relatedPersonId),
+          eq(person.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
     if (!related) return Response.json({ error: "Sibling not found" }, { status: 404 });
     relatedPersonId = related.id;
   } else {
-    const duplicate = await runtime.DATABASE.prepare(
-      `SELECT id FROM person WHERE organization_id = ? AND identifier_kind = 'admission'
-         AND lower(primary_identifier) = lower(?)`,
-    )
-      .bind(context.organizationId, parsed.data.primaryIdentifier)
-      .first<{ id: string }>();
+    const duplicate = await runtime.ORM.select({ id: person.id })
+      .from(person)
+      .where(
+        and(
+          eq(person.organizationId, context.organizationId),
+          eq(person.identifierKind, "admission"),
+          eq(sql`lower(${person.primaryIdentifier})`, parsed.data.primaryIdentifier.toLowerCase()),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
     if (duplicate) {
       return Response.json(
         {
@@ -7697,15 +8634,27 @@ async function addSiblingRelationship(request: Request, personId: string): Promi
     createdPersonId = relatedPersonId;
   }
 
-  const existing = await runtime.DATABASE.prepare(
-    `SELECT id FROM person_relationship
-     WHERE organization_id = ? AND relationship_type = 'sibling' AND is_active = 1
-       AND ((person_id = ? AND related_person_id = ?)
-         OR (person_id = ? AND related_person_id = ?))
-     LIMIT 1`,
-  )
-    .bind(context.organizationId, parsedId.data, relatedPersonId, relatedPersonId, parsedId.data)
-    .first<{ id: string }>();
+  const existing = await runtime.ORM.select({ id: personRelationship.id })
+    .from(personRelationship)
+    .where(
+      and(
+        eq(personRelationship.organizationId, context.organizationId),
+        eq(personRelationship.relationshipType, "sibling"),
+        eq(personRelationship.isActive, 1),
+        or(
+          and(
+            eq(personRelationship.personId, parsedId.data),
+            eq(personRelationship.relatedPersonId, relatedPersonId),
+          ),
+          and(
+            eq(personRelationship.personId, relatedPersonId),
+            eq(personRelationship.relatedPersonId, parsedId.data),
+          ),
+        ),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (existing)
     return Response.json(
       { error: "These people are already linked as siblings." },
@@ -7713,53 +8662,42 @@ async function addSiblingRelationship(request: Request, personId: string): Promi
     );
 
   const relationshipId = crypto.randomUUID();
-  const statements: DrizzleStatement[] = [];
   if (parsed.data.mode === "new") {
-    statements.push(
-      runtime.DATABASE.prepare(
-        `INSERT INTO person (
-           id, organization_id, kind, status, identifier_kind, primary_identifier,
-           display_name, gender, source_system, source_table, source_id,
-           created_by_user_id, updated_by_user_id
-         ) VALUES (?, ?, 'child', 'active', 'admission', ?, ?, ?, 'tsewa', 'person', ?, ?, ?)`,
-      ).bind(
-        relatedPersonId,
-        context.organizationId,
-        parsed.data.primaryIdentifier,
-        parsed.data.displayName,
-        parsed.data.gender,
-        relatedPersonId,
-        context.userId,
-        context.userId,
-      ),
-      auditStatement(
-        runtime.DATABASE,
-        context,
-        "person.created_as_sibling",
-        "person",
-        relatedPersonId,
-        {
-          linkedFromPersonId: parsedId.data,
-        },
-      ),
-    );
+    await runtime.ORM.batch([
+      runtime.ORM.insert(person).values({
+        id: relatedPersonId,
+        organizationId: context.organizationId,
+        kind: "child",
+        status: "active",
+        identifierKind: "admission",
+        primaryIdentifier: parsed.data.primaryIdentifier,
+        displayName: parsed.data.displayName,
+        gender: parsed.data.gender,
+        sourceSystem: "tsewa",
+        sourceTable: "person",
+        sourceId: relatedPersonId,
+        createdByUserId: context.userId,
+        updatedByUserId: context.userId,
+      }),
+      auditInsert(runtime.ORM, context, "person.created_as_sibling", "person", relatedPersonId, {
+        linkedFromPersonId: parsedId.data,
+      }),
+    ]);
   }
-  statements.push(
-    runtime.DATABASE.prepare(
-      `INSERT INTO person_relationship (
-         id, organization_id, person_id, related_person_id, relationship_type,
-         source_system, source_table, source_id, updated_by_user_id
-       ) VALUES (?, ?, ?, ?, 'sibling', 'tsewa', 'person_relationship', ?, ?)`,
-    ).bind(
-      relationshipId,
-      context.organizationId,
-      parsedId.data,
+  await runtime.ORM.batch([
+    runtime.ORM.insert(personRelationship).values({
+      id: relationshipId,
+      organizationId: context.organizationId,
+      personId: parsedId.data,
       relatedPersonId,
-      relationshipId,
-      context.userId,
-    ),
-    auditStatement(
-      runtime.DATABASE,
+      relationshipType: "sibling",
+      sourceSystem: "tsewa",
+      sourceTable: "person_relationship",
+      sourceId: relationshipId,
+      updatedByUserId: context.userId,
+    }),
+    auditInsert(
+      runtime.ORM,
       context,
       "person.sibling_added",
       "person_relationship",
@@ -7769,8 +8707,7 @@ async function addSiblingRelationship(request: Request, personId: string): Promi
         relatedPersonId,
       },
     ),
-  );
-  await runtime.DATABASE.batch(statements);
+  ]);
 
   return Response.json({ relationshipId, relatedPersonId, createdPersonId }, { status: 201 });
 }
@@ -7792,57 +8729,72 @@ async function removeSiblingRelationship(
   if (!context) return unauthorized();
   if (!hasPermission(context, "people.family.manage")) return forbidden();
   const runtime = getRuntimeEnv();
-  const relationship = await runtime.DATABASE.prepare(
-    `SELECT id, person_id AS personId, related_person_id AS relatedPersonId
-     FROM person_relationship
-     WHERE id = ? AND organization_id = ? AND relationship_type = 'sibling'
-       AND is_active = 1 AND (person_id = ? OR related_person_id = ?)`,
-  )
-    .bind(
-      parsedRelationshipId.data,
-      context.organizationId,
-      parsedPersonId.data,
-      parsedPersonId.data,
+  const relationship = await runtime.ORM.select({
+    id: personRelationship.id,
+    personId: personRelationship.personId,
+    relatedPersonId: personRelationship.relatedPersonId,
+  })
+    .from(personRelationship)
+    .where(
+      and(
+        eq(personRelationship.id, parsedRelationshipId.data),
+        eq(personRelationship.organizationId, context.organizationId),
+        eq(personRelationship.relationshipType, "sibling"),
+        eq(personRelationship.isActive, 1),
+        or(
+          eq(personRelationship.personId, parsedPersonId.data),
+          eq(personRelationship.relatedPersonId, parsedPersonId.data),
+        ),
+      ),
     )
-    .first<{ id: string; personId: string; relatedPersonId: string }>();
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!relationship) return Response.json({ error: "Sibling link not found." }, { status: 404 });
 
   const relatedPersonId =
     relationship.personId === parsedPersonId.data
       ? relationship.relatedPersonId
       : relationship.personId;
-  const count = await runtime.DATABASE.prepare(
-    `SELECT COUNT(*) AS total FROM person_relationship
-     WHERE organization_id = ? AND relationship_type = 'sibling' AND is_active = 1
-       AND ((person_id = ? AND related_person_id = ?)
-         OR (person_id = ? AND related_person_id = ?))`,
-  )
-    .bind(
-      context.organizationId,
-      parsedPersonId.data,
-      relatedPersonId,
-      relatedPersonId,
-      parsedPersonId.data,
-    )
-    .first<{ total: number }>();
-
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE person_relationship SET is_active = 0, removed_at = CURRENT_TIMESTAMP,
-         updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE organization_id = ? AND relationship_type = 'sibling' AND is_active = 1
-         AND ((person_id = ? AND related_person_id = ?)
-           OR (person_id = ? AND related_person_id = ?))`,
-    ).bind(
-      context.userId,
-      context.organizationId,
-      parsedPersonId.data,
-      relatedPersonId,
-      relatedPersonId,
-      parsedPersonId.data,
+  const pairCondition = or(
+    and(
+      eq(personRelationship.personId, parsedPersonId.data),
+      eq(personRelationship.relatedPersonId, relatedPersonId),
     ),
-    auditStatement(
-      runtime.DATABASE,
+    and(
+      eq(personRelationship.personId, relatedPersonId),
+      eq(personRelationship.relatedPersonId, parsedPersonId.data),
+    ),
+  );
+  const relationshipCount = await runtime.ORM.select({ total: count() })
+    .from(personRelationship)
+    .where(
+      and(
+        eq(personRelationship.organizationId, context.organizationId),
+        eq(personRelationship.relationshipType, "sibling"),
+        eq(personRelationship.isActive, 1),
+        pairCondition,
+      ),
+    )
+    .then((rows) => rows[0] ?? { total: 0 });
+
+  await runtime.ORM.batch([
+    runtime.ORM.update(personRelationship)
+      .set({
+        isActive: 0,
+        removedAt: sql`CURRENT_TIMESTAMP`,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(personRelationship.organizationId, context.organizationId),
+          eq(personRelationship.relationshipType, "sibling"),
+          eq(personRelationship.isActive, 1),
+          pairCondition,
+        ),
+      ),
+    auditInsert(
+      runtime.ORM,
       context,
       "person.sibling_removed",
       "person_relationship",
@@ -7850,7 +8802,7 @@ async function removeSiblingRelationship(
       {
         personId: parsedPersonId.data,
         relatedPersonId,
-        hiddenSourceRows: String(Number(count?.total ?? 0)),
+        hiddenSourceRows: String(Number(relationshipCount.total)),
       },
     ),
   ]);
@@ -7870,19 +8822,22 @@ async function getPersonFile(request: Request, fileId: string): Promise<Response
   }
 
   const runtime = getRuntimeEnv();
-  const file = await runtime.DATABASE.prepare(
-    `SELECT r2_object_key AS r2ObjectKey, file_name AS fileName,
-            content_type AS contentType, byte_size AS byteSize
-     FROM person_file
-     WHERE id = ? AND organization_id = ? AND is_active = 1`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<{
-      r2ObjectKey: string;
-      fileName: string;
-      contentType: string;
-      byteSize: number;
-    }>();
+  const file = await runtime.ORM.select({
+    r2ObjectKey: personFile.r2ObjectKey,
+    fileName: personFile.fileName,
+    contentType: personFile.contentType,
+    byteSize: personFile.byteSize,
+  })
+    .from(personFile)
+    .where(
+      and(
+        eq(personFile.id, parsedId.data),
+        eq(personFile.organizationId, context.organizationId),
+        eq(personFile.isActive, 1),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!file) return Response.json({ error: "File not found" }, { status: 404 });
 
   const object = await runtime.FILES.get(file.r2ObjectKey);
@@ -7923,24 +8878,31 @@ async function addPersonFile(request: Request, personId: string): Promise<Respon
     return Response.json({ error: "Invalid person ID" }, { status: 400 });
 
   const runtime = getRuntimeEnv();
-  const person = await runtime.DATABASE.prepare(
-    "SELECT id FROM person WHERE id = ? AND organization_id = ?",
-  )
-    .bind(parsedPersonId.data, context.organizationId)
-    .first<{ id: string }>();
-  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+  const personRecord = await runtime.ORM.select({ id: person.id })
+    .from(person)
+    .where(
+      and(eq(person.id, parsedPersonId.data), eq(person.organizationId, context.organizationId)),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
 
   const parsed = await parsePersonFileForm(request);
   if (parsed instanceof Response) return parsed;
 
   if (parsed.category !== "document") {
-    const existing = await runtime.DATABASE.prepare(
-      `SELECT id FROM person_file
-       WHERE organization_id = ? AND person_id = ? AND category = ? AND is_active = 1
-       LIMIT 1`,
-    )
-      .bind(context.organizationId, parsedPersonId.data, parsed.category)
-      .first<{ id: string }>();
+    const existing = await runtime.ORM.select({ id: personFile.id })
+      .from(personFile)
+      .where(
+        and(
+          eq(personFile.organizationId, context.organizationId),
+          eq(personFile.personId, parsedPersonId.data),
+          eq(personFile.category, parsed.category),
+          eq(personFile.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
     if (existing) {
       return Response.json(
         { error: "This photo already exists. Use Replace to change it." },
@@ -7968,19 +8930,24 @@ async function handlePersonFile(
   }
 
   const runtime = getRuntimeEnv();
-  const existing = await runtime.DATABASE.prepare(
-    `SELECT id, category, label, file_name AS fileName, r2_object_key AS r2ObjectKey
-     FROM person_file
-     WHERE id = ? AND person_id = ? AND organization_id = ? AND is_active = 1`,
-  )
-    .bind(parsedFileId.data, parsedPersonId.data, context.organizationId)
-    .first<{
-      id: string;
-      category: z.infer<typeof personFileCategorySchema>;
-      label: string;
-      fileName: string;
-      r2ObjectKey: string;
-    }>();
+  const existing = await runtime.ORM.select({
+    id: personFile.id,
+    category: personFile.category,
+    label: personFile.label,
+    fileName: personFile.fileName,
+    r2ObjectKey: personFile.r2ObjectKey,
+  })
+    .from(personFile)
+    .where(
+      and(
+        eq(personFile.id, parsedFileId.data),
+        eq(personFile.personId, parsedPersonId.data),
+        eq(personFile.organizationId, context.organizationId),
+        eq(personFile.isActive, 1),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!existing) return Response.json({ error: "File not found" }, { status: 404 });
 
   if (request.method === "PATCH") {
@@ -7993,12 +8960,21 @@ async function handlePersonFile(
         { status: 400 },
       );
     }
-    await runtime.DATABASE.batch([
-      runtime.DATABASE.prepare(
-        `UPDATE person_file SET label = ?, updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND organization_id = ? AND is_active = 1`,
-      ).bind(input.data, context.userId, existing.id, context.organizationId),
-      auditStatement(runtime.DATABASE, context, "person.file_renamed", "person_file", existing.id, {
+    await runtime.ORM.batch([
+      runtime.ORM.update(personFile)
+        .set({
+          label: input.data,
+          updatedByUserId: context.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(personFile.id, existing.id),
+            eq(personFile.organizationId, context.organizationId),
+            eq(personFile.isActive, 1),
+          ),
+        ),
+      auditInsert(runtime.ORM, context, "person.file_renamed", "person_file", existing.id, {
         personId: parsedPersonId.data,
         previousName: existing.label,
         name: input.data,
@@ -8008,7 +8984,8 @@ async function handlePersonFile(
   }
 
   if (request.method === "POST") {
-    const parsed = await parsePersonFileForm(request, existing.category);
+    const existingCategory = personFileCategorySchema.parse(existing.category);
+    const parsed = await parsePersonFileForm(request, existingCategory);
     if (parsed instanceof Response) return parsed;
     const response = await storePersonFile(runtime, context, parsedPersonId.data, parsed, existing);
     if (response.ok) await runtime.FILES.delete(existing.r2ObjectKey);
@@ -8016,26 +8993,34 @@ async function handlePersonFile(
   }
 
   if (request.method === "DELETE") {
-    const statements = [
-      runtime.DATABASE.prepare(
-        `UPDATE person_file SET is_active = 0, removed_at = CURRENT_TIMESTAMP,
-           updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND organization_id = ? AND is_active = 1`,
-      ).bind(context.userId, existing.id, context.organizationId),
-      auditStatement(runtime.DATABASE, context, "person.file_removed", "person_file", existing.id, {
+    const profilePersonId =
+      existing.category === "profile_photo" ? parsedPersonId.data : "__no_person__";
+    await runtime.ORM.batch([
+      runtime.ORM.update(personFile)
+        .set({
+          isActive: 0,
+          removedAt: sql`CURRENT_TIMESTAMP`,
+          updatedByUserId: context.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(personFile.id, existing.id),
+            eq(personFile.organizationId, context.organizationId),
+            eq(personFile.isActive, 1),
+          ),
+        ),
+      runtime.ORM.update(person)
+        .set({ photoAssetKey: null, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(eq(person.id, profilePersonId), eq(person.organizationId, context.organizationId)),
+        ),
+      auditInsert(runtime.ORM, context, "person.file_removed", "person_file", existing.id, {
         personId: parsedPersonId.data,
         name: existing.label,
         category: existing.category,
       }),
-    ];
-    if (existing.category === "profile_photo") {
-      statements.push(
-        runtime.DATABASE.prepare(
-          "UPDATE person SET photo_asset_key = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?",
-        ).bind(parsedPersonId.data, context.organizationId),
-      );
-    }
-    await runtime.DATABASE.batch(statements);
+    ]);
     await runtime.FILES.delete(existing.r2ObjectKey);
     return Response.json({ ok: true });
   }
@@ -8095,52 +9080,50 @@ async function storePersonFile(
   });
 
   try {
-    const statements = [];
-    if (replaced) {
-      statements.push(
-        runtime.DATABASE.prepare(
-          `UPDATE person_file SET is_active = 0, removed_at = CURRENT_TIMESTAMP,
-             updated_by_user_id = ?, updated_at = CURRENT_TIMESTAMP
-           WHERE id = ? AND organization_id = ? AND is_active = 1`,
-        ).bind(context.userId, replaced.id, context.organizationId),
-      );
-    }
-    statements.push(
-      runtime.DATABASE.prepare(
-        `INSERT INTO person_file (
-           id, organization_id, person_id, category, label, file_name, content_type,
-           byte_size, sha256, r2_object_key, is_primary, source_system, source_table,
-           source_id, source_asset_id, created_by_user_id, updated_by_user_id, replaces_file_id
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'tsewa', 'person_file', ?, ?, ?, ?, ?)`,
-      ).bind(
+    const replacedFileId = replaced?.id ?? "__no_file__";
+    const profilePersonId = input.category === "profile_photo" ? personId : "__no_person__";
+    await runtime.ORM.batch([
+      runtime.ORM.update(personFile)
+        .set({
+          isActive: 0,
+          removedAt: sql`CURRENT_TIMESTAMP`,
+          updatedByUserId: context.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(personFile.id, replacedFileId),
+            eq(personFile.organizationId, context.organizationId),
+            eq(personFile.isActive, 1),
+          ),
+        ),
+      runtime.ORM.insert(personFile).values({
         id,
-        context.organizationId,
+        organizationId: context.organizationId,
         personId,
-        input.category,
-        input.name,
-        input.file.name,
-        input.file.type,
-        input.file.size,
+        category: input.category,
+        label: input.name,
+        fileName: input.file.name,
+        contentType: input.file.type,
+        byteSize: input.file.size,
         sha256,
-        objectKey,
-        input.category === "profile_photo" ? 1 : 0,
-        id,
-        id,
-        context.userId,
-        context.userId,
-        replaced?.id ?? null,
-      ),
-    );
-    if (input.category === "profile_photo") {
-      statements.push(
-        runtime.DATABASE.prepare(
-          "UPDATE person SET photo_asset_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?",
-        ).bind(objectKey, personId, context.organizationId),
-      );
-    }
-    statements.push(
-      auditStatement(
-        runtime.DATABASE,
+        r2ObjectKey: objectKey,
+        isPrimary: input.category === "profile_photo" ? 1 : 0,
+        sourceSystem: "tsewa",
+        sourceTable: "person_file",
+        sourceId: id,
+        sourceAssetId: id,
+        createdByUserId: context.userId,
+        updatedByUserId: context.userId,
+        replacesFileId: replaced?.id ?? null,
+      }),
+      runtime.ORM.update(person)
+        .set({ photoAssetKey: objectKey, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(eq(person.id, profilePersonId), eq(person.organizationId, context.organizationId)),
+        ),
+      auditInsert(
+        runtime.ORM,
         context,
         replaced ? "person.file_replaced" : "person.file_added",
         "person_file",
@@ -8152,8 +9135,7 @@ async function storePersonFile(
           replacedFileId: replaced?.id ?? "",
         },
       ),
-    );
-    await runtime.DATABASE.batch(statements);
+    ]);
   } catch (error) {
     await runtime.FILES.delete(objectKey);
     throw error;
@@ -9129,31 +10111,6 @@ function auditInsert(
     entityId,
     metadataJson: metadata ? JSON.stringify(metadata) : null,
   });
-}
-
-function auditStatement(
-  database: QueryDatabase,
-  context: MembershipContext,
-  action: string,
-  entityType: string,
-  entityId: string,
-  metadata?: Record<string, string>,
-): DrizzleStatement {
-  return database
-    .prepare(
-      `INSERT INTO audit_event
-        (id, organization_id, actor_user_id, action, entity_type, entity_id, metadata_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      crypto.randomUUID(),
-      context.organizationId,
-      context.userId,
-      action,
-      entityType,
-      entityId,
-      metadata ? JSON.stringify(metadata) : null,
-    );
 }
 
 function createInvitationToken(): string {
