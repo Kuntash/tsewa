@@ -1,6 +1,31 @@
+import { and, asc, count, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import type { Database } from "@/db/client";
 import type { DrizzleStatement, QueryDatabase } from "@/db/query";
+import {
+  academicAssessment,
+  academicClassMaster,
+  academicClassSubject,
+  academicClassSubjectAssessment,
+  academicGrade,
+  academicGradeType,
+  academicSession,
+  academicSubject,
+  academicSubjectHead,
+  academicSubjectType,
+  accessGroup,
+  accessGroupRole,
+  accessPermission,
+  accessRole,
+  accessRolePermission,
+  auditEvent,
+  organization,
+  organizationInvitation,
+  organizationMember,
+  user,
+  userPreference,
+} from "@/db/schema";
 
 import {
   groupCatalog,
@@ -978,12 +1003,12 @@ async function handleAuthRequest(request: Request): Promise<Response> {
   const signUpInput = isEmailSignUp ? await readSignUpInput(request.clone()) : null;
   const invitationToken = isEmailSignUp ? request.headers.get("x-tsewa-invitation") : null;
   const invitation = invitationToken
-    ? await findInvitation(runtime.DATABASE, invitationToken, signUpInput?.email)
+    ? await findInvitation(runtime.ORM, invitationToken, signUpInput?.email)
     : null;
   const userCount = isEmailSignUp
-    ? await runtime.DATABASE.prepare('SELECT COUNT(*) AS count FROM "user"').first<{
-        count: number;
-      }>()
+    ? await runtime.ORM.select({ count: count() })
+        .from(user)
+        .then((rows) => rows[0] ?? null)
     : null;
   const isFirstUser = isEmailSignUp && Number(userCount?.count ?? 0) === 0;
   const auth = createRequestAuth(request, isFirstUser || Boolean(invitation));
@@ -998,14 +1023,14 @@ async function handleAuthRequest(request: Request): Promise<Response> {
     const userId = payload.user?.id;
 
     if (userId && isFirstUser) {
-      await bootstrapFirstOrganization(runtime.DATABASE, userId);
+      await bootstrapFirstOrganization(runtime.ORM, userId);
     } else if (userId && invitation) {
-      await acceptInvitation(runtime.DATABASE, invitation, userId);
+      await acceptInvitation(runtime.ORM, invitation, userId);
     }
   }
 
   if (response.ok && accountAuditAction && actorSession?.user.id) {
-    await auditAccountAction(runtime.DATABASE, actorSession.user.id, accountAuditAction);
+    await auditAccountAction(runtime.ORM, actorSession.user.id, accountAuditAction);
   }
 
   return response;
@@ -1038,27 +1063,27 @@ function getAccountAuditAction(pathname: string): string | null {
 }
 
 async function auditAccountAction(
-  database: QueryDatabase,
+  database: Database,
   userId: string,
   action: string,
 ): Promise<void> {
   const membership = await database
-    .prepare(
-      `SELECT organization_id AS organizationId
-       FROM organization_member WHERE user_id = ? ORDER BY created_at LIMIT 1`,
-    )
-    .bind(userId)
-    .first<{ organizationId: string }>();
+    .select({ organizationId: organizationMember.organizationId })
+    .from(organizationMember)
+    .where(eq(organizationMember.userId, userId))
+    .orderBy(asc(organizationMember.createdAt))
+    .limit(1)
+    .then((rows) => rows[0]);
   if (!membership) return;
 
-  await database
-    .prepare(
-      `INSERT INTO audit_event
-        (id, organization_id, actor_user_id, action, entity_type, entity_id)
-       VALUES (?, ?, ?, ?, 'user', ?)`,
-    )
-    .bind(crypto.randomUUID(), membership.organizationId, userId, action, userId)
-    .run();
+  await database.insert(auditEvent).values({
+    id: crypto.randomUUID(),
+    organizationId: membership.organizationId,
+    actorUserId: userId,
+    action,
+    entityType: "user",
+    entityId: userId,
+  });
 }
 
 function accessRoleId(organizationId: string, role: AccessRoleKey): string {
@@ -1070,109 +1095,111 @@ function accessGroupId(organizationId: string, group: AccessGroupKey): string {
 }
 
 async function ensureAccessControlSeeded(
-  database: QueryDatabase,
+  database: Database,
   organizationId: string,
 ): Promise<void> {
-  const statements: DrizzleStatement[] = [];
-
   for (const [key, name, category] of permissionCatalog) {
-    statements.push(
-      database
-        .prepare(`INSERT OR IGNORE INTO access_permission (key, name, category) VALUES (?, ?, ?)`)
-        .bind(key, name, category),
-    );
+    await database.insert(accessPermission).values({ key, name, category }).onConflictDoNothing();
   }
 
   for (const role of roleCatalog) {
     const roleId = accessRoleId(organizationId, role.key);
-    statements.push(
-      database
-        .prepare(
-          `INSERT OR IGNORE INTO access_role
-            (id, organization_id, key, name, description)
-           VALUES (?, ?, ?, ?, ?)`,
-        )
-        .bind(roleId, organizationId, role.key, role.name, role.description),
-    );
+    await database
+      .insert(accessRole)
+      .values({
+        id: roleId,
+        organizationId,
+        key: role.key,
+        name: role.name,
+        description: role.description,
+      })
+      .onConflictDoNothing();
     for (const permission of rolePermissionDefaults[role.key]) {
-      statements.push(
-        database
-          .prepare(
-            `INSERT OR IGNORE INTO access_role_permission (role_id, permission_key)
-             VALUES (?, ?)`,
-          )
-          .bind(roleId, permission),
-      );
+      await database
+        .insert(accessRolePermission)
+        .values({ roleId, permissionKey: permission })
+        .onConflictDoNothing();
     }
   }
 
   for (const group of groupCatalog) {
     const groupId = accessGroupId(organizationId, group.key);
-    statements.push(
-      database
-        .prepare(
-          `INSERT OR IGNORE INTO access_group
-            (id, organization_id, key, name, description)
-           VALUES (?, ?, ?, ?, ?)`,
-        )
-        .bind(groupId, organizationId, group.key, group.name, group.description),
-    );
+    await database
+      .insert(accessGroup)
+      .values({
+        id: groupId,
+        organizationId,
+        key: group.key,
+        name: group.name,
+        description: group.description,
+      })
+      .onConflictDoNothing();
     for (const roleKey of groupRoleDefaults[group.key]) {
-      statements.push(
-        database
-          .prepare(`INSERT OR IGNORE INTO access_group_role (group_id, role_id) VALUES (?, ?)`)
-          .bind(groupId, accessRoleId(organizationId, roleKey)),
-      );
+      await database
+        .insert(accessGroupRole)
+        .values({ groupId, roleId: accessRoleId(organizationId, roleKey) })
+        .onConflictDoNothing();
     }
   }
-
-  await database.batch(statements);
 }
 
-async function bootstrapFirstOrganization(database: QueryDatabase, userId: string): Promise<void> {
+async function bootstrapFirstOrganization(database: Database, userId: string): Promise<void> {
   const organizationId = crypto.randomUUID();
   const memberId = crypto.randomUUID();
   const sessionId = crypto.randomUUID();
   const auditId = crypto.randomUUID();
 
-  await database.batch([
-    database
-      .prepare(
-        `INSERT OR IGNORE INTO organization (id, name, slug)
-         VALUES (?, 'Tibetan Homes Foundation', 'tibetan-homes-foundation')`,
-      )
-      .bind(organizationId),
-    database
-      .prepare(
-        `INSERT OR IGNORE INTO academic_session
-          (id, organization_id, name, starts_on, ends_on, is_active)
-         SELECT ?, id, '2026–27', '2026-04-01', '2027-03-31', 1
-         FROM organization WHERE slug = 'tibetan-homes-foundation'`,
-      )
-      .bind(sessionId),
-    database
-      .prepare(
-        `INSERT INTO audit_event
-          (id, organization_id, actor_user_id, action, entity_type, entity_id)
-         SELECT ?, id, ?, 'platform.bootstrap', 'organization', id
-         FROM organization WHERE slug = 'tibetan-homes-foundation'`,
-      )
-      .bind(auditId, userId),
-  ]);
+  const organizationRow = await database
+    .insert(organization)
+    .values({
+      id: organizationId,
+      name: "Tibetan Homes Foundation",
+      slug: "tibetan-homes-foundation",
+    })
+    .onConflictDoNothing()
+    .returning({ id: organization.id })
+    .then(
+      async (rows) =>
+        rows[0] ??
+        database
+          .select({ id: organization.id })
+          .from(organization)
+          .where(eq(organization.slug, "tibetan-homes-foundation"))
+          .limit(1)
+          .then((existing) => existing[0]),
+    );
+  if (!organizationRow) throw new Error("The initial organization could not be created.");
 
-  const organization = await database
-    .prepare("SELECT id FROM organization WHERE slug = 'tibetan-homes-foundation'")
-    .first<{ id: string }>();
-  if (!organization) throw new Error("The initial organization could not be created.");
-  await ensureAccessControlSeeded(database, organization.id);
   await database
-    .prepare(
-      `INSERT OR IGNORE INTO organization_member
-        (id, organization_id, user_id, role, group_id)
-       VALUES (?, ?, ?, 'owner', ?)`,
-    )
-    .bind(memberId, organization.id, userId, accessGroupId(organization.id, "owner"))
-    .run();
+    .insert(academicSession)
+    .values({
+      id: sessionId,
+      organizationId: organizationRow.id,
+      name: "2026–27",
+      startsOn: "2026-04-01",
+      endsOn: "2027-03-31",
+      isActive: 1,
+    })
+    .onConflictDoNothing();
+  await database.insert(auditEvent).values({
+    id: auditId,
+    organizationId: organizationRow.id,
+    actorUserId: userId,
+    action: "platform.bootstrap",
+    entityType: "organization",
+    entityId: organizationRow.id,
+  });
+  await ensureAccessControlSeeded(database, organizationRow.id);
+  await database
+    .insert(organizationMember)
+    .values({
+      id: memberId,
+      organizationId: organizationRow.id,
+      userId,
+      role: "owner",
+      groupId: accessGroupId(organizationRow.id, "owner"),
+    })
+    .onConflictDoNothing();
 }
 
 async function handlePlatformRequest(request: Request): Promise<Response> {
@@ -3206,7 +3233,7 @@ async function getAcademicConfiguration(request: Request): Promise<Response> {
     return Response.json({ error: "Select a valid academic session." }, { status: 400 });
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope || !hasPermission(scope, "school.results.read")) return forbidden();
-  const db = getRuntimeEnv().DATABASE;
+  const db = getRuntimeEnv().ORM;
   const [
     subjectTypes,
     subjectHeads,
@@ -3218,79 +3245,170 @@ async function getAcademicConfiguration(request: Request): Promise<Response> {
     mappings,
     limits,
   ] = await Promise.all([
-    academicCatalogRows(db, "academic_subject_type", scope.organizationId, scope.session.id),
-    academicCatalogRows(db, "academic_subject_head", scope.organizationId, scope.session.id),
-    academicCatalogRows(db, "academic_grade_type", scope.organizationId, scope.session.id),
     db
-      .prepare(`SELECT grade.id,grade.grade_type_id AS gradeTypeId,grade.name,grade.starts_at AS startsAt,
-      grade.ends_at AS endsAt,grade.points,grade.source_system AS sourceSystem
-      FROM academic_grade grade JOIN academic_grade_type type ON type.id=grade.grade_type_id
-      WHERE grade.organization_id=? AND type.academic_session_id=?
-      ORDER BY type.name COLLATE NOCASE,grade.starts_at DESC`)
-      .bind(scope.organizationId, scope.session.id)
-      .all(),
+      .select({
+        id: academicSubjectType.id,
+        name: academicSubjectType.name,
+        sourceSystem: academicSubjectType.sourceSystem,
+      })
+      .from(academicSubjectType)
+      .where(
+        and(
+          eq(academicSubjectType.organizationId, scope.organizationId),
+          eq(academicSubjectType.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicSubjectType.name})`)),
     db
-      .prepare(`SELECT id,name,short_name AS shortName,subject_type_id AS subjectTypeId,
-      subject_head_id AS subjectHeadId,grade_type_id AS gradeTypeId,is_optional AS isOptional,
-      passing_percentage AS passingPercentage,is_active AS isActive,source_system AS sourceSystem
-      FROM academic_subject WHERE organization_id=? AND academic_session_id=?
-      ORDER BY name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all<{ isOptional: number; isActive: number; [key: string]: unknown }>(),
+      .select({
+        id: academicSubjectHead.id,
+        name: academicSubjectHead.name,
+        sourceSystem: academicSubjectHead.sourceSystem,
+      })
+      .from(academicSubjectHead)
+      .where(
+        and(
+          eq(academicSubjectHead.organizationId, scope.organizationId),
+          eq(academicSubjectHead.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicSubjectHead.name})`)),
     db
-      .prepare(`SELECT class.id,${classDisplayName("class")} AS name
-      FROM academic_class_master class WHERE class.organization_id=? ORDER BY coalesce(class.level,999),name COLLATE NOCASE`)
-      .bind(scope.organizationId)
-      .all(),
+      .select({
+        id: academicGradeType.id,
+        name: academicGradeType.name,
+        sourceSystem: academicGradeType.sourceSystem,
+      })
+      .from(academicGradeType)
+      .where(
+        and(
+          eq(academicGradeType.organizationId, scope.organizationId),
+          eq(academicGradeType.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicGradeType.name})`)),
     db
-      .prepare(`SELECT id,term_id AS termId,name FROM academic_assessment
-      WHERE organization_id=? AND academic_session_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all(),
+      .select({
+        id: academicGrade.id,
+        gradeTypeId: academicGrade.gradeTypeId,
+        name: academicGrade.name,
+        startsAt: academicGrade.startsAt,
+        endsAt: academicGrade.endsAt,
+        points: academicGrade.points,
+        sourceSystem: academicGrade.sourceSystem,
+      })
+      .from(academicGrade)
+      .innerJoin(academicGradeType, eq(academicGradeType.id, academicGrade.gradeTypeId))
+      .where(
+        and(
+          eq(academicGrade.organizationId, scope.organizationId),
+          eq(academicGradeType.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicGradeType.name})`), desc(academicGrade.startsAt)),
     db
-      .prepare(`SELECT id,academic_class_id AS academicClassId,subject_id AS subjectId,
-      maximum_marks AS maximumMarks,display_order AS displayOrder,source_system AS sourceSystem
-      FROM academic_class_subject WHERE organization_id=? AND academic_session_id=?
-      ORDER BY academic_class_id,display_order`)
-      .bind(scope.organizationId, scope.session.id)
-      .all(),
+      .select({
+        id: academicSubject.id,
+        name: academicSubject.name,
+        shortName: academicSubject.shortName,
+        subjectTypeId: academicSubject.subjectTypeId,
+        subjectHeadId: academicSubject.subjectHeadId,
+        gradeTypeId: academicSubject.gradeTypeId,
+        isOptional: academicSubject.isOptional,
+        passingPercentage: academicSubject.passingPercentage,
+        isActive: academicSubject.isActive,
+        sourceSystem: academicSubject.sourceSystem,
+      })
+      .from(academicSubject)
+      .where(
+        and(
+          eq(academicSubject.organizationId, scope.organizationId),
+          eq(academicSubject.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicSubject.name})`)),
     db
-      .prepare(`SELECT id,academic_class_id AS academicClassId,subject_id AS subjectId,
-      assessment_id AS assessmentId,maximum_marks AS maximumMarks
-      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?`)
-      .bind(scope.organizationId, scope.session.id)
-      .all(),
+      .select({
+        id: academicClassMaster.id,
+        name: sql<string>`CASE
+        WHEN lower(trim(coalesce(${academicClassMaster.section}, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
+          AND lower(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})))
+            NOT LIKE '% ' || lower(trim(${academicClassMaster.section}))
+        THEN trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
+        ELSE trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
+      END`,
+      })
+      .from(academicClassMaster)
+      .where(eq(academicClassMaster.organizationId, scope.organizationId))
+      .orderBy(
+        asc(sql`coalesce(${academicClassMaster.level}, 999)`),
+        asc(sql`lower(${academicClassMaster.name})`),
+      ),
+    db
+      .select({
+        id: academicAssessment.id,
+        termId: academicAssessment.termId,
+        name: academicAssessment.name,
+      })
+      .from(academicAssessment)
+      .where(
+        and(
+          eq(academicAssessment.organizationId, scope.organizationId),
+          eq(academicAssessment.academicSessionId, scope.session.id),
+          eq(academicAssessment.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicAssessment.name})`)),
+    db
+      .select({
+        id: academicClassSubject.id,
+        academicClassId: academicClassSubject.academicClassId,
+        subjectId: academicClassSubject.subjectId,
+        maximumMarks: academicClassSubject.maximumMarks,
+        displayOrder: academicClassSubject.displayOrder,
+        sourceSystem: academicClassSubject.sourceSystem,
+      })
+      .from(academicClassSubject)
+      .where(
+        and(
+          eq(academicClassSubject.organizationId, scope.organizationId),
+          eq(academicClassSubject.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(academicClassSubject.academicClassId), asc(academicClassSubject.displayOrder)),
+    db
+      .select({
+        id: academicClassSubjectAssessment.id,
+        academicClassId: academicClassSubjectAssessment.academicClassId,
+        subjectId: academicClassSubjectAssessment.subjectId,
+        assessmentId: academicClassSubjectAssessment.assessmentId,
+        maximumMarks: academicClassSubjectAssessment.maximumMarks,
+      })
+      .from(academicClassSubjectAssessment)
+      .where(
+        and(
+          eq(academicClassSubjectAssessment.organizationId, scope.organizationId),
+          eq(academicClassSubjectAssessment.academicSessionId, scope.session.id),
+        ),
+      ),
   ]);
   return Response.json({
     session: scope.session,
-    subjectTypes: subjectTypes.results,
-    subjectHeads: subjectHeads.results,
-    gradeTypes: gradeTypes.results,
-    grades: grades.results,
-    subjects: subjects.results.map((row) => ({
+    subjectTypes,
+    subjectHeads,
+    gradeTypes,
+    grades,
+    subjects: subjects.map((row) => ({
       ...row,
       isOptional: Boolean(row.isOptional),
       isActive: Boolean(row.isActive),
     })),
-    classes: classes.results,
-    assessments: assessments.results,
-    mappings: mappings.results,
-    assessmentLimits: limits.results,
+    classes,
+    assessments,
+    mappings,
+    assessmentLimits: limits,
     capabilities: { manage: hasPermission(scope, "school.results.manage") },
   });
-}
-
-function academicCatalogRows(
-  db: QueryDatabase,
-  table: string,
-  organizationId: string,
-  sessionId: string,
-) {
-  return db
-    .prepare(`SELECT id,name,source_system AS sourceSystem FROM ${table}
-    WHERE organization_id=? AND academic_session_id=? ORDER BY name COLLATE NOCASE`)
-    .bind(organizationId, sessionId)
-    .all();
 }
 
 async function mutateAcademicConfiguration(request: Request): Promise<Response> {
@@ -3304,85 +3422,135 @@ async function mutateAcademicConfiguration(request: Request): Promise<Response> 
   const data = parsed.data;
   const scope = await getSchoolSessionScope(request, data.sessionId);
   if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
-  const db = getRuntimeEnv().DATABASE;
+  const db = getRuntimeEnv().ORM;
   try {
     if (data.action === "saveCatalog") {
-      const table = {
+      const tableName = {
         subjectType: "academic_subject_type",
         subjectHead: "academic_subject_head",
         gradeType: "academic_grade_type",
       }[data.kind];
       const id = data.id ?? crypto.randomUUID();
-      const result = data.id
-        ? await db
-            .prepare(`UPDATE ${table} SET name=?,updated_at=CURRENT_TIMESTAMP
-              WHERE id=? AND organization_id=? AND academic_session_id=?`)
-            .bind(data.name, id, scope.organizationId, scope.session.id)
-            .run()
-        : await db
-            .prepare(`INSERT INTO ${table}
-              (id,organization_id,academic_session_id,name,source_system,source_table,source_id)
-              VALUES (?,?,?,?,'tsewa',?,?)`)
-            .bind(id, scope.organizationId, scope.session.id, data.name, table, id)
-            .run();
-      if (data.id && !Number(result.meta.changes))
+      const values = {
+        id,
+        organizationId: scope.organizationId,
+        academicSessionId: scope.session.id,
+        name: data.name,
+        sourceSystem: "tsewa",
+        sourceTable: tableName,
+        sourceId: id,
+      };
+      const changed =
+        data.kind === "subjectType"
+          ? data.id
+            ? await db
+                .update(academicSubjectType)
+                .set({ name: data.name, updatedAt: sql`CURRENT_TIMESTAMP` })
+                .where(
+                  and(
+                    eq(academicSubjectType.id, id),
+                    eq(academicSubjectType.organizationId, scope.organizationId),
+                    eq(academicSubjectType.academicSessionId, scope.session.id),
+                  ),
+                )
+                .returning({ id: academicSubjectType.id })
+            : await db
+                .insert(academicSubjectType)
+                .values(values)
+                .returning({ id: academicSubjectType.id })
+          : data.kind === "subjectHead"
+            ? data.id
+              ? await db
+                  .update(academicSubjectHead)
+                  .set({ name: data.name, updatedAt: sql`CURRENT_TIMESTAMP` })
+                  .where(
+                    and(
+                      eq(academicSubjectHead.id, id),
+                      eq(academicSubjectHead.organizationId, scope.organizationId),
+                      eq(academicSubjectHead.academicSessionId, scope.session.id),
+                    ),
+                  )
+                  .returning({ id: academicSubjectHead.id })
+              : await db
+                  .insert(academicSubjectHead)
+                  .values(values)
+                  .returning({ id: academicSubjectHead.id })
+            : data.id
+              ? await db
+                  .update(academicGradeType)
+                  .set({ name: data.name, updatedAt: sql`CURRENT_TIMESTAMP` })
+                  .where(
+                    and(
+                      eq(academicGradeType.id, id),
+                      eq(academicGradeType.organizationId, scope.organizationId),
+                      eq(academicGradeType.academicSessionId, scope.session.id),
+                    ),
+                  )
+                  .returning({ id: academicGradeType.id })
+              : await db
+                  .insert(academicGradeType)
+                  .values(values)
+                  .returning({ id: academicGradeType.id });
+      if (data.id && changed.length === 0)
         return Response.json({ error: "Configuration item not found." }, { status: 404 });
-      await db.batch([
-        auditStatement(db, scope, "academic.configuration_saved", table, id, {
-          kind: data.kind,
-          sessionId: scope.session.id,
-        }),
-      ]);
+      await auditInsert(db, scope, "academic.configuration_saved", tableName, id, {
+        kind: data.kind,
+        sessionId: scope.session.id,
+      });
       return Response.json({ id }, { status: data.id ? 200 : 201 });
     }
     if (data.action === "saveGrade") {
       const type = await db
-        .prepare(
-          "SELECT id FROM academic_grade_type WHERE id=? AND organization_id=? AND academic_session_id=?",
+        .select({ id: academicGradeType.id })
+        .from(academicGradeType)
+        .where(
+          and(
+            eq(academicGradeType.id, data.gradeTypeId),
+            eq(academicGradeType.organizationId, scope.organizationId),
+            eq(academicGradeType.academicSessionId, scope.session.id),
+          ),
         )
-        .bind(data.gradeTypeId, scope.organizationId, scope.session.id)
-        .first();
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
       if (!type)
         return Response.json({ error: "Choose a grade type from this session." }, { status: 400 });
       const id = data.id ?? crypto.randomUUID();
-      const result = data.id
+      const changed = data.id
         ? await db
-            .prepare(
-              "UPDATE academic_grade SET grade_type_id=?,name=?,starts_at=?,ends_at=?,points=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+            .update(academicGrade)
+            .set({
+              gradeTypeId: data.gradeTypeId,
+              name: data.name,
+              startsAt: data.startsAt,
+              endsAt: data.endsAt,
+              points: data.points,
+              updatedAt: sql`CURRENT_TIMESTAMP`,
+            })
+            .where(
+              and(eq(academicGrade.id, id), eq(academicGrade.organizationId, scope.organizationId)),
             )
-            .bind(
-              data.gradeTypeId,
-              data.name,
-              data.startsAt,
-              data.endsAt,
-              data.points,
-              id,
-              scope.organizationId,
-            )
-            .run()
+            .returning({ id: academicGrade.id })
         : await db
-            .prepare(`INSERT INTO academic_grade
-              (id,organization_id,grade_type_id,name,starts_at,ends_at,points,source_system,source_table,source_id)
-              VALUES (?,?,?,?,?,?,?,'tsewa','academic_grade',?)`)
-            .bind(
+            .insert(academicGrade)
+            .values({
               id,
-              scope.organizationId,
-              data.gradeTypeId,
-              data.name,
-              data.startsAt,
-              data.endsAt,
-              data.points,
-              id,
-            )
-            .run();
-      if (data.id && !Number(result.meta.changes))
+              organizationId: scope.organizationId,
+              gradeTypeId: data.gradeTypeId,
+              name: data.name,
+              startsAt: data.startsAt,
+              endsAt: data.endsAt,
+              points: data.points,
+              sourceSystem: "tsewa",
+              sourceTable: "academic_grade",
+              sourceId: id,
+            })
+            .returning({ id: academicGrade.id });
+      if (data.id && changed.length === 0)
         return Response.json({ error: "Grade not found." }, { status: 404 });
-      await db.batch([
-        auditStatement(db, scope, "academic.grade_saved", "academic_grade", id, {
-          sessionId: scope.session.id,
-          gradeTypeId: data.gradeTypeId,
-        }),
-      ]);
+      await auditInsert(db, scope, "academic.grade_saved", "academic_grade", id, {
+        sessionId: scope.session.id,
+        gradeTypeId: data.gradeTypeId,
+      });
       return Response.json({ id }, { status: data.id ? 200 : 201 });
     }
     if (data.action === "saveSubject") {
@@ -3415,58 +3583,83 @@ async function mutateAcademicConfiguration(request: Request): Promise<Response> 
           { status: 400 },
         );
       const id = data.id ?? crypto.randomUUID();
-      const values = [
-        data.name,
-        data.shortName,
-        data.subjectTypeId,
-        data.subjectHeadId,
-        data.gradeTypeId,
-        data.isOptional ? 1 : 0,
-        data.passingPercentage,
-        data.isActive ? 1 : 0,
-      ];
-      const result = data.id
+      const subjectValues = {
+        name: data.name,
+        shortName: data.shortName,
+        subjectTypeId: data.subjectTypeId,
+        subjectHeadId: data.subjectHeadId,
+        gradeTypeId: data.gradeTypeId,
+        isOptional: data.isOptional ? 1 : 0,
+        passingPercentage: data.passingPercentage,
+        isActive: data.isActive ? 1 : 0,
+      };
+      const changed = data.id
         ? await db
-            .prepare(
-              "UPDATE academic_subject SET name=?,short_name=?,subject_type_id=?,subject_head_id=?,grade_type_id=?,is_optional=?,passing_percentage=?,is_active=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=? AND academic_session_id=?",
+            .update(academicSubject)
+            .set({ ...subjectValues, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(
+              and(
+                eq(academicSubject.id, id),
+                eq(academicSubject.organizationId, scope.organizationId),
+                eq(academicSubject.academicSessionId, scope.session.id),
+              ),
             )
-            .bind(...values, id, scope.organizationId, scope.session.id)
-            .run()
+            .returning({ id: academicSubject.id })
         : await db
-            .prepare(`INSERT INTO academic_subject
-              (id,organization_id,academic_session_id,name,short_name,subject_type_id,subject_head_id,grade_type_id,is_optional,passing_percentage,is_active,source_system,source_table,source_id)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,'tsewa','academic_subject',?)`)
-            .bind(id, scope.organizationId, scope.session.id, ...values, id)
-            .run();
-      if (data.id && !Number(result.meta.changes))
+            .insert(academicSubject)
+            .values({
+              id,
+              organizationId: scope.organizationId,
+              academicSessionId: scope.session.id,
+              ...subjectValues,
+              sourceSystem: "tsewa",
+              sourceTable: "academic_subject",
+              sourceId: id,
+            })
+            .returning({ id: academicSubject.id });
+      if (data.id && changed.length === 0)
         return Response.json({ error: "Subject not found." }, { status: 404 });
-      await db.batch([
-        auditStatement(db, scope, "academic.subject_saved", "academic_subject", id, {
-          sessionId: scope.session.id,
-        }),
-      ]);
+      await auditInsert(db, scope, "academic.subject_saved", "academic_subject", id, {
+        sessionId: scope.session.id,
+      });
       return Response.json({ id }, { status: data.id ? 200 : 201 });
     }
     if (data.action === "saveClassSubject") {
       const [academicClass, configuredSubject, configuredAssessments] = await Promise.all([
         db
-          .prepare("SELECT id FROM academic_class_master WHERE id=? AND organization_id=?")
-          .bind(data.academicClassId, scope.organizationId)
-          .first(),
-        db
-          .prepare(
-            "SELECT id FROM academic_subject WHERE id=? AND organization_id=? AND academic_session_id=?",
+          .select({ id: academicClassMaster.id })
+          .from(academicClassMaster)
+          .where(
+            and(
+              eq(academicClassMaster.id, data.academicClassId),
+              eq(academicClassMaster.organizationId, scope.organizationId),
+            ),
           )
-          .bind(data.subjectId, scope.organizationId, scope.session.id)
-          .first(),
+          .limit(1)
+          .then((rows) => rows[0] ?? null),
         db
-          .prepare(
-            "SELECT id FROM academic_assessment WHERE organization_id=? AND academic_session_id=?",
+          .select({ id: academicSubject.id })
+          .from(academicSubject)
+          .where(
+            and(
+              eq(academicSubject.id, data.subjectId),
+              eq(academicSubject.organizationId, scope.organizationId),
+              eq(academicSubject.academicSessionId, scope.session.id),
+            ),
           )
-          .bind(scope.organizationId, scope.session.id)
-          .all<{ id: string }>(),
+          .limit(1)
+          .then((rows) => rows[0] ?? null),
+        db
+          .select({ id: academicAssessment.id })
+          .from(academicAssessment)
+          .where(
+            and(
+              eq(academicAssessment.organizationId, scope.organizationId),
+              eq(academicAssessment.academicSessionId, scope.session.id),
+            ),
+          ),
       ]);
-      const assessmentIds = new Set(configuredAssessments.results.map((item) => item.id));
+      const assessmentIds = new Set(configuredAssessments.map((item) => item.id));
       if (
         !academicClass ||
         !configuredSubject ||
@@ -3477,23 +3670,40 @@ async function mutateAcademicConfiguration(request: Request): Promise<Response> 
           { status: 400 },
         );
       const existing = await db
-        .prepare(
-          `SELECT id FROM academic_class_subject WHERE organization_id=? AND academic_session_id=? AND academic_class_id=? AND subject_id=?`,
+        .select({ id: academicClassSubject.id })
+        .from(academicClassSubject)
+        .where(
+          and(
+            eq(academicClassSubject.organizationId, scope.organizationId),
+            eq(academicClassSubject.academicSessionId, scope.session.id),
+            eq(academicClassSubject.academicClassId, data.academicClassId),
+            eq(academicClassSubject.subjectId, data.subjectId),
+          ),
         )
-        .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId)
-        .first<{ id: string }>();
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
       if (!data.enabled) {
         if (existing)
           await db.batch([
             db
-              .prepare(
-                "DELETE FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=? AND academic_class_id=? AND subject_id=?",
-              )
-              .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId),
+              .delete(academicClassSubjectAssessment)
+              .where(
+                and(
+                  eq(academicClassSubjectAssessment.organizationId, scope.organizationId),
+                  eq(academicClassSubjectAssessment.academicSessionId, scope.session.id),
+                  eq(academicClassSubjectAssessment.academicClassId, data.academicClassId),
+                  eq(academicClassSubjectAssessment.subjectId, data.subjectId),
+                ),
+              ),
             db
-              .prepare("DELETE FROM academic_class_subject WHERE id=? AND organization_id=?")
-              .bind(existing.id, scope.organizationId),
-            auditStatement(
+              .delete(academicClassSubject)
+              .where(
+                and(
+                  eq(academicClassSubject.id, existing.id),
+                  eq(academicClassSubject.organizationId, scope.organizationId),
+                ),
+              ),
+            auditInsert(
               db,
               scope,
               "academic.class_subject_removed",
@@ -3509,56 +3719,59 @@ async function mutateAcademicConfiguration(request: Request): Promise<Response> 
         return Response.json({ removed: Boolean(existing) });
       }
       const id = existing?.id ?? crypto.randomUUID();
-      const statements: DrizzleStatement[] = [
-        db
-          .prepare(`INSERT INTO academic_class_subject
-        (id,organization_id,academic_session_id,academic_class_id,subject_id,maximum_marks,display_order,source_system,source_table,source_id)
-        VALUES (?,?,?,?,?,?,?,'tsewa','academic_class_subject',?) ON CONFLICT(id) DO UPDATE SET
-        maximum_marks=excluded.maximum_marks,display_order=excluded.display_order,updated_at=CURRENT_TIMESTAMP`)
-          .bind(
-            id,
-            scope.organizationId,
-            scope.session.id,
-            data.academicClassId,
-            data.subjectId,
-            data.maximumMarks,
-            data.displayOrder,
-            id,
-          ),
-        db
-          .prepare(
-            "DELETE FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=? AND academic_class_id=? AND subject_id=?",
-          )
-          .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId),
-      ];
-      for (const limit of data.assessmentLimits) {
-        const limitId = crypto.randomUUID();
-        statements.push(
-          db
-            .prepare(`INSERT INTO academic_class_subject_assessment
-          (id,organization_id,academic_session_id,academic_class_id,subject_id,assessment_id,maximum_marks,source_system,source_table,source_id)
-          VALUES (?,?,?,?,?,?,?,'tsewa','academic_class_subject_assessment',?)`)
-            .bind(
-              limitId,
-              scope.organizationId,
-              scope.session.id,
-              data.academicClassId,
-              data.subjectId,
-              limit.assessmentId,
-              limit.maximumMarks,
-              limitId,
-            ),
-        );
-      }
-      statements.push(
-        auditStatement(db, scope, "academic.class_subject_saved", "academic_class_subject", id, {
-          sessionId: scope.session.id,
+      await db
+        .insert(academicClassSubject)
+        .values({
+          id,
+          organizationId: scope.organizationId,
+          academicSessionId: scope.session.id,
           academicClassId: data.academicClassId,
           subjectId: data.subjectId,
-          assessmentCount: String(data.assessmentLimits.length),
-        }),
-      );
-      await db.batch(statements);
+          maximumMarks: data.maximumMarks,
+          displayOrder: data.displayOrder,
+          sourceSystem: "tsewa",
+          sourceTable: "academic_class_subject",
+          sourceId: id,
+        })
+        .onConflictDoUpdate({
+          target: academicClassSubject.id,
+          set: {
+            maximumMarks: data.maximumMarks,
+            displayOrder: data.displayOrder,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          },
+        });
+      await db
+        .delete(academicClassSubjectAssessment)
+        .where(
+          and(
+            eq(academicClassSubjectAssessment.organizationId, scope.organizationId),
+            eq(academicClassSubjectAssessment.academicSessionId, scope.session.id),
+            eq(academicClassSubjectAssessment.academicClassId, data.academicClassId),
+            eq(academicClassSubjectAssessment.subjectId, data.subjectId),
+          ),
+        );
+      for (const limit of data.assessmentLimits) {
+        const limitId = crypto.randomUUID();
+        await db.insert(academicClassSubjectAssessment).values({
+          id: limitId,
+          organizationId: scope.organizationId,
+          academicSessionId: scope.session.id,
+          academicClassId: data.academicClassId,
+          subjectId: data.subjectId,
+          assessmentId: limit.assessmentId,
+          maximumMarks: limit.maximumMarks,
+          sourceSystem: "tsewa",
+          sourceTable: "academic_class_subject_assessment",
+          sourceId: limitId,
+        });
+      }
+      await auditInsert(db, scope, "academic.class_subject_saved", "academic_class_subject", id, {
+        sessionId: scope.session.id,
+        academicClassId: data.academicClassId,
+        subjectId: data.subjectId,
+        assessmentCount: String(data.assessmentLimits.length),
+      });
       return Response.json({ id });
     }
     const table = {
@@ -3568,27 +3781,82 @@ async function mutateAcademicConfiguration(request: Request): Promise<Response> 
       grade: "academic_grade",
       subject: "academic_subject",
     }[data.kind];
-    const result =
-      data.kind === "grade"
-        ? await db
-            .prepare(`DELETE FROM academic_grade WHERE id=? AND organization_id=? AND grade_type_id IN
-            (SELECT id FROM academic_grade_type WHERE organization_id=? AND academic_session_id=?)`)
-            .bind(data.id, scope.organizationId, scope.organizationId, scope.session.id)
-            .run()
-        : await db
-            .prepare(
-              `DELETE FROM ${table} WHERE id=? AND organization_id=? AND academic_session_id=?`,
-            )
-            .bind(data.id, scope.organizationId, scope.session.id)
-            .run();
-    if (Number(result.meta.changes))
-      await db.batch([
-        auditStatement(db, scope, "academic.configuration_deleted", table, data.id, {
-          kind: data.kind,
-          sessionId: scope.session.id,
-        }),
-      ]);
-    return Response.json({ deleted: Number(result.meta.changes) > 0 });
+    let deleted: Array<{ id: string }> = [];
+    if (data.kind === "grade") {
+      const gradeTypeIds = await db
+        .select({ id: academicGradeType.id })
+        .from(academicGradeType)
+        .where(
+          and(
+            eq(academicGradeType.organizationId, scope.organizationId),
+            eq(academicGradeType.academicSessionId, scope.session.id),
+          ),
+        )
+        .then((rows) => rows.map((row) => row.id));
+      if (gradeTypeIds.length) {
+        deleted = await db
+          .delete(academicGrade)
+          .where(
+            and(
+              eq(academicGrade.id, data.id),
+              eq(academicGrade.organizationId, scope.organizationId),
+              inArray(academicGrade.gradeTypeId, gradeTypeIds),
+            ),
+          )
+          .returning({ id: academicGrade.id });
+      }
+    } else if (data.kind === "subjectType") {
+      deleted = await db
+        .delete(academicSubjectType)
+        .where(
+          and(
+            eq(academicSubjectType.id, data.id),
+            eq(academicSubjectType.organizationId, scope.organizationId),
+            eq(academicSubjectType.academicSessionId, scope.session.id),
+          ),
+        )
+        .returning({ id: academicSubjectType.id });
+    } else if (data.kind === "subjectHead") {
+      deleted = await db
+        .delete(academicSubjectHead)
+        .where(
+          and(
+            eq(academicSubjectHead.id, data.id),
+            eq(academicSubjectHead.organizationId, scope.organizationId),
+            eq(academicSubjectHead.academicSessionId, scope.session.id),
+          ),
+        )
+        .returning({ id: academicSubjectHead.id });
+    } else if (data.kind === "gradeType") {
+      deleted = await db
+        .delete(academicGradeType)
+        .where(
+          and(
+            eq(academicGradeType.id, data.id),
+            eq(academicGradeType.organizationId, scope.organizationId),
+            eq(academicGradeType.academicSessionId, scope.session.id),
+          ),
+        )
+        .returning({ id: academicGradeType.id });
+    } else {
+      deleted = await db
+        .delete(academicSubject)
+        .where(
+          and(
+            eq(academicSubject.id, data.id),
+            eq(academicSubject.organizationId, scope.organizationId),
+            eq(academicSubject.academicSessionId, scope.session.id),
+          ),
+        )
+        .returning({ id: academicSubject.id });
+    }
+    if (deleted.length) {
+      await auditInsert(db, scope, "academic.configuration_deleted", table, data.id, {
+        kind: data.kind,
+        sessionId: scope.session.id,
+      });
+    }
+    return Response.json({ deleted: deleted.length > 0 });
   } catch (reason) {
     const detail = reason instanceof Error ? reason.message : "";
     if (detail.includes("UNIQUE"))
@@ -3603,19 +3871,56 @@ async function mutateAcademicConfiguration(request: Request): Promise<Response> 
 }
 
 async function academicConfigurationReference(
-  db: QueryDatabase,
+  db: Database,
   table: string,
   id: string | null,
   organizationId: string,
   sessionId: string,
 ) {
   if (!id) return true;
-  return Boolean(
-    await db
-      .prepare(`SELECT id FROM ${table} WHERE id=? AND organization_id=? AND academic_session_id=?`)
-      .bind(id, organizationId, sessionId)
-      .first(),
-  );
+  if (table === "academic_subject_type") {
+    return db
+      .select({ id: academicSubjectType.id })
+      .from(academicSubjectType)
+      .where(
+        and(
+          eq(academicSubjectType.id, id),
+          eq(academicSubjectType.organizationId, organizationId),
+          eq(academicSubjectType.academicSessionId, sessionId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => Boolean(rows[0]));
+  }
+  if (table === "academic_subject_head") {
+    return db
+      .select({ id: academicSubjectHead.id })
+      .from(academicSubjectHead)
+      .where(
+        and(
+          eq(academicSubjectHead.id, id),
+          eq(academicSubjectHead.organizationId, organizationId),
+          eq(academicSubjectHead.academicSessionId, sessionId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => Boolean(rows[0]));
+  }
+  if (table === "academic_grade_type") {
+    return db
+      .select({ id: academicGradeType.id })
+      .from(academicGradeType)
+      .where(
+        and(
+          eq(academicGradeType.id, id),
+          eq(academicGradeType.organizationId, organizationId),
+          eq(academicGradeType.academicSessionId, sessionId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => Boolean(rows[0]));
+  }
+  return false;
 }
 
 async function getAcademicResultSetup(request: Request): Promise<Response> {
@@ -7864,64 +8169,92 @@ function inlineContentDisposition(fileName: string): string {
 async function getPlatformStatus(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const context = await getMembershipContext(request);
-  const [userCount, sessions, preference, organizations] = await Promise.all([
-    runtime.DATABASE.prepare('SELECT COUNT(*) AS count FROM "user"').first<{
-      count: number;
-    }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, name, starts_on AS startsOn, ends_on AS endsOn
-       FROM academic_session
-       WHERE is_active = 1
-         AND organization_id = coalesce(
-           ?,
-           (SELECT id FROM organization WHERE slug = ? LIMIT 1)
-         )
-       ORDER BY starts_on DESC`,
-    )
-      .bind(context?.organizationId ?? null, runtime.DEFAULT_ORGANIZATION_SLUG)
-      .all<{
-        id: string;
-        name: string;
-        startsOn: string;
-        endsOn: string;
-      }>(),
+  const fallbackOrganization = context
+    ? null
+    : await runtime.ORM.select({ id: organization.id })
+        .from(organization)
+        .where(eq(organization.slug, runtime.DEFAULT_ORGANIZATION_SLUG))
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+  const sessionOrganizationId = context?.organizationId ?? fallbackOrganization?.id;
+  const [userCount, sessions, preference, memberships] = await Promise.all([
+    runtime.ORM.select({ count: count() })
+      .from(user)
+      .then((rows) => rows[0] ?? { count: 0 }),
+    sessionOrganizationId
+      ? runtime.ORM.select({
+          id: academicSession.id,
+          name: academicSession.name,
+          startsOn: academicSession.startsOn,
+          endsOn: academicSession.endsOn,
+        })
+          .from(academicSession)
+          .where(
+            and(
+              eq(academicSession.organizationId, sessionOrganizationId),
+              eq(academicSession.isActive, 1),
+            ),
+          )
+          .orderBy(desc(academicSession.startsOn))
+      : Promise.resolve([]),
     context
-      ? runtime.DATABASE.prepare(
-          `SELECT active_academic_session_id AS activeSessionId
-           FROM user_preference WHERE user_id = ? AND active_organization_id = ?`,
-        )
-          .bind(context.userId, context.organizationId)
-          .first<{ activeSessionId: string | null }>()
+      ? runtime.ORM.select({ activeSessionId: userPreference.activeAcademicSessionId })
+          .from(userPreference)
+          .where(
+            and(
+              eq(userPreference.userId, context.userId),
+              eq(userPreference.activeOrganizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
       : Promise.resolve(null),
     context
-      ? runtime.DATABASE.prepare(
-          `SELECT organization.id, organization.name,
-                  coalesce(access_group.key, organization_member.role) AS "group",
-                  (SELECT session.id FROM academic_session session
-                   WHERE session.organization_id = organization.id AND session.is_active = 1
-                   ORDER BY session.starts_on DESC LIMIT 1) AS defaultSessionId
-           FROM organization_member
-           JOIN organization ON organization.id = organization_member.organization_id
-           LEFT JOIN access_group ON access_group.id = organization_member.group_id
-           WHERE organization_member.user_id = ?
-           ORDER BY organization.name COLLATE NOCASE`,
-        )
-          .bind(context.userId)
-          .all<{
-            id: string;
-            name: string;
-            group: AccessGroupKey;
-            defaultSessionId: string | null;
-          }>()
-      : Promise.resolve({ results: [] }),
+      ? runtime.ORM.select({
+          id: organization.id,
+          name: organization.name,
+          group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+        })
+          .from(organizationMember)
+          .innerJoin(organization, eq(organization.id, organizationMember.organizationId))
+          .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+          .where(eq(organizationMember.userId, context.userId))
+          .orderBy(asc(sql`lower(${organization.name})`))
+      : Promise.resolve([]),
   ]);
+
+  const organizationIds = memberships.map((membership) => membership.id);
+  const organizationSessions = organizationIds.length
+    ? await runtime.ORM.select({
+        organizationId: academicSession.organizationId,
+        id: academicSession.id,
+        startsOn: academicSession.startsOn,
+      })
+        .from(academicSession)
+        .where(
+          and(
+            inArray(academicSession.organizationId, organizationIds),
+            eq(academicSession.isActive, 1),
+          ),
+        )
+        .orderBy(desc(academicSession.startsOn))
+    : [];
+  const defaultSessionByOrganization = new Map<string, string>();
+  for (const session of organizationSessions) {
+    if (!defaultSessionByOrganization.has(session.organizationId)) {
+      defaultSessionByOrganization.set(session.organizationId, session.id);
+    }
+  }
 
   return Response.json({
     needsSetup: Number(userCount?.count ?? 0) === 0,
-    sessions: sessions.results,
-    activeSessionId: preference?.activeSessionId ?? sessions.results[0]?.id ?? null,
+    sessions,
+    activeSessionId: preference?.activeSessionId ?? sessions[0]?.id ?? null,
     activeOrganizationId: context?.organizationId ?? null,
-    organizations: organizations.results,
+    organizations: memberships.map((membership) => ({
+      ...membership,
+      defaultSessionId: defaultSessionByOrganization.get(membership.id) ?? null,
+    })),
   });
 }
 
@@ -7938,28 +8271,38 @@ async function savePlatformPreference(request: Request): Promise<Response> {
     return Response.json({ error: "Invalid academic session" }, { status: 400 });
   }
 
-  const membership = await runtime.DATABASE.prepare(
-    `SELECT om.organization_id AS organizationId
-     FROM organization_member om
-     JOIN academic_session s ON s.organization_id = om.organization_id
-     WHERE om.user_id = ? AND s.id = ?`,
-  )
-    .bind(session.user.id, parsed.data.academicSessionId)
-    .first<{ organizationId: string }>();
+  const membership = await runtime.ORM.select({ organizationId: organizationMember.organizationId })
+    .from(organizationMember)
+    .innerJoin(
+      academicSession,
+      eq(academicSession.organizationId, organizationMember.organizationId),
+    )
+    .where(
+      and(
+        eq(organizationMember.userId, session.user.id),
+        eq(academicSession.id, parsed.data.academicSessionId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
 
   if (!membership) return forbidden();
 
-  await runtime.DATABASE.prepare(
-    `INSERT INTO user_preference
-      (user_id, active_organization_id, active_academic_session_id, updated_at)
-     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-     ON CONFLICT(user_id) DO UPDATE SET
-       active_organization_id = excluded.active_organization_id,
-       active_academic_session_id = excluded.active_academic_session_id,
-       updated_at = CURRENT_TIMESTAMP`,
-  )
-    .bind(session.user.id, membership.organizationId, parsed.data.academicSessionId)
-    .run();
+  await runtime.ORM.insert(userPreference)
+    .values({
+      userId: session.user.id,
+      activeOrganizationId: membership.organizationId,
+      activeAcademicSessionId: parsed.data.academicSessionId,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .onConflictDoUpdate({
+      target: userPreference.userId,
+      set: {
+        activeOrganizationId: membership.organizationId,
+        activeAcademicSessionId: parsed.data.academicSessionId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      },
+    });
 
   return Response.json({ ok: true });
 }
@@ -7976,124 +8319,122 @@ async function getOrganization(request: Request): Promise<Response> {
   if (!hasPermission(context, "organization.settings.read")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const [organization, members, invitations, groups, roles, rolePermissions, groupRoles] =
+  const [organizationState, members, invitations, groups, roles, rolePermissions, groupRoles] =
     await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT id, name, slug, timezone, locale
-       FROM organization WHERE id = ?`,
-      )
-        .bind(context.organizationId)
-        .first<{
-          id: string;
-          name: string;
-          slug: string;
-          timezone: string;
-          locale: string;
-        }>(),
-      runtime.DATABASE.prepare(
-        `SELECT om.id, coalesce(access_group.key, om.role) AS "group", om.created_at AS joinedAt,
-              u.id AS userId, u.name, u.email, u."emailVerified" AS emailVerified
-       FROM organization_member om
-       JOIN "user" u ON u.id = om.user_id
-       LEFT JOIN access_group ON access_group.id = om.group_id
-       WHERE om.organization_id = ?
-       ORDER BY CASE coalesce(access_group.key, om.role)
-                  WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'staff' THEN 2 ELSE 3 END,
-                lower(u.name)`,
-      )
-        .bind(context.organizationId)
-        .all<{
-          id: string;
-          group: AccessGroupKey;
-          joinedAt: string;
-          userId: string;
-          name: string;
-          email: string;
-          emailVerified: number;
-        }>(),
-      runtime.DATABASE.prepare(
-        `SELECT invitation.id, invitation.email,
-              coalesce(access_group.key, invitation.role) AS "group",
-              invitation.expires_at AS expiresAt, invitation.created_at AS createdAt,
-              invitation.email_status AS emailStatus,
-              invitation.email_sent_at AS emailSentAt,
-              invitation.email_last_attempt_at AS emailLastAttemptAt,
-              invitation.email_attempt_count AS emailAttemptCount
-       FROM organization_invitation invitation
-       LEFT JOIN access_group ON access_group.id = invitation.group_id
-       WHERE invitation.organization_id = ? AND invitation.accepted_at IS NULL
-         AND invitation.revoked_at IS NULL AND unixepoch(invitation.expires_at) > unixepoch()
-       ORDER BY invitation.created_at DESC`,
-      )
-        .bind(context.organizationId)
-        .all<{
-          id: string;
-          email: string;
-          group: Exclude<AccessGroupKey, "owner">;
-          expiresAt: string;
-          createdAt: string;
-          emailStatus: "not_sent" | "sent" | "failed";
-          emailSentAt: string | null;
-          emailLastAttemptAt: string | null;
-          emailAttemptCount: number;
-        }>(),
-      runtime.DATABASE.prepare(
-        `SELECT id, key, name, description FROM access_group
-       WHERE organization_id = ? ORDER BY CASE key
-         WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'staff' THEN 2 ELSE 3 END`,
-      )
-        .bind(context.organizationId)
-        .all<{ id: string; key: AccessGroupKey; name: string; description: string }>(),
-      runtime.DATABASE.prepare(
-        `SELECT id, key, name, description FROM access_role
-       WHERE organization_id = ? ORDER BY name COLLATE NOCASE`,
-      )
-        .bind(context.organizationId)
-        .all<{ id: string; key: AccessRoleKey; name: string; description: string }>(),
-      runtime.DATABASE.prepare(
-        `SELECT role.key AS roleKey, mapping.permission_key AS permissionKey
-       FROM access_role_permission mapping
-       JOIN access_role role ON role.id = mapping.role_id
-       WHERE role.organization_id = ?`,
-      )
-        .bind(context.organizationId)
-        .all<{ roleKey: AccessRoleKey; permissionKey: PermissionKey }>(),
-      runtime.DATABASE.prepare(
-        `SELECT access_group.key AS groupKey, role.key AS roleKey
-       FROM access_group_role mapping
-       JOIN access_group ON access_group.id = mapping.group_id
-       JOIN access_role role ON role.id = mapping.role_id
-       WHERE access_group.organization_id = ?`,
-      )
-        .bind(context.organizationId)
-        .all<{ groupKey: AccessGroupKey; roleKey: AccessRoleKey }>(),
+      runtime.ORM.select({
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        timezone: organization.timezone,
+        locale: organization.locale,
+      })
+        .from(organization)
+        .where(eq(organization.id, context.organizationId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
+      runtime.ORM.select({
+        id: organizationMember.id,
+        group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+        joinedAt: organizationMember.createdAt,
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        emailVerified: user.emailVerified,
+      })
+        .from(organizationMember)
+        .innerJoin(user, eq(user.id, organizationMember.userId))
+        .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+        .where(eq(organizationMember.organizationId, context.organizationId))
+        .orderBy(
+          asc(sql`CASE coalesce(${accessGroup.key}, ${organizationMember.role})
+            WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'staff' THEN 2 ELSE 3 END`),
+          asc(sql`lower(${user.name})`),
+        ),
+      runtime.ORM.select({
+        id: organizationInvitation.id,
+        email: organizationInvitation.email,
+        group: sql<
+          Exclude<AccessGroupKey, "owner">
+        >`coalesce(${accessGroup.key}, ${organizationInvitation.role})`,
+        expiresAt: organizationInvitation.expiresAt,
+        createdAt: organizationInvitation.createdAt,
+        emailStatus: organizationInvitation.emailStatus,
+        emailSentAt: organizationInvitation.emailSentAt,
+        emailLastAttemptAt: organizationInvitation.emailLastAttemptAt,
+        emailAttemptCount: organizationInvitation.emailAttemptCount,
+      })
+        .from(organizationInvitation)
+        .leftJoin(accessGroup, eq(accessGroup.id, organizationInvitation.groupId))
+        .where(
+          and(
+            eq(organizationInvitation.organizationId, context.organizationId),
+            isNull(organizationInvitation.acceptedAt),
+            isNull(organizationInvitation.revokedAt),
+            gt(organizationInvitation.expiresAt, new Date().toISOString()),
+          ),
+        )
+        .orderBy(desc(organizationInvitation.createdAt)),
+      runtime.ORM.select({
+        id: accessGroup.id,
+        key: accessGroup.key,
+        name: accessGroup.name,
+        description: accessGroup.description,
+      })
+        .from(accessGroup)
+        .where(eq(accessGroup.organizationId, context.organizationId))
+        .orderBy(
+          asc(sql`CASE ${accessGroup.key}
+            WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'staff' THEN 2 ELSE 3 END`),
+        ),
+      runtime.ORM.select({
+        id: accessRole.id,
+        key: accessRole.key,
+        name: accessRole.name,
+        description: accessRole.description,
+      })
+        .from(accessRole)
+        .where(eq(accessRole.organizationId, context.organizationId))
+        .orderBy(asc(sql`lower(${accessRole.name})`)),
+      runtime.ORM.select({
+        roleKey: accessRole.key,
+        permissionKey: accessRolePermission.permissionKey,
+      })
+        .from(accessRolePermission)
+        .innerJoin(accessRole, eq(accessRole.id, accessRolePermission.roleId))
+        .where(eq(accessRole.organizationId, context.organizationId)),
+      runtime.ORM.select({ groupKey: accessGroup.key, roleKey: accessRole.key })
+        .from(accessGroupRole)
+        .innerJoin(accessGroup, eq(accessGroup.id, accessGroupRole.groupId))
+        .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
+        .where(eq(accessGroup.organizationId, context.organizationId)),
     ]);
 
-  if (!organization) return Response.json({ error: "Organization not found" }, { status: 404 });
+  if (!organizationState)
+    return Response.json({ error: "Organization not found" }, { status: 404 });
 
   return Response.json({
-    organization,
+    organization: organizationState,
     currentMember: {
       id: context.memberId,
       group: context.group,
       permissions: context.permissions,
     },
-    members: members.results.map((member) => ({
+    members: members.map((member) => ({
       ...member,
       emailVerified: Boolean(member.emailVerified),
     })),
-    invitations: invitations.results,
+    invitations,
     accessModel: {
       permissions: permissionCatalog.map(([key, name, category]) => ({ key, name, category })),
-      roles: roles.results.map((role) => ({
+      roles: roles.map((role) => ({
         ...role,
-        permissionKeys: rolePermissions.results
+        permissionKeys: rolePermissions
           .filter((mapping) => mapping.roleKey === role.key)
           .map((mapping) => mapping.permissionKey),
       })),
-      groups: groups.results.map((group) => ({
+      groups: groups.map((group) => ({
         ...group,
-        roleKeys: groupRoles.results
+        roleKeys: groupRoles
           .filter((mapping) => mapping.groupKey === group.key)
           .map((mapping) => mapping.roleKey),
       })),
@@ -8116,13 +8457,17 @@ async function updateOrganization(request: Request): Promise<Response> {
   }
 
   const runtime = getRuntimeEnv();
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE organization SET name = ?, timezone = ?, locale = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-    ).bind(parsed.data.name, parsed.data.timezone, parsed.data.locale, context.organizationId),
-    auditStatement(
-      runtime.DATABASE,
+  await runtime.ORM.batch([
+    runtime.ORM.update(organization)
+      .set({
+        name: parsed.data.name,
+        timezone: parsed.data.timezone,
+        locale: parsed.data.locale,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(eq(organization.id, context.organizationId)),
+    auditInsert(
+      runtime.ORM,
       context,
       "organization.updated",
       "organization",
@@ -8154,24 +8499,35 @@ async function createOrganizationInvitation(request: Request): Promise<Response>
   }
 
   const runtime = getRuntimeEnv();
-  const existingMember = await runtime.DATABASE.prepare(
-    `SELECT member.id FROM organization_member member
-     JOIN "user" ON "user".id = member.user_id
-     WHERE member.organization_id = ? AND lower("user".email) = ?`,
-  )
-    .bind(context.organizationId, parsed.data.email)
-    .first<{ id: string }>();
+  const existingMember = await runtime.ORM.select({ id: organizationMember.id })
+    .from(organizationMember)
+    .innerJoin(user, eq(user.id, organizationMember.userId))
+    .where(
+      and(
+        eq(organizationMember.organizationId, context.organizationId),
+        eq(sql`lower(${user.email})`, parsed.data.email),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (existingMember) {
     return Response.json({ error: "That person is already a member." }, { status: 409 });
   }
 
-  const recentInvitations = await runtime.DATABASE.prepare(
-    `SELECT COUNT(*) AS count FROM organization_invitation
-     WHERE organization_id = ? AND invited_by_user_id = ?
-       AND unixepoch(created_at) >= unixepoch() - 3600`,
-  )
-    .bind(context.organizationId, context.userId)
-    .first<{ count: number }>();
+  const recentInvitationCutoff = new Date(Date.now() - 60 * 60 * 1000)
+    .toISOString()
+    .replace("T", " ")
+    .slice(0, 19);
+  const recentInvitations = await runtime.ORM.select({ count: count() })
+    .from(organizationInvitation)
+    .where(
+      and(
+        eq(organizationInvitation.organizationId, context.organizationId),
+        eq(organizationInvitation.invitedByUserId, context.userId),
+        gt(organizationInvitation.createdAt, recentInvitationCutoff),
+      ),
+    )
+    .then((rows) => rows[0] ?? { count: 0 });
   if (Number(recentInvitations?.count ?? 0) >= 20) {
     return Response.json(
       { error: "Invitation limit reached. Try again in an hour." },
@@ -8184,36 +8540,34 @@ async function createOrganizationInvitation(request: Request): Promise<Response>
   const invitationId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE organization_invitation SET revoked_at = CURRENT_TIMESTAMP
-       WHERE organization_id = ? AND email = ?
-         AND accepted_at IS NULL AND revoked_at IS NULL`,
-    ).bind(context.organizationId, parsed.data.email),
-    runtime.DATABASE.prepare(
-      `INSERT INTO organization_invitation
-        (id, organization_id, email, role, group_id, token_hash, invited_by_user_id, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(
-      invitationId,
-      context.organizationId,
-      parsed.data.email,
-      parsed.data.group,
-      accessGroupId(context.organizationId, parsed.data.group),
+  await runtime.ORM.batch([
+    runtime.ORM.update(organizationInvitation)
+      .set({ revokedAt: sql`CURRENT_TIMESTAMP` })
+      .where(
+        and(
+          eq(organizationInvitation.organizationId, context.organizationId),
+          eq(organizationInvitation.email, parsed.data.email),
+          isNull(organizationInvitation.acceptedAt),
+          isNull(organizationInvitation.revokedAt),
+        ),
+      ),
+    runtime.ORM.insert(organizationInvitation).values({
+      id: invitationId,
+      organizationId: context.organizationId,
+      email: parsed.data.email,
+      role: parsed.data.group,
+      groupId: accessGroupId(context.organizationId, parsed.data.group),
       tokenHash,
-      context.userId,
+      invitedByUserId: context.userId,
       expiresAt,
-    ),
-    auditStatement(
-      runtime.DATABASE,
+    }),
+    auditInsert(
+      runtime.ORM,
       context,
       "invitation.created",
       "organization_invitation",
       invitationId,
-      {
-        email: parsed.data.email,
-        group: parsed.data.group,
-      },
+      { email: parsed.data.email, group: parsed.data.group },
     ),
   ]);
 
@@ -8242,7 +8596,7 @@ async function previewInvitation(request: Request): Promise<Response> {
   const token = new URL(request.url).searchParams.get("token");
   if (!token) return Response.json({ error: "Invitation not found" }, { status: 404 });
 
-  const invitation = await findInvitation(getRuntimeEnv().DATABASE, token);
+  const invitation = await findInvitation(getRuntimeEnv().ORM, token);
   if (!invitation)
     return Response.json({ error: "This invitation is invalid or expired." }, { status: 404 });
 
@@ -8265,12 +8619,12 @@ async function acceptInvitationForCurrentUser(request: Request): Promise<Respons
   if (!parsed.success) return Response.json({ error: "Invalid invitation" }, { status: 400 });
 
   const runtime = getRuntimeEnv();
-  const invitation = await findInvitation(runtime.DATABASE, parsed.data.token, session.user.email);
+  const invitation = await findInvitation(runtime.ORM, parsed.data.token, session.user.email);
   if (!invitation) {
     return Response.json({ error: "This invitation is invalid or expired." }, { status: 404 });
   }
 
-  await acceptInvitation(runtime.DATABASE, invitation, session.user.id);
+  await acceptInvitation(runtime.ORM, invitation, session.user.id);
   return Response.json({ ok: true });
 }
 
@@ -8291,14 +8645,20 @@ async function updateOrganizationMember(request: Request, memberId: string): Pro
   if (!parsed.success) return Response.json({ error: "Invalid access group" }, { status: 400 });
 
   const runtime = getRuntimeEnv();
-  const target = await runtime.DATABASE.prepare(
-    `SELECT member.id, coalesce(access_group.key, member.role) AS "group"
-     FROM organization_member member
-     LEFT JOIN access_group ON access_group.id = member.group_id
-     WHERE member.id = ? AND member.organization_id = ?`,
-  )
-    .bind(memberId, context.organizationId)
-    .first<{ id: string; group: AccessGroupKey }>();
+  const target = await runtime.ORM.select({
+    id: organizationMember.id,
+    group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+  })
+    .from(organizationMember)
+    .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+    .where(
+      and(
+        eq(organizationMember.id, memberId),
+        eq(organizationMember.organizationId, context.organizationId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!target) return Response.json({ error: "Member not found" }, { status: 404 });
   if (target.group === "owner") {
     return Response.json(
@@ -8307,21 +8667,17 @@ async function updateOrganizationMember(request: Request, memberId: string): Pro
     );
   }
 
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE organization_member SET role = ?, group_id = ? WHERE id = ?`,
-    ).bind(parsed.data.group, accessGroupId(context.organizationId, parsed.data.group), target.id),
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "member.group_changed",
-      "organization_member",
-      target.id,
-      {
-        from: target.group,
-        to: parsed.data.group,
-      },
-    ),
+  await runtime.ORM.batch([
+    runtime.ORM.update(organizationMember)
+      .set({
+        role: parsed.data.group,
+        groupId: accessGroupId(context.organizationId, parsed.data.group),
+      })
+      .where(eq(organizationMember.id, target.id)),
+    auditInsert(runtime.ORM, context, "member.group_changed", "organization_member", target.id, {
+      from: target.group,
+      to: parsed.data.group,
+    }),
   ]);
 
   return Response.json({ ok: true });
@@ -8340,41 +8696,45 @@ async function transferOrganizationOwnership(request: Request): Promise<Response
   }
 
   const runtime = getRuntimeEnv();
-  const target = await runtime.DATABASE.prepare(
-    `SELECT member.id, member.user_id AS userId,
-            coalesce(access_group.key, member.role) AS "group"
-     FROM organization_member member
-     LEFT JOIN access_group ON access_group.id = member.group_id
-     WHERE member.id = ? AND member.organization_id = ?`,
-  )
-    .bind(parsed.data.targetMemberId, context.organizationId)
-    .first<{ id: string; userId: string; group: AccessGroupKey }>();
+  const target = await runtime.ORM.select({
+    id: organizationMember.id,
+    userId: organizationMember.userId,
+    group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+  })
+    .from(organizationMember)
+    .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+    .where(
+      and(
+        eq(organizationMember.id, parsed.data.targetMemberId),
+        eq(organizationMember.organizationId, context.organizationId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!target) return Response.json({ error: "Member not found" }, { status: 404 });
 
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE organization_member SET role = 'owner', group_id = ?
-       WHERE id = ? AND organization_id = ?`,
-    ).bind(accessGroupId(context.organizationId, "owner"), target.id, context.organizationId),
-    runtime.DATABASE.prepare(
-      `UPDATE organization_member SET role = 'admin', group_id = ?
-       WHERE id = ? AND organization_id = ? AND role = 'owner'`,
-    ).bind(
-      accessGroupId(context.organizationId, "admin"),
-      context.memberId,
-      context.organizationId,
-    ),
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "ownership.transferred",
-      "organization_member",
-      target.id,
-      {
-        previousOwnerMemberId: context.memberId,
-        newOwnerUserId: target.userId,
-      },
-    ),
+  await runtime.ORM.batch([
+    runtime.ORM.update(organizationMember)
+      .set({ role: "owner", groupId: accessGroupId(context.organizationId, "owner") })
+      .where(
+        and(
+          eq(organizationMember.id, target.id),
+          eq(organizationMember.organizationId, context.organizationId),
+        ),
+      ),
+    runtime.ORM.update(organizationMember)
+      .set({ role: "admin", groupId: accessGroupId(context.organizationId, "admin") })
+      .where(
+        and(
+          eq(organizationMember.id, context.memberId),
+          eq(organizationMember.organizationId, context.organizationId),
+          eq(organizationMember.role, "owner"),
+        ),
+      ),
+    auditInsert(runtime.ORM, context, "ownership.transferred", "organization_member", target.id, {
+      previousOwnerMemberId: context.memberId,
+      newOwnerUserId: target.userId,
+    }),
   ]);
 
   return Response.json({ ok: true });
@@ -8399,33 +8759,24 @@ async function updateAccessGroup(request: Request, groupKey: string): Promise<Re
   const group = groupKey as Exclude<AccessGroupKey, "owner">;
   const runtime = getRuntimeEnv();
   const groupId = accessGroupId(context.organizationId, group);
-  const statements: DrizzleStatement[] = [
-    runtime.DATABASE.prepare(`DELETE FROM access_group_role WHERE group_id = ?`).bind(groupId),
-  ];
+  await runtime.ORM.delete(accessGroupRole).where(eq(accessGroupRole.groupId, groupId));
   for (const roleKey of roleKeys) {
-    statements.push(
-      runtime.DATABASE.prepare(
-        `INSERT INTO access_group_role (group_id, role_id) VALUES (?, ?)`,
-      ).bind(groupId, accessRoleId(context.organizationId, roleKey)),
-    );
-  }
-  statements.push(
-    runtime.DATABASE.prepare(
-      `UPDATE access_group SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND organization_id = ?`,
-    ).bind(groupId, context.organizationId),
-    auditStatement(
-      runtime.DATABASE,
-      context,
-      "access_group.roles_changed",
-      "access_group",
+    await runtime.ORM.insert(accessGroupRole).values({
       groupId,
-      {
-        group,
-        roleKeys: roleKeys.join(","),
-      },
-    ),
-  );
-  await runtime.DATABASE.batch(statements);
+      roleId: accessRoleId(context.organizationId, roleKey),
+    });
+  }
+  await runtime.ORM.batch([
+    runtime.ORM.update(accessGroup)
+      .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
+      .where(
+        and(eq(accessGroup.id, groupId), eq(accessGroup.organizationId, context.organizationId)),
+      ),
+    auditInsert(runtime.ORM, context, "access_group.roles_changed", "access_group", groupId, {
+      group,
+      roleKeys: roleKeys.join(","),
+    }),
+  ]);
   return Response.json({ ok: true, group, roleKeys });
 }
 
@@ -8440,22 +8791,26 @@ async function resendOrganizationInvitation(
   if (!hasPermission(context, "organization.members.manage")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const invitation = await runtime.DATABASE.prepare(
-    `SELECT invitation.id, invitation.email,
-            coalesce(access_group.key, invitation.role) AS "group",
-            invitation.email_last_attempt_at AS emailLastAttemptAt
-     FROM organization_invitation invitation
-     LEFT JOIN access_group ON access_group.id = invitation.group_id
-     WHERE invitation.id = ? AND invitation.organization_id = ?
-       AND invitation.accepted_at IS NULL AND invitation.revoked_at IS NULL`,
-  )
-    .bind(invitationId, context.organizationId)
-    .first<{
-      id: string;
-      email: string;
-      group: Exclude<AccessGroupKey, "owner">;
-      emailLastAttemptAt: string | null;
-    }>();
+  const invitation = await runtime.ORM.select({
+    id: organizationInvitation.id,
+    email: organizationInvitation.email,
+    group: sql<
+      Exclude<AccessGroupKey, "owner">
+    >`coalesce(${accessGroup.key}, ${organizationInvitation.role})`,
+    emailLastAttemptAt: organizationInvitation.emailLastAttemptAt,
+  })
+    .from(organizationInvitation)
+    .leftJoin(accessGroup, eq(accessGroup.id, organizationInvitation.groupId))
+    .where(
+      and(
+        eq(organizationInvitation.id, invitationId),
+        eq(organizationInvitation.organizationId, context.organizationId),
+        isNull(organizationInvitation.acceptedAt),
+        isNull(organizationInvitation.revokedAt),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!invitation) return Response.json({ error: "Invitation not found" }, { status: 404 });
   if (
     invitation.emailLastAttemptAt &&
@@ -8470,14 +8825,15 @@ async function resendOrganizationInvitation(
   const token = createInvitationToken();
   const tokenHash = await hashInvitationToken(token);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  await runtime.DATABASE.prepare(
-    `UPDATE organization_invitation
-     SET token_hash = ?, expires_at = ?, email_status = 'not_sent',
-         email_message_id = NULL, email_sent_at = NULL
-     WHERE id = ?`,
-  )
-    .bind(tokenHash, expiresAt, invitation.id)
-    .run();
+  await runtime.ORM.update(organizationInvitation)
+    .set({
+      tokenHash,
+      expiresAt,
+      emailStatus: "not_sent",
+      emailMessageId: null,
+      emailSentAt: null,
+    })
+    .where(eq(organizationInvitation.id, invitation.id));
 
   const invitationUrl = new URL(request.url);
   invitationUrl.pathname = "/";
@@ -8491,14 +8847,14 @@ async function resendOrganizationInvitation(
     invitationUrl.toString(),
     expiresAt,
   );
-  await auditStatement(
-    runtime.DATABASE,
+  await auditInsert(
+    runtime.ORM,
     context,
     "invitation.resent",
     "organization_invitation",
     invitation.id,
     { email: invitation.email, group: invitation.group, delivery: delivery.status },
-  ).run();
+  );
 
   return Response.json({ invitationUrl: invitationUrl.toString(), expiresAt, delivery });
 }
@@ -8512,53 +8868,58 @@ async function deliverOrganizationInvitation(
   invitationUrl: string,
   expiresAt: string,
 ): Promise<{ status: "sent" | "failed"; messageId?: string }> {
-  const [organization, inviter, roles] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT name FROM organization WHERE id = ?`)
-      .bind(context.organizationId)
-      .first<{ name: string }>(),
-    runtime.DATABASE.prepare(`SELECT name, email FROM "user" WHERE id = ?`)
-      .bind(context.userId)
-      .first<{ name: string; email: string }>(),
-    runtime.DATABASE.prepare(
-      `SELECT role.name FROM access_group_role mapping
-       JOIN access_group ON access_group.id = mapping.group_id
-       JOIN access_role role ON role.id = mapping.role_id
-       WHERE access_group.organization_id = ? AND access_group.key = ?
-       ORDER BY role.name COLLATE NOCASE`,
-    )
-      .bind(context.organizationId, group)
-      .all<{ name: string }>(),
+  const [organizationState, inviter, roles] = await Promise.all([
+    runtime.ORM.select({ name: organization.name })
+      .from(organization)
+      .where(eq(organization.id, context.organizationId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ name: user.name, email: user.email })
+      .from(user)
+      .where(eq(user.id, context.userId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ name: accessRole.name })
+      .from(accessGroupRole)
+      .innerJoin(accessGroup, eq(accessGroup.id, accessGroupRole.groupId))
+      .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
+      .where(
+        and(eq(accessGroup.organizationId, context.organizationId), eq(accessGroup.key, group)),
+      )
+      .orderBy(asc(sql`lower(${accessRole.name})`)),
   ]);
-  if (!organization || !inviter) throw new Error("Invitation sender context is missing.");
+  if (!organizationState || !inviter) throw new Error("Invitation sender context is missing.");
 
   try {
     const messageId = await sendInvitationEmail(runtime, {
-      organizationName: organization.name,
+      organizationName: organizationState.name,
       expiresAt,
       invitationUrl,
       inviterEmail: inviter.email,
       inviterName: inviter.name,
       recipient,
       group,
-      roleNames: roles.results.map((role) => role.name),
+      roleNames: roles.map((role) => role.name),
     });
-    await runtime.DATABASE.prepare(
-      `UPDATE organization_invitation SET email_status = 'sent', email_message_id = ?,
-       email_sent_at = CURRENT_TIMESTAMP, email_last_attempt_at = CURRENT_TIMESTAMP,
-       email_attempt_count = email_attempt_count + 1 WHERE id = ?`,
-    )
-      .bind(messageId, invitationId)
-      .run();
+    await runtime.ORM.update(organizationInvitation)
+      .set({
+        emailStatus: "sent",
+        emailMessageId: messageId,
+        emailSentAt: sql`CURRENT_TIMESTAMP`,
+        emailLastAttemptAt: sql`CURRENT_TIMESTAMP`,
+        emailAttemptCount: sql`${organizationInvitation.emailAttemptCount} + 1`,
+      })
+      .where(eq(organizationInvitation.id, invitationId));
     return { status: "sent", messageId };
   } catch (error) {
     console.error("Invitation email delivery failed", { invitationId, error });
-    await runtime.DATABASE.prepare(
-      `UPDATE organization_invitation SET email_status = 'failed',
-       email_last_attempt_at = CURRENT_TIMESTAMP,
-       email_attempt_count = email_attempt_count + 1 WHERE id = ?`,
-    )
-      .bind(invitationId)
-      .run();
+    await runtime.ORM.update(organizationInvitation)
+      .set({
+        emailStatus: "failed",
+        emailLastAttemptAt: sql`CURRENT_TIMESTAMP`,
+        emailAttemptCount: sql`${organizationInvitation.emailAttemptCount} + 1`,
+      })
+      .where(eq(organizationInvitation.id, invitationId));
     return { status: "failed" };
   }
 }
@@ -8574,20 +8935,26 @@ async function revokeOrganizationInvitation(
   if (!hasPermission(context, "organization.members.manage")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const invitation = await runtime.DATABASE.prepare(
-    `SELECT id FROM organization_invitation
-     WHERE id = ? AND organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL`,
-  )
-    .bind(invitationId, context.organizationId)
-    .first<{ id: string }>();
+  const invitation = await runtime.ORM.select({ id: organizationInvitation.id })
+    .from(organizationInvitation)
+    .where(
+      and(
+        eq(organizationInvitation.id, invitationId),
+        eq(organizationInvitation.organizationId, context.organizationId),
+        isNull(organizationInvitation.acceptedAt),
+        isNull(organizationInvitation.revokedAt),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
   if (!invitation) return Response.json({ error: "Invitation not found" }, { status: 404 });
 
-  await runtime.DATABASE.batch([
-    runtime.DATABASE.prepare(
-      `UPDATE organization_invitation SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    ).bind(invitation.id),
-    auditStatement(
-      runtime.DATABASE,
+  await runtime.ORM.batch([
+    runtime.ORM.update(organizationInvitation)
+      .set({ revokedAt: sql`CURRENT_TIMESTAMP` })
+      .where(eq(organizationInvitation.id, invitation.id)),
+    auditInsert(
+      runtime.ORM,
       context,
       "invitation.revoked",
       "organization_invitation",
@@ -8607,35 +8974,40 @@ async function getMembershipContext(request: Request): Promise<MembershipContext
   if (!session?.user.id) return null;
 
   const runtime = getRuntimeEnv();
-  const membership = await runtime.DATABASE.prepare(
-    `SELECT om.id AS memberId, om.organization_id AS organizationId,
-            coalesce(access_group.key, om.role) AS "group"
-     FROM organization_member om
-     LEFT JOIN access_group ON access_group.id = om.group_id
-     LEFT JOIN user_preference up ON up.user_id = om.user_id
-     WHERE om.user_id = ?
-     ORDER BY CASE WHEN up.active_organization_id = om.organization_id THEN 0 ELSE 1 END,
-              om.created_at
-     LIMIT 1`,
-  )
-    .bind(session.user.id)
-    .first<Pick<MembershipContext, "memberId" | "organizationId" | "group">>();
+  const membership = await runtime.ORM.select({
+    memberId: organizationMember.id,
+    organizationId: organizationMember.organizationId,
+    group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+  })
+    .from(organizationMember)
+    .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+    .leftJoin(userPreference, eq(userPreference.userId, organizationMember.userId))
+    .where(eq(organizationMember.userId, session.user.id))
+    .orderBy(
+      asc(
+        sql`CASE WHEN ${userPreference.activeOrganizationId} = ${organizationMember.organizationId}
+          THEN 0 ELSE 1 END`,
+      ),
+      asc(organizationMember.createdAt),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
 
   if (!membership) return null;
   const permissions =
     membership.group === "owner"
       ? permissionCatalog.map(([key]) => key)
-      : (
-          await runtime.DATABASE.prepare(
-            `SELECT DISTINCT mapping.permission_key AS permissionKey
-             FROM organization_member member
-             JOIN access_group_role group_role ON group_role.group_id = member.group_id
-             JOIN access_role_permission mapping ON mapping.role_id = group_role.role_id
-             WHERE member.id = ? AND member.organization_id = ?`,
+      : await runtime.ORM.selectDistinct({ permissionKey: accessRolePermission.permissionKey })
+          .from(organizationMember)
+          .innerJoin(accessGroupRole, eq(accessGroupRole.groupId, organizationMember.groupId))
+          .innerJoin(accessRolePermission, eq(accessRolePermission.roleId, accessGroupRole.roleId))
+          .where(
+            and(
+              eq(organizationMember.id, membership.memberId),
+              eq(organizationMember.organizationId, membership.organizationId),
+            ),
           )
-            .bind(membership.memberId, membership.organizationId)
-            .all<{ permissionKey: PermissionKey }>()
-        ).results.map((row) => row.permissionKey);
+          .then((rows) => rows.map((row) => row.permissionKey as PermissionKey));
 
   return {
     ...membership,
@@ -8645,40 +9017,61 @@ async function getMembershipContext(request: Request): Promise<MembershipContext
 }
 
 async function findInvitation(
-  database: QueryDatabase,
+  database: Database,
   token: string,
   expectedEmail?: string,
 ): Promise<Invitation | null> {
   if (token.length < 32 || token.length > 256) return null;
   const tokenHash = await hashInvitationToken(token);
   const invitation = await database
-    .prepare(
-      `SELECT i.id, i.organization_id AS organizationId, o.name AS organizationName,
-              i.email, coalesce(access_group.key, i.role) AS "group",
-              i.expires_at AS expiresAt,
-              coalesce(group_concat(DISTINCT role.name), '') AS roleNamesCsv
-       FROM organization_invitation i
-       JOIN organization o ON o.id = i.organization_id
-       LEFT JOIN access_group ON access_group.id = i.group_id
-       LEFT JOIN access_group_role group_role ON group_role.group_id = access_group.id
-       LEFT JOIN access_role role ON role.id = group_role.role_id
-       WHERE i.token_hash = ? AND i.accepted_at IS NULL AND i.revoked_at IS NULL
-         AND unixepoch(i.expires_at) > unixepoch()
-       GROUP BY i.id`,
+    .select({
+      id: organizationInvitation.id,
+      organizationId: organizationInvitation.organizationId,
+      organizationName: organization.name,
+      email: organizationInvitation.email,
+      group: sql<
+        Exclude<AccessGroupKey, "owner">
+      >`coalesce(${accessGroup.key}, ${organizationInvitation.role})`,
+      expiresAt: organizationInvitation.expiresAt,
+      groupId: organizationInvitation.groupId,
+    })
+    .from(organizationInvitation)
+    .innerJoin(organization, eq(organization.id, organizationInvitation.organizationId))
+    .leftJoin(accessGroup, eq(accessGroup.id, organizationInvitation.groupId))
+    .where(
+      and(
+        eq(organizationInvitation.tokenHash, tokenHash),
+        isNull(organizationInvitation.acceptedAt),
+        isNull(organizationInvitation.revokedAt),
+        gt(organizationInvitation.expiresAt, new Date().toISOString()),
+      ),
     )
-    .bind(tokenHash)
-    .first<Invitation & { roleNamesCsv: string }>();
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
 
   if (!invitation) return null;
   if (expectedEmail && invitation.email !== expectedEmail.trim().toLowerCase()) return null;
+  const roles = invitation.groupId
+    ? await database
+        .select({ name: accessRole.name })
+        .from(accessGroupRole)
+        .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
+        .where(eq(accessGroupRole.groupId, invitation.groupId))
+        .orderBy(asc(sql`lower(${accessRole.name})`))
+    : [];
   return {
-    ...invitation,
-    roleNames: invitation.roleNamesCsv ? invitation.roleNamesCsv.split(",") : [],
+    id: invitation.id,
+    organizationId: invitation.organizationId,
+    organizationName: invitation.organizationName,
+    email: invitation.email,
+    group: invitation.group,
+    expiresAt: invitation.expiresAt,
+    roleNames: roles.map((role) => role.name),
   };
 }
 
 async function acceptInvitation(
-  database: QueryDatabase,
+  database: Database,
   invitation: Invitation,
   userId: string,
 ): Promise<void> {
@@ -8687,35 +9080,55 @@ async function acceptInvitation(
 
   await database.batch([
     database
-      .prepare(
-        `INSERT OR IGNORE INTO organization_member
-          (id, organization_id, user_id, role, group_id)
-         SELECT ?, organization_id, ?, role, group_id FROM organization_invitation
-         WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL
-           AND unixepoch(expires_at) > unixepoch()`,
-      )
-      .bind(memberId, userId, invitation.id),
-    database
-      .prepare(
-        `UPDATE organization_invitation
-         SET accepted_at = CURRENT_TIMESTAMP, accepted_by_user_id = ?
-         WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL`,
-      )
-      .bind(userId, invitation.id),
-    database
-      .prepare(
-        `INSERT INTO audit_event
-          (id, organization_id, actor_user_id, action, entity_type, entity_id, metadata_json)
-         VALUES (?, ?, ?, 'invitation.accepted', 'organization_invitation', ?, ?)`,
-      )
-      .bind(
-        auditId,
-        invitation.organizationId,
+      .insert(organizationMember)
+      .values({
+        id: memberId,
+        organizationId: invitation.organizationId,
         userId,
-        invitation.id,
-        JSON.stringify({ email: invitation.email, group: invitation.group }),
+        role: invitation.group,
+        groupId: accessGroupId(invitation.organizationId, invitation.group),
+      })
+      .onConflictDoNothing(),
+    database
+      .update(organizationInvitation)
+      .set({ acceptedAt: sql`CURRENT_TIMESTAMP`, acceptedByUserId: userId })
+      .where(
+        and(
+          eq(organizationInvitation.id, invitation.id),
+          isNull(organizationInvitation.acceptedAt),
+          isNull(organizationInvitation.revokedAt),
+          gt(organizationInvitation.expiresAt, new Date().toISOString()),
+        ),
       ),
+    database.insert(auditEvent).values({
+      id: auditId,
+      organizationId: invitation.organizationId,
+      actorUserId: userId,
+      action: "invitation.accepted",
+      entityType: "organization_invitation",
+      entityId: invitation.id,
+      metadataJson: JSON.stringify({ email: invitation.email, group: invitation.group }),
+    }),
   ]);
+}
+
+function auditInsert(
+  database: Database,
+  context: MembershipContext,
+  action: string,
+  entityType: string,
+  entityId: string,
+  metadata?: Record<string, string>,
+) {
+  return database.insert(auditEvent).values({
+    id: crypto.randomUUID(),
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    action,
+    entityType,
+    entityId,
+    metadataJson: metadata ? JSON.stringify(metadata) : null,
+  });
 }
 
 function auditStatement(
