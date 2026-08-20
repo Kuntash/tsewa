@@ -103,15 +103,19 @@ people and school workflows where appropriate.
 
 - [x] Preserve and display imported historical marks and results.
 - [x] Configure subjects, terms, and assessments for the active session.
-- [ ] Add the remaining subject types, subject heads, evaluation types, grades,
-      and class-mapping catalogs where legacy use requires them.
+- [x] Add subject types, subject heads, grade types and bands, class-subject order
+      and maximum marks, and assessment-specific maximum marks.
 - [x] Create and edit Tsewa draft mark sheets while keeping imported sheets immutable.
 - [x] Support draft, verification, final locking, audited reopening, and correction.
 - [ ] Confirm whether Excel marks import is still wanted.
 - [x] Generate student summaries and printable/exportable report cards.
 
 Evidence: 311 mark sheets and 17,821 mark-detail rows exist, but all mark sheets
-belong to the 2011 or 2012 session.
+belong to the 2011 or 2012 session. The imported configuration preserves 3
+subject types, 20 subject heads, 4 grade types, 20 grade bands, 1,271
+class-subject assignments, and 4,414 assessment limits. The recovered database
+has an ASP.NET evaluation-type screen but no evaluation-type table or populated
+rows, so it is not treated as populated v0 parity work.
 
 ### Promotion
 

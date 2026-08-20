@@ -1054,6 +1054,55 @@ export const historicalResultsImportBatch = sqliteTable("historical_results_impo
     .notNull(),
 });
 
+const academicCatalogColumns = () => ({
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  academicSessionId: text("academic_session_id")
+    .notNull()
+    .references(() => academicSession.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importedAt: text("imported_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const academicSubjectType = sqliteTable("academic_subject_type", academicCatalogColumns());
+export const academicSubjectHead = sqliteTable("academic_subject_head", academicCatalogColumns());
+export const academicGradeType = sqliteTable("academic_grade_type", academicCatalogColumns());
+
+export const academicGrade = sqliteTable("academic_grade", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  gradeTypeId: text("grade_type_id")
+    .notNull()
+    .references(() => academicGradeType.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  startsAt: real("starts_at").notNull(),
+  endsAt: real("ends_at").notNull(),
+  points: real().notNull(),
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importedAt: text("imported_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
 export const academicSubject = sqliteTable(
   "academic_subject",
   {
@@ -1066,6 +1115,15 @@ export const academicSubject = sqliteTable(
       .references(() => academicSession.id, { onDelete: "cascade" }),
     name: text().notNull(),
     shortName: text("short_name"),
+    subjectTypeId: text("subject_type_id").references(() => academicSubjectType.id, {
+      onDelete: "set null",
+    }),
+    subjectHeadId: text("subject_head_id").references(() => academicSubjectHead.id, {
+      onDelete: "set null",
+    }),
+    gradeTypeId: text("grade_type_id").references(() => academicGradeType.id, {
+      onDelete: "set null",
+    }),
     isOptional: integer("is_optional").default(0).notNull(),
     passingPercentage: real("passing_percentage"),
     isActive: integer("is_active").default(1).notNull(),
@@ -1133,6 +1191,64 @@ export const academicAssessment = sqliteTable("academic_assessment", {
   importBatchId: text("import_batch_id").references(() => historicalResultsImportBatch.id, {
     onDelete: "set null",
   }),
+  importedAt: text("imported_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const academicClassSubject = sqliteTable("academic_class_subject", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  academicSessionId: text("academic_session_id")
+    .notNull()
+    .references(() => academicSession.id, { onDelete: "cascade" }),
+  academicClassId: text("academic_class_id")
+    .notNull()
+    .references(() => academicClassMaster.id, { onDelete: "cascade" }),
+  subjectId: text("subject_id")
+    .notNull()
+    .references(() => academicSubject.id, { onDelete: "cascade" }),
+  maximumMarks: real("maximum_marks"),
+  displayOrder: integer("display_order"),
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importedAt: text("imported_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const academicClassSubjectAssessment = sqliteTable("academic_class_subject_assessment", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  academicSessionId: text("academic_session_id")
+    .notNull()
+    .references(() => academicSession.id, { onDelete: "cascade" }),
+  academicClassId: text("academic_class_id")
+    .notNull()
+    .references(() => academicClassMaster.id, { onDelete: "cascade" }),
+  subjectId: text("subject_id")
+    .notNull()
+    .references(() => academicSubject.id, { onDelete: "cascade" }),
+  assessmentId: text("assessment_id")
+    .notNull()
+    .references(() => academicAssessment.id, { onDelete: "cascade" }),
+  maximumMarks: real("maximum_marks"),
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
   importedAt: text("imported_at"),
   createdAt: text("created_at")
     .default(sql`CURRENT_TIMESTAMP`)

@@ -209,6 +209,59 @@ const historicalResultsQuerySchema = z.object({
 
 const resultSetupQuerySchema = z.object({ sessionId: z.uuid() });
 
+const academicConfigurationMutationSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("saveCatalog"),
+    sessionId: z.uuid(),
+    kind: z.enum(["subjectType", "subjectHead", "gradeType"]),
+    id: z.uuid().optional(),
+    name: z.string().trim().min(1).max(120),
+  }),
+  z
+    .object({
+      action: z.literal("saveGrade"),
+      sessionId: z.uuid(),
+      id: z.uuid().optional(),
+      gradeTypeId: z.uuid(),
+      name: z.string().trim().min(1).max(30),
+      startsAt: z.number().min(0).max(10_000),
+      endsAt: z.number().min(0).max(10_000),
+      points: z.number().min(0).max(10_000),
+    })
+    .refine((value) => value.startsAt <= value.endsAt, { message: "The grade range is reversed." }),
+  z.object({
+    action: z.literal("saveSubject"),
+    sessionId: z.uuid(),
+    id: z.uuid().optional(),
+    name: z.string().trim().min(1).max(120),
+    shortName: z.string().trim().max(30).nullable(),
+    subjectTypeId: z.uuid().nullable(),
+    subjectHeadId: z.uuid().nullable(),
+    gradeTypeId: z.uuid().nullable(),
+    isOptional: z.boolean(),
+    passingPercentage: z.number().min(0).max(100).nullable(),
+    isActive: z.boolean(),
+  }),
+  z.object({
+    action: z.literal("saveClassSubject"),
+    sessionId: z.uuid(),
+    academicClassId: z.uuid(),
+    subjectId: z.uuid(),
+    enabled: z.boolean(),
+    maximumMarks: z.number().positive().max(10_000),
+    displayOrder: z.number().int().min(0).max(1_000),
+    assessmentLimits: z
+      .array(z.object({ assessmentId: z.uuid(), maximumMarks: z.number().positive().max(10_000) }))
+      .max(100),
+  }),
+  z.object({
+    action: z.literal("delete"),
+    sessionId: z.uuid(),
+    kind: z.enum(["subjectType", "subjectHead", "gradeType", "grade", "subject"]),
+    id: z.uuid(),
+  }),
+]);
+
 const resultSummaryQuerySchema = z.object({
   sessionId: z.uuid(),
   q: z.string().trim().max(100).default(""),
@@ -758,6 +811,10 @@ export const apiDispatcher = {
 
     if (url.pathname === "/api/school-operations/results/setup") {
       return handleAcademicResultSetup(request);
+    }
+
+    if (url.pathname === "/api/school-operations/academic-configuration") {
+      return handleAcademicConfiguration(request);
     }
 
     if (url.pathname === "/api/school-operations/results/summaries") {
@@ -3136,6 +3193,431 @@ async function handleAcademicResultSetup(request: Request): Promise<Response> {
   return methodNotAllowed("GET, POST");
 }
 
+async function handleAcademicConfiguration(request: Request): Promise<Response> {
+  if (request.method === "GET") return getAcademicConfiguration(request);
+  if (request.method === "POST") return mutateAcademicConfiguration(request);
+  return methodNotAllowed("GET, POST");
+}
+
+async function getAcademicConfiguration(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const parsed = resultSetupQuerySchema.safeParse({ sessionId: url.searchParams.get("sessionId") });
+  if (!parsed.success)
+    return Response.json({ error: "Select a valid academic session." }, { status: 400 });
+  const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
+  if (!scope || !hasPermission(scope, "school.results.read")) return forbidden();
+  const db = getRuntimeEnv().DATABASE;
+  const [
+    subjectTypes,
+    subjectHeads,
+    gradeTypes,
+    grades,
+    subjects,
+    classes,
+    assessments,
+    mappings,
+    limits,
+  ] = await Promise.all([
+    academicCatalogRows(db, "academic_subject_type", scope.organizationId, scope.session.id),
+    academicCatalogRows(db, "academic_subject_head", scope.organizationId, scope.session.id),
+    academicCatalogRows(db, "academic_grade_type", scope.organizationId, scope.session.id),
+    db
+      .prepare(`SELECT grade.id,grade.grade_type_id AS gradeTypeId,grade.name,grade.starts_at AS startsAt,
+      grade.ends_at AS endsAt,grade.points,grade.source_system AS sourceSystem
+      FROM academic_grade grade JOIN academic_grade_type type ON type.id=grade.grade_type_id
+      WHERE grade.organization_id=? AND type.academic_session_id=?
+      ORDER BY type.name COLLATE NOCASE,grade.starts_at DESC`)
+      .bind(scope.organizationId, scope.session.id)
+      .all(),
+    db
+      .prepare(`SELECT id,name,short_name AS shortName,subject_type_id AS subjectTypeId,
+      subject_head_id AS subjectHeadId,grade_type_id AS gradeTypeId,is_optional AS isOptional,
+      passing_percentage AS passingPercentage,is_active AS isActive,source_system AS sourceSystem
+      FROM academic_subject WHERE organization_id=? AND academic_session_id=?
+      ORDER BY name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all<{ isOptional: number; isActive: number; [key: string]: unknown }>(),
+    db
+      .prepare(`SELECT class.id,${classDisplayName("class")} AS name
+      FROM academic_class_master class WHERE class.organization_id=? ORDER BY coalesce(class.level,999),name COLLATE NOCASE`)
+      .bind(scope.organizationId)
+      .all(),
+    db
+      .prepare(`SELECT id,term_id AS termId,name FROM academic_assessment
+      WHERE organization_id=? AND academic_session_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`)
+      .bind(scope.organizationId, scope.session.id)
+      .all(),
+    db
+      .prepare(`SELECT id,academic_class_id AS academicClassId,subject_id AS subjectId,
+      maximum_marks AS maximumMarks,display_order AS displayOrder,source_system AS sourceSystem
+      FROM academic_class_subject WHERE organization_id=? AND academic_session_id=?
+      ORDER BY academic_class_id,display_order`)
+      .bind(scope.organizationId, scope.session.id)
+      .all(),
+    db
+      .prepare(`SELECT id,academic_class_id AS academicClassId,subject_id AS subjectId,
+      assessment_id AS assessmentId,maximum_marks AS maximumMarks
+      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?`)
+      .bind(scope.organizationId, scope.session.id)
+      .all(),
+  ]);
+  return Response.json({
+    session: scope.session,
+    subjectTypes: subjectTypes.results,
+    subjectHeads: subjectHeads.results,
+    gradeTypes: gradeTypes.results,
+    grades: grades.results,
+    subjects: subjects.results.map((row) => ({
+      ...row,
+      isOptional: Boolean(row.isOptional),
+      isActive: Boolean(row.isActive),
+    })),
+    classes: classes.results,
+    assessments: assessments.results,
+    mappings: mappings.results,
+    assessmentLimits: limits.results,
+    capabilities: { manage: hasPermission(scope, "school.results.manage") },
+  });
+}
+
+function academicCatalogRows(
+  db: QueryDatabase,
+  table: string,
+  organizationId: string,
+  sessionId: string,
+) {
+  return db
+    .prepare(`SELECT id,name,source_system AS sourceSystem FROM ${table}
+    WHERE organization_id=? AND academic_session_id=? ORDER BY name COLLATE NOCASE`)
+    .bind(organizationId, sessionId)
+    .all();
+}
+
+async function mutateAcademicConfiguration(request: Request): Promise<Response> {
+  if (!isSameOrigin(request)) return forbidden();
+  const parsed = academicConfigurationMutationSchema.safeParse(await readJson(request));
+  if (!parsed.success)
+    return Response.json(
+      { error: parsed.error.issues[0]?.message ?? "Check the academic configuration." },
+      { status: 400 },
+    );
+  const data = parsed.data;
+  const scope = await getSchoolSessionScope(request, data.sessionId);
+  if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
+  const db = getRuntimeEnv().DATABASE;
+  try {
+    if (data.action === "saveCatalog") {
+      const table = {
+        subjectType: "academic_subject_type",
+        subjectHead: "academic_subject_head",
+        gradeType: "academic_grade_type",
+      }[data.kind];
+      const id = data.id ?? crypto.randomUUID();
+      const result = data.id
+        ? await db
+            .prepare(`UPDATE ${table} SET name=?,updated_at=CURRENT_TIMESTAMP
+              WHERE id=? AND organization_id=? AND academic_session_id=?`)
+            .bind(data.name, id, scope.organizationId, scope.session.id)
+            .run()
+        : await db
+            .prepare(`INSERT INTO ${table}
+              (id,organization_id,academic_session_id,name,source_system,source_table,source_id)
+              VALUES (?,?,?,?,'tsewa',?,?)`)
+            .bind(id, scope.organizationId, scope.session.id, data.name, table, id)
+            .run();
+      if (data.id && !Number(result.meta.changes))
+        return Response.json({ error: "Configuration item not found." }, { status: 404 });
+      await db.batch([
+        auditStatement(db, scope, "academic.configuration_saved", table, id, {
+          kind: data.kind,
+          sessionId: scope.session.id,
+        }),
+      ]);
+      return Response.json({ id }, { status: data.id ? 200 : 201 });
+    }
+    if (data.action === "saveGrade") {
+      const type = await db
+        .prepare(
+          "SELECT id FROM academic_grade_type WHERE id=? AND organization_id=? AND academic_session_id=?",
+        )
+        .bind(data.gradeTypeId, scope.organizationId, scope.session.id)
+        .first();
+      if (!type)
+        return Response.json({ error: "Choose a grade type from this session." }, { status: 400 });
+      const id = data.id ?? crypto.randomUUID();
+      const result = data.id
+        ? await db
+            .prepare(
+              "UPDATE academic_grade SET grade_type_id=?,name=?,starts_at=?,ends_at=?,points=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?",
+            )
+            .bind(
+              data.gradeTypeId,
+              data.name,
+              data.startsAt,
+              data.endsAt,
+              data.points,
+              id,
+              scope.organizationId,
+            )
+            .run()
+        : await db
+            .prepare(`INSERT INTO academic_grade
+              (id,organization_id,grade_type_id,name,starts_at,ends_at,points,source_system,source_table,source_id)
+              VALUES (?,?,?,?,?,?,?,'tsewa','academic_grade',?)`)
+            .bind(
+              id,
+              scope.organizationId,
+              data.gradeTypeId,
+              data.name,
+              data.startsAt,
+              data.endsAt,
+              data.points,
+              id,
+            )
+            .run();
+      if (data.id && !Number(result.meta.changes))
+        return Response.json({ error: "Grade not found." }, { status: 404 });
+      await db.batch([
+        auditStatement(db, scope, "academic.grade_saved", "academic_grade", id, {
+          sessionId: scope.session.id,
+          gradeTypeId: data.gradeTypeId,
+        }),
+      ]);
+      return Response.json({ id }, { status: data.id ? 200 : 201 });
+    }
+    if (data.action === "saveSubject") {
+      const references = await Promise.all([
+        academicConfigurationReference(
+          db,
+          "academic_subject_type",
+          data.subjectTypeId,
+          scope.organizationId,
+          scope.session.id,
+        ),
+        academicConfigurationReference(
+          db,
+          "academic_subject_head",
+          data.subjectHeadId,
+          scope.organizationId,
+          scope.session.id,
+        ),
+        academicConfigurationReference(
+          db,
+          "academic_grade_type",
+          data.gradeTypeId,
+          scope.organizationId,
+          scope.session.id,
+        ),
+      ]);
+      if (references.some((valid) => !valid))
+        return Response.json(
+          { error: "Choose configuration values from this session." },
+          { status: 400 },
+        );
+      const id = data.id ?? crypto.randomUUID();
+      const values = [
+        data.name,
+        data.shortName,
+        data.subjectTypeId,
+        data.subjectHeadId,
+        data.gradeTypeId,
+        data.isOptional ? 1 : 0,
+        data.passingPercentage,
+        data.isActive ? 1 : 0,
+      ];
+      const result = data.id
+        ? await db
+            .prepare(
+              "UPDATE academic_subject SET name=?,short_name=?,subject_type_id=?,subject_head_id=?,grade_type_id=?,is_optional=?,passing_percentage=?,is_active=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=? AND academic_session_id=?",
+            )
+            .bind(...values, id, scope.organizationId, scope.session.id)
+            .run()
+        : await db
+            .prepare(`INSERT INTO academic_subject
+              (id,organization_id,academic_session_id,name,short_name,subject_type_id,subject_head_id,grade_type_id,is_optional,passing_percentage,is_active,source_system,source_table,source_id)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,'tsewa','academic_subject',?)`)
+            .bind(id, scope.organizationId, scope.session.id, ...values, id)
+            .run();
+      if (data.id && !Number(result.meta.changes))
+        return Response.json({ error: "Subject not found." }, { status: 404 });
+      await db.batch([
+        auditStatement(db, scope, "academic.subject_saved", "academic_subject", id, {
+          sessionId: scope.session.id,
+        }),
+      ]);
+      return Response.json({ id }, { status: data.id ? 200 : 201 });
+    }
+    if (data.action === "saveClassSubject") {
+      const [academicClass, configuredSubject, configuredAssessments] = await Promise.all([
+        db
+          .prepare("SELECT id FROM academic_class_master WHERE id=? AND organization_id=?")
+          .bind(data.academicClassId, scope.organizationId)
+          .first(),
+        db
+          .prepare(
+            "SELECT id FROM academic_subject WHERE id=? AND organization_id=? AND academic_session_id=?",
+          )
+          .bind(data.subjectId, scope.organizationId, scope.session.id)
+          .first(),
+        db
+          .prepare(
+            "SELECT id FROM academic_assessment WHERE organization_id=? AND academic_session_id=?",
+          )
+          .bind(scope.organizationId, scope.session.id)
+          .all<{ id: string }>(),
+      ]);
+      const assessmentIds = new Set(configuredAssessments.results.map((item) => item.id));
+      if (
+        !academicClass ||
+        !configuredSubject ||
+        data.assessmentLimits.some((item) => !assessmentIds.has(item.assessmentId))
+      )
+        return Response.json(
+          { error: "Choose a valid class, subject, and assessments." },
+          { status: 400 },
+        );
+      const existing = await db
+        .prepare(
+          `SELECT id FROM academic_class_subject WHERE organization_id=? AND academic_session_id=? AND academic_class_id=? AND subject_id=?`,
+        )
+        .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId)
+        .first<{ id: string }>();
+      if (!data.enabled) {
+        if (existing)
+          await db.batch([
+            db
+              .prepare(
+                "DELETE FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=? AND academic_class_id=? AND subject_id=?",
+              )
+              .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId),
+            db
+              .prepare("DELETE FROM academic_class_subject WHERE id=? AND organization_id=?")
+              .bind(existing.id, scope.organizationId),
+            auditStatement(
+              db,
+              scope,
+              "academic.class_subject_removed",
+              "academic_class_subject",
+              existing.id,
+              {
+                sessionId: scope.session.id,
+                academicClassId: data.academicClassId,
+                subjectId: data.subjectId,
+              },
+            ),
+          ]);
+        return Response.json({ removed: Boolean(existing) });
+      }
+      const id = existing?.id ?? crypto.randomUUID();
+      const statements: DrizzleStatement[] = [
+        db
+          .prepare(`INSERT INTO academic_class_subject
+        (id,organization_id,academic_session_id,academic_class_id,subject_id,maximum_marks,display_order,source_system,source_table,source_id)
+        VALUES (?,?,?,?,?,?,?,'tsewa','academic_class_subject',?) ON CONFLICT(id) DO UPDATE SET
+        maximum_marks=excluded.maximum_marks,display_order=excluded.display_order,updated_at=CURRENT_TIMESTAMP`)
+          .bind(
+            id,
+            scope.organizationId,
+            scope.session.id,
+            data.academicClassId,
+            data.subjectId,
+            data.maximumMarks,
+            data.displayOrder,
+            id,
+          ),
+        db
+          .prepare(
+            "DELETE FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=? AND academic_class_id=? AND subject_id=?",
+          )
+          .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId),
+      ];
+      for (const limit of data.assessmentLimits) {
+        const limitId = crypto.randomUUID();
+        statements.push(
+          db
+            .prepare(`INSERT INTO academic_class_subject_assessment
+          (id,organization_id,academic_session_id,academic_class_id,subject_id,assessment_id,maximum_marks,source_system,source_table,source_id)
+          VALUES (?,?,?,?,?,?,?,'tsewa','academic_class_subject_assessment',?)`)
+            .bind(
+              limitId,
+              scope.organizationId,
+              scope.session.id,
+              data.academicClassId,
+              data.subjectId,
+              limit.assessmentId,
+              limit.maximumMarks,
+              limitId,
+            ),
+        );
+      }
+      statements.push(
+        auditStatement(db, scope, "academic.class_subject_saved", "academic_class_subject", id, {
+          sessionId: scope.session.id,
+          academicClassId: data.academicClassId,
+          subjectId: data.subjectId,
+          assessmentCount: String(data.assessmentLimits.length),
+        }),
+      );
+      await db.batch(statements);
+      return Response.json({ id });
+    }
+    const table = {
+      subjectType: "academic_subject_type",
+      subjectHead: "academic_subject_head",
+      gradeType: "academic_grade_type",
+      grade: "academic_grade",
+      subject: "academic_subject",
+    }[data.kind];
+    const result =
+      data.kind === "grade"
+        ? await db
+            .prepare(`DELETE FROM academic_grade WHERE id=? AND organization_id=? AND grade_type_id IN
+            (SELECT id FROM academic_grade_type WHERE organization_id=? AND academic_session_id=?)`)
+            .bind(data.id, scope.organizationId, scope.organizationId, scope.session.id)
+            .run()
+        : await db
+            .prepare(
+              `DELETE FROM ${table} WHERE id=? AND organization_id=? AND academic_session_id=?`,
+            )
+            .bind(data.id, scope.organizationId, scope.session.id)
+            .run();
+    if (Number(result.meta.changes))
+      await db.batch([
+        auditStatement(db, scope, "academic.configuration_deleted", table, data.id, {
+          kind: data.kind,
+          sessionId: scope.session.id,
+        }),
+      ]);
+    return Response.json({ deleted: Number(result.meta.changes) > 0 });
+  } catch (reason) {
+    const detail = reason instanceof Error ? reason.message : "";
+    if (detail.includes("UNIQUE"))
+      return Response.json({ error: "That name already exists in this session." }, { status: 409 });
+    if (detail.includes("FOREIGN KEY"))
+      return Response.json(
+        { error: "This item is in use and cannot be removed." },
+        { status: 409 },
+      );
+    throw reason;
+  }
+}
+
+async function academicConfigurationReference(
+  db: QueryDatabase,
+  table: string,
+  id: string | null,
+  organizationId: string,
+  sessionId: string,
+) {
+  if (!id) return true;
+  return Boolean(
+    await db
+      .prepare(`SELECT id FROM ${table} WHERE id=? AND organization_id=? AND academic_session_id=?`)
+      .bind(id, organizationId, sessionId)
+      .first(),
+  );
+}
+
 async function getAcademicResultSetup(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const parsed = resultSetupQuerySchema.safeParse({ sessionId: url.searchParams.get("sessionId") });
@@ -3145,7 +3627,16 @@ async function getAcademicResultSetup(request: Request): Promise<Response> {
   if (!scope) return forbidden();
   if (!hasPermission(scope, "school.results.read")) return forbidden();
   const runtime = getRuntimeEnv();
-  const [schools, classes, subjects, terms, assessments, students] = await Promise.all([
+  const [
+    schools,
+    classes,
+    subjects,
+    terms,
+    assessments,
+    students,
+    classSubjects,
+    assessmentLimits,
+  ] = await Promise.all([
     runtime.DATABASE.prepare(`SELECT DISTINCT school.id,school.name FROM school_class_offering offering
       JOIN school_master school ON school.id=offering.school_id
       WHERE offering.organization_id=? AND offering.academic_session_id=? AND offering.is_active=1
@@ -3193,6 +3684,16 @@ async function getAcademicResultSetup(request: Request): Promise<Response> {
         name: string;
         admissionNumber: string;
       }>(),
+    runtime.DATABASE.prepare(`SELECT academic_class_id AS academicClassId,subject_id AS subjectId,
+      maximum_marks AS maximumMarks,display_order AS displayOrder FROM academic_class_subject
+      WHERE organization_id=? AND academic_session_id=? ORDER BY academic_class_id,display_order`)
+      .bind(scope.organizationId, scope.session.id)
+      .all(),
+    runtime.DATABASE.prepare(`SELECT academic_class_id AS academicClassId,subject_id AS subjectId,
+      assessment_id AS assessmentId,maximum_marks AS maximumMarks
+      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?`)
+      .bind(scope.organizationId, scope.session.id)
+      .all(),
   ]);
   return Response.json({
     session: scope.session,
@@ -3205,6 +3706,8 @@ async function getAcademicResultSetup(request: Request): Promise<Response> {
     terms: terms.results,
     assessments: assessments.results,
     students: students.results,
+    classSubjects: classSubjects.results,
+    assessmentLimits: assessmentLimits.results,
     capabilities: { manage: hasPermission(scope, "school.results.manage") },
   });
 }
@@ -3310,7 +3813,16 @@ async function createMarkSheet(request: Request): Promise<Response> {
   if (!scope || !hasPermission(scope, "school.results.manage")) return forbidden();
   const runtime = getRuntimeEnv();
   const data = parsed.data;
-  const [offering, subject, term, assessments, roster, existing] = await Promise.all([
+  const [
+    offering,
+    subject,
+    term,
+    assessments,
+    roster,
+    existing,
+    configuredSubjects,
+    configuredLimits,
+  ] = await Promise.all([
     runtime.DATABASE.prepare(`SELECT id FROM school_class_offering WHERE organization_id=?
       AND academic_session_id=? AND school_id=? AND academic_class_id=? AND is_active=1`)
       .bind(scope.organizationId, scope.session.id, data.schoolId, data.academicClassId)
@@ -3343,15 +3855,34 @@ async function createMarkSheet(request: Request): Promise<Response> {
         data.termId,
       )
       .first<{ id: string }>(),
+    runtime.DATABASE.prepare(`SELECT subject_id AS subjectId FROM academic_class_subject
+      WHERE organization_id=? AND academic_session_id=? AND academic_class_id=?`)
+      .bind(scope.organizationId, scope.session.id, data.academicClassId)
+      .all<{ subjectId: string }>(),
+    runtime.DATABASE.prepare(`SELECT assessment_id AS assessmentId,maximum_marks AS maximumMarks
+      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?
+      AND academic_class_id=? AND subject_id=?`)
+      .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId)
+      .all<{ assessmentId: string; maximumMarks: number }>(),
   ]);
   if (!offering || !subject || !term)
     return Response.json({ error: "Choose valid result setup values." }, { status: 400 });
+  if (
+    configuredSubjects.results.length &&
+    !configuredSubjects.results.some((row) => row.subjectId === data.subjectId)
+  )
+    return Response.json({ error: "That subject is not assigned to this class." }, { status: 400 });
   if (existing)
     return Response.json(
       { error: "A mark sheet already exists for this class, subject, and term.", id: existing.id },
       { status: 409 },
     );
   const assessmentIds = new Set(assessments.results.map((row) => row.id));
+  const maximumByAssessment = new Map(
+    configuredLimits.results
+      .filter((row) => row.maximumMarks !== null)
+      .map((row) => [row.assessmentId, Number(row.maximumMarks)]),
+  );
   const rosterIds = new Set(roster.results.map((row) => row.personId));
   if (
     data.marks.some(
@@ -3363,6 +3894,17 @@ async function createMarkSheet(request: Request): Promise<Response> {
       { status: 400 },
     );
   }
+  if (
+    data.marks.some(
+      (mark) =>
+        maximumByAssessment.has(mark.assessmentId) &&
+        mark.maximumMarks !== maximumByAssessment.get(mark.assessmentId),
+    )
+  )
+    return Response.json(
+      { error: "Use the configured maximum marks for this class and subject." },
+      { status: 400 },
+    );
   const markSheetId = crypto.randomUUID();
   const statements: DrizzleStatement[] = [
     runtime.DATABASE.prepare(`INSERT INTO mark_sheet
@@ -3510,7 +4052,7 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
   )
     return Response.json({ error: "A mark sheet's scope cannot be changed." }, { status: 409 });
 
-  const [assessments, roster, currentMarks] = await Promise.all([
+  const [assessments, roster, currentMarks, configuredLimits] = await Promise.all([
     runtime.DATABASE.prepare(`SELECT id FROM academic_assessment WHERE organization_id=?
       AND academic_session_id=? AND term_id=? AND is_active=1`)
       .bind(scope.organizationId, scope.session.id, data.termId)
@@ -3523,6 +4065,11 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
       FROM student_mark WHERE organization_id=? AND mark_sheet_id=? AND is_active=1`)
       .bind(scope.organizationId, markSheetId)
       .all<{ id: string; personId: string; assessmentId: string }>(),
+    runtime.DATABASE.prepare(`SELECT assessment_id AS assessmentId,maximum_marks AS maximumMarks
+      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?
+      AND academic_class_id=? AND subject_id=?`)
+      .bind(scope.organizationId, scope.session.id, data.academicClassId, data.subjectId)
+      .all<{ assessmentId: string; maximumMarks: number | null }>(),
   ]);
   const assessmentIds = new Set(assessments.results.map((row) => row.id));
   const rosterIds = new Set(roster.results.map((row) => row.personId));
@@ -3533,6 +4080,22 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
   )
     return Response.json(
       { error: "A mark entry is outside the selected class or term." },
+      { status: 400 },
+    );
+  const configuredMaximums = new Map(
+    configuredLimits.results
+      .filter((item) => item.maximumMarks !== null)
+      .map((item) => [item.assessmentId, Number(item.maximumMarks)]),
+  );
+  if (
+    data.marks.some(
+      (mark) =>
+        configuredMaximums.has(mark.assessmentId) &&
+        mark.maximumMarks !== configuredMaximums.get(mark.assessmentId),
+    )
+  )
+    return Response.json(
+      { error: "Use the configured maximum marks for this class and subject." },
       { status: 400 },
     );
 
@@ -3713,7 +4276,7 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Choose a valid student, session, and term." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const [organization, session, student, rows] = await Promise.all([
+  const [organization, session, student, rows, grades] = await Promise.all([
     runtime.DATABASE.prepare("SELECT name FROM organization WHERE id=?")
       .bind(context.organizationId)
       .first<{ name: string }>(),
@@ -3734,7 +4297,7 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
       .bind(context.organizationId, parsed.data.personId, parsed.data.sessionId, parsed.data.termId)
       .first<Record<string, unknown>>(),
     runtime.DATABASE.prepare(`SELECT subject.id AS subjectId,subject.name AS subjectName,
-      subject.passing_percentage AS passingPercentage,assessment.id AS assessmentId,
+      subject.grade_type_id AS gradeTypeId,subject.passing_percentage AS passingPercentage,assessment.id AS assessmentId,
       assessment.name AS assessmentName,mark.marks,mark.maximum_marks AS maximumMarks,
       mark.note,sheet.status,sheet.source_system AS sourceSystem
       FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
@@ -3745,6 +4308,12 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
       ORDER BY subject.name COLLATE NOCASE,assessment.name COLLATE NOCASE`)
       .bind(context.organizationId, parsed.data.personId, parsed.data.sessionId, parsed.data.termId)
       .all<Record<string, unknown>>(),
+    runtime.DATABASE.prepare(`SELECT grade.grade_type_id AS gradeTypeId,grade.name,
+      grade.starts_at AS startsAt,grade.ends_at AS endsAt FROM academic_grade grade
+      JOIN academic_grade_type type ON type.id=grade.grade_type_id
+      WHERE grade.organization_id=? AND type.academic_session_id=? ORDER BY grade.starts_at DESC`)
+      .bind(context.organizationId, parsed.data.sessionId)
+      .all(),
   ]);
   if (!session || !student || !rows.results.length)
     return Response.json(
@@ -3757,6 +4326,7 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
     session,
     student,
     results: rows.results,
+    grades: grades.results,
   });
 }
 

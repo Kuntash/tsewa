@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { summarizeReportResults } from "@/lib/academic-results";
-import type { ReportResultRow } from "@/lib/academic-results";
+import type { GradeBand, ReportResultRow } from "@/lib/academic-results";
 
 type Summary = {
   personId: string;
@@ -41,6 +41,7 @@ type ReportCardResponse = {
     termName: string;
   };
   results: ReportResultRow[];
+  grades: GradeBand[];
 };
 
 export function ResultSummaryPanel({
@@ -233,12 +234,24 @@ function ReportCardSheet({
       });
     return () => controller.abort();
   }, [request]);
-  const summary = useMemo(() => (data ? summarizeReportResults(data.results) : null), [data]);
+  const summary = useMemo(
+    () => (data ? summarizeReportResults(data.results, data.grades) : null),
+    [data],
+  );
 
   function downloadCsv() {
     if (!data || !summary) return;
     const rows = [
-      ["Subject", "Assessment", "Marks", "Maximum marks", "Subject total", "Percentage", "Status"],
+      [
+        "Subject",
+        "Assessment",
+        "Marks",
+        "Maximum marks",
+        "Subject total",
+        "Percentage",
+        "Grade",
+        "Status",
+      ],
       ...summary.subjects.flatMap((subject) =>
         subject.assessments.map((assessment, index) => [
           index === 0 ? subject.name : "",
@@ -247,6 +260,7 @@ function ReportCardSheet({
           assessment.maximumMarks === null ? "" : String(assessment.maximumMarks),
           index === 0 ? `${subject.marks}/${subject.maximumMarks}` : "",
           index === 0 ? formatPercentage(subject.percentage) : "",
+          index === 0 ? (subject.grade ?? "") : "",
           statusLabel(assessment.status),
         ]),
       ),
@@ -342,6 +356,7 @@ function ReportCardSheet({
                     <th>Assessment breakdown</th>
                     <th className="text-right">Total</th>
                     <th className="text-right">Percent</th>
+                    <th>Grade</th>
                     <th>Outcome</th>
                   </tr>
                 </thead>
@@ -363,6 +378,7 @@ function ReportCardSheet({
                       <td className="text-right font-semibold tabular-nums">
                         {formatPercentage(subject.percentage)}
                       </td>
+                      <td className="font-semibold">{subject.grade ?? "—"}</td>
                       <td>
                         {subject.passed === null ? "—" : subject.passed ? "Pass" : "Needs support"}
                       </td>

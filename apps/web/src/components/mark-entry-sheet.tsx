@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { assessmentMaximum, subjectsForClass } from "@/lib/academic-results";
 
 type Option = { id: string; name: string };
 type ClassOption = Option & { schoolId: string };
@@ -30,6 +31,18 @@ type Setup = {
   terms: Option[];
   assessments: Assessment[];
   students: Student[];
+  classSubjects: Array<{
+    academicClassId: string;
+    subjectId: string;
+    maximumMarks: number | null;
+    displayOrder: number | null;
+  }>;
+  assessmentLimits: Array<{
+    academicClassId: string;
+    subjectId: string;
+    assessmentId: string;
+    maximumMarks: number | null;
+  }>;
   capabilities: { manage: boolean };
 };
 type EditableSheet = {
@@ -151,6 +164,10 @@ export function MarkEntrySheet({
     () => setup?.assessments.filter((item) => item.termId === termId) ?? [],
     [setup, termId],
   );
+  const subjectOptions = useMemo(() => {
+    if (!setup) return [];
+    return subjectsForClass(setup.subjects, setup.classSubjects, classId);
+  }, [classId, setup]);
   const studentOptions = useMemo(
     () =>
       setup?.students.filter(
@@ -162,10 +179,24 @@ export function MarkEntrySheet({
   useEffect(() => {
     setMaximums((current) => {
       const next = { ...current };
-      for (const assessment of assessmentOptions) next[assessment.id] ??= "100";
+      for (const assessment of assessmentOptions) {
+        const configured = assessmentMaximum(
+          setup?.assessmentLimits ?? [],
+          classId,
+          subjectId,
+          assessment.id,
+          Number(next[assessment.id] ?? 100),
+        );
+        next[assessment.id] = String(configured);
+      }
       return next;
     });
-  }, [assessmentOptions]);
+  }, [assessmentOptions, classId, setup, subjectId]);
+
+  useEffect(() => {
+    if (!editId && subjectOptions.length && !subjectOptions.some((item) => item.id === subjectId))
+      setSubjectId(subjectOptions[0].id);
+  }, [editId, subjectId, subjectOptions]);
 
   async function createCatalog(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -353,7 +384,7 @@ export function MarkEntrySheet({
                     label="Subject"
                     disabled={Boolean(editId)}
                     onChange={setSubjectId}
-                    options={setup?.subjects ?? []}
+                    options={subjectOptions}
                     value={subjectId}
                   />
                   <Choice
@@ -379,7 +410,7 @@ export function MarkEntrySheet({
                   </div>
                 </div>
 
-                {!setup?.subjects.length ? (
+                {!subjectOptions.length ? (
                   <EmptySetup onCreate={() => setCatalogOpen(true)} />
                 ) : !assessmentOptions.length ? (
                   <EmptySetup
@@ -405,6 +436,13 @@ export function MarkEntrySheet({
                                 Out of
                                 <Input
                                   className="h-7 w-16 px-2 text-xs"
+                                  disabled={setup?.assessmentLimits.some(
+                                    (item) =>
+                                      item.academicClassId === classId &&
+                                      item.subjectId === subjectId &&
+                                      item.assessmentId === assessment.id &&
+                                      item.maximumMarks !== null,
+                                  )}
                                   min="1"
                                   onChange={(event) =>
                                     setMaximums((value) => ({

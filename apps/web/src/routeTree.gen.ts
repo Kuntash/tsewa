@@ -28,6 +28,7 @@ import { Route as ApiPeoplePersonIdRouteImport } from './routes/api.people.$pers
 import { Route as ApiScholarshipsScholarshipIdRouteImport } from './routes/api.scholarships.$scholarshipId'
 import { Route as ApiScholarshipsReportsRouteImport } from './routes/api.scholarships.reports'
 import { Route as ApiScholarshipsSetupRouteImport } from './routes/api.scholarships.setup'
+import { Route as ApiSchoolOperationsAcademicConfigurationRouteImport } from './routes/api.school-operations.academic-configuration'
 import { Route as ApiSchoolOperationsAdmissionsRouteImport } from './routes/api.school-operations.admissions'
 import { Route as ApiSchoolOperationsClassesRouteImport } from './routes/api.school-operations.classes'
 import { Route as ApiSchoolOperationsHousesRouteImport } from './routes/api.school-operations.houses'
@@ -162,6 +163,12 @@ const ApiScholarshipsSetupRoute = ApiScholarshipsSetupRouteImport.update({
   path: '/setup',
   getParentRoute: () => ApiScholarshipsRoute,
 } as any)
+const ApiSchoolOperationsAcademicConfigurationRoute =
+  ApiSchoolOperationsAcademicConfigurationRouteImport.update({
+    id: '/api/school-operations/academic-configuration',
+    path: '/api/school-operations/academic-configuration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiSchoolOperationsAdmissionsRoute =
   ApiSchoolOperationsAdmissionsRouteImport.update({
     id: '/api/school-operations/admissions',
@@ -395,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
   '/api/scholarships/reports': typeof ApiScholarshipsReportsRoute
   '/api/scholarships/setup': typeof ApiScholarshipsSetupRoute
+  '/api/school-operations/academic-configuration': typeof ApiSchoolOperationsAcademicConfigurationRoute
   '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
   '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
   '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -452,6 +460,7 @@ export interface FileRoutesByTo {
   '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
   '/api/scholarships/reports': typeof ApiScholarshipsReportsRoute
   '/api/scholarships/setup': typeof ApiScholarshipsSetupRoute
+  '/api/school-operations/academic-configuration': typeof ApiSchoolOperationsAcademicConfigurationRoute
   '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
   '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
   '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -510,6 +519,7 @@ export interface FileRoutesById {
   '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
   '/api/scholarships/reports': typeof ApiScholarshipsReportsRoute
   '/api/scholarships/setup': typeof ApiScholarshipsSetupRoute
+  '/api/school-operations/academic-configuration': typeof ApiSchoolOperationsAcademicConfigurationRoute
   '/api/school-operations/admissions': typeof ApiSchoolOperationsAdmissionsRoute
   '/api/school-operations/classes': typeof ApiSchoolOperationsClassesRouteWithChildren
   '/api/school-operations/houses': typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -569,6 +579,7 @@ export interface FileRouteTypes {
     | '/api/scholarships/$scholarshipId'
     | '/api/scholarships/reports'
     | '/api/scholarships/setup'
+    | '/api/school-operations/academic-configuration'
     | '/api/school-operations/admissions'
     | '/api/school-operations/classes'
     | '/api/school-operations/houses'
@@ -626,6 +637,7 @@ export interface FileRouteTypes {
     | '/api/scholarships/$scholarshipId'
     | '/api/scholarships/reports'
     | '/api/scholarships/setup'
+    | '/api/school-operations/academic-configuration'
     | '/api/school-operations/admissions'
     | '/api/school-operations/classes'
     | '/api/school-operations/houses'
@@ -683,6 +695,7 @@ export interface FileRouteTypes {
     | '/api/scholarships/$scholarshipId'
     | '/api/scholarships/reports'
     | '/api/scholarships/setup'
+    | '/api/school-operations/academic-configuration'
     | '/api/school-operations/admissions'
     | '/api/school-operations/classes'
     | '/api/school-operations/houses'
@@ -735,6 +748,7 @@ export interface RootRouteChildren {
   ApiHealthTbRoute: typeof ApiHealthTbRoute
   ApiInvitationsAcceptRoute: typeof ApiInvitationsAcceptRoute
   ApiInvitationsPreviewRoute: typeof ApiInvitationsPreviewRoute
+  ApiSchoolOperationsAcademicConfigurationRoute: typeof ApiSchoolOperationsAcademicConfigurationRoute
   ApiSchoolOperationsAdmissionsRoute: typeof ApiSchoolOperationsAdmissionsRoute
   ApiSchoolOperationsClassesRoute: typeof ApiSchoolOperationsClassesRouteWithChildren
   ApiSchoolOperationsHousesRoute: typeof ApiSchoolOperationsHousesRouteWithChildren
@@ -883,6 +897,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/scholarships/setup'
       preLoaderRoute: typeof ApiScholarshipsSetupRouteImport
       parentRoute: typeof ApiScholarshipsRoute
+    }
+    '/api/school-operations/academic-configuration': {
+      id: '/api/school-operations/academic-configuration'
+      path: '/api/school-operations/academic-configuration'
+      fullPath: '/api/school-operations/academic-configuration'
+      preLoaderRoute: typeof ApiSchoolOperationsAcademicConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/school-operations/admissions': {
       id: '/api/school-operations/admissions'
@@ -1407,6 +1428,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthTbRoute: ApiHealthTbRoute,
   ApiInvitationsAcceptRoute: ApiInvitationsAcceptRoute,
   ApiInvitationsPreviewRoute: ApiInvitationsPreviewRoute,
+  ApiSchoolOperationsAcademicConfigurationRoute:
+    ApiSchoolOperationsAcademicConfigurationRoute,
   ApiSchoolOperationsAdmissionsRoute: ApiSchoolOperationsAdmissionsRoute,
   ApiSchoolOperationsClassesRoute: ApiSchoolOperationsClassesRouteWithChildren,
   ApiSchoolOperationsHousesRoute: ApiSchoolOperationsHousesRouteWithChildren,

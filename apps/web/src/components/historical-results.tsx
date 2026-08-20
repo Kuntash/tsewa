@@ -7,10 +7,12 @@ import {
   Plus,
   Search,
   Users,
+  Settings2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { MarkEntrySheet } from "@/components/mark-entry-sheet";
+import { AcademicConfiguration } from "@/components/academic-configuration";
 import { ResultSummaryPanel } from "@/components/result-summary-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +86,7 @@ export function HistoricalResults({
   const [savedMessage, setSavedMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [changingSheetId, setChangingSheetId] = useState("");
+  const [configurationOpen, setConfigurationOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -172,15 +175,19 @@ export function HistoricalResults({
           Imported 2011–2012 results remain preserved as read-only history. New results are entered
           against the active academic session as drafts, then verified and finalized.
         </p>
-        <Button
-          className="shrink-0"
-          onClick={() => {
-            setEditSheetId(null);
-            setEntryOpen(true);
-          }}
-        >
-          <Plus className="size-4" /> Enter marks
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button onClick={() => setConfigurationOpen(true)} variant="outline">
+            <Settings2 className="size-4" /> Configure
+          </Button>
+          <Button
+            onClick={() => {
+              setEditSheetId(null);
+              setEntryOpen(true);
+            }}
+          >
+            <Plus className="size-4" /> Enter marks
+          </Button>
+        </div>
       </div>
       {savedMessage ? (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
@@ -450,6 +457,15 @@ export function HistoricalResults({
         }}
         open={entryOpen}
         sessionId={activeSessionId}
+      />
+      <AcademicConfiguration
+        onChanged={(value) => {
+          setSavedMessage(value);
+          setRefreshKey((current) => current + 1);
+        }}
+        onOpenChange={setConfigurationOpen}
+        open={configurationOpen}
+        sessionId={sessionId || activeSessionId}
       />
     </div>
   );
