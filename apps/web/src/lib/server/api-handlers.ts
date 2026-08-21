@@ -819,6 +819,7 @@ type MembershipContext = {
   organizationId: string;
   group: AccessGroupKey;
   permissions: PermissionKey[];
+  activeSessionId: string | null;
   userId: string;
 };
 
@@ -1111,8 +1112,18 @@ export const apiDispatcher = {
   },
 };
 
-export function handleApiRequest({ request }: { request: Request }): Promise<Response> {
-  return apiDispatcher.fetch(request);
+export async function handleApiRequest({ request }: { request: Request }): Promise<Response> {
+  const startedAt = performance.now();
+  const response = await apiDispatcher.fetch(request);
+  const durationMs = performance.now() - startedAt;
+  const headers = new Headers(response.headers);
+  headers.set("Server-Timing", `app;dur=${durationMs.toFixed(1)}`);
+  headers.set("X-Tsewa-Api-Ms", durationMs.toFixed(1));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 async function handleAuthRequest(request: Request): Promise<Response> {
@@ -6707,41 +6718,41 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
   const search = `%${escapeLikePattern(q.toLowerCase())}%`;
   const offset = (page - 1) * pageSize;
   const [
-    individualSummary,
-    organizationSummary,
-    assignmentSummary,
-    fundSummary,
-    letterSummary,
-    visitorSummary,
-  ] = await Promise.all([
+    individualSummaryRows,
+    organizationSummaryRows,
+    assignmentSummaryRows,
+    fundSummaryRows,
+    letterSummaryRows,
+    visitorSummaryRows,
+  ] = await runtime.ORM.batch([
     runtime.ORM.select({ count: count() })
       .from(sponsorshipIndividual)
-      .where(eq(sponsorshipIndividual.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(sponsorshipIndividual.organizationId, context.organizationId)),
     runtime.ORM.select({ count: count() })
       .from(sponsorshipOrganization)
-      .where(eq(sponsorshipOrganization.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(sponsorshipOrganization.organizationId, context.organizationId)),
     runtime.ORM.select({ count: count() })
       .from(sponsorshipAssignment)
-      .where(eq(sponsorshipAssignment.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(sponsorshipAssignment.organizationId, context.organizationId)),
     runtime.ORM.select({
       count: count(),
       amount: sql<number>`coalesce(sum(${sponsorshipFund.amount}), 0)`,
     })
       .from(sponsorshipFund)
-      .where(eq(sponsorshipFund.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(sponsorshipFund.organizationId, context.organizationId)),
     runtime.ORM.select({ count: count() })
       .from(sponsorshipLetter)
-      .where(eq(sponsorshipLetter.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(sponsorshipLetter.organizationId, context.organizationId)),
     runtime.ORM.select({ count: count() })
       .from(sponsorshipVisitor)
-      .where(eq(sponsorshipVisitor.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(sponsorshipVisitor.organizationId, context.organizationId)),
   ]);
+  const individualSummary = individualSummaryRows[0];
+  const organizationSummary = organizationSummaryRows[0];
+  const assignmentSummary = assignmentSummaryRows[0];
+  const fundSummary = fundSummaryRows[0];
+  const letterSummary = letterSummaryRows[0];
+  const visitorSummary = visitorSummaryRows[0];
   const summaries = {
     individuals: individualSummary?.count ?? 0,
     organizations: organizationSummary?.count ?? 0,
@@ -10241,10 +10252,12 @@ async function getPlatformStatus(request: Request): Promise<Response> {
         .limit(1)
         .then((rows) => rows[0] ?? null);
   const sessionOrganizationId = context?.organizationId ?? fallbackOrganization?.id;
-  const [userCount, sessions, preference, memberships] = await Promise.all([
-    runtime.ORM.select({ count: count() })
-      .from(user)
-      .then((rows) => rows[0] ?? { count: 0 }),
+  const [userCount, sessions, memberships] = await Promise.all([
+    context
+      ? Promise.resolve({ count: 1 })
+      : runtime.ORM.select({ count: count() })
+          .from(user)
+          .then((rows) => rows[0] ?? { count: 0 }),
     sessionOrganizationId
       ? runtime.ORM.select({
           id: academicSession.id,
@@ -10261,18 +10274,6 @@ async function getPlatformStatus(request: Request): Promise<Response> {
           )
           .orderBy(desc(academicSession.startsOn))
       : Promise.resolve([]),
-    context
-      ? runtime.ORM.select({ activeSessionId: userPreference.activeAcademicSessionId })
-          .from(userPreference)
-          .where(
-            and(
-              eq(userPreference.userId, context.userId),
-              eq(userPreference.activeOrganizationId, context.organizationId),
-            ),
-          )
-          .limit(1)
-          .then((rows) => rows[0] ?? null)
-      : Promise.resolve(null),
     context
       ? runtime.ORM.select({
           id: organization.id,
@@ -10316,7 +10317,7 @@ async function getPlatformStatus(request: Request): Promise<Response> {
   return Response.json({
     needsSetup: Number(userCount?.count ?? 0) === 0,
     sessions,
-    activeSessionId: preference?.activeSessionId ?? sessions[0]?.id ?? null,
+    activeSessionId: context?.activeSessionId ?? sessions[0]?.id ?? null,
     activeOrganizationId: context?.organizationId ?? null,
     organizations: memberships.map((membership) => ({
       ...membership,
@@ -10434,8 +10435,8 @@ async function getOrganization(request: Request): Promise<Response> {
   if (!hasPermission(context, "organization.settings.read")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const [organizationState, members, invitations, groups, roles, rolePermissions, groupRoles] =
-    await Promise.all([
+  const [organizationRows, members, invitations, groups, roles, rolePermissions, groupRoles] =
+    await runtime.ORM.batch([
       runtime.ORM.select({
         id: organization.id,
         name: organization.name,
@@ -10448,8 +10449,7 @@ async function getOrganization(request: Request): Promise<Response> {
       })
         .from(organization)
         .where(eq(organization.id, context.organizationId))
-        .limit(1)
-        .then((rows) => rows[0] ?? null),
+        .limit(1),
       runtime.ORM.select({
         id: organizationMember.id,
         group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
@@ -10526,9 +10526,23 @@ async function getOrganization(request: Request): Promise<Response> {
         .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
         .where(eq(accessGroup.organizationId, context.organizationId)),
     ]);
+  const organizationState = organizationRows[0] ?? null;
 
   if (!organizationState)
     return Response.json({ error: "Organization not found" }, { status: 404 });
+
+  const permissionKeysByRole = new Map<string, PermissionKey[]>();
+  for (const mapping of rolePermissions) {
+    const permissionKeys = permissionKeysByRole.get(mapping.roleKey) ?? [];
+    permissionKeys.push(mapping.permissionKey as PermissionKey);
+    permissionKeysByRole.set(mapping.roleKey, permissionKeys);
+  }
+  const roleKeysByGroup = new Map<string, AccessRoleKey[]>();
+  for (const mapping of groupRoles) {
+    const roleKeys = roleKeysByGroup.get(mapping.groupKey) ?? [];
+    roleKeys.push(mapping.roleKey as AccessRoleKey);
+    roleKeysByGroup.set(mapping.groupKey, roleKeys);
+  }
 
   return Response.json({
     organization: {
@@ -10551,15 +10565,11 @@ async function getOrganization(request: Request): Promise<Response> {
       permissions: permissionCatalog.map(([key, name, category]) => ({ key, name, category })),
       roles: roles.map((role) => ({
         ...role,
-        permissionKeys: rolePermissions
-          .filter((mapping) => mapping.roleKey === role.key)
-          .map((mapping) => mapping.permissionKey),
+        permissionKeys: permissionKeysByRole.get(role.key) ?? [],
       })),
       groups: groups.map((group) => ({
         ...group,
-        roleKeys: groupRoles
-          .filter((mapping) => mapping.groupKey === group.key)
-          .map((mapping) => mapping.roleKey),
+        roleKeys: roleKeysByGroup.get(group.key) ?? [],
       })),
     },
   });
@@ -11194,24 +11204,37 @@ async function updateAccessGroup(request: Request, groupKey: string): Promise<Re
   const group = groupKey as Exclude<AccessGroupKey, "owner">;
   const runtime = getRuntimeEnv();
   const groupId = accessGroupId(context.organizationId, group);
-  await runtime.ORM.delete(accessGroupRole).where(eq(accessGroupRole.groupId, groupId));
-  for (const roleKey of roleKeys) {
-    await runtime.ORM.insert(accessGroupRole).values({
-      groupId,
-      roleId: accessRoleId(context.organizationId, roleKey),
-    });
-  }
-  await runtime.ORM.batch([
-    runtime.ORM.update(accessGroup)
-      .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
-      .where(
-        and(eq(accessGroup.id, groupId), eq(accessGroup.organizationId, context.organizationId)),
+  const deleteRoles = runtime.ORM.delete(accessGroupRole).where(
+    eq(accessGroupRole.groupId, groupId),
+  );
+  const touchGroup = runtime.ORM.update(accessGroup)
+    .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
+    .where(
+      and(eq(accessGroup.id, groupId), eq(accessGroup.organizationId, context.organizationId)),
+    );
+  const audit = auditInsert(
+    runtime.ORM,
+    context,
+    "access_group.roles_changed",
+    "access_group",
+    groupId,
+    { group, roleKeys: roleKeys.join(",") },
+  );
+  if (roleKeys.length) {
+    await runtime.ORM.batch([
+      deleteRoles,
+      runtime.ORM.insert(accessGroupRole).values(
+        roleKeys.map((roleKey) => ({
+          groupId,
+          roleId: accessRoleId(context.organizationId, roleKey),
+        })),
       ),
-    auditInsert(runtime.ORM, context, "access_group.roles_changed", "access_group", groupId, {
-      group,
-      roleKeys: roleKeys.join(","),
-    }),
-  ]);
+      touchGroup,
+      audit,
+    ]);
+  } else {
+    await runtime.ORM.batch([deleteRoles, touchGroup, audit]);
+  }
   return Response.json({ ok: true, group, roleKeys });
 }
 
@@ -11413,11 +11436,30 @@ async function getMembershipContext(request: Request): Promise<MembershipContext
     memberId: organizationMember.id,
     organizationId: organizationMember.organizationId,
     group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+    activeSessionId: sql<string | null>`CASE
+      WHEN ${userPreference.activeOrganizationId} = ${organizationMember.organizationId}
+      THEN ${userPreference.activeAcademicSessionId}
+      ELSE NULL
+    END`,
+    permissionKeys: sql<
+      string | null
+    >`group_concat(distinct ${accessRolePermission.permissionKey})`,
   })
     .from(organizationMember)
     .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
     .leftJoin(userPreference, eq(userPreference.userId, organizationMember.userId))
+    .leftJoin(accessGroupRole, eq(accessGroupRole.groupId, organizationMember.groupId))
+    .leftJoin(accessRolePermission, eq(accessRolePermission.roleId, accessGroupRole.roleId))
     .where(eq(organizationMember.userId, session.user.id))
+    .groupBy(
+      organizationMember.id,
+      organizationMember.organizationId,
+      organizationMember.role,
+      organizationMember.createdAt,
+      accessGroup.key,
+      userPreference.activeOrganizationId,
+      userPreference.activeAcademicSessionId,
+    )
     .orderBy(
       asc(
         sql`CASE WHEN ${userPreference.activeOrganizationId} = ${organizationMember.organizationId}
@@ -11432,20 +11474,13 @@ async function getMembershipContext(request: Request): Promise<MembershipContext
   const permissions =
     membership.group === "owner"
       ? permissionCatalog.map(([key]) => key)
-      : await runtime.ORM.selectDistinct({ permissionKey: accessRolePermission.permissionKey })
-          .from(organizationMember)
-          .innerJoin(accessGroupRole, eq(accessGroupRole.groupId, organizationMember.groupId))
-          .innerJoin(accessRolePermission, eq(accessRolePermission.roleId, accessGroupRole.roleId))
-          .where(
-            and(
-              eq(organizationMember.id, membership.memberId),
-              eq(organizationMember.organizationId, membership.organizationId),
-            ),
-          )
-          .then((rows) => rows.map((row) => row.permissionKey as PermissionKey));
+      : ((membership.permissionKeys?.split(",").filter(Boolean) ?? []) as PermissionKey[]);
 
   return {
-    ...membership,
+    memberId: membership.memberId,
+    organizationId: membership.organizationId,
+    group: membership.group,
+    activeSessionId: membership.activeSessionId,
     permissions,
     userId: session.user.id,
   };

@@ -151,19 +151,12 @@ export function SponsorshipOperations({
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    void Promise.all([
-      fetch(
-        `/api/sponsorship?${new URLSearchParams({ section, q: debouncedQuery, page: String(page), pageSize: "25" })}`,
-        { signal: controller.signal },
-      ).then(parse<ListData>),
-      fetch(`/api/sponsorship/setup?${new URLSearchParams({ q: debouncedQuery })}`, {
-        signal: controller.signal,
-      }).then(parse<Setup>),
-    ])
-      .then(([records, setupData]) => {
-        setData(records);
-        setSetup(setupData);
-      })
+    void fetch(
+      `/api/sponsorship?${new URLSearchParams({ section, q: debouncedQuery, page: String(page), pageSize: "25" })}`,
+      { signal: controller.signal },
+    )
+      .then(parse<ListData>)
+      .then(setData)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(messageOf(reason));
       })
@@ -172,6 +165,19 @@ export function SponsorshipOperations({
       });
     return () => controller.abort();
   }, [debouncedQuery, page, reloadKey, section]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/sponsorship/setup", {
+      signal: controller.signal,
+    })
+      .then(parse<Setup>)
+      .then(setSetup)
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setError(messageOf(reason));
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
 
   function saved(value: string) {
     setMessage(value);
