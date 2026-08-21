@@ -4,6 +4,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   getTableColumns,
   gt,
   inArray,
@@ -35,6 +36,13 @@ import {
   accessRole,
   accessRolePermission,
   auditEvent,
+  healthDiagnosis,
+  healthMedicalAdvance,
+  healthMedicalAdvanceDetail,
+  healthMedicalSettlement,
+  healthTbCase,
+  healthTbDetail,
+  healthVisit,
   houseMaster,
   markSheet,
   organization,
@@ -756,6 +764,16 @@ const siblingLinkSchema = z.discriminatedUnion("mode", [
   }),
 ]);
 
+function classDisplayName() {
+  return sql<string>`case
+    when lower(trim(coalesce(${academicClassMaster.section}, ''))) not in ('', 'none', '0', 'n/a', 'null')
+      and lower(replace(replace(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})), '''', ''), '"', ''))
+        not like '% ' || lower(trim(${academicClassMaster.section}))
+    then trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
+    else trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
+  end`;
+}
+
 type SignUpPayload = {
   user?: {
     id?: string;
@@ -1269,7 +1287,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
-  const className = sql<string>`coalesce(${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end, '')`;
+  const className = classDisplayName();
   const enrollmentScope = and(
     eq(studentEnrollment.organizationId, scope.organizationId),
     eq(studentEnrollment.academicSessionId, scope.session.id),
@@ -2245,12 +2263,7 @@ function buildSchoolStudentFilters(
     }
   }
   if (filters.className !== "all") {
-    conditions.push(
-      eq(
-        sql<string>`${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end`,
-        filters.className,
-      ),
-    );
+    conditions.push(eq(classDisplayName(), filters.className));
   }
   if (filters.house !== "all") {
     if (filters.house === "none") {
@@ -2281,7 +2294,7 @@ function schoolStudentQuery(database: Database) {
       schoolName: schoolMaster.name,
       className: academicClassMaster.name,
       classSection: academicClassMaster.section,
-      classTitle: sql<string>`${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end`,
+      classTitle: classDisplayName(),
       houseName: houseMaster.name,
       rollNumber: studentEnrollment.rollNumber,
       boardRegistrationNumber: studentEnrollment.boardRegistrationNumber,
@@ -2447,7 +2460,7 @@ async function getSchoolOperationsStudentReport(request: Request): Promise<Respo
     .orderBy(
       sql`${schoolMaster.name} collate nocase`,
       sql`coalesce(${academicClassMaster.sortOrder}, 999)`,
-      sql`${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end collate nocase`,
+      sql`${classDisplayName()} collate nocase`,
       sql`${person.displayName} collate nocase`,
       person.primaryIdentifier,
     )
@@ -2501,10 +2514,7 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
     .as("enrollment_counts");
   const offeringCounts = runtime.ORM.select({
     schoolId: schoolClassOffering.schoolId,
-    classes:
-      sql<number>`count(distinct ${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end)`.as(
-        "classes",
-      ),
+    classes: sql<number>`count(distinct ${classDisplayName()})`.as("classes"),
   })
     .from(schoolClassOffering)
     .innerJoin(
@@ -6806,7 +6816,9 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
     totalCount = Number(total?.total ?? 0);
     rows = result;
   } else if (section === "funds") {
-    const sponsorName = sql<string>`coalesce(${sponsorshipIndividual.displayName}, ${sponsorshipOrganization.name}, ${sponsorshipVisitor.displayName}, '')`;
+    const sponsorName = sql<
+      string | null
+    >`coalesce(${sponsorshipIndividual.displayName}, ${sponsorshipOrganization.name}, ${sponsorshipVisitor.displayName})`;
     const conditions = [eq(sponsorshipFund.organizationId, context.organizationId)];
     if (q)
       conditions.push(
@@ -8350,80 +8362,107 @@ async function getHealthHistory(request: Request): Promise<Response> {
   }
 
   const { q, kind, page, pageSize } = parsed.data;
-  const conditions = ["visit.organization_id = ?"];
-  const bindings: Array<string | number> = [context.organizationId];
-  if (kind !== "all") {
-    conditions.push("visit.patient_kind = ?");
-    bindings.push(kind);
-  }
+  const runtime = getRuntimeEnv();
+  const conditions = [eq(healthVisit.organizationId, context.organizationId)];
+  if (kind !== "all") conditions.push(eq(healthVisit.patientKind, kind));
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
-    conditions.push(`(lower(visit.patient_name) LIKE ? ESCAPE '\\'
-      OR lower(coalesce(visit.admission_number, '')) LIKE ? ESCAPE '\\'
-      OR EXISTS (SELECT 1 FROM health_diagnosis search_diagnosis
-        WHERE search_diagnosis.health_visit_id=visit.id
-          AND lower(search_diagnosis.diagnosis_name) LIKE ? ESCAPE '\\'))`);
-    bindings.push(search, search, search);
+    const searchDiagnosis = alias(healthDiagnosis, "search_diagnosis");
+    conditions.push(
+      or(
+        sql`lower(${healthVisit.patientName}) like ${search} escape '\\'`,
+        sql`lower(coalesce(${healthVisit.admissionNumber}, '')) like ${search} escape '\\'`,
+        exists(
+          runtime.ORM.select({ value: sql`1` })
+            .from(searchDiagnosis)
+            .where(
+              and(
+                eq(searchDiagnosis.healthVisitId, healthVisit.id),
+                sql`lower(${searchDiagnosis.diagnosisName}) like ${search} escape '\\'`,
+              ),
+            ),
+        ),
+      )!,
+    );
   }
-  const where = conditions.join(" AND ");
-  const runtime = getRuntimeEnv();
-  const [summary, count, rows] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS visits,
-      COUNT(DISTINCT person_id) AS linkedPeople,
-      MIN(checkup_date) AS firstVisitOn, MAX(checkup_date) AS lastVisitOn,
-      (SELECT COUNT(*) FROM health_diagnosis diagnosis
-        WHERE diagnosis.organization_id=?) AS diagnoses
-      FROM health_visit WHERE organization_id=?`)
-      .bind(context.organizationId, context.organizationId)
-      .first<{
-        visits: number;
-        diagnoses: number;
-        linkedPeople: number;
-        firstVisitOn: string | null;
-        lastVisitOn: string | null;
-      }>(),
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total FROM health_visit visit WHERE ${where}`)
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(`SELECT visit.id,visit.person_id AS personId,
-      visit.patient_name AS patientName,visit.patient_kind AS patientKind,
-      visit.admission_number AS admissionNumber,visit.gender,visit.home_name AS homeName,
-      visit.age_at_visit AS ageAtVisit,visit.checkup_date AS checkupDate,
-      visit.admitted_on AS admittedOn,visit.discharged_on AS dischargedOn,
-      visit.doctor_name AS doctorName,visit.referred_to AS referredTo,
-      visit.referral_location AS referralLocation,visit.remarks,
-      visit.hepatitis_b_status AS hepatitisBStatus,
-      coalesce(json_group_array(json_object(
-        'id',diagnosis.id,'name',diagnosis.diagnosis_name,
-        'recordedOn',diagnosis.recorded_on,'remarks',diagnosis.remarks
-      )) FILTER (WHERE diagnosis.id IS NOT NULL), '[]') AS diagnosesJson
-      FROM health_visit visit
-      LEFT JOIN health_diagnosis diagnosis ON diagnosis.health_visit_id=visit.id
-        AND diagnosis.organization_id=visit.organization_id
-      WHERE ${where}
-      GROUP BY visit.id
-      ORDER BY visit.checkup_date DESC,visit.patient_name COLLATE NOCASE
-      LIMIT ? OFFSET ?`)
-      .bind(...bindings, pageSize, (page - 1) * pageSize)
-      .all<{ diagnosesJson: string; [key: string]: unknown }>(),
+  const where = and(...conditions);
+  const [summary, diagnosisSummary, countRow, visits] = await Promise.all([
+    runtime.ORM.select({
+      visits: count(),
+      linkedPeople: sql<number>`count(distinct ${healthVisit.personId})`,
+      firstVisitOn: sql<string | null>`min(${healthVisit.checkupDate})`,
+      lastVisitOn: sql<string | null>`max(${healthVisit.checkupDate})`,
+    })
+      .from(healthVisit)
+      .where(eq(healthVisit.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ diagnoses: count() })
+      .from(healthDiagnosis)
+      .where(eq(healthDiagnosis.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ total: count() })
+      .from(healthVisit)
+      .where(where)
+      .then((values) => values[0]),
+    runtime.ORM.select({
+      id: healthVisit.id,
+      personId: healthVisit.personId,
+      patientName: healthVisit.patientName,
+      patientKind: healthVisit.patientKind,
+      admissionNumber: healthVisit.admissionNumber,
+      gender: healthVisit.gender,
+      homeName: healthVisit.homeName,
+      ageAtVisit: healthVisit.ageAtVisit,
+      checkupDate: healthVisit.checkupDate,
+      admittedOn: healthVisit.admittedOn,
+      dischargedOn: healthVisit.dischargedOn,
+      doctorName: healthVisit.doctorName,
+      referredTo: healthVisit.referredTo,
+      referralLocation: healthVisit.referralLocation,
+      remarks: healthVisit.remarks,
+      hepatitisBStatus: healthVisit.hepatitisBStatus,
+    })
+      .from(healthVisit)
+      .where(where)
+      .orderBy(desc(healthVisit.checkupDate), sql`${healthVisit.patientName} collate nocase`)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
   ]);
-  const total = Number(count?.total ?? 0);
+  const visitIds = visits.map((visit) => visit.id);
+  const diagnoses = visitIds.length
+    ? await runtime.ORM.select({
+        visitId: healthDiagnosis.healthVisitId,
+        id: healthDiagnosis.id,
+        name: healthDiagnosis.diagnosisName,
+        recordedOn: healthDiagnosis.recordedOn,
+        remarks: healthDiagnosis.remarks,
+      })
+        .from(healthDiagnosis)
+        .where(
+          and(
+            eq(healthDiagnosis.organizationId, context.organizationId),
+            inArray(healthDiagnosis.healthVisitId, visitIds),
+          ),
+        )
+    : [];
+  const diagnosesByVisit = new Map<string, Array<Omit<(typeof diagnoses)[number], "visitId">>>();
+  for (const { visitId, ...diagnosis } of diagnoses) {
+    const values = diagnosesByVisit.get(visitId) ?? [];
+    values.push(diagnosis);
+    diagnosesByVisit.set(visitId, values);
+  }
+  const total = Number(countRow?.total ?? 0);
   return Response.json({
     summary: {
       visits: Number(summary?.visits ?? 0),
-      diagnoses: Number(summary?.diagnoses ?? 0),
+      diagnoses: Number(diagnosisSummary?.diagnoses ?? 0),
       linkedPeople: Number(summary?.linkedPeople ?? 0),
       firstVisitOn: summary?.firstVisitOn ?? null,
       lastVisitOn: summary?.lastVisitOn ?? null,
     },
-    visits: rows.results.map(({ diagnosesJson, ...row }) => ({
-      ...row,
-      diagnoses: JSON.parse(diagnosesJson) as Array<{
-        id: string;
-        name: string;
-        recordedOn: string | null;
-        remarks: string | null;
-      }>,
+    visits: visits.map((visit) => ({
+      ...visit,
+      diagnoses: diagnosesByVisit.get(visit.id) ?? [],
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
@@ -8447,101 +8486,126 @@ async function getTbHistory(request: Request): Promise<Response> {
   }
 
   const { q, kind, outcome, page, pageSize } = parsed.data;
-  const conditions = ["record.organization_id = ?"];
-  const bindings: Array<string | number> = [context.organizationId];
-  if (kind !== "all") {
-    conditions.push("record.patient_kind = ?");
-    bindings.push(kind);
-  }
-  if (outcome !== "all") {
-    conditions.push("record.outcome = ?");
-    bindings.push(outcome);
-  }
+  const runtime = getRuntimeEnv();
+  const conditions = [eq(healthTbCase.organizationId, context.organizationId)];
+  if (kind !== "all") conditions.push(eq(healthTbCase.patientKind, kind));
+  if (outcome !== "all") conditions.push(eq(healthTbCase.outcome, outcome));
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
-    conditions.push(`(lower(record.patient_name) LIKE ? ESCAPE '\\'
-      OR lower(coalesce(record.admission_number, '')) LIKE ? ESCAPE '\\'
-      OR lower(coalesce(record.tb_card_number, '')) LIKE ? ESCAPE '\\'
-      OR EXISTS (SELECT 1 FROM health_tb_detail search_detail
-        WHERE search_detail.tb_case_id=record.id
-          AND (lower(search_detail.test_name) LIKE ? ESCAPE '\\'
-            OR lower(coalesce(search_detail.result, '')) LIKE ? ESCAPE '\\')))`);
-    bindings.push(search, search, search, search, search);
+    const searchDetail = alias(healthTbDetail, "search_tb_detail");
+    conditions.push(
+      or(
+        sql`lower(${healthTbCase.patientName}) like ${search} escape '\\'`,
+        sql`lower(coalesce(${healthTbCase.admissionNumber}, '')) like ${search} escape '\\'`,
+        sql`lower(coalesce(${healthTbCase.tbCardNumber}, '')) like ${search} escape '\\'`,
+        exists(
+          runtime.ORM.select({ value: sql`1` })
+            .from(searchDetail)
+            .where(
+              and(
+                eq(searchDetail.tbCaseId, healthTbCase.id),
+                or(
+                  sql`lower(${searchDetail.testName}) like ${search} escape '\\'`,
+                  sql`lower(coalesce(${searchDetail.result}, '')) like ${search} escape '\\'`,
+                ),
+              ),
+            ),
+        ),
+      )!,
+    );
   }
-  const where = conditions.join(" AND ");
-  const runtime = getRuntimeEnv();
-  const [summary, outcomes, count, rows] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS cases,
-      COUNT(DISTINCT person_id) AS linkedPeople,
-      MIN(registration_date) AS firstRegistrationOn,
-      MAX(registration_date) AS lastRegistrationOn,
-      SUM(CASE WHEN lower(outcome)='on treatment' THEN 1 ELSE 0 END) AS onTreatment,
-      (SELECT COUNT(*) FROM health_tb_detail detail
-        WHERE detail.organization_id=?) AS details
-      FROM health_tb_case WHERE organization_id=?`)
-      .bind(context.organizationId, context.organizationId)
-      .first<{
-        cases: number;
-        details: number;
-        linkedPeople: number;
-        onTreatment: number;
-        firstRegistrationOn: string | null;
-        lastRegistrationOn: string | null;
-      }>(),
-    runtime.DATABASE.prepare(`SELECT outcome,COUNT(*) AS count FROM health_tb_case
-      WHERE organization_id=? GROUP BY outcome ORDER BY count DESC,outcome COLLATE NOCASE`)
-      .bind(context.organizationId)
-      .all<{ outcome: string; count: number }>(),
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total FROM health_tb_case record WHERE ${where}`)
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(`SELECT record.id,record.person_id AS personId,
-      record.patient_name AS patientName,record.patient_kind AS patientKind,
-      record.tb_card_number AS tbCardNumber,record.admission_number AS admissionNumber,
-      record.father_name AS fatherName,record.gender,
-      record.age_at_registration AS ageAtRegistration,record.home_name AS homeName,
-      record.treatment_regimen AS treatmentRegimen,
-      record.registration_date AS registrationDate,
-      record.treatment_start_date AS treatmentStartDate,
-      record.treatment_end_date AS treatmentEndDate,record.outcome,
-      record.tb_type AS tbType,record.case_type AS caseType,record.remarks,
-      coalesce(json_group_array(json_object(
-        'id',detail.id,'recordedOn',detail.recorded_on,'testName',detail.test_name,
-        'result',detail.result,'remarks',detail.remarks
-      )) FILTER (WHERE detail.id IS NOT NULL), '[]') AS detailsJson
-      FROM health_tb_case record
-      LEFT JOIN health_tb_detail detail ON detail.tb_case_id=record.id
-        AND detail.organization_id=record.organization_id
-      WHERE ${where}
-      GROUP BY record.id
-      ORDER BY record.registration_date DESC,record.patient_name COLLATE NOCASE
-      LIMIT ? OFFSET ?`)
-      .bind(...bindings, pageSize, (page - 1) * pageSize)
-      .all<{ detailsJson: string; [key: string]: unknown }>(),
+  const where = and(...conditions);
+  const [summary, detailSummary, outcomes, countRow, cases] = await Promise.all([
+    runtime.ORM.select({
+      cases: count(),
+      linkedPeople: sql<number>`count(distinct ${healthTbCase.personId})`,
+      firstRegistrationOn: sql<string | null>`min(${healthTbCase.registrationDate})`,
+      lastRegistrationOn: sql<string | null>`max(${healthTbCase.registrationDate})`,
+      onTreatment: sql<number>`sum(case when lower(${healthTbCase.outcome}) = 'on treatment' then 1 else 0 end)`,
+    })
+      .from(healthTbCase)
+      .where(eq(healthTbCase.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ details: count() })
+      .from(healthTbDetail)
+      .where(eq(healthTbDetail.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ outcome: healthTbCase.outcome, count: count() })
+      .from(healthTbCase)
+      .where(eq(healthTbCase.organizationId, context.organizationId))
+      .groupBy(healthTbCase.outcome)
+      .orderBy(desc(count()), sql`${healthTbCase.outcome} collate nocase`),
+    runtime.ORM.select({ total: count() })
+      .from(healthTbCase)
+      .where(where)
+      .then((values) => values[0]),
+    runtime.ORM.select({
+      id: healthTbCase.id,
+      personId: healthTbCase.personId,
+      patientName: healthTbCase.patientName,
+      patientKind: healthTbCase.patientKind,
+      tbCardNumber: healthTbCase.tbCardNumber,
+      admissionNumber: healthTbCase.admissionNumber,
+      fatherName: healthTbCase.fatherName,
+      gender: healthTbCase.gender,
+      ageAtRegistration: healthTbCase.ageAtRegistration,
+      homeName: healthTbCase.homeName,
+      treatmentRegimen: healthTbCase.treatmentRegimen,
+      registrationDate: healthTbCase.registrationDate,
+      treatmentStartDate: healthTbCase.treatmentStartDate,
+      treatmentEndDate: healthTbCase.treatmentEndDate,
+      outcome: healthTbCase.outcome,
+      tbType: healthTbCase.tbType,
+      caseType: healthTbCase.caseType,
+      remarks: healthTbCase.remarks,
+    })
+      .from(healthTbCase)
+      .where(where)
+      .orderBy(desc(healthTbCase.registrationDate), sql`${healthTbCase.patientName} collate nocase`)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
   ]);
-  const total = Number(count?.total ?? 0);
+  const caseIds = cases.map((record) => record.id);
+  const details = caseIds.length
+    ? await runtime.ORM.select({
+        caseId: healthTbDetail.tbCaseId,
+        id: healthTbDetail.id,
+        recordedOn: healthTbDetail.recordedOn,
+        testName: healthTbDetail.testName,
+        result: healthTbDetail.result,
+        remarks: healthTbDetail.remarks,
+      })
+        .from(healthTbDetail)
+        .where(
+          and(
+            eq(healthTbDetail.organizationId, context.organizationId),
+            inArray(healthTbDetail.tbCaseId, caseIds),
+          ),
+        )
+    : [];
+  const detailsByCase = new Map<string, Array<Omit<(typeof details)[number], "caseId">>>();
+  for (const { caseId, ...detail } of details) {
+    const values = detailsByCase.get(caseId) ?? [];
+    values.push(detail);
+    detailsByCase.set(caseId, values);
+  }
+  const total = Number(countRow?.total ?? 0);
   return Response.json({
     summary: {
       cases: Number(summary?.cases ?? 0),
-      details: Number(summary?.details ?? 0),
+      details: Number(detailSummary?.details ?? 0),
       linkedPeople: Number(summary?.linkedPeople ?? 0),
       onTreatment: Number(summary?.onTreatment ?? 0),
       firstRegistrationOn: summary?.firstRegistrationOn ?? null,
       lastRegistrationOn: summary?.lastRegistrationOn ?? null,
     },
-    outcomes: outcomes.results.map((item) => ({
+    outcomes: outcomes.map((item) => ({
       name: item.outcome,
       count: Number(item.count),
     })),
-    cases: rows.results.map(({ detailsJson, ...row }) => ({
-      ...row,
-      details: JSON.parse(detailsJson) as Array<{
-        id: string;
-        recordedOn: string;
-        testName: string;
-        result: string | null;
-        remarks: string | null;
-      }>,
+    cases: cases.map((record) => ({
+      ...record,
+      details: detailsByCase.get(record.id) ?? [],
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
@@ -8565,113 +8629,189 @@ async function getMedicalAdvances(request: Request): Promise<Response> {
   }
 
   const { q, kind, settlement, page, pageSize } = parsed.data;
-  const conditions = ["advance.organization_id = ?"];
-  const bindings: Array<string | number> = [context.organizationId];
+  const runtime = getRuntimeEnv();
+  const conditions = [eq(healthMedicalAdvance.organizationId, context.organizationId)];
   if (kind !== "all") {
-    conditions.push(`EXISTS (SELECT 1 FROM health_medical_advance_detail kind_detail
-      WHERE kind_detail.medical_advance_id=advance.id AND kind_detail.patient_kind=?)`);
-    bindings.push(kind);
+    const kindDetail = alias(healthMedicalAdvanceDetail, "kind_medical_detail");
+    conditions.push(
+      exists(
+        runtime.ORM.select({ value: sql`1` })
+          .from(kindDetail)
+          .where(
+            and(
+              eq(kindDetail.medicalAdvanceId, healthMedicalAdvance.id),
+              eq(kindDetail.patientKind, kind),
+            ),
+          ),
+      ),
+    );
   }
   if (settlement !== "all") {
-    conditions.push(`${settlement === "settled" ? "" : "NOT "}EXISTS
-      (SELECT 1 FROM health_medical_settlement status_settlement
-       WHERE status_settlement.medical_advance_id=advance.id)`);
+    const statusSettlement = alias(healthMedicalSettlement, "status_medical_settlement");
+    const settlementExists = exists(
+      runtime.ORM.select({ value: sql`1` })
+        .from(statusSettlement)
+        .where(eq(statusSettlement.medicalAdvanceId, healthMedicalAdvance.id)),
+    );
+    conditions.push(
+      settlement === "settled"
+        ? settlementExists
+        : notExists(
+            runtime.ORM.select({ value: sql`1` })
+              .from(statusSettlement)
+              .where(eq(statusSettlement.medicalAdvanceId, healthMedicalAdvance.id)),
+          ),
+    );
   }
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
-    conditions.push(`(lower(coalesce(advance.sanction_number, '')) LIKE ? ESCAPE '\\'
-      OR lower(coalesce(advance.nurse_name, '')) LIKE ? ESCAPE '\\'
-      OR lower(coalesce(advance.referring_doctor_name, '')) LIKE ? ESCAPE '\\'
-      OR EXISTS (SELECT 1 FROM health_medical_advance_detail search_detail
-        WHERE search_detail.medical_advance_id=advance.id
-          AND (lower(search_detail.patient_name) LIKE ? ESCAPE '\\'
-            OR lower(coalesce(search_detail.diagnosis, '')) LIKE ? ESCAPE '\\'
-            OR lower(coalesce(search_detail.medication, '')) LIKE ? ESCAPE '\\')))`);
-    bindings.push(search, search, search, search, search, search);
+    const searchDetail = alias(healthMedicalAdvanceDetail, "search_medical_detail");
+    conditions.push(
+      or(
+        sql`lower(coalesce(${healthMedicalAdvance.sanctionNumber}, '')) like ${search} escape '\\'`,
+        sql`lower(coalesce(${healthMedicalAdvance.nurseName}, '')) like ${search} escape '\\'`,
+        sql`lower(coalesce(${healthMedicalAdvance.referringDoctorName}, '')) like ${search} escape '\\'`,
+        exists(
+          runtime.ORM.select({ value: sql`1` })
+            .from(searchDetail)
+            .where(
+              and(
+                eq(searchDetail.medicalAdvanceId, healthMedicalAdvance.id),
+                or(
+                  sql`lower(${searchDetail.patientName}) like ${search} escape '\\'`,
+                  sql`lower(coalesce(${searchDetail.diagnosis}, '')) like ${search} escape '\\'`,
+                  sql`lower(coalesce(${searchDetail.medication}, '')) like ${search} escape '\\'`,
+                ),
+              ),
+            ),
+        ),
+      )!,
+    );
   }
-  const where = conditions.join(" AND ");
-  const runtime = getRuntimeEnv();
-  const [summary, count, rows] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS advances,SUM(advance_amount) AS advanceAmount,
-      MIN(sanctioned_on) AS firstSanctionOn,MAX(sanctioned_on) AS lastSanctionOn,
-      (SELECT COUNT(*) FROM health_medical_advance_detail detail
-        WHERE detail.organization_id=?) AS patientAllocations,
-      (SELECT COUNT(DISTINCT legacy_settlement_id) FROM health_medical_settlement value
-        WHERE value.organization_id=?) AS settlements,
-      (SELECT COUNT(*) FROM health_medical_settlement value
-        WHERE value.organization_id=?) AS settlementLinks,
-      (SELECT SUM(total_expenses) FROM (
-        SELECT legacy_settlement_id,MAX(total_expenses) AS total_expenses
-        FROM health_medical_settlement value WHERE value.organization_id=?
-        GROUP BY legacy_settlement_id)) AS totalExpenses
-      FROM health_medical_advance WHERE organization_id=?`)
-      .bind(
-        context.organizationId,
-        context.organizationId,
-        context.organizationId,
-        context.organizationId,
-        context.organizationId,
-      )
-      .first<{
-        advances: number;
-        advanceAmount: number;
-        patientAllocations: number;
-        settlements: number;
-        settlementLinks: number;
-        totalExpenses: number;
-        firstSanctionOn: string | null;
-        lastSanctionOn: string | null;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT COUNT(*) AS total FROM health_medical_advance advance WHERE ${where}`,
-    )
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(`SELECT advance.id,advance.sanctioned_on AS sanctionedOn,
-      advance.nurse_name AS nurseName,advance.sanction_number AS sanctionNumber,
-      advance.advance_amount AS advanceAmount,
-      advance.referring_doctor_name AS referringDoctorName,
-      advance.referral_location AS referralLocation,advance.remarks,
-      coalesce((SELECT json_group_array(json_object(
-        'id',detail.id,'personId',detail.person_id,'patientName',detail.patient_name,
-        'patientKind',detail.patient_kind,'sanctionType',detail.sanction_type,
-        'homeName',detail.home_name,'gender',detail.gender,'ageAtSanction',detail.age_at_sanction,
-        'medication',detail.medication,'referredToDoctorName',detail.referred_to_doctor_name,
-        'hospitalRegistrationNumber',detail.hospital_registration_number,
-        'hospitalReferredTo',detail.hospital_referred_to,
-        'hospitalAdmitted',detail.hospital_admitted,'diagnosis',detail.diagnosis,
-        'admittedOn',detail.admitted_on,'dischargedOn',detail.discharged_on,
-        'surgeryType',detail.surgery_type,'amount',detail.amount,'remarks',detail.remarks))
-        FROM health_medical_advance_detail detail
-        WHERE detail.medical_advance_id=advance.id), '[]') AS detailsJson,
-      coalesce((SELECT json_group_array(json_object(
-        'id',value.id,'settledOn',value.settled_on,'billNumber',value.bill_number,
-        'nurseTada',value.nurse_tada,'totalExpenses',value.total_expenses,
-        'extraExpenses',value.extra_expenses,'balance',value.balance,'remarks',value.remarks))
-        FROM health_medical_settlement value
-        WHERE value.medical_advance_id=advance.id), '[]') AS settlementsJson
-      FROM health_medical_advance advance WHERE ${where}
-      ORDER BY advance.sanctioned_on DESC,advance.sanction_number
-      LIMIT ? OFFSET ?`)
-      .bind(...bindings, pageSize, (page - 1) * pageSize)
-      .all<{ detailsJson: string; settlementsJson: string; [key: string]: unknown }>(),
-  ]);
-  const total = Number(count?.total ?? 0);
+  const where = and(...conditions);
+  const expenseBySettlement = runtime.ORM.select({
+    legacySettlementId: healthMedicalSettlement.legacySettlementId,
+    totalExpenses: sql<number>`max(${healthMedicalSettlement.totalExpenses})`.as("total_expenses"),
+  })
+    .from(healthMedicalSettlement)
+    .where(eq(healthMedicalSettlement.organizationId, context.organizationId))
+    .groupBy(healthMedicalSettlement.legacySettlementId)
+    .as("expense_by_settlement");
+  const [summary, detailSummary, settlementSummary, expenseSummary, countRow, advances] =
+    await Promise.all([
+      runtime.ORM.select({
+        advances: count(),
+        advanceAmount: sql<number>`sum(${healthMedicalAdvance.advanceAmount})`,
+        firstSanctionOn: sql<string | null>`min(${healthMedicalAdvance.sanctionedOn})`,
+        lastSanctionOn: sql<string | null>`max(${healthMedicalAdvance.sanctionedOn})`,
+      })
+        .from(healthMedicalAdvance)
+        .where(eq(healthMedicalAdvance.organizationId, context.organizationId))
+        .then((values) => values[0]),
+      runtime.ORM.select({ patientAllocations: count() })
+        .from(healthMedicalAdvanceDetail)
+        .where(eq(healthMedicalAdvanceDetail.organizationId, context.organizationId))
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        settlements: sql<number>`count(distinct ${healthMedicalSettlement.legacySettlementId})`,
+        settlementLinks: count(),
+      })
+        .from(healthMedicalSettlement)
+        .where(eq(healthMedicalSettlement.organizationId, context.organizationId))
+        .then((values) => values[0]),
+      runtime.ORM.select({ totalExpenses: sql<number>`sum(${expenseBySettlement.totalExpenses})` })
+        .from(expenseBySettlement)
+        .then((values) => values[0]),
+      runtime.ORM.select({ total: count() })
+        .from(healthMedicalAdvance)
+        .where(where)
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        id: healthMedicalAdvance.id,
+        sanctionedOn: healthMedicalAdvance.sanctionedOn,
+        nurseName: healthMedicalAdvance.nurseName,
+        sanctionNumber: healthMedicalAdvance.sanctionNumber,
+        advanceAmount: healthMedicalAdvance.advanceAmount,
+        referringDoctorName: healthMedicalAdvance.referringDoctorName,
+        referralLocation: healthMedicalAdvance.referralLocation,
+        remarks: healthMedicalAdvance.remarks,
+      })
+        .from(healthMedicalAdvance)
+        .where(where)
+        .orderBy(desc(healthMedicalAdvance.sanctionedOn), healthMedicalAdvance.sanctionNumber)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+    ]);
+  const advanceIds = advances.map((advance) => advance.id);
+  const [details, settlements] = advanceIds.length
+    ? await Promise.all([
+        runtime.ORM.select({
+          medicalAdvanceId: healthMedicalAdvanceDetail.medicalAdvanceId,
+          id: healthMedicalAdvanceDetail.id,
+          personId: healthMedicalAdvanceDetail.personId,
+          patientName: healthMedicalAdvanceDetail.patientName,
+          patientKind: healthMedicalAdvanceDetail.patientKind,
+          sanctionType: healthMedicalAdvanceDetail.sanctionType,
+          homeName: healthMedicalAdvanceDetail.homeName,
+          gender: healthMedicalAdvanceDetail.gender,
+          ageAtSanction: healthMedicalAdvanceDetail.ageAtSanction,
+          medication: healthMedicalAdvanceDetail.medication,
+          referredToDoctorName: healthMedicalAdvanceDetail.referredToDoctorName,
+          hospitalRegistrationNumber: healthMedicalAdvanceDetail.hospitalRegistrationNumber,
+          hospitalReferredTo: healthMedicalAdvanceDetail.hospitalReferredTo,
+          hospitalAdmitted: healthMedicalAdvanceDetail.hospitalAdmitted,
+          diagnosis: healthMedicalAdvanceDetail.diagnosis,
+          admittedOn: healthMedicalAdvanceDetail.admittedOn,
+          dischargedOn: healthMedicalAdvanceDetail.dischargedOn,
+          surgeryType: healthMedicalAdvanceDetail.surgeryType,
+          amount: healthMedicalAdvanceDetail.amount,
+          remarks: healthMedicalAdvanceDetail.remarks,
+        })
+          .from(healthMedicalAdvanceDetail)
+          .where(inArray(healthMedicalAdvanceDetail.medicalAdvanceId, advanceIds)),
+        runtime.ORM.select({
+          medicalAdvanceId: healthMedicalSettlement.medicalAdvanceId,
+          id: healthMedicalSettlement.id,
+          settledOn: healthMedicalSettlement.settledOn,
+          billNumber: healthMedicalSettlement.billNumber,
+          nurseTada: healthMedicalSettlement.nurseTada,
+          totalExpenses: healthMedicalSettlement.totalExpenses,
+          extraExpenses: healthMedicalSettlement.extraExpenses,
+          balance: healthMedicalSettlement.balance,
+          remarks: healthMedicalSettlement.remarks,
+        })
+          .from(healthMedicalSettlement)
+          .where(inArray(healthMedicalSettlement.medicalAdvanceId, advanceIds)),
+      ])
+    : [[], []];
+  const detailsByAdvance = new Map<string, Array<Record<string, unknown>>>();
+  for (const { medicalAdvanceId, ...detail } of details) {
+    const values = detailsByAdvance.get(medicalAdvanceId) ?? [];
+    values.push(detail);
+    detailsByAdvance.set(medicalAdvanceId, values);
+  }
+  const settlementsByAdvance = new Map<string, Array<Record<string, unknown>>>();
+  for (const { medicalAdvanceId, ...settlementRow } of settlements) {
+    const values = settlementsByAdvance.get(medicalAdvanceId) ?? [];
+    values.push(settlementRow);
+    settlementsByAdvance.set(medicalAdvanceId, values);
+  }
+  const total = Number(countRow?.total ?? 0);
   return Response.json({
     summary: {
       advances: Number(summary?.advances ?? 0),
       advanceAmount: Number(summary?.advanceAmount ?? 0),
-      patientAllocations: Number(summary?.patientAllocations ?? 0),
-      settlements: Number(summary?.settlements ?? 0),
-      settlementLinks: Number(summary?.settlementLinks ?? 0),
-      totalExpenses: Number(summary?.totalExpenses ?? 0),
+      patientAllocations: Number(detailSummary?.patientAllocations ?? 0),
+      settlements: Number(settlementSummary?.settlements ?? 0),
+      settlementLinks: Number(settlementSummary?.settlementLinks ?? 0),
+      totalExpenses: Number(expenseSummary?.totalExpenses ?? 0),
       firstSanctionOn: summary?.firstSanctionOn ?? null,
       lastSanctionOn: summary?.lastSanctionOn ?? null,
     },
-    advances: rows.results.map(({ detailsJson, settlementsJson, ...row }) => ({
-      ...row,
-      details: JSON.parse(detailsJson) as unknown[],
-      settlements: JSON.parse(settlementsJson) as unknown[],
+    advances: advances.map((advance) => ({
+      ...advance,
+      details: detailsByAdvance.get(advance.id) ?? [],
+      settlements: settlementsByAdvance.get(advance.id) ?? [],
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
