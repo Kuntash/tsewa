@@ -4756,15 +4756,15 @@ async function createMarkSheet(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const data = parsed.data;
   const [
-    offering,
-    subject,
-    term,
+    offeringRows,
+    subjectRows,
+    termRows,
     assessments,
     roster,
-    existing,
+    existingRows,
     configuredSubjects,
     configuredLimits,
-  ] = await Promise.all([
+  ] = await runtime.ORM.batch([
     runtime.ORM.select({ id: schoolClassOffering.id })
       .from(schoolClassOffering)
       .where(
@@ -4776,8 +4776,7 @@ async function createMarkSheet(request: Request): Promise<Response> {
           eq(schoolClassOffering.isActive, 1),
         ),
       )
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+      .limit(1),
     runtime.ORM.select({ id: academicSubject.id })
       .from(academicSubject)
       .where(
@@ -4788,8 +4787,7 @@ async function createMarkSheet(request: Request): Promise<Response> {
           eq(academicSubject.isActive, 1),
         ),
       )
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+      .limit(1),
     runtime.ORM.select({ id: academicTerm.id })
       .from(academicTerm)
       .where(
@@ -4799,8 +4797,7 @@ async function createMarkSheet(request: Request): Promise<Response> {
           eq(academicTerm.isActive, 1),
         ),
       )
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+      .limit(1),
     runtime.ORM.select({ id: academicAssessment.id })
       .from(academicAssessment)
       .where(
@@ -4834,8 +4831,7 @@ async function createMarkSheet(request: Request): Promise<Response> {
           eq(markSheet.termId, data.termId),
         ),
       )
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+      .limit(1),
     runtime.ORM.select({ subjectId: academicClassSubject.subjectId })
       .from(academicClassSubject)
       .where(
@@ -4859,6 +4855,10 @@ async function createMarkSheet(request: Request): Promise<Response> {
         ),
       ),
   ]);
+  const offering = offeringRows[0] ?? null;
+  const subject = subjectRows[0] ?? null;
+  const term = termRows[0] ?? null;
+  const existing = existingRows[0] ?? null;
   if (!offering || !subject || !term)
     return Response.json({ error: "Choose valid result setup values." }, { status: 400 });
   if (
@@ -5044,7 +5044,7 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
   )
     return Response.json({ error: "A mark sheet's scope cannot be changed." }, { status: 409 });
 
-  const [assessments, roster, currentMarks, configuredLimits] = await Promise.all([
+  const [assessments, roster, currentMarks, configuredLimits] = await runtime.ORM.batch([
     runtime.ORM.select({ id: academicAssessment.id })
       .from(academicAssessment)
       .where(
