@@ -6373,11 +6373,16 @@ async function getSponsorshipReport(request: Request): Promise<Response> {
   const sessionRow =
     session === "all"
       ? null
-      : await runtime.DATABASE.prepare(
-          "SELECT name FROM academic_session WHERE id=? AND organization_id=?",
-        )
-          .bind(session, context.organizationId)
-          .first<{ name: string }>();
+      : await runtime.ORM.select({ name: academicSession.name })
+          .from(academicSession)
+          .where(
+            and(
+              eq(academicSession.id, session),
+              eq(academicSession.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+          .then((results) => results[0]);
   if (session !== "all" && !sessionRow)
     return Response.json({ error: "Academic session not found." }, { status: 404 });
 
@@ -6394,29 +6399,42 @@ async function getSponsorshipReport(request: Request): Promise<Response> {
       { key: "approved", label: "Approved", numeric: true },
       { key: "latestStatusOn", label: "Latest status date" },
     ];
+    const parent = alias(sponsorshipOrganization, "report_sponsor_parent");
     const groupExpression = byHome
-      ? "coalesce(placement.home_name,'No current home')"
-      : "coalesce(parent.name,'Independent sponsors')";
-    const sessionCondition = session === "all" ? "" : " AND assignment.academic_session_id=?";
-    const bindings =
-      session === "all" ? [context.organizationId] : [context.organizationId, session];
-    const result =
-      await runtime.DATABASE.prepare(`SELECT ${groupExpression} AS ${byHome ? "homeName" : "organizationName"},
-      COUNT(DISTINCT assignment.person_id) AS beneficiaries,
-      COUNT(DISTINCT assignment.sponsor_individual_id) AS sponsors,
-      SUM(CASE WHEN lower(status.name)='approved' THEN 1 ELSE 0 END) AS approved,
-      MAX(assignment.status_on) AS latestStatusOn
-      FROM sponsorship_assignment assignment
-      JOIN sponsorship_individual sponsor ON sponsor.id=assignment.sponsor_individual_id
-      JOIN sponsorship_status status ON status.id=assignment.sponsorship_status_id
-      LEFT JOIN sponsorship_organization parent ON parent.id=sponsor.sponsor_organization_id
-      LEFT JOIN person_placement placement ON placement.person_id=assignment.person_id
-        AND placement.organization_id=assignment.organization_id AND placement.is_current=1
-      WHERE assignment.organization_id=?${sessionCondition}
-      GROUP BY ${groupExpression} ORDER BY beneficiaries DESC,1 COLLATE NOCASE`)
-        .bind(...bindings)
-        .all<Record<string, unknown>>();
-    rows = result.results;
+      ? sql<string>`coalesce(${personPlacement.homeName}, 'No current home')`
+      : sql<string>`coalesce(${parent.name}, 'Independent sponsors')`;
+    const conditions = [eq(sponsorshipAssignment.organizationId, context.organizationId)];
+    if (session !== "all") conditions.push(eq(sponsorshipAssignment.academicSessionId, session));
+    const result = await runtime.ORM.select({
+      groupName: groupExpression,
+      beneficiaries: sql<number>`count(distinct ${sponsorshipAssignment.personId})`,
+      sponsors: sql<number>`count(distinct ${sponsorshipAssignment.sponsorIndividualId})`,
+      approved: sql<number>`sum(case when lower(${sponsorshipStatus.name}) = 'approved' then 1 else 0 end)`,
+      latestStatusOn: sql<string | null>`max(${sponsorshipAssignment.statusOn})`,
+    })
+      .from(sponsorshipAssignment)
+      .innerJoin(
+        sponsorshipIndividual,
+        eq(sponsorshipIndividual.id, sponsorshipAssignment.sponsorIndividualId),
+      )
+      .innerJoin(
+        sponsorshipStatus,
+        eq(sponsorshipStatus.id, sponsorshipAssignment.sponsorshipStatusId),
+      )
+      .leftJoin(parent, eq(parent.id, sponsorshipIndividual.sponsorOrganizationId))
+      .leftJoin(
+        personPlacement,
+        and(
+          eq(personPlacement.personId, sponsorshipAssignment.personId),
+          eq(personPlacement.organizationId, sponsorshipAssignment.organizationId),
+          eq(personPlacement.isCurrent, 1),
+        ),
+      )
+      .where(and(...conditions))
+      .groupBy(groupExpression)
+      .orderBy(desc(sql`count(distinct ${sponsorshipAssignment.personId})`), sql`1 collate nocase`);
+    const groupKey = byHome ? "homeName" : "organizationName";
+    rows = result.map(({ groupName, ...row }) => ({ [groupKey]: groupName, ...row }));
   } else if (report === "addresses" || report === "sponsors") {
     title = report === "addresses" ? "Address of sponsors" : "Sponsors list";
     columns = [
@@ -6429,18 +6447,35 @@ async function getSponsorshipReport(request: Request): Promise<Response> {
       { key: "phone", label: "Phone" },
       { key: "beneficiaries", label: "Beneficiaries", numeric: true },
     ];
-    const result = await runtime.DATABASE.prepare(`SELECT sponsor.display_name AS sponsorName,
-      parent.name AS organizationName,category.name AS categoryName,sponsor.address,
-      sponsor.country_name AS countryName,sponsor.email,sponsor.phone,
-      (SELECT COUNT(*) FROM sponsorship_assignment assignment
-        WHERE assignment.sponsor_individual_id=sponsor.id) AS beneficiaries
-      FROM sponsorship_individual sponsor
-      LEFT JOIN sponsorship_organization parent ON parent.id=sponsor.sponsor_organization_id
-      LEFT JOIN sponsorship_sponsor_category category ON category.id=sponsor.sponsor_category_id
-      WHERE sponsor.organization_id=? ORDER BY sponsor.display_name COLLATE NOCASE`)
-      .bind(context.organizationId)
-      .all<Record<string, unknown>>();
-    rows = result.results;
+    const assignmentCounts = runtime.ORM.select({
+      sponsorId: sponsorshipAssignment.sponsorIndividualId,
+      beneficiaries: count().as("beneficiaries"),
+    })
+      .from(sponsorshipAssignment)
+      .groupBy(sponsorshipAssignment.sponsorIndividualId)
+      .as("report_assignment_counts");
+    rows = await runtime.ORM.select({
+      sponsorName: sponsorshipIndividual.displayName,
+      organizationName: sponsorshipOrganization.name,
+      categoryName: sponsorshipSponsorCategory.name,
+      address: sponsorshipIndividual.address,
+      countryName: sponsorshipIndividual.countryName,
+      email: sponsorshipIndividual.email,
+      phone: sponsorshipIndividual.phone,
+      beneficiaries: sql<number>`coalesce(${assignmentCounts.beneficiaries}, 0)`,
+    })
+      .from(sponsorshipIndividual)
+      .leftJoin(
+        sponsorshipOrganization,
+        eq(sponsorshipOrganization.id, sponsorshipIndividual.sponsorOrganizationId),
+      )
+      .leftJoin(
+        sponsorshipSponsorCategory,
+        eq(sponsorshipSponsorCategory.id, sponsorshipIndividual.sponsorCategoryId),
+      )
+      .leftJoin(assignmentCounts, eq(assignmentCounts.sponsorId, sponsorshipIndividual.id))
+      .where(eq(sponsorshipIndividual.organizationId, context.organizationId))
+      .orderBy(sql`${sponsorshipIndividual.displayName} collate nocase`);
   } else if (
     report === "completionElderly" ||
     report === "completionStudent" ||
@@ -6459,28 +6494,48 @@ async function getSponsorshipReport(request: Request): Promise<Response> {
       { key: "statusOn", label: "Status date" },
       { key: "remarks", label: "Remarks" },
     ];
-    const sessionCondition = session === "all" ? "" : " AND assignment.academic_session_id=?";
-    const bindings =
-      session === "all"
-        ? [context.organizationId, elderly ? "elderly" : "child"]
-        : [context.organizationId, elderly ? "elderly" : "child", session];
-    const completionCondition = caseHistory
-      ? ""
-      : " AND lower(status.name) IN ('discontinued','rejected','continued')";
-    const result = await runtime.DATABASE.prepare(`SELECT person.display_name AS beneficiaryName,
-      person.primary_identifier AS identifier,placement.home_name AS homeName,
-      sponsor.display_name AS sponsorName,status.name AS statusName,
-      assignment.status_on AS statusOn,assignment.remarks
-      FROM sponsorship_assignment assignment JOIN person ON person.id=assignment.person_id
-      JOIN sponsorship_individual sponsor ON sponsor.id=assignment.sponsor_individual_id
-      JOIN sponsorship_status status ON status.id=assignment.sponsorship_status_id
-      LEFT JOIN person_placement placement ON placement.person_id=person.id
-        AND placement.organization_id=person.organization_id AND placement.is_current=1
-      WHERE assignment.organization_id=? AND person.kind=?${sessionCondition}${completionCondition}
-      ORDER BY person.display_name COLLATE NOCASE,assignment.status_on DESC`)
-      .bind(...bindings)
-      .all<Record<string, unknown>>();
-    rows = result.results;
+    const conditions = [
+      eq(sponsorshipAssignment.organizationId, context.organizationId),
+      eq(person.kind, elderly ? "elderly" : "child"),
+    ];
+    if (session !== "all") conditions.push(eq(sponsorshipAssignment.academicSessionId, session));
+    if (!caseHistory)
+      conditions.push(
+        inArray(sql<string>`lower(${sponsorshipStatus.name})`, [
+          "discontinued",
+          "rejected",
+          "continued",
+        ]),
+      );
+    rows = await runtime.ORM.select({
+      beneficiaryName: person.displayName,
+      identifier: person.primaryIdentifier,
+      homeName: personPlacement.homeName,
+      sponsorName: sponsorshipIndividual.displayName,
+      statusName: sponsorshipStatus.name,
+      statusOn: sponsorshipAssignment.statusOn,
+      remarks: sponsorshipAssignment.remarks,
+    })
+      .from(sponsorshipAssignment)
+      .innerJoin(person, eq(person.id, sponsorshipAssignment.personId))
+      .innerJoin(
+        sponsorshipIndividual,
+        eq(sponsorshipIndividual.id, sponsorshipAssignment.sponsorIndividualId),
+      )
+      .innerJoin(
+        sponsorshipStatus,
+        eq(sponsorshipStatus.id, sponsorshipAssignment.sponsorshipStatusId),
+      )
+      .leftJoin(
+        personPlacement,
+        and(
+          eq(personPlacement.personId, person.id),
+          eq(personPlacement.organizationId, person.organizationId),
+          eq(personPlacement.isCurrent, 1),
+        ),
+      )
+      .where(and(...conditions))
+      .orderBy(sql`${person.displayName} collate nocase`, desc(sponsorshipAssignment.statusOn));
   } else if (report === "giftMoney" || report === "payments") {
     title = report === "giftMoney" ? "Gift money" : "Sponsorship payment list";
     columns = [
@@ -6493,25 +6548,35 @@ async function getSponsorshipReport(request: Request): Promise<Response> {
       { key: "beneficiaries", label: "Beneficiaries", numeric: true },
       { key: "remarks", label: "Remarks" },
     ];
-    const sessionCondition = session === "all" ? "" : " AND fund.academic_session_id=?";
-    const typeCondition = report === "giftMoney" ? " AND lower(type.name)='gift money'" : "";
-    const bindings =
-      session === "all" ? [context.organizationId] : [context.organizationId, session];
-    const result = await runtime.DATABASE.prepare(`SELECT fund.received_on AS receivedOn,
-      coalesce(individual.display_name,parent.name,visitor.display_name,'Legacy sponsor') AS sponsorName,
-      type.name AS fundType,fund.receipt_number AS receiptNumber,fund.amount,
-      coalesce(SUM(allocation.amount),0) AS allocatedAmount,
-      COUNT(DISTINCT allocation.person_id) AS beneficiaries,fund.remarks
-      FROM sponsorship_fund fund JOIN sponsorship_fund_type type ON type.id=fund.fund_type_id
-      LEFT JOIN sponsorship_individual individual ON individual.id=fund.sponsor_individual_id
-      LEFT JOIN sponsorship_organization parent ON parent.id=fund.sponsor_organization_id
-      LEFT JOIN sponsorship_visitor visitor ON visitor.id=fund.visitor_id
-      LEFT JOIN sponsorship_fund_allocation allocation ON allocation.fund_id=fund.id
-      WHERE fund.organization_id=?${sessionCondition}${typeCondition}
-      GROUP BY fund.id ORDER BY fund.received_on DESC,fund.id`)
-      .bind(...bindings)
-      .all<Record<string, unknown>>();
-    rows = result.results;
+    const conditions = [eq(sponsorshipFund.organizationId, context.organizationId)];
+    if (session !== "all") conditions.push(eq(sponsorshipFund.academicSessionId, session));
+    if (report === "giftMoney")
+      conditions.push(eq(sql<string>`lower(${sponsorshipFundType.name})`, "gift money"));
+    rows = await runtime.ORM.select({
+      receivedOn: sponsorshipFund.receivedOn,
+      sponsorName: sql<string>`coalesce(${sponsorshipIndividual.displayName}, ${sponsorshipOrganization.name}, ${sponsorshipVisitor.displayName}, 'Legacy sponsor')`,
+      fundType: sponsorshipFundType.name,
+      receiptNumber: sponsorshipFund.receiptNumber,
+      amount: sponsorshipFund.amount,
+      allocatedAmount: sql<number>`coalesce(sum(${sponsorshipFundAllocation.amount}), 0)`,
+      beneficiaries: sql<number>`count(distinct ${sponsorshipFundAllocation.personId})`,
+      remarks: sponsorshipFund.remarks,
+    })
+      .from(sponsorshipFund)
+      .innerJoin(sponsorshipFundType, eq(sponsorshipFundType.id, sponsorshipFund.fundTypeId))
+      .leftJoin(
+        sponsorshipIndividual,
+        eq(sponsorshipIndividual.id, sponsorshipFund.sponsorIndividualId),
+      )
+      .leftJoin(
+        sponsorshipOrganization,
+        eq(sponsorshipOrganization.id, sponsorshipFund.sponsorOrganizationId),
+      )
+      .leftJoin(sponsorshipVisitor, eq(sponsorshipVisitor.id, sponsorshipFund.visitorId))
+      .leftJoin(sponsorshipFundAllocation, eq(sponsorshipFundAllocation.fundId, sponsorshipFund.id))
+      .where(and(...conditions))
+      .groupBy(sponsorshipFund.id)
+      .orderBy(desc(sponsorshipFund.receivedOn), sponsorshipFund.id);
   } else {
     title = "Visitor list";
     columns = [
@@ -6523,14 +6588,25 @@ async function getSponsorshipReport(request: Request): Promise<Response> {
       { key: "giftsPresented", label: "Gifts presented" },
       { key: "visitSummary", label: "Visit summary" },
     ];
-    const result = await runtime.DATABASE.prepare(`SELECT visitor.visited_on AS visitedOn,
-      visitor.display_name AS visitorName,type.name AS visitorType,visitor.country_name AS countryName,
-      visitor.related_person_name AS relatedPersonName,visitor.gifts_presented,visitor.visit_summary AS visitSummary
-      FROM sponsorship_visitor visitor LEFT JOIN sponsorship_visitor_type type ON type.id=visitor.visitor_type_id
-      WHERE visitor.organization_id=? ORDER BY visitor.visited_on DESC,visitor.display_name COLLATE NOCASE`)
-      .bind(context.organizationId)
-      .all<Record<string, unknown>>();
-    rows = result.results;
+    rows = await runtime.ORM.select({
+      visitedOn: sponsorshipVisitor.visitedOn,
+      visitorName: sponsorshipVisitor.displayName,
+      visitorType: sponsorshipVisitorType.name,
+      countryName: sponsorshipVisitor.countryName,
+      relatedPersonName: sponsorshipVisitor.relatedPersonName,
+      giftsPresented: sponsorshipVisitor.giftsPresented,
+      visitSummary: sponsorshipVisitor.visitSummary,
+    })
+      .from(sponsorshipVisitor)
+      .leftJoin(
+        sponsorshipVisitorType,
+        eq(sponsorshipVisitorType.id, sponsorshipVisitor.visitorTypeId),
+      )
+      .where(eq(sponsorshipVisitor.organizationId, context.organizationId))
+      .orderBy(
+        desc(sponsorshipVisitor.visitedOn),
+        sql`${sponsorshipVisitor.displayName} collate nocase`,
+      );
   }
   return Response.json({
     generatedAt: new Date().toISOString(),
@@ -6559,121 +6635,393 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const search = `%${escapeLikePattern(q.toLowerCase())}%`;
   const offset = (page - 1) * pageSize;
-  const summaries = await runtime.DATABASE.prepare(`SELECT
-    (SELECT COUNT(*) FROM sponsorship_individual WHERE organization_id=?) individuals,
-    (SELECT COUNT(*) FROM sponsorship_organization WHERE organization_id=?) organizations,
-    (SELECT COUNT(*) FROM sponsorship_assignment WHERE organization_id=?) assignments,
-    (SELECT COUNT(*) FROM sponsorship_fund WHERE organization_id=?) funds,
-    (SELECT coalesce(SUM(amount),0) FROM sponsorship_fund WHERE organization_id=?) receivedAmount,
-    (SELECT COUNT(*) FROM sponsorship_letter WHERE organization_id=?) letters,
-    (SELECT COUNT(*) FROM sponsorship_visitor WHERE organization_id=?) visitors`)
-    .bind(...Array(7).fill(context.organizationId))
-    .first<Record<string, unknown>>();
-  let count = 0;
+  const [
+    individualSummary,
+    organizationSummary,
+    assignmentSummary,
+    fundSummary,
+    letterSummary,
+    visitorSummary,
+  ] = await Promise.all([
+    runtime.ORM.select({ count: count() })
+      .from(sponsorshipIndividual)
+      .where(eq(sponsorshipIndividual.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ count: count() })
+      .from(sponsorshipOrganization)
+      .where(eq(sponsorshipOrganization.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ count: count() })
+      .from(sponsorshipAssignment)
+      .where(eq(sponsorshipAssignment.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({
+      count: count(),
+      amount: sql<number>`coalesce(sum(${sponsorshipFund.amount}), 0)`,
+    })
+      .from(sponsorshipFund)
+      .where(eq(sponsorshipFund.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ count: count() })
+      .from(sponsorshipLetter)
+      .where(eq(sponsorshipLetter.organizationId, context.organizationId))
+      .then((values) => values[0]),
+    runtime.ORM.select({ count: count() })
+      .from(sponsorshipVisitor)
+      .where(eq(sponsorshipVisitor.organizationId, context.organizationId))
+      .then((values) => values[0]),
+  ]);
+  const summaries = {
+    individuals: individualSummary?.count ?? 0,
+    organizations: organizationSummary?.count ?? 0,
+    assignments: assignmentSummary?.count ?? 0,
+    funds: fundSummary?.count ?? 0,
+    receivedAmount: fundSummary?.amount ?? 0,
+    letters: letterSummary?.count ?? 0,
+    visitors: visitorSummary?.count ?? 0,
+  };
+  let totalCount = 0;
   let rows: Record<string, unknown>[] = [];
   if (section === "sponsors") {
-    const where = `value.organization_id=? AND (?='' OR lower(value.display_name) LIKE ? ESCAPE '\\' OR lower(coalesce(value.email,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(parent.name,'')) LIKE ? ESCAPE '\\')`;
-    const bindings = [context.organizationId, q, search, search, search];
+    const conditions = [eq(sponsorshipIndividual.organizationId, context.organizationId)];
+    if (q)
+      conditions.push(
+        or(
+          sql`lower(${sponsorshipIndividual.displayName}) like ${search} escape '\\'`,
+          sql`lower(coalesce(${sponsorshipIndividual.email}, '')) like ${search} escape '\\'`,
+          sql`lower(coalesce(${sponsorshipOrganization.name}, '')) like ${search} escape '\\'`,
+        )!,
+      );
+    const where = and(...conditions);
+    const assignmentCounts = runtime.ORM.select({
+      sponsorId: sponsorshipAssignment.sponsorIndividualId,
+      count: count().as("assignment_count"),
+    })
+      .from(sponsorshipAssignment)
+      .groupBy(sponsorshipAssignment.sponsorIndividualId)
+      .as("sponsor_assignment_counts");
     const [total, result] = await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT COUNT(*) total FROM sponsorship_individual value LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id WHERE ${where}`,
-      )
-        .bind(...bindings)
-        .first<{ total: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT value.id,value.display_name AS displayName,value.first_name AS firstName,value.middle_name AS middleName,value.last_name AS lastName,value.address,value.country_name AS countryName,value.email,value.phone,value.sponsor_organization_id AS sponsorOrganizationId,value.sponsor_type_id AS sponsorTypeId,value.sponsor_category_id AS sponsorCategoryId,parent.name AS organizationName,type.name AS sponsorType,category.name AS sponsorCategory,(SELECT COUNT(*) FROM sponsorship_assignment assignment WHERE assignment.sponsor_individual_id=value.id) assignmentCount FROM sponsorship_individual value LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id LEFT JOIN sponsorship_sponsor_type type ON type.id=value.sponsor_type_id LEFT JOIN sponsorship_sponsor_category category ON category.id=value.sponsor_category_id WHERE ${where} ORDER BY value.display_name COLLATE NOCASE LIMIT ? OFFSET ?`,
-      )
-        .bind(...bindings, pageSize, offset)
-        .all<Record<string, unknown>>(),
+      runtime.ORM.select({ total: count() })
+        .from(sponsorshipIndividual)
+        .leftJoin(
+          sponsorshipOrganization,
+          eq(sponsorshipOrganization.id, sponsorshipIndividual.sponsorOrganizationId),
+        )
+        .where(where)
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        id: sponsorshipIndividual.id,
+        displayName: sponsorshipIndividual.displayName,
+        firstName: sponsorshipIndividual.firstName,
+        middleName: sponsorshipIndividual.middleName,
+        lastName: sponsorshipIndividual.lastName,
+        address: sponsorshipIndividual.address,
+        countryName: sponsorshipIndividual.countryName,
+        email: sponsorshipIndividual.email,
+        phone: sponsorshipIndividual.phone,
+        sponsorOrganizationId: sponsorshipIndividual.sponsorOrganizationId,
+        sponsorTypeId: sponsorshipIndividual.sponsorTypeId,
+        sponsorCategoryId: sponsorshipIndividual.sponsorCategoryId,
+        organizationName: sponsorshipOrganization.name,
+        sponsorType: sponsorshipSponsorType.name,
+        sponsorCategory: sponsorshipSponsorCategory.name,
+        assignmentCount: sql<number>`coalesce(${assignmentCounts.count}, 0)`,
+      })
+        .from(sponsorshipIndividual)
+        .leftJoin(
+          sponsorshipOrganization,
+          eq(sponsorshipOrganization.id, sponsorshipIndividual.sponsorOrganizationId),
+        )
+        .leftJoin(
+          sponsorshipSponsorType,
+          eq(sponsorshipSponsorType.id, sponsorshipIndividual.sponsorTypeId),
+        )
+        .leftJoin(
+          sponsorshipSponsorCategory,
+          eq(sponsorshipSponsorCategory.id, sponsorshipIndividual.sponsorCategoryId),
+        )
+        .leftJoin(assignmentCounts, eq(assignmentCounts.sponsorId, sponsorshipIndividual.id))
+        .where(where)
+        .orderBy(sql`${sponsorshipIndividual.displayName} collate nocase`)
+        .limit(pageSize)
+        .offset(offset),
     ]);
-    count = Number(total?.total ?? 0);
-    rows = result.results;
+    totalCount = Number(total?.total ?? 0);
+    rows = result;
   } else if (section === "assignments") {
-    const where = `value.organization_id=? AND (?='' OR lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(sponsor.display_name) LIKE ? ESCAPE '\\' OR lower(status.name) LIKE ? ESCAPE '\\')`;
-    const bindings = [context.organizationId, q, search, search, search];
+    const conditions = [eq(sponsorshipAssignment.organizationId, context.organizationId)];
+    if (q)
+      conditions.push(
+        or(
+          sql`lower(${person.displayName}) like ${search} escape '\\'`,
+          sql`lower(${sponsorshipIndividual.displayName}) like ${search} escape '\\'`,
+          sql`lower(${sponsorshipStatus.name}) like ${search} escape '\\'`,
+        )!,
+      );
+    const where = and(...conditions);
     const [total, result] = await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT COUNT(*) total FROM sponsorship_assignment value JOIN person ON person.id=value.person_id JOIN sponsorship_individual sponsor ON sponsor.id=value.sponsor_individual_id JOIN sponsorship_status status ON status.id=value.sponsorship_status_id WHERE ${where}`,
-      )
-        .bind(...bindings)
-        .first<{ total: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT value.id,value.person_id AS personId,value.sponsor_individual_id AS sponsorIndividualId,value.sponsorship_status_id AS statusId,value.academic_session_id AS sessionId,value.status_on AS statusOn,value.remarks,person.display_name AS personName,person.primary_identifier AS admissionNumber,sponsor.display_name AS sponsorName,status.name AS statusName,session.name AS sessionName FROM sponsorship_assignment value JOIN person ON person.id=value.person_id JOIN sponsorship_individual sponsor ON sponsor.id=value.sponsor_individual_id JOIN sponsorship_status status ON status.id=value.sponsorship_status_id LEFT JOIN academic_session session ON session.id=value.academic_session_id WHERE ${where} ORDER BY value.status_on DESC,person.display_name COLLATE NOCASE LIMIT ? OFFSET ?`,
-      )
-        .bind(...bindings, pageSize, offset)
-        .all<Record<string, unknown>>(),
+      runtime.ORM.select({ total: count() })
+        .from(sponsorshipAssignment)
+        .innerJoin(person, eq(person.id, sponsorshipAssignment.personId))
+        .innerJoin(
+          sponsorshipIndividual,
+          eq(sponsorshipIndividual.id, sponsorshipAssignment.sponsorIndividualId),
+        )
+        .innerJoin(
+          sponsorshipStatus,
+          eq(sponsorshipStatus.id, sponsorshipAssignment.sponsorshipStatusId),
+        )
+        .where(where)
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        id: sponsorshipAssignment.id,
+        personId: sponsorshipAssignment.personId,
+        sponsorIndividualId: sponsorshipAssignment.sponsorIndividualId,
+        statusId: sponsorshipAssignment.sponsorshipStatusId,
+        sessionId: sponsorshipAssignment.academicSessionId,
+        statusOn: sponsorshipAssignment.statusOn,
+        remarks: sponsorshipAssignment.remarks,
+        personName: person.displayName,
+        admissionNumber: person.primaryIdentifier,
+        sponsorName: sponsorshipIndividual.displayName,
+        statusName: sponsorshipStatus.name,
+        sessionName: academicSession.name,
+      })
+        .from(sponsorshipAssignment)
+        .innerJoin(person, eq(person.id, sponsorshipAssignment.personId))
+        .innerJoin(
+          sponsorshipIndividual,
+          eq(sponsorshipIndividual.id, sponsorshipAssignment.sponsorIndividualId),
+        )
+        .innerJoin(
+          sponsorshipStatus,
+          eq(sponsorshipStatus.id, sponsorshipAssignment.sponsorshipStatusId),
+        )
+        .leftJoin(academicSession, eq(academicSession.id, sponsorshipAssignment.academicSessionId))
+        .where(where)
+        .orderBy(desc(sponsorshipAssignment.statusOn), sql`${person.displayName} collate nocase`)
+        .limit(pageSize)
+        .offset(offset),
     ]);
-    count = Number(total?.total ?? 0);
-    rows = result.results;
+    totalCount = Number(total?.total ?? 0);
+    rows = result;
   } else if (section === "funds") {
-    const where = `value.organization_id=? AND (?='' OR lower(coalesce(individual.display_name,parent.name,visitor.display_name,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(value.receipt_number,'')) LIKE ? ESCAPE '\\' OR lower(type.name) LIKE ? ESCAPE '\\')`;
-    const bindings = [context.organizationId, q, search, search, search];
+    const sponsorName = sql<string>`coalesce(${sponsorshipIndividual.displayName}, ${sponsorshipOrganization.name}, ${sponsorshipVisitor.displayName}, '')`;
+    const conditions = [eq(sponsorshipFund.organizationId, context.organizationId)];
+    if (q)
+      conditions.push(
+        or(
+          sql`lower(${sponsorName}) like ${search} escape '\\'`,
+          sql`lower(coalesce(${sponsorshipFund.receiptNumber}, '')) like ${search} escape '\\'`,
+          sql`lower(${sponsorshipFundType.name}) like ${search} escape '\\'`,
+        )!,
+      );
+    const where = and(...conditions);
+    const allocationCounts = runtime.ORM.select({
+      fundId: sponsorshipFundAllocation.fundId,
+      count: count().as("allocation_count"),
+    })
+      .from(sponsorshipFundAllocation)
+      .groupBy(sponsorshipFundAllocation.fundId)
+      .as("fund_allocation_counts");
     const [total, result] = await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT COUNT(*) total FROM sponsorship_fund value JOIN sponsorship_fund_type type ON type.id=value.fund_type_id LEFT JOIN sponsorship_individual individual ON individual.id=value.sponsor_individual_id LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id LEFT JOIN sponsorship_visitor visitor ON visitor.id=value.visitor_id WHERE ${where}`,
-      )
-        .bind(...bindings)
-        .first<{ total: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT value.id,value.fund_type_id AS fundTypeId,value.academic_session_id AS sessionId,value.sponsor_kind AS sponsorKind,coalesce(value.sponsor_individual_id,value.sponsor_organization_id,value.visitor_id) AS sponsorPartyId,value.received_on AS receivedOn,value.period_from AS periodFrom,value.period_to AS periodTo,value.amount,value.receipt_number AS receiptNumber,value.remarks,type.name AS fundType,coalesce(individual.display_name,parent.name,visitor.display_name,'Legacy sponsor') AS sponsorName,(SELECT COUNT(*) FROM sponsorship_fund_allocation allocation WHERE allocation.fund_id=value.id) allocationCount FROM sponsorship_fund value JOIN sponsorship_fund_type type ON type.id=value.fund_type_id LEFT JOIN sponsorship_individual individual ON individual.id=value.sponsor_individual_id LEFT JOIN sponsorship_organization parent ON parent.id=value.sponsor_organization_id LEFT JOIN sponsorship_visitor visitor ON visitor.id=value.visitor_id WHERE ${where} ORDER BY value.received_on DESC LIMIT ? OFFSET ?`,
-      )
-        .bind(...bindings, pageSize, offset)
-        .all<Record<string, unknown>>(),
+      runtime.ORM.select({ total: count() })
+        .from(sponsorshipFund)
+        .innerJoin(sponsorshipFundType, eq(sponsorshipFundType.id, sponsorshipFund.fundTypeId))
+        .leftJoin(
+          sponsorshipIndividual,
+          eq(sponsorshipIndividual.id, sponsorshipFund.sponsorIndividualId),
+        )
+        .leftJoin(
+          sponsorshipOrganization,
+          eq(sponsorshipOrganization.id, sponsorshipFund.sponsorOrganizationId),
+        )
+        .leftJoin(sponsorshipVisitor, eq(sponsorshipVisitor.id, sponsorshipFund.visitorId))
+        .where(where)
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        id: sponsorshipFund.id,
+        fundTypeId: sponsorshipFund.fundTypeId,
+        sessionId: sponsorshipFund.academicSessionId,
+        sponsorKind: sponsorshipFund.sponsorKind,
+        sponsorPartyId: sql<
+          string | null
+        >`coalesce(${sponsorshipFund.sponsorIndividualId}, ${sponsorshipFund.sponsorOrganizationId}, ${sponsorshipFund.visitorId})`,
+        receivedOn: sponsorshipFund.receivedOn,
+        periodFrom: sponsorshipFund.periodFrom,
+        periodTo: sponsorshipFund.periodTo,
+        amount: sponsorshipFund.amount,
+        receiptNumber: sponsorshipFund.receiptNumber,
+        remarks: sponsorshipFund.remarks,
+        fundType: sponsorshipFundType.name,
+        sponsorName: sql<string>`coalesce(${sponsorName}, 'Legacy sponsor')`,
+        allocationCount: sql<number>`coalesce(${allocationCounts.count}, 0)`,
+      })
+        .from(sponsorshipFund)
+        .innerJoin(sponsorshipFundType, eq(sponsorshipFundType.id, sponsorshipFund.fundTypeId))
+        .leftJoin(
+          sponsorshipIndividual,
+          eq(sponsorshipIndividual.id, sponsorshipFund.sponsorIndividualId),
+        )
+        .leftJoin(
+          sponsorshipOrganization,
+          eq(sponsorshipOrganization.id, sponsorshipFund.sponsorOrganizationId),
+        )
+        .leftJoin(sponsorshipVisitor, eq(sponsorshipVisitor.id, sponsorshipFund.visitorId))
+        .leftJoin(allocationCounts, eq(allocationCounts.fundId, sponsorshipFund.id))
+        .where(where)
+        .orderBy(desc(sponsorshipFund.receivedOn))
+        .limit(pageSize)
+        .offset(offset),
     ]);
-    count = Number(total?.total ?? 0);
-    rows = result.results;
+    totalCount = Number(total?.total ?? 0);
+    rows = result;
   } else if (section === "correspondence") {
-    const where = `value.organization_id=? AND (?='' OR lower(coalesce(value.sender,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(value.receiver,'')) LIKE ? ESCAPE '\\' OR lower(type.name) LIKE ? ESCAPE '\\')`;
-    const bindings = [context.organizationId, q, search, search, search];
+    const conditions = [eq(sponsorshipLetter.organizationId, context.organizationId)];
+    if (q)
+      conditions.push(
+        or(
+          sql`lower(coalesce(${sponsorshipLetter.sender}, '')) like ${search} escape '\\'`,
+          sql`lower(coalesce(${sponsorshipLetter.receiver}, '')) like ${search} escape '\\'`,
+          sql`lower(${sponsorshipCorrespondenceType.name}) like ${search} escape '\\'`,
+        )!,
+      );
+    const where = and(...conditions);
     const [total, result] = await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT COUNT(*) total FROM sponsorship_letter value JOIN sponsorship_correspondence_type type ON type.id=value.correspondence_type_id WHERE ${where}`,
-      )
-        .bind(...bindings)
-        .first<{ total: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT value.id,value.correspondence_type_id AS correspondenceTypeId,value.sponsor_individual_id AS sponsorIndividualId,value.person_id AS personId,value.academic_session_id AS sessionId,value.sender,value.receiver,value.received_on AS receivedOn,value.replied_on AS repliedOn,value.reply_due_on AS replyDueOn,value.remarks,type.name AS correspondenceType,sponsor.display_name AS sponsorName,person.display_name AS personName,person.primary_identifier AS admissionNumber FROM sponsorship_letter value JOIN sponsorship_correspondence_type type ON type.id=value.correspondence_type_id LEFT JOIN sponsorship_individual sponsor ON sponsor.id=value.sponsor_individual_id LEFT JOIN person ON person.id=value.person_id WHERE ${where} ORDER BY value.received_on DESC LIMIT ? OFFSET ?`,
-      )
-        .bind(...bindings, pageSize, offset)
-        .all<Record<string, unknown>>(),
+      runtime.ORM.select({ total: count() })
+        .from(sponsorshipLetter)
+        .innerJoin(
+          sponsorshipCorrespondenceType,
+          eq(sponsorshipCorrespondenceType.id, sponsorshipLetter.correspondenceTypeId),
+        )
+        .where(where)
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        id: sponsorshipLetter.id,
+        correspondenceTypeId: sponsorshipLetter.correspondenceTypeId,
+        sponsorIndividualId: sponsorshipLetter.sponsorIndividualId,
+        personId: sponsorshipLetter.personId,
+        sessionId: sponsorshipLetter.academicSessionId,
+        sender: sponsorshipLetter.sender,
+        receiver: sponsorshipLetter.receiver,
+        receivedOn: sponsorshipLetter.receivedOn,
+        repliedOn: sponsorshipLetter.repliedOn,
+        replyDueOn: sponsorshipLetter.replyDueOn,
+        remarks: sponsorshipLetter.remarks,
+        correspondenceType: sponsorshipCorrespondenceType.name,
+        sponsorName: sponsorshipIndividual.displayName,
+        personName: person.displayName,
+        admissionNumber: person.primaryIdentifier,
+      })
+        .from(sponsorshipLetter)
+        .innerJoin(
+          sponsorshipCorrespondenceType,
+          eq(sponsorshipCorrespondenceType.id, sponsorshipLetter.correspondenceTypeId),
+        )
+        .leftJoin(
+          sponsorshipIndividual,
+          eq(sponsorshipIndividual.id, sponsorshipLetter.sponsorIndividualId),
+        )
+        .leftJoin(person, eq(person.id, sponsorshipLetter.personId))
+        .where(where)
+        .orderBy(desc(sponsorshipLetter.receivedOn))
+        .limit(pageSize)
+        .offset(offset),
     ]);
-    count = Number(total?.total ?? 0);
-    rows = result.results;
+    totalCount = Number(total?.total ?? 0);
+    rows = result;
   } else {
-    const where = `value.organization_id=? AND (?='' OR lower(value.display_name) LIKE ? ESCAPE '\\' OR lower(coalesce(value.country_name,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(type.name,'')) LIKE ? ESCAPE '\\')`;
-    const bindings = [context.organizationId, q, search, search, search];
+    const conditions = [eq(sponsorshipVisitor.organizationId, context.organizationId)];
+    if (q)
+      conditions.push(
+        or(
+          sql`lower(${sponsorshipVisitor.displayName}) like ${search} escape '\\'`,
+          sql`lower(coalesce(${sponsorshipVisitor.countryName}, '')) like ${search} escape '\\'`,
+          sql`lower(coalesce(${sponsorshipVisitorType.name}, '')) like ${search} escape '\\'`,
+        )!,
+      );
+    const where = and(...conditions);
     const [total, result] = await Promise.all([
-      runtime.DATABASE.prepare(
-        `SELECT COUNT(*) total FROM sponsorship_visitor value LEFT JOIN sponsorship_visitor_type type ON type.id=value.visitor_type_id WHERE ${where}`,
-      )
-        .bind(...bindings)
-        .first<{ total: number }>(),
-      runtime.DATABASE.prepare(
-        `SELECT value.id,value.visitor_type_id AS visitorTypeId,value.first_name AS firstName,value.middle_name AS middleName,value.last_name AS lastName,value.display_name AS displayName,value.address,value.country_name AS countryName,value.email,value.phone,value.related_person_name AS relatedPersonName,value.visited_on AS visitedOn,value.memento_quantity AS mementoQuantity,value.gifts_presented AS giftsPresented,value.visit_summary AS visitSummary,value.comments,type.name AS visitorType FROM sponsorship_visitor value LEFT JOIN sponsorship_visitor_type type ON type.id=value.visitor_type_id WHERE ${where} ORDER BY value.visited_on DESC LIMIT ? OFFSET ?`,
-      )
-        .bind(...bindings, pageSize, offset)
-        .all<Record<string, unknown>>(),
+      runtime.ORM.select({ total: count() })
+        .from(sponsorshipVisitor)
+        .leftJoin(
+          sponsorshipVisitorType,
+          eq(sponsorshipVisitorType.id, sponsorshipVisitor.visitorTypeId),
+        )
+        .where(where)
+        .then((values) => values[0]),
+      runtime.ORM.select({
+        id: sponsorshipVisitor.id,
+        visitorTypeId: sponsorshipVisitor.visitorTypeId,
+        firstName: sponsorshipVisitor.firstName,
+        middleName: sponsorshipVisitor.middleName,
+        lastName: sponsorshipVisitor.lastName,
+        displayName: sponsorshipVisitor.displayName,
+        address: sponsorshipVisitor.address,
+        countryName: sponsorshipVisitor.countryName,
+        email: sponsorshipVisitor.email,
+        phone: sponsorshipVisitor.phone,
+        relatedPersonName: sponsorshipVisitor.relatedPersonName,
+        visitedOn: sponsorshipVisitor.visitedOn,
+        mementoQuantity: sponsorshipVisitor.mementoQuantity,
+        giftsPresented: sponsorshipVisitor.giftsPresented,
+        visitSummary: sponsorshipVisitor.visitSummary,
+        comments: sponsorshipVisitor.comments,
+        visitorType: sponsorshipVisitorType.name,
+      })
+        .from(sponsorshipVisitor)
+        .leftJoin(
+          sponsorshipVisitorType,
+          eq(sponsorshipVisitorType.id, sponsorshipVisitor.visitorTypeId),
+        )
+        .where(where)
+        .orderBy(desc(sponsorshipVisitor.visitedOn))
+        .limit(pageSize)
+        .offset(offset),
     ]);
-    count = Number(total?.total ?? 0);
-    rows = result.results;
+    totalCount = Number(total?.total ?? 0);
+    rows = result;
   }
   if (section === "funds") {
-    rows = await Promise.all(
-      rows.map(async (row) => {
-        const allocations = await runtime.DATABASE.prepare(`SELECT allocation.person_id AS personId,
-          person.display_name AS personName,allocation.amount,allocation.remarks
-          FROM sponsorship_fund_allocation allocation LEFT JOIN person ON person.id=allocation.person_id
-          WHERE allocation.organization_id=? AND allocation.fund_id=? ORDER BY person.display_name COLLATE NOCASE`)
-          .bind(context.organizationId, String(row.id))
-          .all<Record<string, unknown>>();
-        return { ...row, allocations: allocations.results };
-      }),
-    );
+    const fundIds = rows.map((row) => String(row.id));
+    const allocations = fundIds.length
+      ? await runtime.ORM.select({
+          fundId: sponsorshipFundAllocation.fundId,
+          personId: sponsorshipFundAllocation.personId,
+          personName: person.displayName,
+          amount: sponsorshipFundAllocation.amount,
+          remarks: sponsorshipFundAllocation.remarks,
+        })
+          .from(sponsorshipFundAllocation)
+          .leftJoin(person, eq(person.id, sponsorshipFundAllocation.personId))
+          .where(
+            and(
+              eq(sponsorshipFundAllocation.organizationId, context.organizationId),
+              inArray(sponsorshipFundAllocation.fundId, fundIds),
+            ),
+          )
+          .orderBy(sql`${person.displayName} collate nocase`)
+      : [];
+    const allocationsByFund = new Map<string, Array<Record<string, unknown>>>();
+    for (const { fundId, ...allocation } of allocations) {
+      const values = allocationsByFund.get(fundId) ?? [];
+      values.push(allocation);
+      allocationsByFund.set(fundId, values);
+    }
+    rows = rows.map((row) => ({
+      ...row,
+      allocations: allocationsByFund.get(String(row.id)) ?? [],
+    }));
   }
   return Response.json({
     summary: summaries,
     records: rows,
-    pagination: { page, pageSize, total: count, totalPages: Math.ceil(count / pageSize) },
+    pagination: {
+      page,
+      pageSize,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+    },
     capabilities: { manage: hasPermission(context, "sponsorship.manage") },
   });
 }
