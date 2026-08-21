@@ -977,37 +977,37 @@ function Dashboard({
         </div>
       </section>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_0.7fr]">
-        <section>
+      <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)]">
+        <section className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Work areas
           </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
             {modules
               .filter((module) => module.open)
               .map(({ Icon, title, description, view }) => (
                 <button
-                  className="group rounded-2xl border bg-card p-4 text-left transition-colors hover:border-primary/40"
+                  className="group min-w-0 w-full overflow-hidden whitespace-normal rounded-2xl border bg-card p-4 text-left transition-colors hover:border-primary/40"
                   key={title}
                   onClick={() => onOpen(view)}
                   type="button"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-xl bg-muted text-primary">
+                    <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-primary">
                       <Icon className="size-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">{title}</p>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
                     </div>
-                    <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </button>
               ))}
           </div>
         </section>
 
-        <section>
+        <section className="min-w-0">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Recent activity
