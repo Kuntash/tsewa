@@ -756,16 +756,6 @@ const siblingLinkSchema = z.discriminatedUnion("mode", [
   }),
 ]);
 
-function classDisplayName(alias: "class" | "offering_class" | "from_class" | "to_class"): string {
-  return `CASE
-    WHEN lower(trim(coalesce(${alias}.section, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
-      AND lower(replace(replace(trim(coalesce(nullif(${alias}.title, ''), ${alias}.name)), '''', ''), '"', ''))
-        NOT LIKE '% ' || lower(trim(${alias}.section))
-    THEN trim(coalesce(nullif(${alias}.title, ''), ${alias}.name)) || ' ' || trim(${alias}.section)
-    ELSE trim(coalesce(nullif(${alias}.title, ''), ${alias}.name))
-  END`;
-}
-
 type SignUpPayload = {
   user?: {
     id?: string;
@@ -1279,71 +1269,98 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
-  const bindings = [scope.organizationId, scope.session.id];
+  const className = sql<string>`coalesce(${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end, '')`;
+  const enrollmentScope = and(
+    eq(studentEnrollment.organizationId, scope.organizationId),
+    eq(studentEnrollment.academicSessionId, scope.session.id),
+  );
   const [summary, schools, classes, houses] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT COUNT(*) AS students,
-              SUM(CASE WHEN person.status = 'active' THEN 1 ELSE 0 END) AS activeStudents,
-              SUM(CASE WHEN person.status = 'inactive' THEN 1 ELSE 0 END) AS inactiveStudents,
-              COUNT(DISTINCT enrollment.school_id) AS schools,
-              COUNT(DISTINCT coalesce(enrollment.school_id, 'unmapped') || '|' ||
-                ${classDisplayName("class")}) AS classes,
-              COUNT(DISTINCT enrollment.house_id) AS houses,
-              SUM(CASE WHEN enrollment.school_id IS NULL THEN 1 ELSE 0 END) AS unmappedSchools
-       FROM student_enrollment enrollment
-       JOIN person ON person.id = enrollment.person_id
-         AND person.organization_id = enrollment.organization_id
-       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-         AND class.organization_id = enrollment.organization_id
-       WHERE enrollment.organization_id = ? AND enrollment.academic_session_id = ?`,
-    )
-      .bind(...bindings)
-      .first<{
-        students: number;
-        activeStudents: number;
-        inactiveStudents: number;
-        schools: number;
-        classes: number;
-        houses: number;
-        unmappedSchools: number;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT coalesce(school.id, 'unmapped') AS id,
-              coalesce(school.name, 'School not set') AS name, COUNT(*) AS count
-       FROM student_enrollment enrollment
-       LEFT JOIN school_master school ON school.id = enrollment.school_id
-         AND school.organization_id = enrollment.organization_id
-       WHERE enrollment.organization_id = ? AND enrollment.academic_session_id = ?
-       GROUP BY school.id, school.name
-       ORDER BY count DESC, name COLLATE NOCASE`,
-    )
-      .bind(...bindings)
-      .all<{ id: string; name: string; count: number }>(),
-    runtime.DATABASE.prepare(
-      `SELECT ${classDisplayName("class")} AS id,
-              ${classDisplayName("class")} AS name,
-              COUNT(*) AS count
-       FROM student_enrollment enrollment
-       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-         AND class.organization_id = enrollment.organization_id
-       WHERE enrollment.organization_id = ? AND enrollment.academic_session_id = ?
-       GROUP BY ${classDisplayName("class")}
-       ORDER BY coalesce(max(class.level), 999), name COLLATE NOCASE`,
-    )
-      .bind(...bindings)
-      .all<{ id: string; name: string; count: number }>(),
-    runtime.DATABASE.prepare(
-      `SELECT coalesce(house.id, 'none') AS id,
-              coalesce(house.name, 'No house') AS name, COUNT(*) AS count
-       FROM student_enrollment enrollment
-       LEFT JOIN house_master house ON house.id = enrollment.house_id
-         AND house.organization_id = enrollment.organization_id
-       WHERE enrollment.organization_id = ? AND enrollment.academic_session_id = ?
-       GROUP BY house.id, house.name
-       ORDER BY count DESC, name COLLATE NOCASE`,
-    )
-      .bind(...bindings)
-      .all<{ id: string; name: string; count: number }>(),
+    runtime.ORM.select({
+      students: count(),
+      activeStudents: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
+      inactiveStudents: sql<number>`sum(case when ${person.status} = 'inactive' then 1 else 0 end)`,
+      schools: sql<number>`count(distinct ${studentEnrollment.schoolId})`,
+      classes: sql<number>`count(distinct coalesce(${studentEnrollment.schoolId}, 'unmapped') || '|' || ${className})`,
+      houses: sql<number>`count(distinct ${studentEnrollment.houseId})`,
+      unmappedSchools: sql<number>`sum(case when ${studentEnrollment.schoolId} is null then 1 else 0 end)`,
+    })
+      .from(studentEnrollment)
+      .innerJoin(
+        person,
+        and(
+          eq(person.id, studentEnrollment.personId),
+          eq(person.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, studentEnrollment.academicClassId),
+          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .where(enrollmentScope)
+      .then(
+        (rows) =>
+          rows[0] as
+            | {
+                students: number;
+                activeStudents: number;
+                inactiveStudents: number;
+                schools: number;
+                classes: number;
+                houses: number;
+                unmappedSchools: number;
+              }
+            | undefined,
+      ),
+    runtime.ORM.select({
+      id: sql<string>`coalesce(${schoolMaster.id}, 'unmapped')`,
+      name: sql<string>`coalesce(${schoolMaster.name}, 'School not set')`,
+      count: count(),
+    })
+      .from(studentEnrollment)
+      .leftJoin(
+        schoolMaster,
+        and(
+          eq(schoolMaster.id, studentEnrollment.schoolId),
+          eq(schoolMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .where(enrollmentScope)
+      .groupBy(schoolMaster.id, schoolMaster.name)
+      .orderBy(desc(count()), sql`coalesce(${schoolMaster.name}, 'School not set') collate nocase`),
+    runtime.ORM.select({ id: className, name: className, count: count() })
+      .from(studentEnrollment)
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, studentEnrollment.academicClassId),
+          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .where(enrollmentScope)
+      .groupBy(className)
+      .orderBy(
+        sql`coalesce(max(${academicClassMaster.level}), 999)`,
+        sql`${className} collate nocase`,
+      ),
+    runtime.ORM.select({
+      id: sql<string>`coalesce(${houseMaster.id}, 'none')`,
+      name: sql<string>`coalesce(${houseMaster.name}, 'No house')`,
+      count: count(),
+    })
+      .from(studentEnrollment)
+      .leftJoin(
+        houseMaster,
+        and(
+          eq(houseMaster.id, studentEnrollment.houseId),
+          eq(houseMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .where(enrollmentScope)
+      .groupBy(houseMaster.id, houseMaster.name)
+      .orderBy(desc(count()), sql`coalesce(${houseMaster.name}, 'No house') collate nocase`),
   ]);
 
   return Response.json({
@@ -1359,9 +1376,9 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       unmappedSchools: Number(summary?.unmappedSchools ?? 0),
     },
     filters: {
-      schools: schools.results,
-      classes: classes.results,
-      houses: houses.results,
+      schools,
+      classes,
+      houses,
     },
   });
 }
@@ -2201,96 +2218,143 @@ async function readStudentEnrollment(
 
 type SchoolStudentFilters = z.infer<typeof schoolStudentFiltersSchema>;
 
-type SchoolStudentRow = {
-  personId: string;
-  enrollmentId: string;
-  displayName: string;
-  primaryIdentifier: string;
-  status: "active" | "inactive";
-  gender: "female" | "male" | "other" | "unknown" | null;
-  schoolName: string | null;
-  className: string;
-  classSection: string | null;
-  classTitle: string | null;
-  houseName: string | null;
-  rollNumber: string | null;
-  boardRegistrationNumber: string | null;
-  result: string | null;
-  enrollmentStatus: StudentEnrollmentRecord["status"];
-  statusSource: StudentEnrollmentRecord["statusSource"];
-};
-
 function buildSchoolStudentFilters(
   scope: { organizationId: string; session: { id: string } },
   filters: SchoolStudentFilters,
 ) {
   const conditions = [
-    "enrollment.organization_id = ?",
-    "enrollment.academic_session_id = ?",
-    "person.organization_id = ?",
-  ];
-  const bindings: Array<string | number> = [
-    scope.organizationId,
-    scope.session.id,
-    scope.organizationId,
+    eq(studentEnrollment.organizationId, scope.organizationId),
+    eq(studentEnrollment.academicSessionId, scope.session.id),
+    eq(person.organizationId, scope.organizationId),
   ];
   if (filters.q) {
     const search = `%${escapeLikePattern(filters.q.toLowerCase())}%`;
     conditions.push(
-      `(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\' OR lower(coalesce(enrollment.roll_number, '')) LIKE ? ESCAPE '\\')`,
+      or(
+        sql`lower(${person.displayName}) like ${search} escape '\\'`,
+        sql`lower(${person.primaryIdentifier}) like ${search} escape '\\'`,
+        sql`lower(coalesce(${studentEnrollment.rollNumber}, '')) like ${search} escape '\\'`,
+      )!,
     );
-    bindings.push(search, search, search);
   }
   if (filters.school !== "all") {
     if (filters.school === "unmapped") {
-      conditions.push("enrollment.school_id IS NULL");
+      conditions.push(isNull(studentEnrollment.schoolId));
     } else {
-      conditions.push("school.id = ?");
-      bindings.push(filters.school);
+      conditions.push(eq(schoolMaster.id, filters.school));
     }
   }
   if (filters.className !== "all") {
-    conditions.push(`${classDisplayName("class")} = ?`);
-    bindings.push(filters.className);
+    conditions.push(
+      eq(
+        sql<string>`${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end`,
+        filters.className,
+      ),
+    );
   }
   if (filters.house !== "all") {
     if (filters.house === "none") {
-      conditions.push("enrollment.house_id IS NULL");
+      conditions.push(isNull(studentEnrollment.houseId));
     } else {
-      conditions.push("house.id = ?");
-      bindings.push(filters.house);
+      conditions.push(eq(houseMaster.id, filters.house));
     }
   }
   if (filters.status !== "all") {
     if (filters.status === "completed") {
-      conditions.push("enrollment.status IN ('completed', 'graduated')");
+      conditions.push(inArray(studentEnrollment.status, ["completed", "graduated"]));
     } else {
-      conditions.push("enrollment.status = ?");
-      bindings.push(filters.status);
+      conditions.push(eq(studentEnrollment.status, filters.status));
     }
   }
-  return { bindings, where: conditions.join(" AND ") };
+  return and(...conditions)!;
 }
 
-const schoolStudentFromSql = `FROM student_enrollment enrollment
-       JOIN person ON person.id = enrollment.person_id
-         AND person.organization_id = enrollment.organization_id
-       JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-         AND class.organization_id = enrollment.organization_id
-       LEFT JOIN school_master school ON school.id = enrollment.school_id
-         AND school.organization_id = enrollment.organization_id
-       LEFT JOIN house_master house ON house.id = enrollment.house_id
-         AND house.organization_id = enrollment.organization_id`;
+function schoolStudentQuery(database: Database) {
+  return database
+    .select({
+      personId: person.id,
+      enrollmentId: studentEnrollment.id,
+      displayName: person.displayName,
+      primaryIdentifier: person.primaryIdentifier,
+      status: person.status,
+      gender: person.gender,
+      schoolName: schoolMaster.name,
+      className: academicClassMaster.name,
+      classSection: academicClassMaster.section,
+      classTitle: sql<string>`${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end`,
+      houseName: houseMaster.name,
+      rollNumber: studentEnrollment.rollNumber,
+      boardRegistrationNumber: studentEnrollment.boardRegistrationNumber,
+      result: studentEnrollment.result,
+      enrollmentStatus: studentEnrollment.status,
+      statusSource: studentEnrollment.statusSource,
+    })
+    .from(studentEnrollment)
+    .innerJoin(
+      person,
+      and(
+        eq(person.id, studentEnrollment.personId),
+        eq(person.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .innerJoin(
+      academicClassMaster,
+      and(
+        eq(academicClassMaster.id, studentEnrollment.academicClassId),
+        eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .leftJoin(
+      schoolMaster,
+      and(
+        eq(schoolMaster.id, studentEnrollment.schoolId),
+        eq(schoolMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .leftJoin(
+      houseMaster,
+      and(
+        eq(houseMaster.id, studentEnrollment.houseId),
+        eq(houseMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .$dynamic();
+}
 
-const schoolStudentSelectSql = `SELECT person.id AS personId, enrollment.id AS enrollmentId,
-              person.display_name AS displayName,
-              person.primary_identifier AS primaryIdentifier, person.status, person.gender,
-              school.name AS schoolName, class.name AS className,
-              class.section AS classSection, ${classDisplayName("class")} AS classTitle,
-              house.name AS houseName, enrollment.roll_number AS rollNumber,
-              enrollment.board_registration_number AS boardRegistrationNumber,
-              enrollment.result, enrollment.status AS enrollmentStatus,
-              enrollment.status_source AS statusSource`;
+function schoolStudentCountQuery(database: Database) {
+  return database
+    .select({ total: count() })
+    .from(studentEnrollment)
+    .innerJoin(
+      person,
+      and(
+        eq(person.id, studentEnrollment.personId),
+        eq(person.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .innerJoin(
+      academicClassMaster,
+      and(
+        eq(academicClassMaster.id, studentEnrollment.academicClassId),
+        eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .leftJoin(
+      schoolMaster,
+      and(
+        eq(schoolMaster.id, studentEnrollment.schoolId),
+        eq(schoolMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .leftJoin(
+      houseMaster,
+      and(
+        eq(houseMaster.id, studentEnrollment.houseId),
+        eq(houseMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .$dynamic();
+}
 
 async function getSchoolOperationsStudents(request: Request): Promise<Response> {
   if (request.method !== "GET") return methodNotAllowed("GET");
@@ -2312,28 +2376,26 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const { page, pageSize } = parsed.data;
-  const { bindings: filterBindings, where } = buildSchoolStudentFilters(scope, parsed.data);
+  const where = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
   const offset = (page - 1) * pageSize;
   const [count, students] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total ${schoolStudentFromSql} WHERE ${where}`)
-      .bind(...filterBindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(
-      `${schoolStudentSelectSql} ${schoolStudentFromSql} WHERE ${where}
-       ORDER BY person.display_name COLLATE NOCASE, person.primary_identifier
-       LIMIT ? OFFSET ?`,
-    )
-      .bind(...filterBindings, pageSize, offset)
-      .all<SchoolStudentRow>(),
+    schoolStudentCountQuery(runtime.ORM)
+      .where(where)
+      .then((rows) => rows[0]),
+    schoolStudentQuery(runtime.ORM)
+      .where(where)
+      .orderBy(sql`${person.displayName} collate nocase`, person.primaryIdentifier)
+      .limit(pageSize)
+      .offset(offset),
   ]);
   const total = Number(count?.total ?? 0);
   return Response.json({
-    students: students.results.map((student) => ({
+    students: students.map((student) => ({
       ...student,
       canEdit:
         hasPermission(scope, "school.enrollment.manage") &&
-        isOpenEnrollment(student.enrollmentStatus),
+        isOpenEnrollment(student.enrollmentStatus as StudentEnrollmentRecord["status"]),
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
@@ -2358,15 +2420,17 @@ async function getSchoolOperationsStudentReport(request: Request): Promise<Respo
 
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
-  const { bindings, where } = buildSchoolStudentFilters(scope, parsed.data);
+  const where = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
-  const [count, organization] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total ${schoolStudentFromSql} WHERE ${where}`)
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare("SELECT name FROM organization WHERE id = ?")
-      .bind(scope.organizationId)
-      .first<{ name: string }>(),
+  const [count, organizationRow] = await Promise.all([
+    schoolStudentCountQuery(runtime.ORM)
+      .where(where)
+      .then((rows) => rows[0]),
+    runtime.ORM.select({ name: organization.name })
+      .from(organization)
+      .where(eq(organization.id, scope.organizationId))
+      .limit(1)
+      .then((rows) => rows[0]),
   ]);
   const total = Number(count?.total ?? 0);
   if (total > MAX_STUDENT_REPORT_ROWS) {
@@ -2378,21 +2442,22 @@ async function getSchoolOperationsStudentReport(request: Request): Promise<Respo
     );
   }
 
-  const students = await runtime.DATABASE.prepare(
-    `${schoolStudentSelectSql} ${schoolStudentFromSql} WHERE ${where}
-     ORDER BY school.name COLLATE NOCASE, coalesce(class.sort_order, 999),
-              classTitle COLLATE NOCASE, person.display_name COLLATE NOCASE,
-              person.primary_identifier
-     LIMIT ?`,
-  )
-    .bind(...bindings, MAX_STUDENT_REPORT_ROWS)
-    .all<SchoolStudentRow>();
+  const students = await schoolStudentQuery(runtime.ORM)
+    .where(where)
+    .orderBy(
+      sql`${schoolMaster.name} collate nocase`,
+      sql`coalesce(${academicClassMaster.sortOrder}, 999)`,
+      sql`${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end collate nocase`,
+      sql`${person.displayName} collate nocase`,
+      person.primaryIdentifier,
+    )
+    .limit(MAX_STUDENT_REPORT_ROWS);
 
   return Response.json({
     generatedAt: new Date().toISOString(),
-    organizationName: organization?.name ?? "School",
+    organizationName: organizationRow?.name ?? "School",
     session: scope.session,
-    students: students.results,
+    students,
     total,
   });
 }
@@ -2410,58 +2475,83 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
-  const schools = await runtime.DATABASE.prepare(
-    `WITH session_enrollments AS (
-       SELECT * FROM student_enrollment
-       WHERE organization_id = ? AND academic_session_id = ?
-     ), session_offerings AS (
-       SELECT * FROM school_class_offering
-       WHERE organization_id = ? AND academic_session_id = ? AND is_active = 1
-     )
-     SELECT school.id, school.name, school.location_name AS locationName,
-            school.affiliation_number AS affiliationNumber,
-            school.is_active AS isActive,
-            COUNT(DISTINCT enrollment.id) AS students,
-            COUNT(DISTINCT CASE WHEN person.status = 'active' THEN enrollment.person_id END)
-              AS currentActiveStudents,
-            COUNT(DISTINCT ${classDisplayName("offering_class")}) AS classes,
-            COUNT(DISTINCT school_house.house_id) AS houses
-     FROM school_master school
-     LEFT JOIN session_enrollments enrollment ON enrollment.school_id = school.id
-     LEFT JOIN person ON person.id = enrollment.person_id
-       AND person.organization_id = enrollment.organization_id
-     LEFT JOIN session_offerings offering ON offering.school_id = school.id
-     LEFT JOIN academic_class_master offering_class
-       ON offering_class.id = offering.academic_class_id
-      AND offering_class.organization_id = school.organization_id
-     LEFT JOIN school_house_master school_house ON school_house.school_id = school.id
-       AND school_house.organization_id = school.organization_id
-     WHERE school.organization_id = ?
-     GROUP BY school.id
-     ORDER BY school.is_active DESC, school.name COLLATE NOCASE`,
-  )
-    .bind(
-      scope.organizationId,
-      scope.session.id,
-      scope.organizationId,
-      scope.session.id,
-      scope.organizationId,
+  const enrollmentCounts = runtime.ORM.select({
+    schoolId: studentEnrollment.schoolId,
+    students: count(studentEnrollment.id).as("students"),
+    currentActiveStudents:
+      sql<number>`count(distinct case when ${person.status} = 'active' then ${studentEnrollment.personId} end)`.as(
+        "current_active_students",
+      ),
+  })
+    .from(studentEnrollment)
+    .innerJoin(
+      person,
+      and(
+        eq(person.id, studentEnrollment.personId),
+        eq(person.organizationId, studentEnrollment.organizationId),
+      ),
     )
-    .all<{
-      id: string;
-      name: string;
-      locationName: string | null;
-      affiliationNumber: string | null;
-      isActive: number;
-      students: number;
-      currentActiveStudents: number;
-      classes: number;
-      houses: number;
-    }>();
+    .where(
+      and(
+        eq(studentEnrollment.organizationId, scope.organizationId),
+        eq(studentEnrollment.academicSessionId, scope.session.id),
+      ),
+    )
+    .groupBy(studentEnrollment.schoolId)
+    .as("enrollment_counts");
+  const offeringCounts = runtime.ORM.select({
+    schoolId: schoolClassOffering.schoolId,
+    classes:
+      sql<number>`count(distinct ${academicClassMaster.name} || case when ${academicClassMaster.section} is not null and trim(${academicClassMaster.section}) <> '' then ' - ' || ${academicClassMaster.section} else '' end)`.as(
+        "classes",
+      ),
+  })
+    .from(schoolClassOffering)
+    .innerJoin(
+      academicClassMaster,
+      and(
+        eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+        eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+      ),
+    )
+    .where(
+      and(
+        eq(schoolClassOffering.organizationId, scope.organizationId),
+        eq(schoolClassOffering.academicSessionId, scope.session.id),
+        eq(schoolClassOffering.isActive, 1),
+      ),
+    )
+    .groupBy(schoolClassOffering.schoolId)
+    .as("offering_counts");
+  const houseCounts = runtime.ORM.select({
+    schoolId: schoolHouseMaster.schoolId,
+    houses: sql<number>`count(distinct ${schoolHouseMaster.houseId})`.as("houses"),
+  })
+    .from(schoolHouseMaster)
+    .where(eq(schoolHouseMaster.organizationId, scope.organizationId))
+    .groupBy(schoolHouseMaster.schoolId)
+    .as("house_counts");
+  const schools = await runtime.ORM.select({
+    id: schoolMaster.id,
+    name: schoolMaster.name,
+    locationName: schoolMaster.locationName,
+    affiliationNumber: schoolMaster.affiliationNumber,
+    isActive: schoolMaster.isActive,
+    students: sql<number>`coalesce(${enrollmentCounts.students}, 0)`,
+    currentActiveStudents: sql<number>`coalesce(${enrollmentCounts.currentActiveStudents}, 0)`,
+    classes: sql<number>`coalesce(${offeringCounts.classes}, 0)`,
+    houses: sql<number>`coalesce(${houseCounts.houses}, 0)`,
+  })
+    .from(schoolMaster)
+    .leftJoin(enrollmentCounts, eq(enrollmentCounts.schoolId, schoolMaster.id))
+    .leftJoin(offeringCounts, eq(offeringCounts.schoolId, schoolMaster.id))
+    .leftJoin(houseCounts, eq(houseCounts.schoolId, schoolMaster.id))
+    .where(eq(schoolMaster.organizationId, scope.organizationId))
+    .orderBy(desc(schoolMaster.isActive), sql`${schoolMaster.name} collate nocase`);
 
   return Response.json({
     session: scope.session,
-    schools: schools.results.map((school) => ({ ...school, isActive: Boolean(school.isActive) })),
+    schools: schools.map((school) => ({ ...school, isActive: Boolean(school.isActive) })),
   });
 }
 
@@ -5263,16 +5353,21 @@ async function getScholarshipReport(request: Request): Promise<Response> {
     return Response.json({ error: "Choose a valid scholarship report." }, { status: 400 });
   const { report, session } = parsed.data;
   const runtime = getRuntimeEnv();
-  const sessionCondition = session === "all" ? "" : " AND record.academic_session_id=?";
-  const bindings = session === "all" ? [context.organizationId] : [context.organizationId, session];
+  const recordConditions = [eq(scholarshipRecord.organizationId, context.organizationId)];
+  if (session !== "all") recordConditions.push(eq(scholarshipRecord.academicSessionId, session));
   const sessionRow =
     session === "all"
       ? null
-      : await runtime.DATABASE.prepare(
-          "SELECT name FROM academic_session WHERE id=? AND organization_id=?",
-        )
-          .bind(session, context.organizationId)
-          .first<{ name: string }>();
+      : await runtime.ORM.select({ name: academicSession.name })
+          .from(academicSession)
+          .where(
+            and(
+              eq(academicSession.id, session),
+              eq(academicSession.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+          .then((values) => values[0] ?? null);
   if (session !== "all" && !sessionRow)
     return Response.json({ error: "Academic session not found." }, { status: 404 });
 
@@ -5291,19 +5386,33 @@ async function getScholarshipReport(request: Request): Promise<Response> {
       { key: "amount", label: "Amount", numeric: true },
       { key: "paymentReference", label: "Payment ref." },
     ];
-    const ledgerCondition = session === "all" ? "" : " AND sanction.academic_session_id=?";
-    const result = await runtime.DATABASE.prepare(`SELECT sanction.sanctioned_on AS sanctionedOn,
-      record.student_name AS studentName,record.admission_number AS admissionNumber,course.name AS courseName,
-      head.name AS headName,line.city_name AS cityName,line.amount,sanction.payment_reference AS paymentReference
-      FROM scholarship_sanction_line line JOIN scholarship_sanction sanction ON sanction.id=line.sanction_id
-      JOIN scholarship_record record ON record.id=sanction.scholarship_id
-      LEFT JOIN scholarship_course course ON course.id=record.course_id
-      JOIN scholarship_head head ON head.id=line.head_id
-      WHERE sanction.organization_id=?${ledgerCondition}
-      ORDER BY sanction.sanctioned_on,record.student_name COLLATE NOCASE,head.name COLLATE NOCASE`)
-      .bind(...bindings)
-      .all<Record<string, unknown>>();
-    rows = result.results;
+    const ledgerConditions = [eq(scholarshipSanction.organizationId, context.organizationId)];
+    if (session !== "all")
+      ledgerConditions.push(eq(scholarshipSanction.academicSessionId, session));
+    rows = await runtime.ORM.select({
+      sanctionedOn: scholarshipSanction.sanctionedOn,
+      studentName: scholarshipRecord.studentName,
+      admissionNumber: scholarshipRecord.admissionNumber,
+      courseName: scholarshipCourse.name,
+      headName: scholarshipHead.name,
+      cityName: scholarshipSanctionLine.cityName,
+      amount: scholarshipSanctionLine.amount,
+      paymentReference: scholarshipSanction.paymentReference,
+    })
+      .from(scholarshipSanctionLine)
+      .innerJoin(
+        scholarshipSanction,
+        eq(scholarshipSanction.id, scholarshipSanctionLine.sanctionId),
+      )
+      .innerJoin(scholarshipRecord, eq(scholarshipRecord.id, scholarshipSanction.scholarshipId))
+      .leftJoin(scholarshipCourse, eq(scholarshipCourse.id, scholarshipRecord.courseId))
+      .innerJoin(scholarshipHead, eq(scholarshipHead.id, scholarshipSanctionLine.headId))
+      .where(and(...ledgerConditions))
+      .orderBy(
+        asc(scholarshipSanction.sanctionedOn),
+        asc(sql`lower(${scholarshipRecord.studentName})`),
+        asc(sql`lower(${scholarshipHead.name})`),
+      );
   } else if (report === "placeWise") {
     title = "Scholarship students · place-wise";
     columns = [
@@ -5312,15 +5421,25 @@ async function getScholarshipReport(request: Request): Promise<Response> {
       { key: "awardedAmount", label: "Awarded", numeric: true },
       { key: "sanctionedAmount", label: "Sanctioned", numeric: true },
     ];
-    const result =
-      await runtime.DATABASE.prepare(`SELECT coalesce(record.city_name,'Not recorded') AS cityName,
-      COUNT(*) AS students,coalesce(SUM(record.scholarship_awarded),0) AS awardedAmount,
-      coalesce(SUM((SELECT SUM(amount) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id)),0) AS sanctionedAmount
-      FROM scholarship_record record WHERE record.organization_id=?${sessionCondition}
-      GROUP BY coalesce(record.city_name,'Not recorded') ORDER BY students DESC,cityName COLLATE NOCASE`)
-        .bind(...bindings)
-        .all<Record<string, unknown>>();
-    rows = result.results;
+    const sanctionTotals = runtime.ORM.select({
+      scholarshipId: scholarshipSanction.scholarshipId,
+      amount: sql<number>`sum(${scholarshipSanction.amount})`.as("amount"),
+    })
+      .from(scholarshipSanction)
+      .groupBy(scholarshipSanction.scholarshipId)
+      .as("sanction_totals");
+    const cityName = sql<string>`coalesce(${scholarshipRecord.cityName}, 'Not recorded')`;
+    rows = await runtime.ORM.select({
+      cityName,
+      students: count(),
+      awardedAmount: sql<number>`coalesce(sum(${scholarshipRecord.scholarshipAwarded}), 0)`,
+      sanctionedAmount: sql<number>`coalesce(sum(${sanctionTotals.amount}), 0)`,
+    })
+      .from(scholarshipRecord)
+      .leftJoin(sanctionTotals, eq(sanctionTotals.scholarshipId, scholarshipRecord.id))
+      .where(and(...recordConditions))
+      .groupBy(cityName)
+      .orderBy(desc(count()), asc(sql`lower(${cityName})`));
   } else if (report === "yearWise") {
     title = "Scholarship students · year-wise";
     columns = [
@@ -5329,25 +5448,46 @@ async function getScholarshipReport(request: Request): Promise<Response> {
       { key: "studyYear", label: "Study year" },
       { key: "students", label: "Students", numeric: true },
     ];
-    const result =
-      await runtime.DATABASE.prepare(`SELECT coalesce(category.name,'Uncategorised') AS courseCategory,
-      coalesce(course.name,'Course not recorded') AS courseName,
-      coalesce((SELECT annual.study_year FROM scholarship_annual_detail annual
-        WHERE annual.scholarship_id=record.id ORDER BY annual.created_at DESC,annual.id DESC LIMIT 1),'Not recorded') AS studyYear,
-      COUNT(*) AS students FROM scholarship_record record
-      LEFT JOIN scholarship_course course ON course.id=record.course_id
-      LEFT JOIN scholarship_course_category category ON category.id=course.category_id
-      WHERE record.organization_id=?${sessionCondition}
-      GROUP BY courseCategory,courseName,studyYear
-      ORDER BY courseCategory COLLATE NOCASE,courseName COLLATE NOCASE,studyYear COLLATE NOCASE`)
-        .bind(...bindings)
-        .all<Record<string, unknown>>();
-    rows = result.results;
+    const rankedAnnual = runtime.ORM.select({
+      scholarshipId: scholarshipAnnualDetail.scholarshipId,
+      studyYear: scholarshipAnnualDetail.studyYear,
+      rank: sql<number>`row_number() over (partition by ${scholarshipAnnualDetail.scholarshipId} order by ${scholarshipAnnualDetail.createdAt} desc, ${scholarshipAnnualDetail.id} desc)`.as(
+        "annual_rank",
+      ),
+    })
+      .from(scholarshipAnnualDetail)
+      .as("ranked_annual");
+    const latestAnnual = runtime.ORM.select({
+      scholarshipId: rankedAnnual.scholarshipId,
+      studyYear: rankedAnnual.studyYear,
+    })
+      .from(rankedAnnual)
+      .where(eq(rankedAnnual.rank, 1))
+      .as("latest_annual");
+    const courseCategory = sql<string>`coalesce(${scholarshipCourseCategory.name}, 'Uncategorised')`;
+    const courseName = sql<string>`coalesce(${scholarshipCourse.name}, 'Course not recorded')`;
+    const studyYear = sql<string>`coalesce(${latestAnnual.studyYear}, 'Not recorded')`;
+    rows = await runtime.ORM.select({ courseCategory, courseName, studyYear, students: count() })
+      .from(scholarshipRecord)
+      .leftJoin(scholarshipCourse, eq(scholarshipCourse.id, scholarshipRecord.courseId))
+      .leftJoin(
+        scholarshipCourseCategory,
+        eq(scholarshipCourseCategory.id, scholarshipCourse.categoryId),
+      )
+      .leftJoin(latestAnnual, eq(latestAnnual.scholarshipId, scholarshipRecord.id))
+      .where(and(...recordConditions))
+      .groupBy(courseCategory, courseName, studyYear)
+      .orderBy(
+        asc(sql`lower(${courseCategory})`),
+        asc(sql`lower(${courseName})`),
+        asc(sql`lower(${studyYear})`),
+      );
   } else {
-    const extraCondition =
-      report === "courseCompleted"
-        ? " AND record.status='closed' AND lower(coalesce(record.reason,''))='course completed'"
-        : "";
+    if (report === "courseCompleted")
+      recordConditions.push(
+        eq(scholarshipRecord.status, "closed"),
+        eq(sql`lower(coalesce(${scholarshipRecord.reason}, ''))`, "course completed"),
+      );
     title =
       report === "courseCompleted"
         ? "Scholarship students · course completed"
@@ -5363,15 +5503,19 @@ async function getScholarshipReport(request: Request): Promise<Response> {
       { key: "status", label: "Status" },
       { key: "scholarshipAwarded", label: "Awarded", numeric: true },
     ];
-    const result = await runtime.DATABASE.prepare(`SELECT record.student_name AS studentName,
-      record.admission_number AS admissionNumber,course.name AS courseName,record.institute_name AS instituteName,
-      record.city_name AS cityName,record.status,record.scholarship_awarded AS scholarshipAwarded
-      FROM scholarship_record record LEFT JOIN scholarship_course course ON course.id=record.course_id
-      WHERE record.organization_id=?${sessionCondition}${extraCondition}
-      ORDER BY record.student_name COLLATE NOCASE`)
-      .bind(...bindings)
-      .all<Record<string, unknown>>();
-    rows = result.results;
+    rows = await runtime.ORM.select({
+      studentName: scholarshipRecord.studentName,
+      admissionNumber: scholarshipRecord.admissionNumber,
+      courseName: scholarshipCourse.name,
+      instituteName: scholarshipRecord.instituteName,
+      cityName: scholarshipRecord.cityName,
+      status: scholarshipRecord.status,
+      scholarshipAwarded: scholarshipRecord.scholarshipAwarded,
+    })
+      .from(scholarshipRecord)
+      .leftJoin(scholarshipCourse, eq(scholarshipCourse.id, scholarshipRecord.courseId))
+      .where(and(...recordConditions))
+      .orderBy(asc(sql`lower(${scholarshipRecord.studentName})`));
   }
   return Response.json({
     generatedAt: new Date().toISOString(),
