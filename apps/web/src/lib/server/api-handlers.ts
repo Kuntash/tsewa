@@ -1,4 +1,17 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  inArray,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
@@ -30,6 +43,7 @@ import {
   person,
   personFamilyProfile,
   personFile,
+  personImportBatch,
   personPlacement,
   personRelationship,
   schoolClassOffering,
@@ -2915,14 +2929,19 @@ async function getSchoolAssignments(request: Request, schoolId: string): Promise
             eq(schoolClassOffering.schoolId, schoolId),
           ),
         ),
-      runtime.DATABASE.prepare(
-        `SELECT academic_class_id AS academicClassId, COUNT(*) AS students
-         FROM student_enrollment
-         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
-         GROUP BY academic_class_id`,
-      )
-        .bind(scope.organizationId, scope.session.id, schoolId)
-        .all<{ academicClassId: string; students: number }>(),
+      runtime.ORM.select({
+        academicClassId: studentEnrollment.academicClassId,
+        students: count(),
+      })
+        .from(studentEnrollment)
+        .where(
+          and(
+            eq(studentEnrollment.organizationId, scope.organizationId),
+            eq(studentEnrollment.academicSessionId, scope.session.id),
+            eq(studentEnrollment.schoolId, schoolId),
+          ),
+        )
+        .groupBy(studentEnrollment.academicClassId),
       runtime.ORM.select({
         id: houseMaster.id,
         name: houseMaster.name,
@@ -2939,24 +2958,28 @@ async function getSchoolAssignments(request: Request, schoolId: string): Promise
             eq(schoolHouseMaster.schoolId, schoolId),
           ),
         ),
-      runtime.DATABASE.prepare(
-        `SELECT house_id AS houseId, COUNT(*) AS students FROM student_enrollment
-         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
-           AND house_id IS NOT NULL GROUP BY house_id`,
-      )
-        .bind(scope.organizationId, scope.session.id, schoolId)
-        .all<{ houseId: string; students: number }>(),
+      runtime.ORM.select({ houseId: studentEnrollment.houseId, students: count() })
+        .from(studentEnrollment)
+        .where(
+          and(
+            eq(studentEnrollment.organizationId, scope.organizationId),
+            eq(studentEnrollment.academicSessionId, scope.session.id),
+            eq(studentEnrollment.schoolId, schoolId),
+            sql`${studentEnrollment.houseId} IS NOT NULL`,
+          ),
+        )
+        .groupBy(studentEnrollment.houseId),
     ]);
 
   const activeOfferingIds = new Set(
     offerings.filter((item) => Boolean(item.isActive)).map((item) => item.academicClassId),
   );
   const classStudentCounts = new Map(
-    enrollmentClasses.results.map((item) => [item.academicClassId, Number(item.students)]),
+    enrollmentClasses.map((item) => [item.academicClassId, Number(item.students)]),
   );
   const assignedHouseIds = new Set(schoolHouses.map((item) => item.houseId));
   const houseStudentCounts = new Map(
-    enrollmentHouses.results.map((item) => [item.houseId, Number(item.students)]),
+    enrollmentHouses.map((item) => [item.houseId, Number(item.students)]),
   );
 
   return Response.json({
@@ -3023,14 +3046,19 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
             eq(schoolClassOffering.schoolId, schoolId),
           ),
         ),
-      runtime.DATABASE.prepare(
-        `SELECT academic_class_id AS academicClassId, COUNT(*) AS students
-         FROM student_enrollment
-         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
-         GROUP BY academic_class_id`,
-      )
-        .bind(scope.organizationId, scope.session.id, schoolId)
-        .all<{ academicClassId: string; students: number }>(),
+      runtime.ORM.select({
+        academicClassId: studentEnrollment.academicClassId,
+        students: count(),
+      })
+        .from(studentEnrollment)
+        .where(
+          and(
+            eq(studentEnrollment.organizationId, scope.organizationId),
+            eq(studentEnrollment.academicSessionId, scope.session.id),
+            eq(studentEnrollment.schoolId, schoolId),
+          ),
+        )
+        .groupBy(studentEnrollment.academicClassId),
       runtime.ORM.select({
         id: houseMaster.id,
         name: houseMaster.name,
@@ -3046,13 +3074,17 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
             eq(schoolHouseMaster.schoolId, schoolId),
           ),
         ),
-      runtime.DATABASE.prepare(
-        `SELECT house_id AS houseId, COUNT(*) AS students FROM student_enrollment
-         WHERE organization_id = ? AND academic_session_id = ? AND school_id = ?
-           AND house_id IS NOT NULL GROUP BY house_id`,
-      )
-        .bind(scope.organizationId, scope.session.id, schoolId)
-        .all<{ houseId: string; students: number }>(),
+      runtime.ORM.select({ houseId: studentEnrollment.houseId, students: count() })
+        .from(studentEnrollment)
+        .where(
+          and(
+            eq(studentEnrollment.organizationId, scope.organizationId),
+            eq(studentEnrollment.academicSessionId, scope.session.id),
+            eq(studentEnrollment.schoolId, schoolId),
+            sql`${studentEnrollment.houseId} IS NOT NULL`,
+          ),
+        )
+        .groupBy(studentEnrollment.houseId),
     ]);
 
   const classGroups = groupAcademicClassRows(classRows);
@@ -3074,11 +3106,11 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
   const offeringByClassId = new Map<string, (typeof offerings)[number]>();
   for (const offering of offerings) offeringByClassId.set(offering.academicClassId, offering);
   const classStudentCounts = new Map(
-    enrollmentClasses.results.map((item) => [item.academicClassId, Number(item.students)]),
+    enrollmentClasses.map((item) => [item.academicClassId, Number(item.students)]),
   );
   const schoolHouseByHouseId = new Map(schoolHouses.map((item) => [item.houseId, item]));
   const houseStudentCounts = new Map(
-    enrollmentHouses.results.map((item) => [item.houseId, Number(item.students)]),
+    enrollmentHouses.map((item) => [item.houseId, Number(item.students)]),
   );
 
   const blockedClasses = displayedClasses
@@ -5113,60 +5145,100 @@ async function getScholarships(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Check the scholarship filters." }, { status: 400 });
   const { q, status, course, page, pageSize } = parsed.data;
-  const conditions = ["record.organization_id=?"];
-  const bindings: Array<string | number> = [context.organizationId];
-  if (status !== "all") {
-    conditions.push("record.status=?");
-    bindings.push(status);
-  }
-  if (course !== "all") {
-    conditions.push("record.course_id=?");
-    bindings.push(course);
-  }
+  const conditions = [eq(scholarshipRecord.organizationId, context.organizationId)];
+  if (status !== "all") conditions.push(eq(scholarshipRecord.status, status));
+  if (course !== "all") conditions.push(eq(scholarshipRecord.courseId, course));
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
     conditions.push(
-      "(lower(record.student_name) LIKE ? ESCAPE '\\' OR lower(coalesce(record.admission_number,'')) LIKE ? ESCAPE '\\' OR lower(coalesce(record.institute_name,'')) LIKE ? ESCAPE '\\')",
+      or(
+        sql`lower(${scholarshipRecord.studentName}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(coalesce(${scholarshipRecord.admissionNumber}, '')) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(coalesce(${scholarshipRecord.instituteName}, '')) LIKE ${search} ESCAPE '\\'`,
+      )!,
     );
-    bindings.push(search, search, search);
   }
-  const where = conditions.join(" AND ");
+  const where = and(...conditions);
   const runtime = getRuntimeEnv();
-  const [count, summary, rows] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) total FROM scholarship_record record WHERE ${where}`)
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(`SELECT COUNT(*) scholarships,SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) active,
-      (SELECT COUNT(*) FROM scholarship_sanction WHERE organization_id=?) sanctions,
-      (SELECT SUM(amount) FROM scholarship_sanction WHERE organization_id=?) sanctionedAmount
-      FROM scholarship_record WHERE organization_id=?`)
-      .bind(context.organizationId, context.organizationId, context.organizationId)
-      .first<Record<string, unknown>>(),
-    runtime.DATABASE.prepare(`SELECT record.id,record.person_id AS personId,record.student_name AS studentName,
-      record.admission_number AS admissionNumber,record.beneficiary_category AS beneficiaryCategory,
-      record.institute_name AS instituteName,record.city_name AS cityName,record.status,
-      record.admission_year AS admissionYear,record.course_duration AS courseDuration,
-      course.name AS courseName,category.name AS courseCategory,
-      (SELECT COUNT(*) FROM scholarship_annual_detail annual WHERE annual.scholarship_id=record.id) AS annualDetailCount,
-      (SELECT COUNT(*) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id) AS sanctionCount,
-      (SELECT coalesce(SUM(amount),0) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id) AS sanctionedAmount,
-      (SELECT MAX(sanctioned_on) FROM scholarship_sanction sanction WHERE sanction.scholarship_id=record.id) AS lastSanctionOn
-      FROM scholarship_record record LEFT JOIN scholarship_course course ON course.id=record.course_id
-      LEFT JOIN scholarship_course_category category ON category.id=course.category_id
-      WHERE ${where}
-      ORDER BY record.student_name COLLATE NOCASE LIMIT ? OFFSET ?`)
-      .bind(...bindings, pageSize, (page - 1) * pageSize)
-      .all<Record<string, unknown>>(),
+  const [countRows, scholarshipSummary, sanctionSummary, rows] = await Promise.all([
+    runtime.ORM.select({ total: count() }).from(scholarshipRecord).where(where),
+    runtime.ORM.select({
+      scholarships: count(),
+      active: sql<number>`sum(case when ${scholarshipRecord.status} = 'active' then 1 else 0 end)`,
+    })
+      .from(scholarshipRecord)
+      .where(eq(scholarshipRecord.organizationId, context.organizationId)),
+    runtime.ORM.select({
+      sanctions: count(),
+      sanctionedAmount: sql<number>`coalesce(sum(${scholarshipSanction.amount}), 0)`,
+    })
+      .from(scholarshipSanction)
+      .where(eq(scholarshipSanction.organizationId, context.organizationId)),
+    runtime.ORM.select({
+      id: scholarshipRecord.id,
+      personId: scholarshipRecord.personId,
+      studentName: scholarshipRecord.studentName,
+      admissionNumber: scholarshipRecord.admissionNumber,
+      beneficiaryCategory: scholarshipRecord.beneficiaryCategory,
+      instituteName: scholarshipRecord.instituteName,
+      cityName: scholarshipRecord.cityName,
+      status: scholarshipRecord.status,
+      admissionYear: scholarshipRecord.admissionYear,
+      courseDuration: scholarshipRecord.courseDuration,
+      courseName: scholarshipCourse.name,
+      courseCategory: scholarshipCourseCategory.name,
+    })
+      .from(scholarshipRecord)
+      .leftJoin(scholarshipCourse, eq(scholarshipCourse.id, scholarshipRecord.courseId))
+      .leftJoin(
+        scholarshipCourseCategory,
+        eq(scholarshipCourseCategory.id, scholarshipCourse.categoryId),
+      )
+      .where(where)
+      .orderBy(asc(sql`lower(${scholarshipRecord.studentName})`))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
   ]);
-  const total = Number(count?.total ?? 0);
+  const recordIds = rows.map((row) => row.id);
+  const [annualCounts, sanctionAggregates] = recordIds.length
+    ? await Promise.all([
+        runtime.ORM.select({ scholarshipId: scholarshipAnnualDetail.scholarshipId, count: count() })
+          .from(scholarshipAnnualDetail)
+          .where(inArray(scholarshipAnnualDetail.scholarshipId, recordIds))
+          .groupBy(scholarshipAnnualDetail.scholarshipId),
+        runtime.ORM.select({
+          scholarshipId: scholarshipSanction.scholarshipId,
+          count: count(),
+          sanctionedAmount: sql<number>`coalesce(sum(${scholarshipSanction.amount}), 0)`,
+          lastSanctionOn: sql<string | null>`max(${scholarshipSanction.sanctionedOn})`,
+        })
+          .from(scholarshipSanction)
+          .where(inArray(scholarshipSanction.scholarshipId, recordIds))
+          .groupBy(scholarshipSanction.scholarshipId),
+      ])
+    : [[], []];
+  const annualByRecord = new Map(annualCounts.map((item) => [item.scholarshipId, item.count]));
+  const sanctionsByRecord = new Map(sanctionAggregates.map((item) => [item.scholarshipId, item]));
+  const total = Number(countRows[0]?.total ?? 0);
+  const summary = scholarshipSummary[0];
+  const sanctions = sanctionSummary[0];
   return Response.json({
     summary: {
       scholarships: Number(summary?.scholarships ?? 0),
       active: Number(summary?.active ?? 0),
-      sanctions: Number(summary?.sanctions ?? 0),
-      sanctionedAmount: Number(summary?.sanctionedAmount ?? 0),
+      sanctions: Number(sanctions?.sanctions ?? 0),
+      sanctionedAmount: Number(sanctions?.sanctionedAmount ?? 0),
     },
-    scholarships: rows.results,
+    scholarships: rows.map((row) => {
+      const sanction = sanctionsByRecord.get(row.id);
+      return {
+        ...row,
+        annualDetailCount: annualByRecord.get(row.id) ?? 0,
+        sanctionCount: sanction?.count ?? 0,
+        sanctionedAmount: sanction?.sanctionedAmount ?? 0,
+        lastSanctionOn: sanction?.lastSanctionOn ?? null,
+      };
+    }),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     capabilities: { manage: hasPermission(context, "scholarship.manage") },
   });
@@ -5204,40 +5276,84 @@ async function getScholarshipRecord(request: Request, scholarshipId: string): Pr
   if (!context) return unauthorized();
   if (!hasPermission(context, "scholarship.read")) return forbidden();
   const runtime = getRuntimeEnv();
-  const record =
-    await runtime.DATABASE.prepare(`SELECT record.*,record.organization_id AS organizationId,
-    record.person_id AS personId,record.academic_session_id AS sessionId,record.course_id AS courseId,
-    record.beneficiary_category AS beneficiaryCategory,record.student_name AS studentName,
-    record.admission_number AS admissionNumber,record.father_name AS fatherName,record.date_of_birth AS dateOfBirth,
-    record.class_stream AS classStream,record.class_percentage AS classPercentage,record.admission_year AS admissionYear,
-    record.course_duration AS courseDuration,record.college_training AS collegeTraining,record.city_name AS cityName,
-    record.permanent_address AS permanentAddress,record.mailing_address AS mailingAddress,
-    record.special_allowance AS specialAllowance,record.scholarship_awarded AS scholarshipAwarded,
-    record.institute_name AS instituteName,record.bank_account_number AS bankAccountNumber,
-    record.ward_health_record AS wardHealthRecord,record.needy_case AS needyCase,
-    record.ledger_number AS ledgerNumber,course.name AS courseName,category.name AS courseCategory
-    FROM scholarship_record record LEFT JOIN scholarship_course course ON course.id=record.course_id
-    LEFT JOIN scholarship_course_category category ON category.id=course.category_id
-    WHERE record.id=? AND record.organization_id=?`)
-      .bind(scholarshipId, context.organizationId)
-      .first<Record<string, unknown>>();
-  if (!record) return Response.json({ error: "Scholarship record not found." }, { status: 404 });
-  const [annual, sanctions] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT id,academic_session_id AS sessionId,study_year AS studyYear,passed,percentage,division,fees,remarks,source_system AS sourceSystem FROM scholarship_annual_detail WHERE organization_id=? AND scholarship_id=? ORDER BY study_year,created_at`,
+  const record = await runtime.ORM.select({
+    ...getTableColumns(scholarshipRecord),
+    sessionId: scholarshipRecord.academicSessionId,
+    courseName: scholarshipCourse.name,
+    courseCategory: scholarshipCourseCategory.name,
+  })
+    .from(scholarshipRecord)
+    .leftJoin(scholarshipCourse, eq(scholarshipCourse.id, scholarshipRecord.courseId))
+    .leftJoin(
+      scholarshipCourseCategory,
+      eq(scholarshipCourseCategory.id, scholarshipCourse.categoryId),
     )
-      .bind(context.organizationId, scholarshipId)
-      .all<Record<string, unknown>>(),
-    runtime.DATABASE.prepare(`SELECT sanction.id,sanction.academic_session_id AS sessionId,sanction.amount,
-      sanction.sanctioned_on AS sanctionedOn,sanction.period_from AS periodFrom,sanction.period_to AS periodTo,
-      sanction.payment_reference AS paymentReference,sanction.in_favour_of AS inFavourOf,sanction.remarks,
-      sanction.source_system AS sourceSystem,json_group_array(json_object('id',line.id,'headId',head.id,
-      'headName',head.name,'cityName',line.city_name,'amount',line.amount,'advanceOn',line.advance_on)) AS linesJson
-      FROM scholarship_sanction sanction LEFT JOIN scholarship_sanction_line line ON line.sanction_id=sanction.id
-      LEFT JOIN scholarship_head head ON head.id=line.head_id WHERE sanction.organization_id=? AND sanction.scholarship_id=?
-      GROUP BY sanction.id ORDER BY sanction.sanctioned_on DESC`)
-      .bind(context.organizationId, scholarshipId)
-      .all<Record<string, unknown>>(),
+    .where(
+      and(
+        eq(scholarshipRecord.id, scholarshipId),
+        eq(scholarshipRecord.organizationId, context.organizationId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!record) return Response.json({ error: "Scholarship record not found." }, { status: 404 });
+  const [annual, sanctions, sanctionLines] = await Promise.all([
+    runtime.ORM.select({
+      id: scholarshipAnnualDetail.id,
+      sessionId: scholarshipAnnualDetail.academicSessionId,
+      studyYear: scholarshipAnnualDetail.studyYear,
+      passed: scholarshipAnnualDetail.passed,
+      percentage: scholarshipAnnualDetail.percentage,
+      division: scholarshipAnnualDetail.division,
+      fees: scholarshipAnnualDetail.fees,
+      remarks: scholarshipAnnualDetail.remarks,
+      sourceSystem: scholarshipAnnualDetail.sourceSystem,
+    })
+      .from(scholarshipAnnualDetail)
+      .where(
+        and(
+          eq(scholarshipAnnualDetail.organizationId, context.organizationId),
+          eq(scholarshipAnnualDetail.scholarshipId, scholarshipId),
+        ),
+      )
+      .orderBy(asc(scholarshipAnnualDetail.studyYear), asc(scholarshipAnnualDetail.createdAt)),
+    runtime.ORM.select({
+      id: scholarshipSanction.id,
+      sessionId: scholarshipSanction.academicSessionId,
+      amount: scholarshipSanction.amount,
+      sanctionedOn: scholarshipSanction.sanctionedOn,
+      periodFrom: scholarshipSanction.periodFrom,
+      periodTo: scholarshipSanction.periodTo,
+      paymentReference: scholarshipSanction.paymentReference,
+      inFavourOf: scholarshipSanction.inFavourOf,
+      remarks: scholarshipSanction.remarks,
+      sourceSystem: scholarshipSanction.sourceSystem,
+    })
+      .from(scholarshipSanction)
+      .where(
+        and(
+          eq(scholarshipSanction.organizationId, context.organizationId),
+          eq(scholarshipSanction.scholarshipId, scholarshipId),
+        ),
+      )
+      .orderBy(desc(scholarshipSanction.sanctionedOn)),
+    runtime.ORM.select({
+      id: scholarshipSanctionLine.id,
+      sanctionId: scholarshipSanctionLine.sanctionId,
+      headId: scholarshipHead.id,
+      headName: scholarshipHead.name,
+      cityName: scholarshipSanctionLine.cityName,
+      amount: scholarshipSanctionLine.amount,
+      advanceOn: scholarshipSanctionLine.advanceOn,
+    })
+      .from(scholarshipSanctionLine)
+      .innerJoin(scholarshipHead, eq(scholarshipHead.id, scholarshipSanctionLine.headId))
+      .where(
+        and(
+          eq(scholarshipSanctionLine.organizationId, context.organizationId),
+          eq(scholarshipSanctionLine.scholarshipId, scholarshipId),
+        ),
+      ),
   ]);
   return Response.json({
     record: {
@@ -5245,10 +5361,10 @@ async function getScholarshipRecord(request: Request, scholarshipId: string): Pr
       collegeTraining: Boolean(record.collegeTraining),
       specialAllowance: Boolean(record.specialAllowance),
     },
-    annualDetails: annual.results.map((item) => ({ ...item, passed: Boolean(item.passed) })),
-    sanctions: sanctions.results.map((item) => ({
+    annualDetails: annual.map((item) => ({ ...item, passed: Boolean(item.passed) })),
+    sanctions: sanctions.map((item) => ({
       ...item,
-      lines: JSON.parse(String(item.linesJson)),
+      lines: sanctionLines.filter((line) => line.sanctionId === item.id),
     })),
     capabilities: { manage: hasPermission(context, "scholarship.manage") },
   });
@@ -5485,51 +5601,85 @@ async function handleScholarshipSetup(request: Request): Promise<Response> {
   if (request.method === "GET") {
     const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    const personSearch = q
+      ? or(
+          sql`lower(${person.displayName}) LIKE ${search} ESCAPE '\\'`,
+          sql`lower(coalesce(${person.primaryIdentifier}, '')) LIKE ${search} ESCAPE '\\'`,
+        )
+      : undefined;
     const [categories, courses, heads, limits, advances, sessions, people] = await Promise.all([
-      runtime.DATABASE.prepare(
-        "SELECT id,name,is_active AS isActive FROM scholarship_course_category WHERE organization_id=? ORDER BY name COLLATE NOCASE",
-      )
-        .bind(context.organizationId)
-        .all(),
-      runtime.DATABASE.prepare(
-        "SELECT id,category_id AS categoryId,name,is_active AS isActive FROM scholarship_course WHERE organization_id=? ORDER BY name COLLATE NOCASE",
-      )
-        .bind(context.organizationId)
-        .all(),
-      runtime.DATABASE.prepare(
-        "SELECT id,name,is_active AS isActive FROM scholarship_head WHERE organization_id=? ORDER BY name COLLATE NOCASE",
-      )
-        .bind(context.organizationId)
-        .all(),
-      runtime.DATABASE.prepare(
-        "SELECT id,course_group AS courseGroup,head_name AS headName,amount,is_active AS isActive FROM scholarship_limit WHERE organization_id=? ORDER BY course_group,head_name",
-      )
-        .bind(context.organizationId)
-        .all(),
-      runtime.DATABASE.prepare(
-        "SELECT id,academic_session_id AS sessionId,city_name AS cityName,amount FROM scholarship_city_advance WHERE organization_id=? ORDER BY city_name",
-      )
-        .bind(context.organizationId)
-        .all(),
-      runtime.DATABASE.prepare(
-        "SELECT id,name FROM academic_session WHERE organization_id=? ORDER BY starts_on DESC",
-      )
-        .bind(context.organizationId)
-        .all(),
-      runtime.DATABASE.prepare(
-        `SELECT id,display_name AS name,primary_identifier AS admissionNumber FROM person WHERE organization_id=? AND status='active' AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\' OR lower(primary_identifier) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 30`,
-      )
-        .bind(context.organizationId, q, search, search)
-        .all(),
+      runtime.ORM.select({
+        id: scholarshipCourseCategory.id,
+        name: scholarshipCourseCategory.name,
+        isActive: scholarshipCourseCategory.isActive,
+      })
+        .from(scholarshipCourseCategory)
+        .where(eq(scholarshipCourseCategory.organizationId, context.organizationId))
+        .orderBy(asc(sql`lower(${scholarshipCourseCategory.name})`)),
+      runtime.ORM.select({
+        id: scholarshipCourse.id,
+        categoryId: scholarshipCourse.categoryId,
+        name: scholarshipCourse.name,
+        isActive: scholarshipCourse.isActive,
+      })
+        .from(scholarshipCourse)
+        .where(eq(scholarshipCourse.organizationId, context.organizationId))
+        .orderBy(asc(sql`lower(${scholarshipCourse.name})`)),
+      runtime.ORM.select({
+        id: scholarshipHead.id,
+        name: scholarshipHead.name,
+        isActive: scholarshipHead.isActive,
+      })
+        .from(scholarshipHead)
+        .where(eq(scholarshipHead.organizationId, context.organizationId))
+        .orderBy(asc(sql`lower(${scholarshipHead.name})`)),
+      runtime.ORM.select({
+        id: scholarshipLimit.id,
+        courseGroup: scholarshipLimit.courseGroup,
+        headName: scholarshipLimit.headName,
+        amount: scholarshipLimit.amount,
+        isActive: scholarshipLimit.isActive,
+      })
+        .from(scholarshipLimit)
+        .where(eq(scholarshipLimit.organizationId, context.organizationId))
+        .orderBy(asc(scholarshipLimit.courseGroup), asc(scholarshipLimit.headName)),
+      runtime.ORM.select({
+        id: scholarshipCityAdvance.id,
+        sessionId: scholarshipCityAdvance.academicSessionId,
+        cityName: scholarshipCityAdvance.cityName,
+        amount: scholarshipCityAdvance.amount,
+      })
+        .from(scholarshipCityAdvance)
+        .where(eq(scholarshipCityAdvance.organizationId, context.organizationId))
+        .orderBy(asc(scholarshipCityAdvance.cityName)),
+      runtime.ORM.select({ id: academicSession.id, name: academicSession.name })
+        .from(academicSession)
+        .where(eq(academicSession.organizationId, context.organizationId))
+        .orderBy(desc(academicSession.startsOn)),
+      runtime.ORM.select({
+        id: person.id,
+        name: person.displayName,
+        admissionNumber: person.primaryIdentifier,
+      })
+        .from(person)
+        .where(
+          and(
+            eq(person.organizationId, context.organizationId),
+            eq(person.status, "active"),
+            personSearch,
+          ),
+        )
+        .orderBy(asc(sql`lower(${person.displayName})`))
+        .limit(30),
     ]);
     return Response.json({
-      categories: categories.results,
-      courses: courses.results,
-      heads: heads.results,
-      limits: limits.results,
-      cityAdvances: advances.results,
-      sessions: sessions.results,
-      people: people.results,
+      categories,
+      courses,
+      heads,
+      limits,
+      cityAdvances: advances,
+      sessions,
+      people,
       capabilities: { manage: hasPermission(context, "scholarship.manage") },
     });
   }
@@ -6139,14 +6289,18 @@ async function getSponsorshipSetup(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const q = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
   const search = `%${escapeLikePattern(q.toLowerCase())}%`;
-  const tables = [
-    "sponsorship_sponsor_type",
-    "sponsorship_sponsor_category",
-    "sponsorship_status",
-    "sponsorship_fund_type",
-    "sponsorship_correspondence_type",
-    "sponsorship_visitor_type",
-  ];
+  const personSearch = q
+    ? or(
+        sql`lower(${person.displayName}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(coalesce(${person.primaryIdentifier}, '')) LIKE ${search} ESCAPE '\\'`,
+      )
+    : undefined;
+  const individualSearch = q
+    ? sql`lower(${sponsorshipIndividual.displayName}) LIKE ${search} ESCAPE '\\'`
+    : undefined;
+  const visitorSearch = q
+    ? sql`lower(${sponsorshipVisitor.displayName}) LIKE ${search} ESCAPE '\\'`
+    : undefined;
   const [
     organizations,
     sponsorTypes,
@@ -6160,52 +6314,116 @@ async function getSponsorshipSetup(request: Request): Promise<Response> {
     individuals,
     visitors,
   ] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT id,name,country_name AS countryName,
-      supports_children AS supportsChildren,supports_elderly AS supportsElderly
-      FROM sponsorship_organization WHERE organization_id=? AND is_active=1
-      ORDER BY name COLLATE NOCASE`)
-      .bind(context.organizationId)
-      .all(),
-    ...tables.map((table) =>
-      runtime.DATABASE.prepare(
-        `SELECT id,name FROM ${table} WHERE organization_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`,
+    runtime.ORM.select({
+      id: sponsorshipOrganization.id,
+      name: sponsorshipOrganization.name,
+      countryName: sponsorshipOrganization.countryName,
+      supportsChildren: sponsorshipOrganization.supportsChildren,
+      supportsElderly: sponsorshipOrganization.supportsElderly,
+    })
+      .from(sponsorshipOrganization)
+      .where(
+        and(
+          eq(sponsorshipOrganization.organizationId, context.organizationId),
+          eq(sponsorshipOrganization.isActive, 1),
+        ),
       )
-        .bind(context.organizationId)
-        .all(),
-    ),
-    runtime.DATABASE.prepare(
-      "SELECT id,name FROM academic_session WHERE organization_id=? ORDER BY starts_on DESC",
-    )
-      .bind(context.organizationId)
-      .all(),
-    runtime.DATABASE.prepare(
-      `SELECT id,display_name AS name,primary_identifier AS admissionNumber FROM person WHERE organization_id=? AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\' OR lower(primary_identifier) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 50`,
-    )
-      .bind(context.organizationId, q, search, search)
-      .all(),
-    runtime.DATABASE.prepare(
-      `SELECT id,display_name AS name FROM sponsorship_individual WHERE organization_id=? AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 50`,
-    )
-      .bind(context.organizationId, q, search)
-      .all(),
-    runtime.DATABASE.prepare(
-      `SELECT id,display_name AS name FROM sponsorship_visitor WHERE organization_id=? AND (?='' OR lower(display_name) LIKE ? ESCAPE '\\') ORDER BY display_name COLLATE NOCASE LIMIT 50`,
-    )
-      .bind(context.organizationId, q, search)
-      .all(),
+      .orderBy(asc(sql`lower(${sponsorshipOrganization.name})`)),
+    runtime.ORM.select({ id: sponsorshipSponsorType.id, name: sponsorshipSponsorType.name })
+      .from(sponsorshipSponsorType)
+      .where(
+        and(
+          eq(sponsorshipSponsorType.organizationId, context.organizationId),
+          eq(sponsorshipSponsorType.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipSponsorType.name})`)),
+    runtime.ORM.select({ id: sponsorshipSponsorCategory.id, name: sponsorshipSponsorCategory.name })
+      .from(sponsorshipSponsorCategory)
+      .where(
+        and(
+          eq(sponsorshipSponsorCategory.organizationId, context.organizationId),
+          eq(sponsorshipSponsorCategory.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipSponsorCategory.name})`)),
+    runtime.ORM.select({ id: sponsorshipStatus.id, name: sponsorshipStatus.name })
+      .from(sponsorshipStatus)
+      .where(
+        and(
+          eq(sponsorshipStatus.organizationId, context.organizationId),
+          eq(sponsorshipStatus.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipStatus.name})`)),
+    runtime.ORM.select({ id: sponsorshipFundType.id, name: sponsorshipFundType.name })
+      .from(sponsorshipFundType)
+      .where(
+        and(
+          eq(sponsorshipFundType.organizationId, context.organizationId),
+          eq(sponsorshipFundType.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipFundType.name})`)),
+    runtime.ORM.select({
+      id: sponsorshipCorrespondenceType.id,
+      name: sponsorshipCorrespondenceType.name,
+    })
+      .from(sponsorshipCorrespondenceType)
+      .where(
+        and(
+          eq(sponsorshipCorrespondenceType.organizationId, context.organizationId),
+          eq(sponsorshipCorrespondenceType.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipCorrespondenceType.name})`)),
+    runtime.ORM.select({ id: sponsorshipVisitorType.id, name: sponsorshipVisitorType.name })
+      .from(sponsorshipVisitorType)
+      .where(
+        and(
+          eq(sponsorshipVisitorType.organizationId, context.organizationId),
+          eq(sponsorshipVisitorType.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipVisitorType.name})`)),
+    runtime.ORM.select({ id: academicSession.id, name: academicSession.name })
+      .from(academicSession)
+      .where(eq(academicSession.organizationId, context.organizationId))
+      .orderBy(desc(academicSession.startsOn)),
+    runtime.ORM.select({
+      id: person.id,
+      name: person.displayName,
+      admissionNumber: person.primaryIdentifier,
+    })
+      .from(person)
+      .where(and(eq(person.organizationId, context.organizationId), personSearch))
+      .orderBy(asc(sql`lower(${person.displayName})`))
+      .limit(50),
+    runtime.ORM.select({ id: sponsorshipIndividual.id, name: sponsorshipIndividual.displayName })
+      .from(sponsorshipIndividual)
+      .where(
+        and(eq(sponsorshipIndividual.organizationId, context.organizationId), individualSearch),
+      )
+      .orderBy(asc(sql`lower(${sponsorshipIndividual.displayName})`))
+      .limit(50),
+    runtime.ORM.select({ id: sponsorshipVisitor.id, name: sponsorshipVisitor.displayName })
+      .from(sponsorshipVisitor)
+      .where(and(eq(sponsorshipVisitor.organizationId, context.organizationId), visitorSearch))
+      .orderBy(asc(sql`lower(${sponsorshipVisitor.displayName})`))
+      .limit(50),
   ]);
   return Response.json({
-    organizations: organizations.results,
-    sponsorTypes: sponsorTypes.results,
-    sponsorCategories: sponsorCategories.results,
-    statuses: statuses.results,
-    fundTypes: fundTypes.results,
-    correspondenceTypes: correspondenceTypes.results,
-    visitorTypes: visitorTypes.results,
-    sessions: sessions.results,
-    people: people.results,
-    individuals: individuals.results,
-    visitors: visitors.results,
+    organizations,
+    sponsorTypes,
+    sponsorCategories,
+    statuses,
+    fundTypes,
+    correspondenceTypes,
+    visitorTypes,
+    sessions,
+    people,
+    individuals,
+    visitors,
     capabilities: { manage: hasPermission(context, "sponsorship.manage") },
   });
 }
@@ -7757,107 +7975,78 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
   }
 
   const { q, kind, status, page, pageSize } = parsed.data;
-  const conditions = ["organization_id = ?"];
-  const bindings: Array<string | number> = [context.organizationId];
-
-  if (kind !== "all") {
-    conditions.push("kind = ?");
-    bindings.push(kind);
-  }
-  if (status !== "all") {
-    conditions.push("status = ?");
-    bindings.push(status);
-  }
+  const conditions = [eq(person.organizationId, context.organizationId)];
+  if (kind !== "all") conditions.push(eq(person.kind, kind));
+  if (status !== "all") conditions.push(eq(person.status, status));
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
     conditions.push(
-      `(lower(display_name) LIKE ? ESCAPE '\\' OR lower(primary_identifier) LIKE ? ESCAPE '\\')`,
+      or(
+        sql`lower(${person.displayName}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(${person.primaryIdentifier}) LIKE ${search} ESCAPE '\\'`,
+      )!,
     );
-    bindings.push(search, search);
   }
-
-  const where = conditions.join(" AND ");
+  const where = and(...conditions);
   const offset = (page - 1) * pageSize;
   const runtime = getRuntimeEnv();
-  const [count, people, summary, latestImport] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total FROM person WHERE ${where}`)
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, kind, status, identifier_kind AS identifierKind,
-              primary_identifier AS primaryIdentifier, display_name AS displayName,
-              gender, date_of_birth AS dateOfBirth,
-              admitted_or_joined_on AS admittedOrJoinedOn,
-              campus_or_location AS campusOrLocation,
-              source_system AS sourceSystem, source_table AS sourceTable,
-              source_id AS sourceId, imported_at AS importedAt
-       FROM person WHERE ${where}
-       ORDER BY display_name COLLATE NOCASE, primary_identifier
-       LIMIT ? OFFSET ?`,
-    )
-      .bind(...bindings, pageSize, offset)
-      .all<{
-        id: string;
-        kind: "child" | "elderly" | "staff";
-        status: "active" | "inactive";
-        identifierKind: "admission" | "staff";
-        primaryIdentifier: string;
-        displayName: string;
-        gender: "female" | "male" | "other" | "unknown" | null;
-        dateOfBirth: string | null;
-        admittedOrJoinedOn: string | null;
-        campusOrLocation: string | null;
-        sourceSystem: string;
-        sourceTable: string;
-        sourceId: string;
-        importedAt: string | null;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT kind, status, COUNT(*) AS count
-       FROM person WHERE organization_id = ? GROUP BY kind, status`,
-    )
-      .bind(context.organizationId)
-      .all<{
-        kind: "child" | "elderly" | "staff";
-        status: "active" | "inactive";
-        count: number;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, source_system AS sourceSystem, mode, status,
-              source_count AS sourceCount, eligible_count AS eligibleCount,
-              imported_count AS importedCount,
-              skipped_count AS skippedCount, issue_count AS issueCount,
-              created_at AS createdAt, finished_at AS finishedAt
-       FROM person_import_batch WHERE organization_id = ?
-       ORDER BY created_at DESC LIMIT 1`,
-    )
-      .bind(context.organizationId)
-      .first<{
-        id: string;
-        sourceSystem: string;
-        mode: "dry_run" | "import";
-        status: "pending" | "running" | "completed" | "failed";
-        sourceCount: number;
-        eligibleCount: number;
-        importedCount: number;
-        skippedCount: number;
-        issueCount: number;
-        createdAt: string;
-        finishedAt: string | null;
-      }>(),
+  const [countRows, people, summary, latestImports] = await Promise.all([
+    runtime.ORM.select({ total: count() }).from(person).where(where),
+    runtime.ORM.select({
+      id: person.id,
+      kind: person.kind,
+      status: person.status,
+      identifierKind: person.identifierKind,
+      primaryIdentifier: person.primaryIdentifier,
+      displayName: person.displayName,
+      gender: person.gender,
+      dateOfBirth: person.dateOfBirth,
+      admittedOrJoinedOn: person.admittedOrJoinedOn,
+      campusOrLocation: person.campusOrLocation,
+      sourceSystem: person.sourceSystem,
+      sourceTable: person.sourceTable,
+      sourceId: person.sourceId,
+      importedAt: person.importedAt,
+    })
+      .from(person)
+      .where(where)
+      .orderBy(asc(sql`lower(${person.displayName})`), asc(person.primaryIdentifier))
+      .limit(pageSize)
+      .offset(offset),
+    runtime.ORM.select({ kind: person.kind, status: person.status, count: count() })
+      .from(person)
+      .where(eq(person.organizationId, context.organizationId))
+      .groupBy(person.kind, person.status),
+    runtime.ORM.select({
+      id: personImportBatch.id,
+      sourceSystem: personImportBatch.sourceSystem,
+      mode: personImportBatch.mode,
+      status: personImportBatch.status,
+      sourceCount: personImportBatch.sourceCount,
+      eligibleCount: personImportBatch.eligibleCount,
+      importedCount: personImportBatch.importedCount,
+      skippedCount: personImportBatch.skippedCount,
+      issueCount: personImportBatch.issueCount,
+      createdAt: personImportBatch.createdAt,
+      finishedAt: personImportBatch.finishedAt,
+    })
+      .from(personImportBatch)
+      .where(eq(personImportBatch.organizationId, context.organizationId))
+      .orderBy(desc(personImportBatch.createdAt))
+      .limit(1),
   ]);
 
-  const total = Number(count?.total ?? 0);
+  const total = Number(countRows[0]?.total ?? 0);
   return Response.json({
-    people: people.results,
+    people,
     pagination: {
       page,
       pageSize,
       total,
       totalPages: Math.ceil(total / pageSize),
     },
-    summary: summary.results,
-    latestImport,
+    summary,
+    latestImport: latestImports[0] ?? null,
   });
 }
 
