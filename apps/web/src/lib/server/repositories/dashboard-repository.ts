@@ -1,4 +1,5 @@
 import { and, count, desc, eq, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 
 import type { Database } from "@/db/client";
 import {
@@ -39,19 +40,26 @@ export async function findDashboard(
     .then((rows) => rows[0] ?? null);
   if (!session) return null;
 
-  const [people, school, scholarships, sponsorships, health, activity] = await Promise.all([
-    can("people.read")
-      ? database
+  const queries: BatchItem<"sqlite">[] = [];
+  const add = (query: BatchItem<"sqlite">) => {
+    const index = queries.length;
+    queries.push(query);
+    return index;
+  };
+  const peopleIndex = can("people.read")
+    ? add(
+        database
           .select({
             total: count(),
             active: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
           })
           .from(person)
-          .where(eq(person.organizationId, organizationId))
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    can("school.read")
-      ? database
+          .where(eq(person.organizationId, organizationId)),
+      )
+    : -1;
+  const schoolIndex = can("school.read")
+    ? add(
+        database
           .select({
             total: count(),
             current: sql<number>`sum(case when ${studentEnrollment.status} in ('recorded', 'enrolled') then 1 else 0 end)`,
@@ -62,11 +70,12 @@ export async function findDashboard(
               eq(studentEnrollment.organizationId, organizationId),
               eq(studentEnrollment.academicSessionId, session.id),
             ),
-          )
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    can("scholarship.read")
-      ? database
+          ),
+      )
+    : -1;
+  const scholarshipIndex = can("scholarship.read")
+    ? add(
+        database
           .select({
             total: count(),
             active: sql<number>`sum(case when lower(${scholarshipRecord.status}) not in ('closed', 'rejected') then 1 else 0 end)`,
@@ -77,11 +86,12 @@ export async function findDashboard(
               eq(scholarshipRecord.organizationId, organizationId),
               eq(scholarshipRecord.academicSessionId, session.id),
             ),
-          )
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    can("sponsorship.read")
-      ? database
+          ),
+      )
+    : -1;
+  const sponsorshipIndex = can("sponsorship.read")
+    ? add(
+        database
           .select({ total: count() })
           .from(sponsorshipAssignment)
           .where(
@@ -89,21 +99,23 @@ export async function findDashboard(
               eq(sponsorshipAssignment.organizationId, organizationId),
               eq(sponsorshipAssignment.academicSessionId, session.id),
             ),
-          )
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    can("health.read")
-      ? database
+          ),
+      )
+    : -1;
+  const healthIndex = can("health.read")
+    ? add(
+        database
           .select({
             total: count(),
             recent: sql<number>`sum(case when ${healthVisit.checkupDate} >= date('now', '-30 days') then 1 else 0 end)`,
           })
           .from(healthVisit)
-          .where(eq(healthVisit.organizationId, organizationId))
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    can("audit.read")
-      ? database
+          .where(eq(healthVisit.organizationId, organizationId)),
+      )
+    : -1;
+  const activityIndex = can("audit.read")
+    ? add(
+        database
           .select({
             id: auditEvent.id,
             action: auditEvent.action,
@@ -116,9 +128,29 @@ export async function findDashboard(
           .leftJoin(user, eq(user.id, auditEvent.actorUserId))
           .where(eq(auditEvent.organizationId, organizationId))
           .orderBy(desc(auditEvent.occurredAt))
-          .limit(8)
-      : Promise.resolve([]),
-  ]);
+          .limit(8),
+      )
+    : -1;
+  const results = queries.length
+    ? await database.batch(queries as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]])
+    : [];
+  type Metric = { total: number; active?: number; current?: number; recent?: number };
+  type Activity = {
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string | null;
+    occurredAt: string;
+    actorName: string | null;
+  };
+  const metricAt = (index: number) =>
+    index >= 0 ? ((results[index] as Metric[])[0] ?? null) : null;
+  const people = metricAt(peopleIndex);
+  const school = metricAt(schoolIndex);
+  const scholarships = metricAt(scholarshipIndex);
+  const sponsorships = metricAt(sponsorshipIndex);
+  const health = metricAt(healthIndex);
+  const activity = activityIndex >= 0 ? (results[activityIndex] as Activity[]) : [];
 
   return {
     session,

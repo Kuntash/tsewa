@@ -31,7 +31,7 @@ export async function findPeopleRegistry(
   }
 
   const where = and(...conditions);
-  const [countRows, people, summary, latestImports] = await Promise.all([
+  const [countRows, people, summary, latestImports] = await database.batch([
     database.select({ total: count() }).from(person).where(where),
     database
       .select({

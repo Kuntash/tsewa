@@ -167,6 +167,7 @@ export function SponsorshipOperations({
   }, [debouncedQuery, page, reloadKey, section]);
 
   useEffect(() => {
+    if (!setupOpen && !reportsOpen) return;
     const controller = new AbortController();
     void fetch("/api/sponsorship/setup", {
       signal: controller.signal,
@@ -177,7 +178,7 @@ export function SponsorshipOperations({
         if (!controller.signal.aborted) setError(messageOf(reason));
       });
     return () => controller.abort();
-  }, [reloadKey]);
+  }, [reloadKey, reportsOpen, setupOpen]);
 
   function saved(value: string) {
     setMessage(value);

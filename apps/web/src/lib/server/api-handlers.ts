@@ -14,6 +14,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
@@ -1116,6 +1117,17 @@ export async function handleApiRequest({ request }: { request: Request }): Promi
   const startedAt = performance.now();
   const response = await apiDispatcher.fetch(request);
   const durationMs = performance.now() - startedAt;
+  if (durationMs >= 500) {
+    console.warn(
+      JSON.stringify({
+        event: "slow_api",
+        method: request.method,
+        path: new URL(request.url).pathname,
+        status: response.status,
+        durationMs: Number(durationMs.toFixed(1)),
+      }),
+    );
+  }
   const headers = new Headers(response.headers);
   headers.set("Server-Timing", `app;dur=${durationMs.toFixed(1)}`);
   headers.set("X-Tsewa-Api-Ms", durationMs.toFixed(1));
@@ -1364,7 +1376,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
     eq(studentEnrollment.organizationId, scope.organizationId),
     eq(studentEnrollment.academicSessionId, scope.session.id),
   );
-  const [summary, schools, classes, houses] = await Promise.all([
+  const [summaryRows, schools, classes, houses] = await runtime.ORM.batch([
     runtime.ORM.select({
       students: count(),
       activeStudents: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
@@ -1389,21 +1401,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
           eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
         ),
       )
-      .where(enrollmentScope)
-      .then(
-        (rows) =>
-          rows[0] as
-            | {
-                students: number;
-                activeStudents: number;
-                inactiveStudents: number;
-                schools: number;
-                classes: number;
-                houses: number;
-                unmappedSchools: number;
-              }
-            | undefined,
-      ),
+      .where(enrollmentScope),
     runtime.ORM.select({
       id: sql<string>`coalesce(${schoolMaster.id}, 'unmapped')`,
       name: sql<string>`coalesce(${schoolMaster.name}, 'School not set')`,
@@ -1452,6 +1450,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       .groupBy(houseMaster.id, houseMaster.name)
       .orderBy(desc(count()), sql`coalesce(${houseMaster.name}, 'No house') collate nocase`),
   ]);
+  const summary = summaryRows[0];
 
   return Response.json({
     session: scope.session,
@@ -1484,7 +1483,7 @@ async function getSchoolOperationsSetup(request: Request): Promise<Response> {
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const runtime = getRuntimeEnv();
-  const [schools, classes, houses] = await Promise.all([
+  const [schools, classes, houses] = await runtime.ORM.batch([
     runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
       .from(schoolMaster)
       .where(
@@ -2464,16 +2463,15 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
   const where = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
   const offset = (page - 1) * pageSize;
-  const [count, students] = await Promise.all([
-    schoolStudentCountQuery(runtime.ORM)
-      .where(where)
-      .then((rows) => rows[0]),
+  const [countRows, students] = await runtime.ORM.batch([
+    schoolStudentCountQuery(runtime.ORM).where(where),
     schoolStudentQuery(runtime.ORM)
       .where(where)
       .orderBy(sql`${person.displayName} collate nocase`, person.primaryIdentifier)
       .limit(pageSize)
       .offset(offset),
   ]);
+  const count = countRows[0];
   const total = Number(count?.total ?? 0);
   return Response.json({
     students: students.map((student) => ({
@@ -2507,16 +2505,15 @@ async function getSchoolOperationsStudentReport(request: Request): Promise<Respo
   if (!scope) return forbidden();
   const where = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
-  const [count, organizationRow] = await Promise.all([
-    schoolStudentCountQuery(runtime.ORM)
-      .where(where)
-      .then((rows) => rows[0]),
+  const [countRows, organizationRows] = await runtime.ORM.batch([
+    schoolStudentCountQuery(runtime.ORM).where(where),
     runtime.ORM.select({ name: organization.name })
       .from(organization)
       .where(eq(organization.id, scope.organizationId))
-      .limit(1)
-      .then((rows) => rows[0]),
+      .limit(1),
   ]);
+  const count = countRows[0];
+  const organizationRow = organizationRows[0];
   const total = Number(count?.total ?? 0);
   if (total > MAX_STUDENT_REPORT_ROWS) {
     return Response.json(
@@ -3310,6 +3307,9 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
     );
   }
 
+  const offeringIdsToActivate: string[] = [];
+  const offeringIdsToDeactivate: string[] = [];
+  const offeringsToInsert: Array<typeof schoolClassOffering.$inferInsert> = [];
   for (const { display, group } of displayedClasses) {
     const shouldAssign = selectedClassIds.has(display.id);
     const current = group.map((row) => offeringByClassId.get(row.id)).filter(Boolean);
@@ -3317,13 +3317,11 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
       const representative = offeringByClassId.get(display.id);
       if (representative) {
         if (!representative.isActive) {
-          await runtime.ORM.update(schoolClassOffering)
-            .set({ isActive: 1, updatedAt: sql`CURRENT_TIMESTAMP` })
-            .where(eq(schoolClassOffering.id, representative.id));
+          offeringIdsToActivate.push(representative.id);
         }
       } else {
         const id = crypto.randomUUID();
-        await runtime.ORM.insert(schoolClassOffering).values({
+        offeringsToInsert.push({
           id,
           organizationId: scope.organizationId,
           academicSessionId: scope.session.id,
@@ -3338,18 +3336,18 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
     } else {
       for (const offering of current) {
         if (offering?.isActive) {
-          await runtime.ORM.update(schoolClassOffering)
-            .set({ isActive: 0, updatedAt: sql`CURRENT_TIMESTAMP` })
-            .where(eq(schoolClassOffering.id, offering.id));
+          offeringIdsToDeactivate.push(offering.id);
         }
       }
     }
   }
+  const schoolHousesToInsert: Array<typeof schoolHouseMaster.$inferInsert> = [];
+  const schoolHouseIdsToDelete: string[] = [];
   for (const house of houses) {
     const current = schoolHouseByHouseId.get(house.id);
     if (selectedHouseIds.has(house.id) && !current) {
       const id = crypto.randomUUID();
-      await runtime.ORM.insert(schoolHouseMaster).values({
+      schoolHousesToInsert.push({
         id,
         organizationId: scope.organizationId,
         schoolId,
@@ -3359,19 +3357,58 @@ async function updateSchoolAssignments(request: Request, schoolId: string): Prom
         sourceId: id,
       });
     } else if (!selectedHouseIds.has(house.id) && current) {
-      await runtime.ORM.delete(schoolHouseMaster).where(
-        and(
-          eq(schoolHouseMaster.id, current.id),
-          eq(schoolHouseMaster.organizationId, scope.organizationId),
-        ),
-      );
+      schoolHouseIdsToDelete.push(current.id);
     }
   }
-  await auditInsert(runtime.ORM, scope, "school.assignments_updated", "school_master", schoolId, {
-    academicSessionId: scope.session.id,
-    classes: String(selectedClassIds.size),
-    houses: String(selectedHouseIds.size),
-  });
+  const writes: BatchItem<"sqlite">[] = [];
+  if (offeringIdsToActivate.length) {
+    writes.push(
+      runtime.ORM.update(schoolClassOffering)
+        .set({ isActive: 1, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(
+            eq(schoolClassOffering.organizationId, scope.organizationId),
+            inArray(schoolClassOffering.id, offeringIdsToActivate),
+          ),
+        ),
+    );
+  }
+  if (offeringIdsToDeactivate.length) {
+    writes.push(
+      runtime.ORM.update(schoolClassOffering)
+        .set({ isActive: 0, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(
+          and(
+            eq(schoolClassOffering.organizationId, scope.organizationId),
+            inArray(schoolClassOffering.id, offeringIdsToDeactivate),
+          ),
+        ),
+    );
+  }
+  if (offeringsToInsert.length) {
+    writes.push(runtime.ORM.insert(schoolClassOffering).values(offeringsToInsert));
+  }
+  if (schoolHousesToInsert.length) {
+    writes.push(runtime.ORM.insert(schoolHouseMaster).values(schoolHousesToInsert));
+  }
+  if (schoolHouseIdsToDelete.length) {
+    writes.push(
+      runtime.ORM.delete(schoolHouseMaster).where(
+        and(
+          eq(schoolHouseMaster.organizationId, scope.organizationId),
+          inArray(schoolHouseMaster.id, schoolHouseIdsToDelete),
+        ),
+      ),
+    );
+  }
+  writes.push(
+    auditInsert(runtime.ORM, scope, "school.assignments_updated", "school_master", schoolId, {
+      academicSessionId: scope.session.id,
+      classes: String(selectedClassIds.size),
+      houses: String(selectedHouseIds.size),
+    }),
+  );
+  await runtime.ORM.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
   return Response.json({
     ok: true,
     schoolName: school.name,
@@ -3513,7 +3550,7 @@ async function getHistoricalResultsOverview(request: Request): Promise<Response>
     });
   if (!sessions.some((session) => session.id === selectedId)) return forbidden();
 
-  const [summary, schools, classes, subjects, terms] = await Promise.all([
+  const [summaryRows, schools, classes, subjects, terms] = await runtime.ORM.batch([
     runtime.ORM.select({
       markSheets: sql<number>`count(distinct ${markSheet.id})`,
       results: count(studentMark.id),
@@ -3532,8 +3569,7 @@ async function getHistoricalResultsOverview(request: Request): Promise<Response>
           eq(markSheet.organizationId, context.organizationId),
           eq(markSheet.academicSessionId, selectedId),
         ),
-      )
-      .then((values) => values[0] ?? null),
+      ),
     runtime.ORM.select({
       id: schoolMaster.id,
       name: schoolMaster.name,
@@ -3627,6 +3663,7 @@ async function getHistoricalResultsOverview(request: Request): Promise<Response>
       .groupBy(academicTerm.id, academicTerm.name)
       .orderBy(asc(sql`lower(${academicTerm.name})`)),
   ]);
+  const summary = summaryRows[0] ?? null;
   return Response.json({
     sessions,
     selectedSessionId: selectedId,
@@ -3689,7 +3726,7 @@ async function getHistoricalResults(request: Request): Promise<Response> {
   }
   const where = and(...conditions);
   const runtime = getRuntimeEnv();
-  const [countRows, rows] = await Promise.all([
+  const [countRows, rows] = await runtime.ORM.batch([
     runtime.ORM.select({ total: count() })
       .from(studentMark)
       .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
@@ -3781,7 +3818,7 @@ async function getAcademicConfiguration(request: Request): Promise<Response> {
     assessments,
     mappings,
     limits,
-  ] = await Promise.all([
+  ] = await db.batch([
     db
       .select({
         id: academicSubjectType.id,
@@ -4478,7 +4515,7 @@ async function getAcademicResultSetup(request: Request): Promise<Response> {
     students,
     classSubjects,
     assessmentLimits,
-  ] = await Promise.all([
+  ] = await runtime.ORM.batch([
     runtime.ORM.selectDistinct({ id: schoolMaster.id, name: schoolMaster.name })
       .from(schoolClassOffering)
       .innerJoin(schoolMaster, eq(schoolMaster.id, schoolClassOffering.schoolId))
@@ -5088,7 +5125,7 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
     currentMarks.map((mark) => [`${mark.personId}:${mark.assessmentId}`, mark]),
   );
   const submittedKeys = new Set(data.marks.map((mark) => `${mark.personId}:${mark.assessmentId}`));
-  await runtime.ORM.update(markSheet)
+  const sheetUpdate = runtime.ORM.update(markSheet)
     .set({
       recordedOn: data.recordedOn,
       maximumMarks: data.maximumMarks ?? null,
@@ -5096,66 +5133,79 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
       updatedAt: sql`CURRENT_TIMESTAMP`,
     })
     .where(and(eq(markSheet.id, markSheetId), eq(markSheet.organizationId, scope.organizationId)));
-  const newMarks: Array<typeof studentMark.$inferInsert> = [];
-  for (const mark of data.marks) {
+  const submittedMarks: Array<typeof studentMark.$inferInsert> = data.marks.map((mark) => {
     const key = `${mark.personId}:${mark.assessmentId}`;
     const existing = existingByKey.get(key);
-    if (existing) {
-      await runtime.ORM.update(studentMark)
+    const id = existing?.id ?? crypto.randomUUID();
+    return {
+      id,
+      organizationId: scope.organizationId,
+      markSheetId,
+      personId: mark.personId,
+      assessmentId: mark.assessmentId,
+      marks: mark.marks,
+      maximumMarks: mark.maximumMarks,
+      note: mark.note ?? null,
+      isActive: 1,
+      removedAt: null,
+      sourceSystem: "tsewa",
+      sourceTable: "student_mark",
+      sourceId: id,
+      createdByUserId: scope.userId,
+      updatedByUserId: scope.userId,
+    };
+  });
+  const submittedMarksUpsert = submittedMarks.length
+    ? runtime.ORM.insert(studentMark)
+        .values(submittedMarks)
+        .onConflictDoUpdate({
+          target: studentMark.id,
+          set: {
+            marks: sql`excluded.marks`,
+            maximumMarks: sql`excluded.maximum_marks`,
+            note: sql`excluded.note`,
+            isActive: 1,
+            removedAt: null,
+            updatedByUserId: scope.userId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          },
+        })
+    : null;
+  const removedMarkIds = currentMarks
+    .filter((mark) => !submittedKeys.has(`${mark.personId}:${mark.assessmentId}`))
+    .map((mark) => mark.id);
+  const removedMarksUpdate = removedMarkIds.length
+    ? runtime.ORM.update(studentMark)
         .set({
-          marks: mark.marks,
-          maximumMarks: mark.maximumMarks,
-          note: mark.note ?? null,
+          isActive: 0,
+          removedAt: sql`CURRENT_TIMESTAMP`,
           updatedByUserId: scope.userId,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
         .where(
           and(
-            eq(studentMark.id, existing.id),
             eq(studentMark.organizationId, scope.organizationId),
+            inArray(studentMark.id, removedMarkIds),
           ),
-        );
-    } else {
-      const id = crypto.randomUUID();
-      newMarks.push({
-        id,
-        organizationId: scope.organizationId,
-        markSheetId,
-        personId: mark.personId,
-        assessmentId: mark.assessmentId,
-        marks: mark.marks,
-        maximumMarks: mark.maximumMarks,
-        note: mark.note ?? null,
-        sourceSystem: "tsewa",
-        sourceTable: "student_mark",
-        sourceId: id,
-        createdByUserId: scope.userId,
-        updatedByUserId: scope.userId,
-      });
-    }
+        )
+    : null;
+  const audit = auditInsert(
+    runtime.ORM,
+    scope,
+    "academic.mark_sheet_updated",
+    "mark_sheet",
+    markSheetId,
+    { entryCount: String(data.marks.length) },
+  );
+  if (submittedMarksUpsert && removedMarksUpdate) {
+    await runtime.ORM.batch([sheetUpdate, submittedMarksUpsert, removedMarksUpdate, audit]);
+  } else if (submittedMarksUpsert) {
+    await runtime.ORM.batch([sheetUpdate, submittedMarksUpsert, audit]);
+  } else if (removedMarksUpdate) {
+    await runtime.ORM.batch([sheetUpdate, removedMarksUpdate, audit]);
+  } else {
+    await runtime.ORM.batch([sheetUpdate, audit]);
   }
-  if (newMarks.length) await runtime.ORM.insert(studentMark).values(newMarks);
-  const removedMarkIds = currentMarks
-    .filter((mark) => !submittedKeys.has(`${mark.personId}:${mark.assessmentId}`))
-    .map((mark) => mark.id);
-  if (removedMarkIds.length) {
-    await runtime.ORM.update(studentMark)
-      .set({
-        isActive: 0,
-        removedAt: sql`CURRENT_TIMESTAMP`,
-        updatedByUserId: scope.userId,
-        updatedAt: sql`CURRENT_TIMESTAMP`,
-      })
-      .where(
-        and(
-          eq(studentMark.organizationId, scope.organizationId),
-          inArray(studentMark.id, removedMarkIds),
-        ),
-      );
-  }
-  await auditInsert(runtime.ORM, scope, "academic.mark_sheet_updated", "mark_sheet", markSheetId, {
-    entryCount: String(data.marks.length),
-  });
   return Response.json({ id: markSheetId, status: "draft" });
 }
 
@@ -5225,7 +5275,7 @@ async function getAcademicResultSummaries(request: Request): Promise<Response> {
       academicTerm.name,
     )
     .as("grouped_results");
-  const [countRows, summaries] = await Promise.all([
+  const [countRows, summaries] = await runtime.ORM.batch([
     runtime.ORM.select({ total: count() }).from(groupedResults),
     runtime.ORM.select({
       personId: person.id,
@@ -5307,12 +5357,11 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Choose a valid student, session, and term." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const [organizationRecord, session, student, rows, grades] = await Promise.all([
+  const [organizationRows, sessionRows, studentRows, rows, grades] = await runtime.ORM.batch([
     runtime.ORM.select({ name: organization.name })
       .from(organization)
       .where(eq(organization.id, context.organizationId))
-      .limit(1)
-      .then((values) => values[0] ?? null),
+      .limit(1),
     runtime.ORM.select({
       id: academicSession.id,
       name: academicSession.name,
@@ -5326,8 +5375,7 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
           eq(academicSession.organizationId, context.organizationId),
         ),
       )
-      .limit(1)
-      .then((values) => values[0] ?? null),
+      .limit(1),
     runtime.ORM.select({
       personId: person.id,
       studentName: person.displayName,
@@ -5352,8 +5400,7 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
           eq(studentMark.isActive, 1),
         ),
       )
-      .limit(1)
-      .then((values) => values[0] ?? null),
+      .limit(1),
     runtime.ORM.select({
       subjectId: academicSubject.id,
       subjectName: academicSubject.name,
@@ -5400,6 +5447,9 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
       )
       .orderBy(desc(academicGrade.startsAt)),
   ]);
+  const organizationRecord = organizationRows[0] ?? null;
+  const session = sessionRows[0] ?? null;
+  const student = studentRows[0] ?? null;
   if (!session || !student || !rows.length)
     return Response.json(
       { error: "No result card was found for that selection." },
@@ -5639,7 +5689,7 @@ async function getScholarships(request: Request): Promise<Response> {
   }
   const where = and(...conditions);
   const runtime = getRuntimeEnv();
-  const [countRows, scholarshipSummary, sanctionSummary, rows] = await Promise.all([
+  const [countRows, scholarshipSummary, sanctionSummary, rows] = await runtime.ORM.batch([
     runtime.ORM.select({ total: count() }).from(scholarshipRecord).where(where),
     runtime.ORM.select({
       scholarships: count(),
@@ -5680,7 +5730,7 @@ async function getScholarships(request: Request): Promise<Response> {
   ]);
   const recordIds = rows.map((row) => row.id);
   const [annualCounts, sanctionAggregates] = recordIds.length
-    ? await Promise.all([
+    ? await runtime.ORM.batch([
         runtime.ORM.select({ scholarshipId: scholarshipAnnualDetail.scholarshipId, count: count() })
           .from(scholarshipAnnualDetail)
           .where(inArray(scholarshipAnnualDetail.scholarshipId, recordIds))
@@ -5776,7 +5826,7 @@ async function getScholarshipRecord(request: Request, scholarshipId: string): Pr
     .limit(1)
     .then((rows) => rows[0] ?? null);
   if (!record) return Response.json({ error: "Scholarship record not found." }, { status: 404 });
-  const [annual, sanctions, sanctionLines] = await Promise.all([
+  const [annual, sanctions, sanctionLines] = await runtime.ORM.batch([
     runtime.ORM.select({
       id: scholarshipAnnualDetail.id,
       sessionId: scholarshipAnnualDetail.academicSessionId,
@@ -6086,71 +6136,72 @@ async function handleScholarshipSetup(request: Request): Promise<Response> {
           sql`lower(coalesce(${person.primaryIdentifier}, '')) LIKE ${search} ESCAPE '\\'`,
         )
       : undefined;
-    const [categories, courses, heads, limits, advances, sessions, people] = await Promise.all([
-      runtime.ORM.select({
-        id: scholarshipCourseCategory.id,
-        name: scholarshipCourseCategory.name,
-        isActive: scholarshipCourseCategory.isActive,
-      })
-        .from(scholarshipCourseCategory)
-        .where(eq(scholarshipCourseCategory.organizationId, context.organizationId))
-        .orderBy(asc(sql`lower(${scholarshipCourseCategory.name})`)),
-      runtime.ORM.select({
-        id: scholarshipCourse.id,
-        categoryId: scholarshipCourse.categoryId,
-        name: scholarshipCourse.name,
-        isActive: scholarshipCourse.isActive,
-      })
-        .from(scholarshipCourse)
-        .where(eq(scholarshipCourse.organizationId, context.organizationId))
-        .orderBy(asc(sql`lower(${scholarshipCourse.name})`)),
-      runtime.ORM.select({
-        id: scholarshipHead.id,
-        name: scholarshipHead.name,
-        isActive: scholarshipHead.isActive,
-      })
-        .from(scholarshipHead)
-        .where(eq(scholarshipHead.organizationId, context.organizationId))
-        .orderBy(asc(sql`lower(${scholarshipHead.name})`)),
-      runtime.ORM.select({
-        id: scholarshipLimit.id,
-        courseGroup: scholarshipLimit.courseGroup,
-        headName: scholarshipLimit.headName,
-        amount: scholarshipLimit.amount,
-        isActive: scholarshipLimit.isActive,
-      })
-        .from(scholarshipLimit)
-        .where(eq(scholarshipLimit.organizationId, context.organizationId))
-        .orderBy(asc(scholarshipLimit.courseGroup), asc(scholarshipLimit.headName)),
-      runtime.ORM.select({
-        id: scholarshipCityAdvance.id,
-        sessionId: scholarshipCityAdvance.academicSessionId,
-        cityName: scholarshipCityAdvance.cityName,
-        amount: scholarshipCityAdvance.amount,
-      })
-        .from(scholarshipCityAdvance)
-        .where(eq(scholarshipCityAdvance.organizationId, context.organizationId))
-        .orderBy(asc(scholarshipCityAdvance.cityName)),
-      runtime.ORM.select({ id: academicSession.id, name: academicSession.name })
-        .from(academicSession)
-        .where(eq(academicSession.organizationId, context.organizationId))
-        .orderBy(desc(academicSession.startsOn)),
-      runtime.ORM.select({
-        id: person.id,
-        name: person.displayName,
-        admissionNumber: person.primaryIdentifier,
-      })
-        .from(person)
-        .where(
-          and(
-            eq(person.organizationId, context.organizationId),
-            eq(person.status, "active"),
-            personSearch,
-          ),
-        )
-        .orderBy(asc(sql`lower(${person.displayName})`))
-        .limit(30),
-    ]);
+    const [categories, courses, heads, limits, advances, sessions, people] =
+      await runtime.ORM.batch([
+        runtime.ORM.select({
+          id: scholarshipCourseCategory.id,
+          name: scholarshipCourseCategory.name,
+          isActive: scholarshipCourseCategory.isActive,
+        })
+          .from(scholarshipCourseCategory)
+          .where(eq(scholarshipCourseCategory.organizationId, context.organizationId))
+          .orderBy(asc(sql`lower(${scholarshipCourseCategory.name})`)),
+        runtime.ORM.select({
+          id: scholarshipCourse.id,
+          categoryId: scholarshipCourse.categoryId,
+          name: scholarshipCourse.name,
+          isActive: scholarshipCourse.isActive,
+        })
+          .from(scholarshipCourse)
+          .where(eq(scholarshipCourse.organizationId, context.organizationId))
+          .orderBy(asc(sql`lower(${scholarshipCourse.name})`)),
+        runtime.ORM.select({
+          id: scholarshipHead.id,
+          name: scholarshipHead.name,
+          isActive: scholarshipHead.isActive,
+        })
+          .from(scholarshipHead)
+          .where(eq(scholarshipHead.organizationId, context.organizationId))
+          .orderBy(asc(sql`lower(${scholarshipHead.name})`)),
+        runtime.ORM.select({
+          id: scholarshipLimit.id,
+          courseGroup: scholarshipLimit.courseGroup,
+          headName: scholarshipLimit.headName,
+          amount: scholarshipLimit.amount,
+          isActive: scholarshipLimit.isActive,
+        })
+          .from(scholarshipLimit)
+          .where(eq(scholarshipLimit.organizationId, context.organizationId))
+          .orderBy(asc(scholarshipLimit.courseGroup), asc(scholarshipLimit.headName)),
+        runtime.ORM.select({
+          id: scholarshipCityAdvance.id,
+          sessionId: scholarshipCityAdvance.academicSessionId,
+          cityName: scholarshipCityAdvance.cityName,
+          amount: scholarshipCityAdvance.amount,
+        })
+          .from(scholarshipCityAdvance)
+          .where(eq(scholarshipCityAdvance.organizationId, context.organizationId))
+          .orderBy(asc(scholarshipCityAdvance.cityName)),
+        runtime.ORM.select({ id: academicSession.id, name: academicSession.name })
+          .from(academicSession)
+          .where(eq(academicSession.organizationId, context.organizationId))
+          .orderBy(desc(academicSession.startsOn)),
+        runtime.ORM.select({
+          id: person.id,
+          name: person.displayName,
+          admissionNumber: person.primaryIdentifier,
+        })
+          .from(person)
+          .where(
+            and(
+              eq(person.organizationId, context.organizationId),
+              eq(person.status, "active"),
+              personSearch,
+            ),
+          )
+          .orderBy(asc(sql`lower(${person.displayName})`))
+          .limit(30),
+      ]);
     return Response.json({
       categories,
       courses,
@@ -6782,15 +6833,14 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
       .from(sponsorshipAssignment)
       .groupBy(sponsorshipAssignment.sponsorIndividualId)
       .as("sponsor_assignment_counts");
-    const [total, result] = await Promise.all([
+    const [totalRows, result] = await runtime.ORM.batch([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipIndividual)
         .leftJoin(
           sponsorshipOrganization,
           eq(sponsorshipOrganization.id, sponsorshipIndividual.sponsorOrganizationId),
         )
-        .where(where)
-        .then((values) => values[0]),
+        .where(where),
       runtime.ORM.select({
         id: sponsorshipIndividual.id,
         displayName: sponsorshipIndividual.displayName,
@@ -6828,7 +6878,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         .limit(pageSize)
         .offset(offset),
     ]);
-    totalCount = Number(total?.total ?? 0);
+    totalCount = Number(totalRows[0]?.total ?? 0);
     rows = result;
   } else if (section === "assignments") {
     const conditions = [eq(sponsorshipAssignment.organizationId, context.organizationId)];
@@ -6841,7 +6891,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         )!,
       );
     const where = and(...conditions);
-    const [total, result] = await Promise.all([
+    const [totalRows, result] = await runtime.ORM.batch([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipAssignment)
         .innerJoin(person, eq(person.id, sponsorshipAssignment.personId))
@@ -6853,8 +6903,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
           sponsorshipStatus,
           eq(sponsorshipStatus.id, sponsorshipAssignment.sponsorshipStatusId),
         )
-        .where(where)
-        .then((values) => values[0]),
+        .where(where),
       runtime.ORM.select({
         id: sponsorshipAssignment.id,
         personId: sponsorshipAssignment.personId,
@@ -6885,7 +6934,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         .limit(pageSize)
         .offset(offset),
     ]);
-    totalCount = Number(total?.total ?? 0);
+    totalCount = Number(totalRows[0]?.total ?? 0);
     rows = result;
   } else if (section === "funds") {
     const sponsorName = sql<
@@ -6908,7 +6957,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
       .from(sponsorshipFundAllocation)
       .groupBy(sponsorshipFundAllocation.fundId)
       .as("fund_allocation_counts");
-    const [total, result] = await Promise.all([
+    const [totalRows, result] = await runtime.ORM.batch([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipFund)
         .innerJoin(sponsorshipFundType, eq(sponsorshipFundType.id, sponsorshipFund.fundTypeId))
@@ -6921,8 +6970,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
           eq(sponsorshipOrganization.id, sponsorshipFund.sponsorOrganizationId),
         )
         .leftJoin(sponsorshipVisitor, eq(sponsorshipVisitor.id, sponsorshipFund.visitorId))
-        .where(where)
-        .then((values) => values[0]),
+        .where(where),
       runtime.ORM.select({
         id: sponsorshipFund.id,
         fundTypeId: sponsorshipFund.fundTypeId,
@@ -6958,7 +7006,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         .limit(pageSize)
         .offset(offset),
     ]);
-    totalCount = Number(total?.total ?? 0);
+    totalCount = Number(totalRows[0]?.total ?? 0);
     rows = result;
   } else if (section === "correspondence") {
     const conditions = [eq(sponsorshipLetter.organizationId, context.organizationId)];
@@ -6971,15 +7019,14 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         )!,
       );
     const where = and(...conditions);
-    const [total, result] = await Promise.all([
+    const [totalRows, result] = await runtime.ORM.batch([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipLetter)
         .innerJoin(
           sponsorshipCorrespondenceType,
           eq(sponsorshipCorrespondenceType.id, sponsorshipLetter.correspondenceTypeId),
         )
-        .where(where)
-        .then((values) => values[0]),
+        .where(where),
       runtime.ORM.select({
         id: sponsorshipLetter.id,
         correspondenceTypeId: sponsorshipLetter.correspondenceTypeId,
@@ -7012,7 +7059,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         .limit(pageSize)
         .offset(offset),
     ]);
-    totalCount = Number(total?.total ?? 0);
+    totalCount = Number(totalRows[0]?.total ?? 0);
     rows = result;
   } else {
     const conditions = [eq(sponsorshipVisitor.organizationId, context.organizationId)];
@@ -7025,15 +7072,14 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         )!,
       );
     const where = and(...conditions);
-    const [total, result] = await Promise.all([
+    const [totalRows, result] = await runtime.ORM.batch([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipVisitor)
         .leftJoin(
           sponsorshipVisitorType,
           eq(sponsorshipVisitorType.id, sponsorshipVisitor.visitorTypeId),
         )
-        .where(where)
-        .then((values) => values[0]),
+        .where(where),
       runtime.ORM.select({
         id: sponsorshipVisitor.id,
         visitorTypeId: sponsorshipVisitor.visitorTypeId,
@@ -7063,7 +7109,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         .limit(pageSize)
         .offset(offset),
     ]);
-    totalCount = Number(total?.total ?? 0);
+    totalCount = Number(totalRows[0]?.total ?? 0);
     rows = result;
   }
   if (section === "funds") {
@@ -7142,7 +7188,7 @@ async function getSponsorshipSetup(request: Request): Promise<Response> {
     people,
     individuals,
     visitors,
-  ] = await Promise.all([
+  ] = await runtime.ORM.batch([
     runtime.ORM.select({
       id: sponsorshipOrganization.id,
       name: sponsorshipOrganization.name,
@@ -8458,7 +8504,7 @@ async function getHealthHistory(request: Request): Promise<Response> {
     );
   }
   const where = and(...conditions);
-  const [summary, diagnosisSummary, countRow, visits] = await Promise.all([
+  const [summaryRows, diagnosisSummaryRows, countRows, visits] = await runtime.ORM.batch([
     runtime.ORM.select({
       visits: count(),
       linkedPeople: sql<number>`count(distinct ${healthVisit.personId})`,
@@ -8466,16 +8512,11 @@ async function getHealthHistory(request: Request): Promise<Response> {
       lastVisitOn: sql<string | null>`max(${healthVisit.checkupDate})`,
     })
       .from(healthVisit)
-      .where(eq(healthVisit.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(healthVisit.organizationId, context.organizationId)),
     runtime.ORM.select({ diagnoses: count() })
       .from(healthDiagnosis)
-      .where(eq(healthDiagnosis.organizationId, context.organizationId))
-      .then((values) => values[0]),
-    runtime.ORM.select({ total: count() })
-      .from(healthVisit)
-      .where(where)
-      .then((values) => values[0]),
+      .where(eq(healthDiagnosis.organizationId, context.organizationId)),
+    runtime.ORM.select({ total: count() }).from(healthVisit).where(where),
     runtime.ORM.select({
       id: healthVisit.id,
       personId: healthVisit.personId,
@@ -8500,6 +8541,9 @@ async function getHealthHistory(request: Request): Promise<Response> {
       .limit(pageSize)
       .offset((page - 1) * pageSize),
   ]);
+  const summary = summaryRows[0];
+  const diagnosisSummary = diagnosisSummaryRows[0];
+  const countRow = countRows[0];
   const visitIds = visits.map((visit) => visit.id);
   const diagnoses = visitIds.length
     ? await runtime.ORM.select({
@@ -8587,7 +8631,7 @@ async function getTbHistory(request: Request): Promise<Response> {
     );
   }
   const where = and(...conditions);
-  const [summary, detailSummary, outcomes, countRow, cases] = await Promise.all([
+  const [summaryRows, detailSummaryRows, outcomes, countRows, cases] = await runtime.ORM.batch([
     runtime.ORM.select({
       cases: count(),
       linkedPeople: sql<number>`count(distinct ${healthTbCase.personId})`,
@@ -8596,21 +8640,16 @@ async function getTbHistory(request: Request): Promise<Response> {
       onTreatment: sql<number>`sum(case when lower(${healthTbCase.outcome}) = 'on treatment' then 1 else 0 end)`,
     })
       .from(healthTbCase)
-      .where(eq(healthTbCase.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(healthTbCase.organizationId, context.organizationId)),
     runtime.ORM.select({ details: count() })
       .from(healthTbDetail)
-      .where(eq(healthTbDetail.organizationId, context.organizationId))
-      .then((values) => values[0]),
+      .where(eq(healthTbDetail.organizationId, context.organizationId)),
     runtime.ORM.select({ outcome: healthTbCase.outcome, count: count() })
       .from(healthTbCase)
       .where(eq(healthTbCase.organizationId, context.organizationId))
       .groupBy(healthTbCase.outcome)
       .orderBy(desc(count()), sql`${healthTbCase.outcome} collate nocase`),
-    runtime.ORM.select({ total: count() })
-      .from(healthTbCase)
-      .where(where)
-      .then((values) => values[0]),
+    runtime.ORM.select({ total: count() }).from(healthTbCase).where(where),
     runtime.ORM.select({
       id: healthTbCase.id,
       personId: healthTbCase.personId,
@@ -8637,6 +8676,9 @@ async function getTbHistory(request: Request): Promise<Response> {
       .limit(pageSize)
       .offset((page - 1) * pageSize),
   ]);
+  const summary = summaryRows[0];
+  const detailSummary = detailSummaryRows[0];
+  const countRow = countRows[0];
   const caseIds = cases.map((record) => record.id);
   const details = caseIds.length
     ? await runtime.ORM.select({
@@ -8769,54 +8811,59 @@ async function getMedicalAdvances(request: Request): Promise<Response> {
     .where(eq(healthMedicalSettlement.organizationId, context.organizationId))
     .groupBy(healthMedicalSettlement.legacySettlementId)
     .as("expense_by_settlement");
-  const [summary, detailSummary, settlementSummary, expenseSummary, countRow, advances] =
-    await Promise.all([
-      runtime.ORM.select({
-        advances: count(),
-        advanceAmount: sql<number>`sum(${healthMedicalAdvance.advanceAmount})`,
-        firstSanctionOn: sql<string | null>`min(${healthMedicalAdvance.sanctionedOn})`,
-        lastSanctionOn: sql<string | null>`max(${healthMedicalAdvance.sanctionedOn})`,
-      })
-        .from(healthMedicalAdvance)
-        .where(eq(healthMedicalAdvance.organizationId, context.organizationId))
-        .then((values) => values[0]),
-      runtime.ORM.select({ patientAllocations: count() })
-        .from(healthMedicalAdvanceDetail)
-        .where(eq(healthMedicalAdvanceDetail.organizationId, context.organizationId))
-        .then((values) => values[0]),
-      runtime.ORM.select({
-        settlements: sql<number>`count(distinct ${healthMedicalSettlement.legacySettlementId})`,
-        settlementLinks: count(),
-      })
-        .from(healthMedicalSettlement)
-        .where(eq(healthMedicalSettlement.organizationId, context.organizationId))
-        .then((values) => values[0]),
-      runtime.ORM.select({ totalExpenses: sql<number>`sum(${expenseBySettlement.totalExpenses})` })
-        .from(expenseBySettlement)
-        .then((values) => values[0]),
-      runtime.ORM.select({ total: count() })
-        .from(healthMedicalAdvance)
-        .where(where)
-        .then((values) => values[0]),
-      runtime.ORM.select({
-        id: healthMedicalAdvance.id,
-        sanctionedOn: healthMedicalAdvance.sanctionedOn,
-        nurseName: healthMedicalAdvance.nurseName,
-        sanctionNumber: healthMedicalAdvance.sanctionNumber,
-        advanceAmount: healthMedicalAdvance.advanceAmount,
-        referringDoctorName: healthMedicalAdvance.referringDoctorName,
-        referralLocation: healthMedicalAdvance.referralLocation,
-        remarks: healthMedicalAdvance.remarks,
-      })
-        .from(healthMedicalAdvance)
-        .where(where)
-        .orderBy(desc(healthMedicalAdvance.sanctionedOn), healthMedicalAdvance.sanctionNumber)
-        .limit(pageSize)
-        .offset((page - 1) * pageSize),
-    ]);
+  const [
+    summaryRows,
+    detailSummaryRows,
+    settlementSummaryRows,
+    expenseSummaryRows,
+    countRows,
+    advances,
+  ] = await runtime.ORM.batch([
+    runtime.ORM.select({
+      advances: count(),
+      advanceAmount: sql<number>`sum(${healthMedicalAdvance.advanceAmount})`,
+      firstSanctionOn: sql<string | null>`min(${healthMedicalAdvance.sanctionedOn})`,
+      lastSanctionOn: sql<string | null>`max(${healthMedicalAdvance.sanctionedOn})`,
+    })
+      .from(healthMedicalAdvance)
+      .where(eq(healthMedicalAdvance.organizationId, context.organizationId)),
+    runtime.ORM.select({ patientAllocations: count() })
+      .from(healthMedicalAdvanceDetail)
+      .where(eq(healthMedicalAdvanceDetail.organizationId, context.organizationId)),
+    runtime.ORM.select({
+      settlements: sql<number>`count(distinct ${healthMedicalSettlement.legacySettlementId})`,
+      settlementLinks: count(),
+    })
+      .from(healthMedicalSettlement)
+      .where(eq(healthMedicalSettlement.organizationId, context.organizationId)),
+    runtime.ORM.select({
+      totalExpenses: sql<number>`sum(${expenseBySettlement.totalExpenses})`,
+    }).from(expenseBySettlement),
+    runtime.ORM.select({ total: count() }).from(healthMedicalAdvance).where(where),
+    runtime.ORM.select({
+      id: healthMedicalAdvance.id,
+      sanctionedOn: healthMedicalAdvance.sanctionedOn,
+      nurseName: healthMedicalAdvance.nurseName,
+      sanctionNumber: healthMedicalAdvance.sanctionNumber,
+      advanceAmount: healthMedicalAdvance.advanceAmount,
+      referringDoctorName: healthMedicalAdvance.referringDoctorName,
+      referralLocation: healthMedicalAdvance.referralLocation,
+      remarks: healthMedicalAdvance.remarks,
+    })
+      .from(healthMedicalAdvance)
+      .where(where)
+      .orderBy(desc(healthMedicalAdvance.sanctionedOn), healthMedicalAdvance.sanctionNumber)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+  ]);
+  const summary = summaryRows[0];
+  const detailSummary = detailSummaryRows[0];
+  const settlementSummary = settlementSummaryRows[0];
+  const expenseSummary = expenseSummaryRows[0];
+  const countRow = countRows[0];
   const advanceIds = advances.map((advance) => advance.id);
   const [details, settlements] = advanceIds.length
-    ? await Promise.all([
+    ? await runtime.ORM.batch([
         runtime.ORM.select({
           medicalAdvanceId: healthMedicalAdvanceDetail.medicalAdvanceId,
           id: healthMedicalAdvanceDetail.id,
@@ -9001,14 +9048,14 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
     )
     .as("reciprocal_relationship");
   const [
-    personRecord,
+    personRows,
     placements,
     academicRecords,
     schoolEnrollments,
-    familyProfile,
+    familyProfileRows,
     relationships,
     files,
-  ] = await Promise.all([
+  ] = await runtime.ORM.batch([
     runtime.ORM.select({
       id: person.id,
       kind: person.kind,
@@ -9033,8 +9080,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
     })
       .from(person)
       .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+      .limit(1),
     runtime.ORM.select({
       id: personPlacement.id,
       homeName: personPlacement.homeName,
@@ -9170,8 +9216,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
           eq(personFamilyProfile.organizationId, context.organizationId),
         ),
       )
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+      .limit(1),
     runtime.ORM.select({
       id: reciprocalRelationships.id,
       relationshipType: reciprocalRelationships.relationshipType,
@@ -9222,6 +9267,8 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         asc(personFile.sourceId),
       ),
   ]);
+  const personRecord = personRows[0] ?? null;
+  const familyProfile = familyProfileRows[0] ?? null;
 
   if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
 
@@ -10244,87 +10291,82 @@ function inlineContentDisposition(fileName: string): string {
 async function getPlatformStatus(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const context = await getMembershipContext(request);
-  const fallbackOrganization = context
-    ? null
-    : await runtime.ORM.select({ id: organization.id })
-        .from(organization)
-        .where(eq(organization.slug, runtime.DEFAULT_ORGANIZATION_SLUG))
-        .limit(1)
-        .then((rows) => rows[0] ?? null);
-  const sessionOrganizationId = context?.organizationId ?? fallbackOrganization?.id;
-  const [userCount, sessions, memberships] = await Promise.all([
-    context
-      ? Promise.resolve({ count: 1 })
-      : runtime.ORM.select({ count: count() })
-          .from(user)
-          .then((rows) => rows[0] ?? { count: 0 }),
-    sessionOrganizationId
-      ? runtime.ORM.select({
-          id: academicSession.id,
-          name: academicSession.name,
-          startsOn: academicSession.startsOn,
-          endsOn: academicSession.endsOn,
-        })
-          .from(academicSession)
-          .where(
-            and(
-              eq(academicSession.organizationId, sessionOrganizationId),
-              eq(academicSession.isActive, 1),
-            ),
-          )
-          .orderBy(desc(academicSession.startsOn))
-      : Promise.resolve([]),
-    context
-      ? runtime.ORM.select({
-          id: organization.id,
-          name: organization.name,
-          displayTitle: organization.displayTitle,
-          logoAssetKey: organization.logoAssetKey,
-          updatedAt: organization.updatedAt,
-          group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
-        })
-          .from(organizationMember)
-          .innerJoin(organization, eq(organization.id, organizationMember.organizationId))
-          .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
-          .where(eq(organizationMember.userId, context.userId))
-          .orderBy(asc(sql`lower(${organization.name})`))
-      : Promise.resolve([]),
-  ]);
-
-  const organizationIds = memberships.map((membership) => membership.id);
-  const organizationSessions = organizationIds.length
-    ? await runtime.ORM.select({
-        organizationId: academicSession.organizationId,
+  if (!context) {
+    const [userCountRows, sessions] = await Promise.all([
+      runtime.ORM.select({ count: count() }).from(user),
+      runtime.ORM.select({
         id: academicSession.id,
+        name: academicSession.name,
         startsOn: academicSession.startsOn,
+        endsOn: academicSession.endsOn,
       })
         .from(academicSession)
+        .innerJoin(organization, eq(organization.id, academicSession.organizationId))
         .where(
           and(
-            inArray(academicSession.organizationId, organizationIds),
+            eq(organization.slug, runtime.DEFAULT_ORGANIZATION_SLUG),
             eq(academicSession.isActive, 1),
           ),
         )
-        .orderBy(desc(academicSession.startsOn))
-    : [];
-  const defaultSessionByOrganization = new Map<string, string>();
-  for (const session of organizationSessions) {
-    if (!defaultSessionByOrganization.has(session.organizationId)) {
-      defaultSessionByOrganization.set(session.organizationId, session.id);
-    }
+        .orderBy(desc(academicSession.startsOn)),
+    ]);
+    return Response.json({
+      needsSetup: Number(userCountRows[0]?.count ?? 0) === 0,
+      sessions,
+      activeSessionId: sessions[0]?.id ?? null,
+      activeOrganizationId: null,
+      organizations: [],
+    });
   }
 
+  const [sessions, membershipRows] = await Promise.all([
+    runtime.ORM.select({
+      id: academicSession.id,
+      name: academicSession.name,
+      startsOn: academicSession.startsOn,
+      endsOn: academicSession.endsOn,
+    })
+      .from(academicSession)
+      .where(
+        and(
+          eq(academicSession.organizationId, context.organizationId),
+          eq(academicSession.isActive, 1),
+        ),
+      )
+      .orderBy(desc(academicSession.startsOn)),
+    runtime.ORM.select({
+      id: organization.id,
+      name: organization.name,
+      displayTitle: organization.displayTitle,
+      logoAssetKey: organization.logoAssetKey,
+      updatedAt: organization.updatedAt,
+      group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
+      defaultSessionId: academicSession.id,
+    })
+      .from(organizationMember)
+      .innerJoin(organization, eq(organization.id, organizationMember.organizationId))
+      .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+      .leftJoin(
+        academicSession,
+        and(eq(academicSession.organizationId, organization.id), eq(academicSession.isActive, 1)),
+      )
+      .where(eq(organizationMember.userId, context.userId))
+      .orderBy(asc(sql`lower(${organization.name})`), desc(academicSession.startsOn)),
+  ]);
+  const memberships = new Map<string, (typeof membershipRows)[number]>();
+  for (const membership of membershipRows) {
+    if (!memberships.has(membership.id)) memberships.set(membership.id, membership);
+  }
   return Response.json({
-    needsSetup: Number(userCount?.count ?? 0) === 0,
+    needsSetup: false,
     sessions,
     activeSessionId: context?.activeSessionId ?? sessions[0]?.id ?? null,
-    activeOrganizationId: context?.organizationId ?? null,
-    organizations: memberships.map((membership) => ({
+    activeOrganizationId: context.organizationId,
+    organizations: [...memberships.values()].map((membership) => ({
       ...membership,
       logoUrl: membership.logoAssetKey
         ? `/api/organization/logo?v=${encodeURIComponent(membership.updatedAt)}`
         : null,
-      defaultSessionId: defaultSessionByOrganization.get(membership.id) ?? null,
     })),
   });
 }
@@ -10740,12 +10782,11 @@ async function getOrganizationAudit(request: Request): Promise<Response> {
     );
   }
   const where = and(...conditions);
-  const [countRow, events, actions] = await Promise.all([
+  const [countRows, events, actions] = await runtime.ORM.batch([
     runtime.ORM.select({ total: count() })
       .from(auditEvent)
       .leftJoin(user, eq(user.id, auditEvent.actorUserId))
-      .where(where)
-      .then((rows) => rows[0]),
+      .where(where),
     runtime.ORM.select({
       id: auditEvent.id,
       action: auditEvent.action,
@@ -10767,6 +10808,7 @@ async function getOrganizationAudit(request: Request): Promise<Response> {
       .where(eq(auditEvent.organizationId, context.organizationId))
       .orderBy(asc(auditEvent.action)),
   ]);
+  const countRow = countRows[0];
   const total = Number(countRow?.total ?? 0);
   return Response.json({
     events,
