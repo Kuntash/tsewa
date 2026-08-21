@@ -133,6 +133,16 @@ type RosterRow = {
 
 type SchoolSection = "students" | "schools" | "rosters" | "setup" | "results";
 
+export type SchoolFilters = {
+  q?: string;
+  school?: string;
+  class?: string;
+  house?: string;
+  status?: "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed";
+  section?: SchoolSection;
+  page?: number;
+};
+
 const emptyStudents: StudentsResponse = {
   students: [],
   pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
@@ -140,32 +150,36 @@ const emptyStudents: StudentsResponse = {
 
 export function SchoolOperations({
   activeSessionId,
+  filters = {},
   onBack,
+  onFiltersChange,
   onSessionChange,
   sessions,
 }: {
   activeSessionId: string;
+  filters?: SchoolFilters;
   onBack: () => void;
+  onFiltersChange?: (filters: SchoolFilters) => void;
   onSessionChange: (sessionId: string) => Promise<void>;
   sessions: AcademicSession[];
 }) {
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [students, setStudents] = useState<StudentsResponse>(emptyStudents);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query);
-  const [school, setSchool] = useState("all");
-  const [className, setClassName] = useState("all");
-  const [house, setHouse] = useState("all");
+  const [school, setSchool] = useState(filters.school ?? "all");
+  const [className, setClassName] = useState(filters.class ?? "all");
+  const [house, setHouse] = useState(filters.house ?? "all");
   const [status, setStatus] = useState<
     "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed"
-  >("all");
-  const [page, setPage] = useState(1);
+  >(filters.status ?? "all");
+  const [page, setPage] = useState(filters.page ?? 1);
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [switchingSession, setSwitchingSession] = useState(false);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [section, setSection] = useState<SchoolSection>("students");
+  const [section, setSection] = useState<SchoolSection>(filters.section ?? "students");
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [rosters, setRosters] = useState<RosterRow[]>([]);
   const [loadingDirectories, setLoadingDirectories] = useState(true);
@@ -177,6 +191,36 @@ export function SchoolOperations({
   const [schoolBeingEdited, setSchoolBeingEdited] = useState<EditableSchool | null>(null);
   const [schoolBeingAssigned, setSchoolBeingAssigned] = useState<SchoolRow | null>(null);
   const [studentReport, setStudentReport] = useState<StudentReportRequest | null>(null);
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+    setSchool(filters.school ?? "all");
+    setClassName(filters.class ?? "all");
+    setHouse(filters.house ?? "all");
+    setStatus(filters.status ?? "all");
+    setSection(filters.section ?? "students");
+    setPage(filters.page ?? 1);
+  }, [
+    filters.class,
+    filters.house,
+    filters.page,
+    filters.q,
+    filters.school,
+    filters.section,
+    filters.status,
+  ]);
+
+  useEffect(() => {
+    onFiltersChange?.({
+      q: debouncedQuery || undefined,
+      school,
+      class: className,
+      house,
+      status,
+      section,
+      page,
+    });
+  }, [className, debouncedQuery, house, onFiltersChange, page, school, section, status]);
 
   useEffect(() => {
     const controller = new AbortController();

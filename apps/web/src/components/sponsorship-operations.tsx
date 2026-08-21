@@ -106,17 +106,27 @@ const sections: Array<{ id: Section; label: string; singular: string }> = [
   { id: "visitors", label: "Visitors", singular: "visitor" },
 ];
 
+export type SponsorshipFilters = {
+  section?: Section;
+  q?: string;
+  page?: number;
+};
+
 export function SponsorshipOperations({
   activeSessionId,
+  filters = {},
   onBack,
+  onFiltersChange,
 }: {
   activeSessionId: string;
+  filters?: SponsorshipFilters;
   onBack: () => void;
+  onFiltersChange?: (filters: SponsorshipFilters) => void;
 }) {
-  const [section, setSection] = useState<Section>("sponsors");
-  const [query, setQuery] = useState("");
+  const [section, setSection] = useState<Section>(filters.section ?? "sponsors");
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query, 250);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(filters.page ?? 1);
   const [data, setData] = useState<ListData>(emptyList);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,6 +136,16 @@ export function SponsorshipOperations({
   const [editor, setEditor] = useState<Row | "new" | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+
+  useEffect(() => {
+    setSection(filters.section ?? "sponsors");
+    setQuery(filters.q ?? "");
+    setPage(filters.page ?? 1);
+  }, [filters.page, filters.q, filters.section]);
+
+  useEffect(() => {
+    onFiltersChange?.({ section, q: debouncedQuery || undefined, page });
+  }, [debouncedQuery, onFiltersChange, page, section]);
 
   useEffect(() => {
     const controller = new AbortController();

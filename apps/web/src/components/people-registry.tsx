@@ -83,17 +83,43 @@ const emptyRegistry: RegistryResponse = {
   latestImport: null,
 };
 
-export function PeopleRegistry({ onBack }: { onBack: () => void }) {
-  const [query, setQuery] = useState("");
+export type PeopleFilters = {
+  q?: string;
+  kind?: "all" | PersonKind;
+  status?: "all" | PersonStatus;
+  page?: number;
+};
+
+export function PeopleRegistry({
+  filters = {},
+  onBack,
+  onFiltersChange,
+}: {
+  filters?: PeopleFilters;
+  onBack: () => void;
+  onFiltersChange?: (filters: PeopleFilters) => void;
+}) {
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query);
-  const [kind, setKind] = useState<"all" | PersonKind>("all");
-  const [status, setStatus] = useState<"all" | PersonStatus>("all");
-  const [page, setPage] = useState(1);
+  const [kind, setKind] = useState<"all" | PersonKind>(filters.kind ?? "all");
+  const [status, setStatus] = useState<"all" | PersonStatus>(filters.status ?? "all");
+  const [page, setPage] = useState(filters.page ?? 1);
   const [data, setData] = useState<RegistryResponse>(emptyRegistry);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+    setKind(filters.kind ?? "all");
+    setStatus(filters.status ?? "all");
+    setPage(filters.page ?? 1);
+  }, [filters.kind, filters.page, filters.q, filters.status]);
+
+  useEffect(() => {
+    onFiltersChange?.({ q: debouncedQuery || undefined, kind, status, page });
+  }, [debouncedQuery, kind, onFiltersChange, page, status]);
 
   useEffect(() => {
     const controller = new AbortController();

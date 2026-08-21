@@ -173,6 +173,20 @@
 }
 
 @media print {
+  .reports-no-print {
+    display: none !important;
+  }
+
+  .reports-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    color: #17251e !important;
+    background: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
   :root,
   .dark {
     color-scheme: light;

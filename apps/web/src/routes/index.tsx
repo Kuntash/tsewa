@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Navigate, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   Award,
@@ -25,14 +25,21 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 import { AccountSettings } from "@/components/account-settings";
 import { HealthOperations } from "@/components/health-operations";
+import type { HealthFilters } from "@/components/health-operations";
 import { PeopleRegistry } from "@/components/people-registry";
+import type { PeopleFilters } from "@/components/people-registry";
+import { ReportsCentre } from "@/components/reports-centre";
+import type { ReportsFilters } from "@/components/reports-centre";
 import { SchoolOperations } from "@/components/school-operations";
+import type { SchoolFilters } from "@/components/school-operations";
 import { ScholarshipOperations } from "@/components/scholarship-operations";
+import type { ScholarshipFilters } from "@/components/scholarship-operations";
 import { SponsorshipOperations } from "@/components/sponsorship-operations";
+import type { SponsorshipFilters } from "@/components/sponsorship-operations";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,6 +94,7 @@ type AccessRole =
   | "registration"
   | "school"
   | "sponsorship"
+  | "reports"
   | "scholarship"
   | "dispensary"
   | "staff_operations"
@@ -148,15 +156,38 @@ type OrganizationState = {
   };
 };
 
-type AppView =
+export type AppView =
   | "dashboard"
   | "people"
   | "school"
   | "health"
   | "scholarship"
   | "sponsorship"
+  | "reports"
   | "settings";
-type SettingsTab = "general" | "sessions" | "members" | "roles" | "security" | "audit";
+export type SettingsTab = "general" | "sessions" | "members" | "roles" | "security" | "audit";
+export type RoutedAppSearch = {
+  q?: string;
+  page?: number;
+  kind?: string;
+  status?: string;
+  school?: string;
+  class?: string;
+  house?: string;
+  section?: string;
+  course?: string;
+  outcome?: string;
+  settlement?: string;
+  domain?: string;
+  report?: string;
+  session?: string;
+  auditQ?: string;
+  auditAction?: string;
+  auditPage?: number;
+};
+type RoutedSearchChange = {
+  bivarianceHack(search: RoutedAppSearch): void;
+}["bivarianceHack"];
 type AppSearch = {
   view?: AppView;
   settingsTab?: SettingsTab;
@@ -197,6 +228,7 @@ const appViews = new Set<AppView>([
   "health",
   "scholarship",
   "sponsorship",
+  "reports",
   "settings",
 ]);
 const settingsTabs = new Set<SettingsTab>([
@@ -252,20 +284,241 @@ function Home() {
     );
   }
 
+  if (inviteToken) {
+    return <Navigate params={{ token: inviteToken }} replace to="/invite/$token" />;
+  }
+
   if (session.data?.user) {
+    if (search.view === "settings") {
+      return (
+        <Navigate params={{ tab: search.settingsTab ?? "general" }} replace to="/settings/$tab" />
+      );
+    }
+    return <Navigate replace to={legacyViewPath(search.view)} />;
+  }
+
+  return <AccessScreen inviteToken={inviteToken} platform={platform} />;
+}
+
+export function InvitationPage({ token }: { token: string }) {
+  const session = authClient.useSession();
+  const [platform, setPlatform] = useState<PlatformState | null>(null);
+  const [invitation, setInvitation] = useState<InvitationPreview | null>(null);
+  const [failure, setFailure] = useState<{ code: string; error: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.all([
+      fetch("/api/platform", { signal: controller.signal }).then(
+        (response) => response.json() as Promise<PlatformState>,
+      ),
+      fetch(`/api/invitations/preview?token=${encodeURIComponent(token)}`, {
+        signal: controller.signal,
+      }).then(async (response) => {
+        const payload = (await response.json()) as InvitationPreview & {
+          code?: string;
+          error?: string;
+        };
+        if (!response.ok) {
+          throw {
+            code: payload.code ?? "invalid",
+            error: payload.error ?? "Invitation unavailable",
+          };
+        }
+        return payload;
+      }),
+    ])
+      .then(([state, preview]) => {
+        setPlatform({ ...state, invitation: preview });
+        setInvitation(preview);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string }).name === "AbortError") return;
+        const detail = reason as { code?: string; error?: string };
+        setFailure({
+          code: detail.code ?? "invalid",
+          error: detail.error ?? "This invitation could not be opened.",
+        });
+      });
+    return () => controller.abort();
+  }, [token]);
+
+  async function accept() {
+    setSubmitting(true);
+    setError("");
+    const response = await fetch("/api/invitations/accept", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setError(payload.error ?? "The invitation could not be accepted.");
+      setSubmitting(false);
+      return;
+    }
+    window.location.assign("/dashboard");
+  }
+
+  if (session.isPending || (!platform && !failure)) {
     return (
-      <Launchpad
-        platform={platform}
-        user={{
-          name: session.data.user.name,
-          email: session.data.user.email,
-          emailVerified: session.data.user.emailVerified,
-        }}
+      <div className="grid min-h-svh place-items-center bg-muted/50">
+        <LoaderCircle className="size-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (failure) {
+    const titles: Record<string, string> = {
+      expired: "Invitation expired",
+      revoked: "Invitation revoked",
+      used: "Invitation already accepted",
+      invalid: "Invalid invitation",
+    };
+    return (
+      <InvitationStateCard
+        description={`${failure.error} Ask an organization administrator to send a fresh invitation if you still need access.`}
+        title={titles[failure.code] ?? "Invitation unavailable"}
       />
     );
   }
 
-  return <AccessScreen inviteToken={inviteToken} platform={platform} />;
+  if (!session.data?.user && platform) {
+    return <AccessScreen inviteToken={token} platform={platform} />;
+  }
+
+  if (session.data?.user && invitation) {
+    const wrongAccount = session.data.user.email.toLowerCase() !== invitation.email.toLowerCase();
+    return (
+      <InvitationStateCard
+        action={
+          wrongAccount ? (
+            <Button
+              className="w-full"
+              onClick={() => void authClient.signOut().then(() => window.location.reload())}
+              variant="outline"
+            >
+              Sign out and use {invitation.email}
+            </Button>
+          ) : (
+            <Button className="w-full" disabled={submitting} onClick={() => void accept()}>
+              {submitting ? <LoaderCircle className="animate-spin" /> : <MailPlus />}
+              Accept invitation
+            </Button>
+          )
+        }
+        description={
+          wrongAccount
+            ? `This invitation is for ${invitation.email}, but you are signed in as ${session.data.user.email}.`
+            : `Join ${invitation.organizationName} as ${invitation.group}. Your assigned roles are ${invitation.roleNames.join(", ") || "set by the organization"}.`
+        }
+        error={error}
+        title={wrongAccount ? "Use the invited account" : `Join ${invitation.organizationName}`}
+      />
+    );
+  }
+
+  return null;
+}
+
+function InvitationStateCard({
+  action,
+  description,
+  error,
+  title,
+}: {
+  action?: ReactNode;
+  description: string;
+  error?: string;
+  title: string;
+}) {
+  return (
+    <main className="grid min-h-svh place-items-center bg-muted/35 px-5 py-10">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="mb-2 grid size-11 place-items-center rounded-full bg-primary/10 text-primary">
+            <MailPlus />
+          </div>
+          <CardTitle className="text-2xl">{title}</CardTitle>
+          <CardDescription className="leading-6">{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          {action}
+          <Button asChild className="w-full" variant="ghost">
+            <a href="/">Return to sign in</a>
+          </Button>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
+
+export function AuthenticatedApp({
+  onSearchChange,
+  view,
+  settingsTab = "general",
+  search = {},
+}: {
+  onSearchChange?: RoutedSearchChange;
+  view: AppView;
+  settingsTab?: SettingsTab;
+  search?: RoutedAppSearch;
+}) {
+  const session = authClient.useSession();
+  const [platform, setPlatform] = useState<PlatformState | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/platform", { signal: controller.signal })
+      .then((response) => response.json() as Promise<PlatformState>)
+      .then(setPlatform)
+      .catch((cause: unknown) => {
+        if ((cause as { name?: string }).name !== "AbortError") setPlatform(null);
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (session.isPending || !platform) {
+    return (
+      <div className="grid min-h-svh place-items-center bg-muted/50">
+        <LoaderCircle className="size-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!session.data?.user) return <Navigate replace to="/" />;
+
+  return (
+    <Launchpad
+      platform={platform}
+      onSearchChange={onSearchChange}
+      search={search}
+      settingsTab={settingsTab}
+      user={{
+        name: session.data.user.name,
+        email: session.data.user.email,
+        emailVerified: session.data.user.emailVerified,
+      }}
+      view={view}
+    />
+  );
+}
+
+function legacyViewPath(view?: AppView) {
+  if (view === "people") return "/people" as const;
+  if (view === "school") return "/school" as const;
+  if (view === "health") return "/health" as const;
+  if (view === "scholarship") return "/scholarships" as const;
+  if (view === "sponsorship") return "/sponsorships" as const;
+  if (view === "reports") return "/reports" as const;
+  return "/dashboard" as const;
 }
 
 function AccessScreen({ platform, inviteToken }: { platform: PlatformState; inviteToken: string }) {
@@ -333,7 +586,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
       });
     }
 
-    window.location.reload();
+    window.location.assign("/dashboard");
   }
 
   async function requestRecovery(event: FormEvent<HTMLFormElement>) {
@@ -596,16 +849,21 @@ function Brand({
 }
 
 function Launchpad({
+  onSearchChange,
   platform,
+  search,
+  settingsTab,
   user,
+  view,
 }: {
+  onSearchChange?: RoutedSearchChange;
   platform: PlatformState;
+  search: RoutedAppSearch;
+  settingsTab: SettingsTab;
   user: { name: string; email: string; emailVerified: boolean };
+  view: AppView;
 }) {
-  const search = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const view = search.view ?? "dashboard";
-  const settingsTab = search.settingsTab ?? "general";
+  const navigate = useNavigate();
   const [activeSessionId, setActiveSessionId] = useState(
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
   );
@@ -613,13 +871,11 @@ function Launchpad({
     (organization) => organization.id === platform.activeOrganizationId,
   );
   function openView(nextView: AppView, tab?: SettingsTab) {
-    void navigate({
-      search: (current) => ({
-        invite: current.invite,
-        view: nextView === "dashboard" ? undefined : nextView,
-        settingsTab: nextView === "settings" ? (tab ?? "general") : undefined,
-      }),
-    });
+    if (nextView === "settings") {
+      void navigate({ to: "/settings/$tab", params: { tab: tab ?? "general" } });
+      return;
+    }
+    void navigate({ to: legacyViewPath(nextView) });
   }
   const modules: DashboardModule[] = [
     {
@@ -660,25 +916,39 @@ function Launchpad({
     {
       Icon: FileText,
       title: "Reports and documents",
-      description: "Documents and reports",
-      view: "dashboard" as const,
-      open: false,
+      description: "Preview and export operational reports",
+      view: "reports" as const,
+      open: true,
     },
   ];
 
   if (view === "people") {
-    return <PeopleRegistry onBack={() => openView("dashboard")} />;
+    return (
+      <PeopleRegistry
+        filters={search as PeopleFilters}
+        onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: PeopleFilters) => void) | undefined}
+      />
+    );
   }
 
   if (view === "health") {
-    return <HealthOperations onBack={() => openView("dashboard")} />;
+    return (
+      <HealthOperations
+        filters={search as HealthFilters}
+        onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: HealthFilters) => void) | undefined}
+      />
+    );
   }
 
   if (view === "scholarship") {
     return (
       <ScholarshipOperations
         activeSessionId={activeSessionId}
+        filters={search as ScholarshipFilters}
         onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: ScholarshipFilters) => void) | undefined}
       />
     );
   }
@@ -687,7 +957,21 @@ function Launchpad({
     return (
       <SponsorshipOperations
         activeSessionId={activeSessionId}
+        filters={search as SponsorshipFilters}
         onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: SponsorshipFilters) => void) | undefined}
+      />
+    );
+  }
+
+  if (view === "reports") {
+    return (
+      <ReportsCentre
+        activeSessionId={activeSessionId}
+        filters={search as ReportsFilters}
+        onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: ReportsFilters) => void) | undefined}
+        sessions={platform.sessions}
       />
     );
   }
@@ -721,7 +1005,9 @@ function Launchpad({
     return (
       <SchoolOperations
         activeSessionId={activeSessionId}
+        filters={search as SchoolFilters}
         onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: SchoolFilters) => void) | undefined}
         onSessionChange={changeSession}
         sessions={platform.sessions}
       />
@@ -822,6 +1108,7 @@ function Launchpad({
         <SettingsWorkspace
           activeTab={settingsTab}
           onTabChange={(tab) => openView("settings", tab)}
+          search={search}
           user={user}
         />
       ) : (
@@ -1046,10 +1333,12 @@ function Dashboard({
 function SettingsWorkspace({
   activeTab,
   onTabChange,
+  search,
   user,
 }: {
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
+  search: RoutedAppSearch;
   user: { name: string; email: string; emailVerified: boolean };
 }) {
   const tabs: Array<{ key: SettingsTab; label: string; description: string; Icon: LucideIcon }> = [
@@ -1106,7 +1395,7 @@ function SettingsWorkspace({
         ) : activeTab === "sessions" ? (
           <AcademicSessionSettings />
         ) : (
-          <AdministrationPanel activeTab={activeTab} />
+          <AdministrationPanel activeTab={activeTab} search={search} />
         )}
       </div>
     </div>
@@ -1115,8 +1404,10 @@ function SettingsWorkspace({
 
 function AdministrationPanel({
   activeTab,
+  search,
 }: {
   activeTab: Exclude<SettingsTab, "security" | "sessions">;
+  search: RoutedAppSearch;
 }) {
   const [state, setState] = useState<OrganizationState | null>(null);
   const [name, setName] = useState("");
@@ -1442,7 +1733,12 @@ function AdministrationPanel({
   const isOwner = state.currentMember.group === "owner";
 
   if (activeTab === "audit") {
-    return <AuditSettings canRead={state.currentMember.permissions.includes("audit.read")} />;
+    return (
+      <AuditSettings
+        canRead={state.currentMember.permissions.includes("audit.read")}
+        search={search}
+      />
+    );
   }
 
   const sectionCopy = {
@@ -2068,9 +2364,8 @@ type AuditState = {
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 };
 
-function AuditSettings({ canRead }: { canRead: boolean }) {
-  const search = Route.useSearch();
-  const navigate = Route.useNavigate();
+function AuditSettings({ canRead, search }: { canRead: boolean; search: RoutedAppSearch }) {
+  const navigate = useNavigate();
   const query = search.auditQ ?? "";
   const action = search.auditAction ?? "all";
   const page = search.auditPage ?? 1;
@@ -2105,14 +2400,13 @@ function AuditSettings({ canRead }: { canRead: boolean }) {
   function updateFilters(next: { q?: string; action?: string; page?: number }) {
     void navigate({
       replace: true,
-      search: (current) => ({
-        ...current,
-        view: "settings",
-        settingsTab: "audit",
-        auditQ: next.q ?? current.auditQ,
-        auditAction: next.action ?? current.auditAction,
-        auditPage: next.page ?? current.auditPage,
-      }),
+      to: "/settings/$tab",
+      params: { tab: "audit" },
+      search: {
+        auditQ: next.q ?? search.auditQ,
+        auditAction: next.action ?? search.auditAction,
+        auditPage: next.page ?? search.auditPage,
+      },
     });
   }
 

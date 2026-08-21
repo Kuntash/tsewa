@@ -168,16 +168,48 @@ const emptyHealth: HealthResponse = {
   pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
 };
 
-export function HealthOperations({ onBack }: { onBack: () => void }) {
-  const [section, setSection] = useState<"diagnosis" | "tb" | "advances">("diagnosis");
-  const [query, setQuery] = useState("");
+export type HealthFilters = {
+  section?: "diagnosis" | "tb" | "advances";
+  q?: string;
+  kind?: "all" | "child" | "elderly" | "staff" | "other";
+  outcome?: string;
+  settlement?: string;
+  page?: number;
+};
+
+export function HealthOperations({
+  filters = {},
+  onBack,
+  onFiltersChange,
+}: {
+  filters?: HealthFilters;
+  onBack: () => void;
+  onFiltersChange?: (filters: HealthFilters) => void;
+}) {
+  const [section, setSection] = useState<"diagnosis" | "tb" | "advances">(
+    filters.section ?? "diagnosis",
+  );
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query);
-  const [kind, setKind] = useState("all");
-  const [page, setPage] = useState(1);
+  const [kind, setKind] = useState(filters.kind ?? "all");
+  const [page, setPage] = useState(filters.page ?? 1);
   const [data, setData] = useState<HealthResponse>(emptyHealth);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSection(filters.section ?? "diagnosis");
+    setQuery(filters.q ?? "");
+    setKind(filters.kind ?? "all");
+    setPage(filters.page ?? 1);
+  }, [filters.kind, filters.page, filters.q, filters.section]);
+
+  useEffect(() => {
+    if (section === "diagnosis") {
+      onFiltersChange?.({ section, q: debouncedQuery || undefined, kind, page });
+    }
+  }, [debouncedQuery, kind, onFiltersChange, page, section]);
 
   useEffect(() => setPage(1), [debouncedQuery, kind]);
 
@@ -305,7 +337,10 @@ export function HealthOperations({ onBack }: { onBack: () => void }) {
                       value={query}
                     />
                   </div>
-                  <Select onValueChange={setKind} value={kind}>
+                  <Select
+                    onValueChange={(value) => setKind(value as NonNullable<HealthFilters["kind"]>)}
+                    value={kind}
+                  >
                     <SelectTrigger aria-label="Patient type">
                       <SelectValue />
                     </SelectTrigger>
@@ -433,9 +468,9 @@ export function HealthOperations({ onBack }: { onBack: () => void }) {
             </Card>
           </>
         ) : section === "tb" ? (
-          <TbHistory />
+          <TbHistory filters={filters} onFiltersChange={onFiltersChange} />
         ) : (
-          <MedicalAdvances />
+          <MedicalAdvances filters={filters} onFiltersChange={onFiltersChange} />
         )}
       </div>
 
@@ -463,16 +498,39 @@ const emptyTb: TbResponse = {
   pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
 };
 
-function TbHistory() {
-  const [query, setQuery] = useState("");
+function TbHistory({
+  filters,
+  onFiltersChange,
+}: {
+  filters: HealthFilters;
+  onFiltersChange?: (filters: HealthFilters) => void;
+}) {
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query);
-  const [kind, setKind] = useState("all");
-  const [outcome, setOutcome] = useState("all");
-  const [page, setPage] = useState(1);
+  const [kind, setKind] = useState(filters.kind ?? "all");
+  const [outcome, setOutcome] = useState(filters.outcome ?? "all");
+  const [page, setPage] = useState(filters.page ?? 1);
   const [data, setData] = useState<TbResponse>(emptyTb);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+    setKind(filters.kind ?? "all");
+    setOutcome(filters.outcome ?? "all");
+    setPage(filters.page ?? 1);
+  }, [filters.kind, filters.outcome, filters.page, filters.q]);
+
+  useEffect(() => {
+    onFiltersChange?.({
+      section: "tb",
+      q: debouncedQuery || undefined,
+      kind,
+      outcome,
+      page,
+    });
+  }, [debouncedQuery, kind, onFiltersChange, outcome, page]);
 
   useEffect(() => setPage(1), [debouncedQuery, kind, outcome]);
 
@@ -547,7 +605,10 @@ function TbHistory() {
                 value={query}
               />
             </div>
-            <Select onValueChange={setKind} value={kind}>
+            <Select
+              onValueChange={(value) => setKind(value as NonNullable<HealthFilters["kind"]>)}
+              value={kind}
+            >
               <SelectTrigger aria-label="TB patient type">
                 <SelectValue />
               </SelectTrigger>
@@ -723,16 +784,39 @@ const emptyMedicalAdvances: MedicalAdvanceResponse = {
   pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
 };
 
-function MedicalAdvances() {
-  const [query, setQuery] = useState("");
+function MedicalAdvances({
+  filters,
+  onFiltersChange,
+}: {
+  filters: HealthFilters;
+  onFiltersChange?: (filters: HealthFilters) => void;
+}) {
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query);
-  const [kind, setKind] = useState("all");
-  const [settlement, setSettlement] = useState("all");
-  const [page, setPage] = useState(1);
+  const [kind, setKind] = useState(filters.kind ?? "all");
+  const [settlement, setSettlement] = useState(filters.settlement ?? "all");
+  const [page, setPage] = useState(filters.page ?? 1);
   const [data, setData] = useState<MedicalAdvanceResponse>(emptyMedicalAdvances);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+    setKind(filters.kind ?? "all");
+    setSettlement(filters.settlement ?? "all");
+    setPage(filters.page ?? 1);
+  }, [filters.kind, filters.page, filters.q, filters.settlement]);
+
+  useEffect(() => {
+    onFiltersChange?.({
+      section: "advances",
+      q: debouncedQuery || undefined,
+      kind,
+      settlement,
+      page,
+    });
+  }, [debouncedQuery, kind, onFiltersChange, page, settlement]);
 
   useEffect(() => setPage(1), [debouncedQuery, kind, settlement]);
 
@@ -813,7 +897,10 @@ function MedicalAdvances() {
                 value={query}
               />
             </div>
-            <Select onValueChange={setKind} value={kind}>
+            <Select
+              onValueChange={(value) => setKind(value as NonNullable<HealthFilters["kind"]>)}
+              value={kind}
+            >
               <SelectTrigger aria-label="Advance patient type">
                 <SelectValue />
               </SelectTrigger>

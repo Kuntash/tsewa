@@ -143,20 +143,31 @@ const emptyList: ListData = {
   capabilities: { manage: false },
 };
 
+export type ScholarshipFilters = {
+  q?: string;
+  status?: string;
+  course?: string;
+  page?: number;
+};
+
 export function ScholarshipOperations({
   activeSessionId,
+  filters = {},
   onBack,
+  onFiltersChange,
 }: {
   activeSessionId: string;
+  filters?: ScholarshipFilters;
   onBack: () => void;
+  onFiltersChange?: (filters: ScholarshipFilters) => void;
 }) {
   const [data, setData] = useState<ListData>(emptyList);
   const [setup, setSetup] = useState<Setup | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(filters.q ?? "");
   const debouncedQuery = useDebouncedValue(query);
-  const [status, setStatus] = useState("all");
-  const [course, setCourse] = useState("all");
-  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState(filters.status ?? "all");
+  const [course, setCourse] = useState(filters.course ?? "all");
+  const [page, setPage] = useState(filters.page ?? 1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -165,6 +176,17 @@ export function ScholarshipOperations({
   const [editor, setEditor] = useState<Detail["record"] | "new" | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+    setStatus(filters.status ?? "all");
+    setCourse(filters.course ?? "all");
+    setPage(filters.page ?? 1);
+  }, [filters.course, filters.page, filters.q, filters.status]);
+
+  useEffect(() => {
+    onFiltersChange?.({ q: debouncedQuery || undefined, status, course, page });
+  }, [course, debouncedQuery, onFiltersChange, page, status]);
 
   useEffect(() => {
     void loadSetup();

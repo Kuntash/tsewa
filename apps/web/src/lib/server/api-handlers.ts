@@ -52,7 +52,6 @@ import {
   personAcademicRecord,
   personFamilyProfile,
   personFile,
-  personImportBatch,
   personPlacement,
   personRelationship,
   schoolClassOffering,
@@ -100,6 +99,8 @@ import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { sendPasswordResetEmail } from "@/lib/auth-email";
 import { getRuntimeEnv } from "@/lib/runtime-env";
+import { findDashboard } from "@/lib/server/repositories/dashboard-repository";
+import { findPeopleRegistry } from "@/lib/server/repositories/people-repository";
 import { allocationsFitFund, sponsorshipDisplayName } from "@/lib/sponsorship";
 
 const preferenceSchema = z.object({
@@ -123,6 +124,14 @@ const organizationSettingsSchema = z.object({
 
 const dashboardQuerySchema = z.object({
   sessionId: z.uuid(),
+});
+
+const reportExportAuditSchema = z.object({
+  domain: z.enum(["scholarship", "sponsorship"]),
+  report: z.string().trim().min(1).max(80),
+  session: z.string().trim().min(1).max(80),
+  format: z.enum(["csv", "pdf"]),
+  rowCount: z.number().int().min(0),
 });
 
 const auditQuerySchema = z.object({
@@ -837,6 +846,10 @@ export const apiDispatcher = {
 
     if (url.pathname === "/api/dashboard") {
       return getDashboard(request);
+    }
+
+    if (url.pathname === "/api/reports/exports") {
+      return recordReportExport(request);
     }
 
     if (url.pathname === "/api/people") {
@@ -8907,80 +8920,8 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
     return Response.json({ error: "Check the people filters." }, { status: 400 });
   }
 
-  const { q, kind, status, page, pageSize } = parsed.data;
-  const conditions = [eq(person.organizationId, context.organizationId)];
-  if (kind !== "all") conditions.push(eq(person.kind, kind));
-  if (status !== "all") conditions.push(eq(person.status, status));
-  if (q) {
-    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
-    conditions.push(
-      or(
-        sql`lower(${person.displayName}) LIKE ${search} ESCAPE '\\'`,
-        sql`lower(${person.primaryIdentifier}) LIKE ${search} ESCAPE '\\'`,
-      )!,
-    );
-  }
-  const where = and(...conditions);
-  const offset = (page - 1) * pageSize;
   const runtime = getRuntimeEnv();
-  const [countRows, people, summary, latestImports] = await Promise.all([
-    runtime.ORM.select({ total: count() }).from(person).where(where),
-    runtime.ORM.select({
-      id: person.id,
-      kind: person.kind,
-      status: person.status,
-      identifierKind: person.identifierKind,
-      primaryIdentifier: person.primaryIdentifier,
-      displayName: person.displayName,
-      gender: person.gender,
-      dateOfBirth: person.dateOfBirth,
-      admittedOrJoinedOn: person.admittedOrJoinedOn,
-      campusOrLocation: person.campusOrLocation,
-      sourceSystem: person.sourceSystem,
-      sourceTable: person.sourceTable,
-      sourceId: person.sourceId,
-      importedAt: person.importedAt,
-    })
-      .from(person)
-      .where(where)
-      .orderBy(asc(sql`lower(${person.displayName})`), asc(person.primaryIdentifier))
-      .limit(pageSize)
-      .offset(offset),
-    runtime.ORM.select({ kind: person.kind, status: person.status, count: count() })
-      .from(person)
-      .where(eq(person.organizationId, context.organizationId))
-      .groupBy(person.kind, person.status),
-    runtime.ORM.select({
-      id: personImportBatch.id,
-      sourceSystem: personImportBatch.sourceSystem,
-      mode: personImportBatch.mode,
-      status: personImportBatch.status,
-      sourceCount: personImportBatch.sourceCount,
-      eligibleCount: personImportBatch.eligibleCount,
-      importedCount: personImportBatch.importedCount,
-      skippedCount: personImportBatch.skippedCount,
-      issueCount: personImportBatch.issueCount,
-      createdAt: personImportBatch.createdAt,
-      finishedAt: personImportBatch.finishedAt,
-    })
-      .from(personImportBatch)
-      .where(eq(personImportBatch.organizationId, context.organizationId))
-      .orderBy(desc(personImportBatch.createdAt))
-      .limit(1),
-  ]);
-
-  const total = Number(countRows[0]?.total ?? 0);
-  return Response.json({
-    people,
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.ceil(total / pageSize),
-    },
-    summary,
-    latestImport: latestImports[0] ?? null,
-  });
+  return Response.json(await findPeopleRegistry(runtime.ORM, context.organizationId, parsed.data));
 }
 
 async function handlePersonProfile(request: Request, personId: string): Promise<Response> {
@@ -10448,133 +10389,37 @@ async function getDashboard(request: Request): Promise<Response> {
   }
 
   const runtime = getRuntimeEnv();
-  const session = await runtime.ORM.select({
-    id: academicSession.id,
-    name: academicSession.name,
-    startsOn: academicSession.startsOn,
-    endsOn: academicSession.endsOn,
-  })
-    .from(academicSession)
-    .where(
-      and(
-        eq(academicSession.id, parsed.data.sessionId),
-        eq(academicSession.organizationId, context.organizationId),
-        eq(academicSession.isActive, 1),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
-  if (!session) return Response.json({ error: "Academic session not found." }, { status: 404 });
+  const dashboard = await findDashboard(
+    runtime.ORM,
+    context.organizationId,
+    parsed.data.sessionId,
+    context.permissions,
+  );
+  if (!dashboard) {
+    return Response.json({ error: "Academic session not found." }, { status: 404 });
+  }
+  return Response.json(dashboard);
+}
 
-  const [
-    peopleSummary,
-    schoolSummary,
-    scholarshipSummary,
-    sponsorshipSummary,
-    healthSummary,
-    activity,
-  ] = await Promise.all([
-    hasPermission(context, "people.read")
-      ? runtime.ORM.select({
-          total: count(),
-          active: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
-        })
-          .from(person)
-          .where(eq(person.organizationId, context.organizationId))
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    hasPermission(context, "school.read")
-      ? runtime.ORM.select({
-          total: count(),
-          current: sql<number>`sum(case when ${studentEnrollment.status} in ('recorded', 'enrolled') then 1 else 0 end)`,
-        })
-          .from(studentEnrollment)
-          .where(
-            and(
-              eq(studentEnrollment.organizationId, context.organizationId),
-              eq(studentEnrollment.academicSessionId, session.id),
-            ),
-          )
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    hasPermission(context, "scholarship.read")
-      ? runtime.ORM.select({
-          total: count(),
-          active: sql<number>`sum(case when lower(${scholarshipRecord.status}) not in ('closed', 'rejected') then 1 else 0 end)`,
-        })
-          .from(scholarshipRecord)
-          .where(
-            and(
-              eq(scholarshipRecord.organizationId, context.organizationId),
-              eq(scholarshipRecord.academicSessionId, session.id),
-            ),
-          )
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    hasPermission(context, "sponsorship.read")
-      ? runtime.ORM.select({ total: count() })
-          .from(sponsorshipAssignment)
-          .where(
-            and(
-              eq(sponsorshipAssignment.organizationId, context.organizationId),
-              eq(sponsorshipAssignment.academicSessionId, session.id),
-            ),
-          )
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    hasPermission(context, "health.read")
-      ? runtime.ORM.select({
-          total: count(),
-          recent: sql<number>`sum(case when ${healthVisit.checkupDate} >= date('now', '-30 days') then 1 else 0 end)`,
-        })
-          .from(healthVisit)
-          .where(eq(healthVisit.organizationId, context.organizationId))
-          .then((rows) => rows[0])
-      : Promise.resolve(null),
-    hasPermission(context, "audit.read")
-      ? runtime.ORM.select({
-          id: auditEvent.id,
-          action: auditEvent.action,
-          entityType: auditEvent.entityType,
-          entityId: auditEvent.entityId,
-          occurredAt: auditEvent.occurredAt,
-          actorName: user.name,
-        })
-          .from(auditEvent)
-          .leftJoin(user, eq(user.id, auditEvent.actorUserId))
-          .where(eq(auditEvent.organizationId, context.organizationId))
-          .orderBy(desc(auditEvent.occurredAt))
-          .limit(8)
-      : Promise.resolve([]),
-  ]);
-
-  return Response.json({
-    session,
-    metrics: {
-      people: peopleSummary
-        ? { value: Number(peopleSummary.active ?? 0), total: Number(peopleSummary.total ?? 0) }
-        : null,
-      school: schoolSummary
-        ? { value: Number(schoolSummary.current ?? 0), total: Number(schoolSummary.total ?? 0) }
-        : null,
-      scholarships: scholarshipSummary
-        ? {
-            value: Number(scholarshipSummary.active ?? 0),
-            total: Number(scholarshipSummary.total ?? 0),
-          }
-        : null,
-      sponsorships: sponsorshipSummary
-        ? {
-            value: Number(sponsorshipSummary.total ?? 0),
-            total: Number(sponsorshipSummary.total ?? 0),
-          }
-        : null,
-      health: healthSummary
-        ? { value: Number(healthSummary.recent ?? 0), total: Number(healthSummary.total ?? 0) }
-        : null,
-    },
-    activity,
-  });
+async function recordReportExport(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const parsed = reportExportAuditSchema.safeParse(await readJson(request));
+  if (!parsed.success) return Response.json({ error: "Invalid report export." }, { status: 400 });
+  const permission = parsed.data.domain === "scholarship" ? "scholarship.read" : "sponsorship.read";
+  if (!hasPermission(context, permission)) return forbidden();
+  const runtime = getRuntimeEnv();
+  await auditInsert(
+    runtime.ORM,
+    context,
+    "report.exported",
+    "report",
+    `${parsed.data.domain}:${parsed.data.report}`,
+    parsed.data,
+  );
+  return Response.json({ ok: true }, { status: 201 });
 }
 
 async function handleOrganizationRequest(request: Request): Promise<Response> {
@@ -11138,8 +10983,8 @@ async function createOrganizationInvitation(request: Request): Promise<Response>
   ]);
 
   const invitationUrl = new URL(request.url);
-  invitationUrl.pathname = "/";
-  invitationUrl.search = new URLSearchParams({ invite: token }).toString();
+  invitationUrl.pathname = `/invite/${token}`;
+  invitationUrl.search = "";
 
   const delivery = await deliverOrganizationInvitation(
     runtime,
@@ -11163,8 +11008,19 @@ async function previewInvitation(request: Request): Promise<Response> {
   if (!token) return Response.json({ error: "Invitation not found" }, { status: 404 });
 
   const invitation = await findInvitation(getRuntimeEnv().ORM, token);
-  if (!invitation)
-    return Response.json({ error: "This invitation is invalid or expired." }, { status: 404 });
+  if (!invitation) {
+    const code = await getInvitationFailure(getRuntimeEnv().ORM, token);
+    const messages = {
+      expired: "This invitation has expired.",
+      revoked: "This invitation was revoked.",
+      used: "This invitation has already been accepted.",
+      invalid: "This invitation link is invalid.",
+    } as const;
+    return Response.json(
+      { code, error: messages[code] },
+      { status: code === "invalid" ? 404 : 410 },
+    );
+  }
 
   return Response.json({
     organizationName: invitation.organizationName,
@@ -11185,9 +11041,22 @@ async function acceptInvitationForCurrentUser(request: Request): Promise<Respons
   if (!parsed.success) return Response.json({ error: "Invalid invitation" }, { status: 400 });
 
   const runtime = getRuntimeEnv();
-  const invitation = await findInvitation(runtime.ORM, parsed.data.token, session.user.email);
+  const invitation = await findInvitation(runtime.ORM, parsed.data.token);
   if (!invitation) {
-    return Response.json({ error: "This invitation is invalid or expired." }, { status: 404 });
+    const code = await getInvitationFailure(runtime.ORM, parsed.data.token);
+    return Response.json(
+      { code, error: "This invitation is no longer available." },
+      { status: 410 },
+    );
+  }
+  if (invitation.email !== session.user.email.trim().toLowerCase()) {
+    return Response.json(
+      {
+        code: "wrong_account",
+        error: `Sign in as ${invitation.email} to accept this invitation.`,
+      },
+      { status: 409 },
+    );
   }
 
   await acceptInvitation(runtime.ORM, invitation, session.user.id);
@@ -11402,8 +11271,8 @@ async function resendOrganizationInvitation(
     .where(eq(organizationInvitation.id, invitation.id));
 
   const invitationUrl = new URL(request.url);
-  invitationUrl.pathname = "/";
-  invitationUrl.search = new URLSearchParams({ invite: token }).toString();
+  invitationUrl.pathname = `/invite/${token}`;
+  invitationUrl.search = "";
   const delivery = await deliverOrganizationInvitation(
     runtime,
     context,
@@ -11634,6 +11503,29 @@ async function findInvitation(
     expiresAt: invitation.expiresAt,
     roleNames: roles.map((role) => role.name),
   };
+}
+
+async function getInvitationFailure(
+  database: Database,
+  token: string,
+): Promise<"expired" | "revoked" | "used" | "invalid"> {
+  if (token.length < 32 || token.length > 256) return "invalid";
+  const tokenHash = await hashInvitationToken(token);
+  const row = await database
+    .select({
+      acceptedAt: organizationInvitation.acceptedAt,
+      revokedAt: organizationInvitation.revokedAt,
+      expiresAt: organizationInvitation.expiresAt,
+    })
+    .from(organizationInvitation)
+    .where(eq(organizationInvitation.tokenHash, tokenHash))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!row) return "invalid";
+  if (row.revokedAt) return "revoked";
+  if (row.acceptedAt) return "used";
+  if (new Date(row.expiresAt).getTime() <= Date.now()) return "expired";
+  return "invalid";
 }
 
 async function acceptInvitation(
