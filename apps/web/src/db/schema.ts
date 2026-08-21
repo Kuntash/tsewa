@@ -114,6 +114,7 @@ export const organization = sqliteTable("organization", {
   id: text().primaryKey().notNull(),
   name: text().notNull(),
   slug: text().notNull(),
+  displayTitle: text("display_title"),
   logoAssetKey: text("logo_asset_key"),
   timezone: text().default("Asia/Kolkata").notNull(),
   locale: text().default("en-IN").notNull(),

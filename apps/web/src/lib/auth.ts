@@ -5,15 +5,24 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { createDatabase } from "@/db/client";
 
 type AuthOptions = {
+  appName?: string;
   database: D1Database;
   secret: string;
   baseURL: string;
   allowSignUp: boolean;
+  sendPasswordReset: (input: { email: string; name: string; url: string }) => Promise<void>;
 };
 
-export function createAuth({ database, secret, baseURL, allowSignUp }: AuthOptions) {
+export function createAuth({
+  appName = "Tsewa",
+  database,
+  secret,
+  baseURL,
+  allowSignUp,
+  sendPasswordReset,
+}: AuthOptions) {
   return betterAuth({
-    appName: "Tsewa",
+    appName,
     database: drizzleAdapter(createDatabase(database), { provider: "sqlite" }),
     secret,
     baseURL,
@@ -22,6 +31,10 @@ export function createAuth({ database, secret, baseURL, allowSignUp }: AuthOptio
       enabled: true,
       disableSignUp: !allowSignUp,
       minPasswordLength: 10,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendPasswordReset({ email: user.email, name: user.name, url });
+      },
     },
     session: {
       expiresIn: 60 * 60 * 24 * 7,

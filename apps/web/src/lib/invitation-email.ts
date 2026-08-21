@@ -19,7 +19,7 @@ export async function sendInvitationEmail(
   const copy = buildInvitationEmail(input);
   const result = await runtime.EMAIL.send({
     to: input.recipient,
-    from: { name: runtime.APP_NAME, email: runtime.INVITATION_FROM_EMAIL },
+    from: { name: runtime.APP_NAME, email: runtime.TRANSACTIONAL_FROM_EMAIL },
     replyTo: input.inviterEmail,
     subject: `${input.inviterName} invited you to ${input.organizationName}`,
     html: copy.html,

@@ -11,15 +11,19 @@ import {
   GraduationCap,
   HeartHandshake,
   HeartPulse,
+  History,
+  LayoutDashboard,
   LoaderCircle,
   LockKeyhole,
   MailPlus,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   UserCog,
   Users,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -59,6 +63,10 @@ type PlatformState = {
   organizations: Array<{
     id: string;
     name: string;
+    displayTitle: string | null;
+    logoAssetKey: string | null;
+    logoUrl: string | null;
+    updatedAt: string;
     group: "owner" | "admin" | "staff" | "viewer";
     defaultSessionId: string | null;
   }>;
@@ -89,6 +97,10 @@ type OrganizationState = {
     id: string;
     name: string;
     slug: string;
+    displayTitle: string | null;
+    logoAssetKey: string | null;
+    logoUrl: string | null;
+    updatedAt: string;
     timezone: string;
     locale: string;
   };
@@ -136,16 +148,89 @@ type OrganizationState = {
   };
 };
 
-export const Route = createFileRoute("/")({ component: Home });
+type AppView =
+  | "dashboard"
+  | "people"
+  | "school"
+  | "health"
+  | "scholarship"
+  | "sponsorship"
+  | "settings";
+type SettingsTab = "general" | "sessions" | "members" | "roles" | "security" | "audit";
+type AppSearch = {
+  view?: AppView;
+  settingsTab?: SettingsTab;
+  auditQ?: string;
+  auditAction?: string;
+  auditPage?: number;
+  invite?: string;
+};
+
+type DashboardModule = {
+  Icon: LucideIcon;
+  title: string;
+  description: string;
+  view: AppView;
+  open: boolean;
+};
+
+type DashboardState = {
+  session: AcademicSession;
+  metrics: Record<
+    "people" | "school" | "scholarships" | "sponsorships" | "health",
+    { value: number; total: number } | null
+  >;
+  activity: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string | null;
+    occurredAt: string;
+    actorName: string | null;
+  }>;
+};
+
+const appViews = new Set<AppView>([
+  "dashboard",
+  "people",
+  "school",
+  "health",
+  "scholarship",
+  "sponsorship",
+  "settings",
+]);
+const settingsTabs = new Set<SettingsTab>([
+  "general",
+  "sessions",
+  "members",
+  "roles",
+  "security",
+  "audit",
+]);
+
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): AppSearch => ({
+    view: appViews.has(search.view as AppView) ? (search.view as AppView) : undefined,
+    settingsTab: settingsTabs.has(search.settingsTab as SettingsTab)
+      ? (search.settingsTab as SettingsTab)
+      : undefined,
+    auditQ: typeof search.auditQ === "string" ? search.auditQ.slice(0, 100) : undefined,
+    auditAction:
+      typeof search.auditAction === "string" ? search.auditAction.slice(0, 120) : undefined,
+    auditPage:
+      typeof search.auditPage === "number" && Number.isInteger(search.auditPage)
+        ? Math.max(1, search.auditPage)
+        : undefined,
+    invite: typeof search.invite === "string" ? search.invite.slice(0, 256) : undefined,
+  }),
+  component: Home,
+});
 
 function Home() {
   const session = authClient.useSession();
+  const search = Route.useSearch();
   const [platform, setPlatform] = useState<PlatformState | null>(null);
-  const [inviteToken] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : (new URLSearchParams(window.location.search).get("invite") ?? ""),
-  );
+  const inviteToken = search.invite ?? "";
 
   useEffect(() => {
     void Promise.all([
@@ -185,7 +270,7 @@ function Home() {
 
 function AccessScreen({ platform, inviteToken }: { platform: PlatformState; inviteToken: string }) {
   const isInvitation = Boolean(inviteToken && platform.invitation);
-  const [mode, setMode] = useState<"sign-in" | "setup">(
+  const [mode, setMode] = useState<"sign-in" | "setup" | "recovery">(
     platform.needsSetup || isInvitation ? "setup" : "sign-in",
   );
   const [name, setName] = useState("");
@@ -193,6 +278,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
   const [password, setPassword] = useState("");
   const [academicSessionId, setAcademicSessionId] = useState(platform.sessions[0]?.id ?? "");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const selectedSession = useMemo(
@@ -250,6 +336,24 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
     window.location.reload();
   }
 
+  async function requestRecovery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    setSubmitting(true);
+    const response = await fetch("/api/auth/request-password-reset", {
+      body: JSON.stringify({ email, redirectTo: "/reset-password" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    setSubmitting(false);
+    if (!response.ok) {
+      setError("We could not send a recovery email. Please try again.");
+      return;
+    }
+    setNotice("If that email belongs to an account, a private reset link is on its way.");
+  }
+
   return (
     <main className="relative grid min-h-svh w-full max-w-none place-items-center overflow-hidden bg-background px-5 py-10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,color-mix(in_oklch,var(--primary)_11%,transparent),transparent_34%),radial-gradient(circle_at_85%_85%,color-mix(in_oklch,var(--primary)_7%,transparent),transparent_36%)]" />
@@ -302,18 +406,22 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                     : "Sign in to accept"
                   : mode === "setup"
                     ? "Create the first owner"
-                    : "Welcome back"}
+                    : mode === "recovery"
+                      ? "Reset your password"
+                      : "Welcome back"}
               </CardTitle>
               <CardDescription className="leading-6">
                 {isInvitation
                   ? `You have been invited as ${platform.invitation?.group}. Use ${platform.invitation?.email}.`
                   : mode === "setup"
                     ? "Create your organization and its first owner account."
-                    : "Sign in to your organization."}
+                    : mode === "recovery"
+                      ? "We will email a private reset link if the account exists."
+                      : "Sign in to your organization."}
               </CardDescription>
             </CardHeader>
             <CardContent className="px-7 pb-7">
-              <form className="space-y-5" onSubmit={submit}>
+              <form className="space-y-5" onSubmit={mode === "recovery" ? requestRecovery : submit}>
                 {mode === "setup" ? (
                   <div className="space-y-2">
                     <Label htmlFor="name">Your name</Label>
@@ -340,19 +448,21 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                     value={email}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    autoComplete={mode === "setup" ? "new-password" : "current-password"}
-                    id="password"
-                    minLength={10}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="At least 10 characters"
-                    required
-                    type="password"
-                    value={password}
-                  />
-                </div>
+                {mode !== "recovery" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      autoComplete={mode === "setup" ? "new-password" : "current-password"}
+                      id="password"
+                      minLength={10}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="At least 10 characters"
+                      required
+                      type="password"
+                      value={password}
+                    />
+                  </div>
+                ) : null}
                 {mode === "sign-in" && platform.sessions.length ? (
                   <div className="space-y-2">
                     <Label htmlFor="academic-session">Academic session</Label>
@@ -384,16 +494,51 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                     {error}
                   </p>
                 ) : null}
+                {notice ? (
+                  <p className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground">
+                    {notice}
+                  </p>
+                ) : null}
                 <Button
                   className="h-11 w-full rounded-full text-sm"
                   disabled={submitting}
                   type="submit"
                 >
                   {submitting ? <LoaderCircle className="animate-spin" /> : null}
-                  {mode === "setup" ? "Create account" : "Sign in"}
+                  {mode === "setup"
+                    ? "Create account"
+                    : mode === "recovery"
+                      ? "Send reset link"
+                      : "Sign in"}
                   {!submitting ? <ArrowRight /> : null}
                 </Button>
               </form>
+              {mode === "sign-in" && !isInvitation ? (
+                <button
+                  className="mt-5 w-full text-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  onClick={() => {
+                    setError("");
+                    setNotice("");
+                    setMode("recovery");
+                  }}
+                  type="button"
+                >
+                  Forgot your password?
+                </button>
+              ) : null}
+              {mode === "recovery" ? (
+                <button
+                  className="mt-5 w-full text-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  onClick={() => {
+                    setError("");
+                    setNotice("");
+                    setMode("sign-in");
+                  }}
+                  type="button"
+                >
+                  Return to sign in
+                </button>
+              ) : null}
               {platform.needsSetup || isInvitation ? (
                 <button
                   className="mt-5 w-full text-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -418,14 +563,32 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
   );
 }
 
-function Brand({ organizationName = "Tibetan Homes Foundation" }: { organizationName?: string }) {
+function Brand({
+  organizationName = "Tibetan Homes Foundation",
+  organizationTitle,
+  logoUrl,
+}: {
+  organizationName?: string;
+  organizationTitle?: string | null;
+  logoUrl?: string | null;
+}) {
   return (
     <div className="flex items-center gap-3">
-      <div className="grid size-10 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
-        TS
-      </div>
+      {logoUrl ? (
+        <img
+          alt=""
+          className="size-10 rounded-xl border bg-white object-contain p-1 shadow-sm"
+          src={logoUrl}
+        />
+      ) : (
+        <div className="grid size-10 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
+          TS
+        </div>
+      )}
       <div>
-        <div className="text-sm font-semibold tracking-tight text-foreground">Tsewa</div>
+        <div className="text-sm font-semibold tracking-tight text-foreground">
+          {organizationTitle || "Tsewa"}
+        </div>
         <div className="text-xs text-muted-foreground">{organizationName}</div>
       </div>
     </div>
@@ -439,77 +602,93 @@ function Launchpad({
   platform: PlatformState;
   user: { name: string; email: string; emailVerified: boolean };
 }) {
-  const [view, setView] = useState<
-    "home" | "people" | "school" | "health" | "scholarship" | "sponsorship"
-  >("home");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const view = search.view ?? "dashboard";
+  const settingsTab = search.settingsTab ?? "general";
   const [activeSessionId, setActiveSessionId] = useState(
     platform.activeSessionId ?? platform.sessions[0]?.id ?? "",
   );
   const activeOrganization = platform.organizations.find(
     (organization) => organization.id === platform.activeOrganizationId,
   );
-  const modules = [
+  function openView(nextView: AppView, tab?: SettingsTab) {
+    void navigate({
+      search: (current) => ({
+        invite: current.invite,
+        view: nextView === "dashboard" ? undefined : nextView,
+        settingsTab: nextView === "settings" ? (tab ?? "general") : undefined,
+      }),
+    });
+  }
+  const modules: DashboardModule[] = [
     {
       Icon: Users,
       title: "People",
       description: "Personal details, family, placement, and documents",
-      view: "people",
+      view: "people" as const,
       open: true,
     },
     {
       Icon: GraduationCap,
       title: "School",
       description: "Students, classes, marks, and results",
-      view: "school",
+      view: "school" as const,
       open: true,
     },
     {
       Icon: HeartPulse,
       title: "Health",
       description: "Visits, treatment, and health history",
-      view: "health",
+      view: "health" as const,
       open: true,
     },
     {
       Icon: Award,
       title: "Scholarships",
       description: "Awards, progress, sanctions, advances, and reports",
-      view: "scholarship",
+      view: "scholarship" as const,
       open: true,
     },
     {
       Icon: HeartHandshake,
       title: "Sponsorship",
       description: "Sponsors, beneficiary links, remittances, correspondence, and visits",
-      view: "sponsorship",
+      view: "sponsorship" as const,
       open: true,
     },
     {
       Icon: FileText,
       title: "Reports and documents",
       description: "Documents and reports",
-      view: "home",
+      view: "dashboard" as const,
       open: false,
     },
-  ] as const;
+  ];
 
   if (view === "people") {
-    return <PeopleRegistry onBack={() => setView("home")} />;
+    return <PeopleRegistry onBack={() => openView("dashboard")} />;
   }
 
   if (view === "health") {
-    return <HealthOperations onBack={() => setView("home")} />;
+    return <HealthOperations onBack={() => openView("dashboard")} />;
   }
 
   if (view === "scholarship") {
     return (
-      <ScholarshipOperations activeSessionId={activeSessionId} onBack={() => setView("home")} />
+      <ScholarshipOperations
+        activeSessionId={activeSessionId}
+        onBack={() => openView("dashboard")}
+      />
     );
   }
 
   if (view === "sponsorship") {
     return (
-      <SponsorshipOperations activeSessionId={activeSessionId} onBack={() => setView("home")} />
+      <SponsorshipOperations
+        activeSessionId={activeSessionId}
+        onBack={() => openView("dashboard")}
+      />
     );
   }
 
@@ -542,7 +721,7 @@ function Launchpad({
     return (
       <SchoolOperations
         activeSessionId={activeSessionId}
-        onBack={() => setView("home")}
+        onBack={() => openView("dashboard")}
         onSessionChange={changeSession}
         sessions={platform.sessions}
       />
@@ -552,7 +731,11 @@ function Launchpad({
   return (
     <main className="min-h-svh w-full max-w-none bg-muted/35">
       <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-background/95 px-5 backdrop-blur md:px-8">
-        <Brand organizationName={activeOrganization?.name} />
+        <Brand
+          logoUrl={activeOrganization?.logoUrl}
+          organizationName={activeOrganization?.name}
+          organizationTitle={activeOrganization?.displayTitle}
+        />
         <div className="ml-auto flex items-center gap-3">
           {platform.organizations.length > 1 ? (
             <Select
@@ -606,61 +789,339 @@ function Launchpad({
           </Button>
         </div>
       </header>
-      <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
-        <p className="text-sm font-medium text-primary">Home</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] md:text-4xl">
-          Welcome back, {user.name.split(" ")[0]}
-        </h1>
-        <p className="mt-3 text-muted-foreground">Choose an area to continue.</p>
-        <div className="mt-9 grid gap-4 md:grid-cols-2">
-          {modules.map(({ Icon, title, description, open, view }) => {
-            const card = (
-              <Card
-                className={
-                  open
-                    ? "h-full border-primary/25 transition-colors group-hover:border-primary/50"
-                    : "opacity-70"
-                }
-              >
-                <CardHeader className="flex-row items-start gap-4 text-left">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                    <Icon />
-                  </div>
-                  <div>
-                    <CardTitle>{title}</CardTitle>
-                    <CardDescription className="mt-1.5">{description}</CardDescription>
-                  </div>
-                  <Badge className="ml-auto rounded-full" variant={open ? "default" : "secondary"}>
-                    {open ? "Open" : "Planned"}
-                  </Badge>
-                </CardHeader>
-              </Card>
-            );
-
-            return open ? (
-              <button
-                className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                key={title}
-                onClick={() => setView(view)}
-                type="button"
-              >
-                {card}
-              </button>
-            ) : (
-              <div key={title}>{card}</div>
-            );
-          })}
-        </div>
-        <AccountSettings user={user} />
-        <AdministrationPanel />
+      <div className="border-b bg-background/70 px-5 md:px-8">
+        <nav
+          aria-label="Primary navigation"
+          className="mx-auto flex max-w-7xl gap-1 overflow-x-auto py-2"
+        >
+          <Button
+            onClick={() => openView("dashboard")}
+            size="sm"
+            variant={view === "dashboard" ? "secondary" : "ghost"}
+          >
+            <LayoutDashboard /> Dashboard
+          </Button>
+          {modules
+            .filter((module) => module.open)
+            .map(({ Icon, title, view: moduleView }) => (
+              <Button key={title} onClick={() => openView(moduleView)} size="sm" variant="ghost">
+                <Icon /> {title}
+              </Button>
+            ))}
+          <Button
+            className="ml-auto"
+            onClick={() => openView("settings", settingsTab)}
+            size="sm"
+            variant={view === "settings" ? "secondary" : "ghost"}
+          >
+            <Settings /> Settings
+          </Button>
+        </nav>
       </div>
+      {view === "settings" ? (
+        <SettingsWorkspace
+          activeTab={settingsTab}
+          onTabChange={(tab) => openView("settings", tab)}
+          user={user}
+        />
+      ) : (
+        <Dashboard
+          activeSessionId={activeSessionId}
+          modules={modules}
+          onOpen={openView}
+          userName={user.name}
+        />
+      )}
     </main>
   );
 }
 
-function AdministrationPanel() {
+function Dashboard({
+  activeSessionId,
+  modules,
+  onOpen,
+  userName,
+}: {
+  activeSessionId: string;
+  modules: DashboardModule[];
+  onOpen: (view: AppView, tab?: SettingsTab) => void;
+  userName: string;
+}) {
+  const [state, setState] = useState<DashboardState | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`/api/dashboard?sessionId=${encodeURIComponent(activeSessionId)}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => (response.ok ? ((await response.json()) as DashboardState) : null))
+      .then((next) => {
+        if (next) setState(next);
+      })
+      .catch((cause: unknown) => {
+        if ((cause as { name?: string }).name !== "AbortError") setState(null);
+      });
+    return () => controller.abort();
+  }, [activeSessionId]);
+
+  const metricCards = [
+    {
+      key: "people" as const,
+      label: "Active people",
+      detail: "across the organisation",
+      Icon: Users,
+      view: "people" as const,
+    },
+    {
+      key: "school" as const,
+      label: "Current students",
+      detail: state ? `in ${state.session.name}` : "in this session",
+      Icon: GraduationCap,
+      view: "school" as const,
+    },
+    {
+      key: "scholarships" as const,
+      label: "Active scholarships",
+      detail: "requiring ongoing oversight",
+      Icon: Award,
+      view: "scholarship" as const,
+    },
+    {
+      key: "sponsorships" as const,
+      label: "Sponsorship links",
+      detail: state ? `in ${state.session.name}` : "in this session",
+      Icon: HeartHandshake,
+      view: "sponsorship" as const,
+    },
+    {
+      key: "health" as const,
+      label: "Health visits",
+      detail: "during the last 30 days",
+      Icon: HeartPulse,
+      view: "health" as const,
+    },
+  ];
+
+  return (
+    <div className="mx-auto max-w-7xl px-5 py-9 md:px-8 md:py-12">
+      <div className="grid gap-7 lg:grid-cols-[1fr_340px] lg:items-end">
+        <div>
+          <p className="text-sm font-medium text-primary">Dashboard</p>
+          <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-[-0.045em] md:text-5xl">
+            Good to see you, {userName.split(" ")[0]}.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+            A live view of the people and programmes your organisation is responsible for.
+          </p>
+        </div>
+        <Card className="border-primary/20 bg-primary text-primary-foreground shadow-none">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">
+              Academic session
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
+              {state?.session.name ?? "Loading…"}
+            </p>
+            {state ? (
+              <p className="mt-1 text-sm opacity-75">
+                {formatShortDate(state.session.startsOn)} – {formatShortDate(state.session.endsOn)}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+
+      <section className="mt-9" aria-labelledby="dashboard-overview">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              At a glance
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em]" id="dashboard-overview">
+              Organisation overview
+            </h2>
+          </div>
+          <button
+            className="text-sm font-medium text-primary hover:underline"
+            onClick={() => onOpen("settings", "audit")}
+            type="button"
+          >
+            View audit trail
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {metricCards.map(({ key, label, detail, Icon, view }) => {
+            const metric = state?.metrics[key];
+            if (state && !metric) return null;
+            return (
+              <button
+                className="group rounded-2xl border bg-card p-4 text-left shadow-xs transition-[border-color,transform] hover:-translate-y-0.5 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                key={key}
+                onClick={() => onOpen(view)}
+                type="button"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="size-4.5" />
+                  </div>
+                  <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <p className="mt-5 text-3xl font-semibold tracking-[-0.04em]">
+                  {metric ? metric.value.toLocaleString() : "—"}
+                </p>
+                <p className="mt-1 text-sm font-medium">{label}</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_0.7fr]">
+        <section>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Work areas
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {modules
+              .filter((module) => module.open)
+              .map(({ Icon, title, description, view }) => (
+                <button
+                  className="group rounded-2xl border bg-card p-4 text-left transition-colors hover:border-primary/40"
+                  key={title}
+                  onClick={() => onOpen(view)}
+                  type="button"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-10 place-items-center rounded-xl bg-muted text-primary">
+                      <Icon className="size-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">{title}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
+                    </div>
+                    <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                </button>
+              ))}
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Recent activity
+            </p>
+            <History className="size-4 text-muted-foreground" />
+          </div>
+          <Card className="mt-3">
+            <CardContent className="divide-y p-0">
+              {state?.activity.length ? (
+                state.activity.slice(0, 6).map((event) => (
+                  <div className="flex gap-3 px-4 py-3.5" key={event.id}>
+                    <div className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {formatAuditAction(event.action)}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {event.actorName ?? "System"} · {formatDateTime(event.occurredAt)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  {state ? "No audit activity is available." : "Loading activity…"}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SettingsWorkspace({
+  activeTab,
+  onTabChange,
+  user,
+}: {
+  activeTab: SettingsTab;
+  onTabChange: (tab: SettingsTab) => void;
+  user: { name: string; email: string; emailVerified: boolean };
+}) {
+  const tabs: Array<{ key: SettingsTab; label: string; description: string; Icon: LucideIcon }> = [
+    { key: "general", label: "General", description: "Organisation profile", Icon: Building2 },
+    {
+      key: "sessions",
+      label: "Academic years",
+      description: "Sessions and dates",
+      Icon: CalendarDays,
+    },
+    { key: "members", label: "Members", description: "People and invitations", Icon: Users },
+    { key: "roles", label: "Roles", description: "Access control", Icon: ShieldCheck },
+    { key: "security", label: "Security", description: "Account and password", Icon: LockKeyhole },
+    { key: "audit", label: "Audit", description: "Activity and policy", Icon: History },
+  ];
+
+  return (
+    <div className="mx-auto grid max-w-7xl gap-8 px-5 py-9 md:px-8 md:py-12 lg:grid-cols-[240px_1fr]">
+      <aside>
+        <p className="text-sm font-medium text-primary">Settings</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em]">Organisation</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Identity, access, member accounts, and oversight.
+        </p>
+        <nav aria-label="Settings" className="mt-6 space-y-1">
+          {tabs.map(({ key, label, description, Icon }) => (
+            <button
+              aria-current={activeTab === key ? "page" : undefined}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                activeTab === key ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              }`}
+              key={key}
+              onClick={() => onTabChange(key)}
+              type="button"
+            >
+              <Icon className="size-4.5 shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{label}</span>
+                <span
+                  className={`block truncate text-xs ${
+                    activeTab === key ? "text-primary-foreground/70" : "text-muted-foreground"
+                  }`}
+                >
+                  {description}
+                </span>
+              </span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+      <div className="min-w-0">
+        {activeTab === "security" ? (
+          <AccountSettings user={user} />
+        ) : activeTab === "sessions" ? (
+          <AcademicSessionSettings />
+        ) : (
+          <AdministrationPanel activeTab={activeTab} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdministrationPanel({
+  activeTab,
+}: {
+  activeTab: Exclude<SettingsTab, "security" | "sessions">;
+}) {
   const [state, setState] = useState<OrganizationState | null>(null);
   const [name, setName] = useState("");
+  const [displayTitle, setDisplayTitle] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [timezone, setTimezone] = useState("");
   const [locale, setLocale] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -678,6 +1139,8 @@ function AdministrationPanel() {
     const next = (await response.json()) as OrganizationState;
     setState(next);
     setName(next.organization.name);
+    setDisplayTitle(next.organization.displayTitle ?? "");
+    setLogoUrl(next.organization.logoUrl);
     setTimezone(next.organization.timezone);
     setLocale(next.organization.locale);
   }
@@ -698,12 +1161,40 @@ function AdministrationPanel() {
     const response = await fetch("/api/organization", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, timezone, locale }),
+      body: JSON.stringify({ name, displayTitle: displayTitle || null, timezone, locale }),
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) setError(payload.error ?? "Settings could not be saved.");
     else {
       setMessage("Organization settings saved.");
+      await refresh();
+    }
+    setBusy("");
+  }
+
+  async function uploadLogo(file: File) {
+    startRequest("logo");
+    const form = new FormData();
+    form.set("file", file);
+    const response = await fetch("/api/organization/logo", { method: "POST", body: form });
+    const payload = (await response.json()) as { error?: string; logoUrl?: string };
+    if (!response.ok) setError(payload.error ?? "The logo could not be uploaded.");
+    else {
+      setLogoUrl(payload.logoUrl ?? null);
+      setMessage("Organisation logo updated.");
+      await refresh();
+    }
+    setBusy("");
+  }
+
+  async function removeLogo() {
+    startRequest("logo-remove");
+    const response = await fetch("/api/organization/logo", { method: "DELETE" });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) setError(payload.error ?? "The logo could not be removed.");
+    else {
+      setLogoUrl(null);
+      setMessage("Organisation logo removed.");
       await refresh();
     }
     setBusy("");
@@ -950,17 +1441,35 @@ function AdministrationPanel() {
   const canManageRoles = state.currentMember.permissions.includes("organization.roles.manage");
   const isOwner = state.currentMember.group === "owner";
 
+  if (activeTab === "audit") {
+    return <AuditSettings canRead={state.currentMember.permissions.includes("audit.read")} />;
+  }
+
+  const sectionCopy = {
+    general: {
+      eyebrow: "General",
+      title: "Organisation profile",
+      description: "Control the identity and regional defaults shown throughout Tsewa.",
+    },
+    members: {
+      eyebrow: "Members",
+      title: "People and invitations",
+      description: "Manage who can sign in and which access group they belong to.",
+    },
+    roles: {
+      eyebrow: "Roles",
+      title: "Access control",
+      description: "Define the functional roles granted to each organisation access group.",
+    },
+  }[activeTab];
+
   return (
-    <section className="mt-12" id="administration">
+    <section id="administration">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-primary">Administration</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">
-            Organization and access
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Update organization details and manage who can sign in.
-          </p>
+          <p className="text-sm font-medium text-primary">{sectionCopy.eyebrow}</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">{sectionCopy.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{sectionCopy.description}</p>
         </div>
         <Badge className="w-fit gap-1.5 rounded-full" variant="outline">
           {isOwner ? <Crown className="size-3.5" /> : <UserCog className="size-3.5" />}
@@ -979,285 +1488,767 @@ function AdministrationPanel() {
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[0.92fr_1.35fr]">
+      <div className="mt-6 grid gap-5">
+        {activeTab === "general" ? (
+          <Card>
+            <CardHeader>
+              <div className="mb-2 grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
+                <Building2 className="size-5" />
+              </div>
+              <CardTitle>Organisation profile</CardTitle>
+              <CardDescription>These details are shown throughout Tsewa.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-5" onSubmit={saveSettings}>
+                <div className="flex flex-col gap-4 rounded-2xl border bg-muted/20 p-4 sm:flex-row sm:items-center">
+                  {logoUrl ? (
+                    <img
+                      alt="Organisation logo"
+                      className="size-20 rounded-2xl border bg-white object-contain p-2"
+                      src={logoUrl}
+                    />
+                  ) : (
+                    <div className="grid size-20 place-items-center rounded-2xl border border-dashed bg-background text-2xl font-semibold text-muted-foreground">
+                      {initials(name || "Organisation")}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Logo</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      JPEG, PNG, or WebP. Keep the file under 2 MB.
+                    </p>
+                    {canManageSettings ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button asChild disabled={busy === "logo"} size="sm" variant="secondary">
+                          <label>
+                            {busy === "logo" ? (
+                              <LoaderCircle className="animate-spin" />
+                            ) : (
+                              <Building2 />
+                            )}
+                            {logoUrl ? "Replace logo" : "Upload logo"}
+                            <input
+                              accept="image/jpeg,image/png,image/webp"
+                              className="sr-only"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) void uploadLogo(file);
+                                event.target.value = "";
+                              }}
+                              type="file"
+                            />
+                          </label>
+                        </Button>
+                        {logoUrl ? (
+                          <Button
+                            disabled={busy === "logo-remove"}
+                            onClick={() => void removeLogo()}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <X /> Remove
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="organization-name">Organisation name</Label>
+                  <Input
+                    disabled={!canManageSettings}
+                    id="organization-name"
+                    onChange={(event) => setName(event.target.value)}
+                    value={name}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="organization-title">Application title</Label>
+                  <Input
+                    disabled={!canManageSettings}
+                    id="organization-title"
+                    maxLength={120}
+                    onChange={(event) => setDisplayTitle(event.target.value)}
+                    placeholder="Tsewa"
+                    value={displayTitle}
+                  />
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Shown beside your logo. Leave blank to use Tsewa.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="organization-timezone">Timezone</Label>
+                    <Input
+                      disabled={!canManageSettings}
+                      id="organization-timezone"
+                      onChange={(event) => setTimezone(event.target.value)}
+                      value={timezone}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="organization-locale">Locale</Label>
+                    <Input
+                      disabled={!canManageSettings}
+                      id="organization-locale"
+                      onChange={(event) => setLocale(event.target.value)}
+                      value={locale}
+                    />
+                  </div>
+                </div>
+                <Button disabled={!canManageSettings || busy === "settings"} type="submit">
+                  {busy === "settings" ? <LoaderCircle className="animate-spin" /> : <Settings />}
+                  Save settings
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {activeTab === "members" ? (
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle>Members</CardTitle>
+                  <CardDescription className="mt-1.5">
+                    {state.members.length} active{" "}
+                    {state.members.length === 1 ? "member" : "members"}
+                  </CardDescription>
+                </div>
+                <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
+                  <Users className="size-5" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {state.members.map((member) => {
+                const isCurrent = member.id === state.currentMember.id;
+                return (
+                  <div
+                    className="flex flex-col gap-3 rounded-2xl border bg-muted/25 p-4 sm:flex-row sm:items-center"
+                    key={member.id}
+                  >
+                    <div className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
+                      {initials(member.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{member.name}</p>
+                        {isCurrent ? <Badge variant="secondary">You</Badge> : null}
+                        {member.group === "owner" ? (
+                          <Badge className="gap-1 rounded-full">
+                            <Crown className="size-3" /> Owner
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{member.email}</p>
+                    </div>
+                    {!isCurrent && canManageMembers && member.group !== "owner" ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                          disabled={pendingMemberGroups.has(member.id)}
+                          onValueChange={(value) =>
+                            void changeGroup(member.id, value as "admin" | "staff" | "viewer")
+                          }
+                          value={member.group}
+                        >
+                          <SelectTrigger className="h-9 w-28 rounded-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="staff">Staff</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          disabled={busy === `transfer-${member.id}`}
+                          onClick={() => void transferOwnership(member.id, member.name)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Crown /> Transfer
+                        </Button>
+                      </div>
+                    ) : member.group !== "owner" ? (
+                      <Badge className="w-fit rounded-full" variant="outline">
+                        {groupLabel(member.group)}
+                      </Badge>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              {canManageMembers ? (
+                <form className="mt-5 rounded-2xl border border-dashed p-4" onSubmit={inviteMember}>
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <MailPlus className="size-4 text-primary" /> Invite a member
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Tsewa emails a private seven-day link and records the delivery result.
+                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
+                    <Input
+                      aria-label="Invitee email"
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="person@example.org"
+                      required
+                      type="email"
+                      value={inviteEmail}
+                    />
+                    <Select
+                      onValueChange={(value) => setInviteGroup(value as typeof inviteGroup)}
+                      value={inviteGroup}
+                    >
+                      <SelectTrigger className="w-full rounded-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button disabled={busy === "invite"} type="submit">
+                      {busy === "invite" ? <LoaderCircle className="animate-spin" /> : <MailPlus />}
+                      Invite
+                    </Button>
+                  </div>
+                  {invitationUrl ? (
+                    <div className="mt-3 flex gap-2 rounded-xl bg-muted p-2 pl-3">
+                      <p className="min-w-0 flex-1 self-center truncate font-mono text-xs text-muted-foreground">
+                        {invitationUrl}
+                      </p>
+                      <Button
+                        onClick={() => {
+                          void navigator.clipboard.writeText(invitationUrl);
+                          setMessage("Invitation link copied.");
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="secondary"
+                      >
+                        <Copy /> Copy
+                      </Button>
+                    </div>
+                  ) : null}
+                </form>
+              ) : null}
+
+              {state.invitations.length ? (
+                <div className="pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Pending invitations
+                  </p>
+                  {state.invitations.map((invitation) => (
+                    <div className="flex items-center gap-3 border-t py-3" key={invitation.id}>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{invitation.email}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {groupLabel(invitation.group)} ·{" "}
+                          {invitation.emailStatus === "sent"
+                            ? "emailed"
+                            : invitation.emailStatus === "failed"
+                              ? "email failed"
+                              : "not emailed"}{" "}
+                          · expires {formatShortDate(invitation.expiresAt)}
+                        </p>
+                      </div>
+                      {canManageMembers ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            disabled={busy === `resend-${invitation.id}`}
+                            onClick={() => void resendInvitation(invitation.id)}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            Resend
+                          </Button>
+                          <Button
+                            aria-label={`Revoke invitation for ${invitation.email}`}
+                            disabled={busy === invitation.id}
+                            onClick={() => void revokeInvitation(invitation.id)}
+                            size="icon-sm"
+                            variant="ghost"
+                          >
+                            <X />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
+
+      {activeTab === "roles" ? (
+        <Card className="mt-5">
+          <CardHeader>
+            <CardTitle>Access groups and functional roles</CardTitle>
+            <CardDescription>
+              Every member belongs to one access group. A group receives explicit permissions
+              through its functional roles; owner always retains every role.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-3">
+            {state.accessModel.groups
+              .filter((group) => group.key !== "owner")
+              .map((group) => (
+                <div className="rounded-2xl border bg-muted/20 p-4" key={group.id}>
+                  <div>
+                    <p className="font-semibold">{group.name}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {group.description}
+                    </p>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {state.accessModel.roles.map((role) => {
+                      const selected = group.roleKeys.includes(role.key);
+                      const nextRoles = selected
+                        ? group.roleKeys.filter((roleKey) => roleKey !== role.key)
+                        : [...group.roleKeys, role.key];
+                      return (
+                        <button
+                          aria-pressed={selected}
+                          className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                            selected
+                              ? "border-primary/30 bg-primary/8"
+                              : "border-border bg-background hover:bg-muted"
+                          }`}
+                          disabled={!canManageRoles || pendingAccessGroups.has(group.key)}
+                          key={role.id}
+                          onClick={() =>
+                            void saveGroupRoles(
+                              group.key as Exclude<AccessGroup, "owner">,
+                              nextRoles,
+                            )
+                          }
+                          type="button"
+                        >
+                          <span className="flex items-center justify-between gap-3 text-sm font-medium">
+                            {role.name}
+                            {selected ? <Check className="size-4 text-primary" /> : null}
+                          </span>
+                          <span className="mt-1 block text-xs leading-4 text-muted-foreground">
+                            {role.permissionKeys.length} explicit permissions
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      ) : null}
+    </section>
+  );
+}
+
+type SessionSettingsState = {
+  sessions: Array<AcademicSession & { isActive: boolean }>;
+  capabilities: { manage: boolean };
+};
+
+function AcademicSessionSettings() {
+  const [state, setState] = useState<SessionSettingsState | null>(null);
+  const [name, setName] = useState("");
+  const [startsOn, setStartsOn] = useState("");
+  const [endsOn, setEndsOn] = useState("");
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function refresh(resetDraft = false) {
+    const response = await fetch("/api/organization/sessions");
+    if (!response.ok) return;
+    const next = (await response.json()) as SessionSettingsState;
+    setState(next);
+    if (resetDraft || !name) {
+      const latestYear = next.sessions.reduce(
+        (maximum, session) => Math.max(maximum, Number(session.startsOn.slice(0, 4)) || 0),
+        new Date().getFullYear() - 1,
+      );
+      const nextYear = latestYear + 1;
+      setName(`${nextYear}–${String(nextYear + 1).slice(-2)}`);
+      setStartsOn(`${nextYear}-04-01`);
+      setEndsOn(`${nextYear + 1}-03-31`);
+    }
+  }
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  async function createSession(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy("create");
+    setMessage("");
+    setError("");
+    const response = await fetch("/api/organization/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, startsOn, endsOn, isActive: true }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) setError(payload.error ?? "The academic year could not be created.");
+    else {
+      setMessage(`${name} is ready to use.`);
+      await refresh(true);
+    }
+    setBusy("");
+  }
+
+  async function toggleSession(session: AcademicSession & { isActive: boolean }) {
+    setBusy(session.id);
+    setMessage("");
+    setError("");
+    const response = await fetch(`/api/organization/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: session.name,
+        startsOn: session.startsOn,
+        endsOn: session.endsOn,
+        isActive: !session.isActive,
+      }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) setError(payload.error ?? "The academic year could not be updated.");
+    else {
+      setMessage(`${session.name} ${session.isActive ? "archived" : "activated"}.`);
+      await refresh();
+    }
+    setBusy("");
+  }
+
+  return (
+    <section>
+      <p className="text-sm font-medium text-primary">Academic years</p>
+      <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">Sessions and dates</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Create the next session before enrolment and results work begins. Existing session data is
+        never copied or deleted automatically.
+      </p>
+
+      {message ? (
+        <div className="mt-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm text-primary">
+          <Check className="size-4" /> {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_0.8fr]">
         <Card>
           <CardHeader>
-            <div className="mb-2 grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
-              <Building2 className="size-5" />
+            <CardTitle>Academic year history</CardTitle>
+            <CardDescription>
+              Active years are available in the global session picker.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="divide-y p-0">
+            {state?.sessions.map((session) => (
+              <div
+                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"
+                key={session.id}
+              >
+                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <CalendarDays className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{session.name}</p>
+                    <Badge variant={session.isActive ? "default" : "secondary"}>
+                      {session.isActive ? "Active" : "Archived"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatShortDate(session.startsOn)} – {formatShortDate(session.endsOn)}
+                  </p>
+                </div>
+                {state.capabilities.manage ? (
+                  <Button
+                    disabled={busy === session.id}
+                    onClick={() => void toggleSession(session)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {busy === session.id ? <LoaderCircle className="animate-spin" /> : null}
+                    {session.isActive ? "Archive" : "Activate"}
+                  </Button>
+                ) : null}
+              </div>
+            )) ?? (
+              <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+                Loading academic years…
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="mb-2 grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <CalendarDays className="size-5" />
             </div>
-            <CardTitle>Organization profile</CardTitle>
-            <CardDescription>These details are shown throughout Tsewa.</CardDescription>
+            <CardTitle>Create the next year</CardTitle>
+            <CardDescription>
+              For example, create 2027–28 before 1 April 2027 and then select it from the header.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={saveSettings}>
+            <form className="space-y-4" onSubmit={createSession}>
               <div className="space-y-2">
-                <Label htmlFor="organization-name">Organization name</Label>
+                <Label htmlFor="session-name">Session name</Label>
                 <Input
-                  disabled={!canManageSettings}
-                  id="organization-name"
+                  disabled={!state?.capabilities.manage}
+                  id="session-name"
                   onChange={(event) => setName(event.target.value)}
+                  required
                   value={name}
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="organization-timezone">Timezone</Label>
+                  <Label htmlFor="session-start">Starts on</Label>
                   <Input
-                    disabled={!canManageSettings}
-                    id="organization-timezone"
-                    onChange={(event) => setTimezone(event.target.value)}
-                    value={timezone}
+                    disabled={!state?.capabilities.manage}
+                    id="session-start"
+                    onChange={(event) => setStartsOn(event.target.value)}
+                    required
+                    type="date"
+                    value={startsOn}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="organization-locale">Locale</Label>
+                  <Label htmlFor="session-end">Ends on</Label>
                   <Input
-                    disabled={!canManageSettings}
-                    id="organization-locale"
-                    onChange={(event) => setLocale(event.target.value)}
-                    value={locale}
+                    disabled={!state?.capabilities.manage}
+                    id="session-end"
+                    onChange={(event) => setEndsOn(event.target.value)}
+                    required
+                    type="date"
+                    value={endsOn}
                   />
                 </div>
               </div>
-              <Button disabled={!canManageSettings || busy === "settings"} type="submit">
-                {busy === "settings" ? <LoaderCircle className="animate-spin" /> : <Settings />}
-                Save settings
+              <Button disabled={!state?.capabilities.manage || busy === "create"} type="submit">
+                {busy === "create" ? <LoaderCircle className="animate-spin" /> : <CalendarDays />}
+                Create academic year
               </Button>
             </form>
           </CardContent>
         </Card>
+      </div>
+    </section>
+  );
+}
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle>Members</CardTitle>
-                <CardDescription className="mt-1.5">
-                  {state.members.length} active {state.members.length === 1 ? "member" : "members"}
-                </CardDescription>
-              </div>
-              <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
-                <Users className="size-5" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {state.members.map((member) => {
-              const isCurrent = member.id === state.currentMember.id;
-              return (
-                <div
-                  className="flex flex-col gap-3 rounded-2xl border bg-muted/25 p-4 sm:flex-row sm:items-center"
-                  key={member.id}
-                >
-                  <div className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
-                    {initials(member.name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold">{member.name}</p>
-                      {isCurrent ? <Badge variant="secondary">You</Badge> : null}
-                      {member.group === "owner" ? (
-                        <Badge className="gap-1 rounded-full">
-                          <Crown className="size-3" /> Owner
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{member.email}</p>
-                  </div>
-                  {!isCurrent && canManageMembers && member.group !== "owner" ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Select
-                        disabled={pendingMemberGroups.has(member.id)}
-                        onValueChange={(value) =>
-                          void changeGroup(member.id, value as "admin" | "staff" | "viewer")
-                        }
-                        value={member.group}
-                      >
-                        <SelectTrigger className="h-9 w-28 rounded-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="staff">Staff</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        disabled={busy === `transfer-${member.id}`}
-                        onClick={() => void transferOwnership(member.id, member.name)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Crown /> Transfer
-                      </Button>
-                    </div>
-                  ) : member.group !== "owner" ? (
-                    <Badge className="w-fit rounded-full" variant="outline">
-                      {groupLabel(member.group)}
-                    </Badge>
-                  ) : null}
-                </div>
-              );
-            })}
+type AuditState = {
+  events: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string | null;
+    metadataJson: string | null;
+    occurredAt: string;
+    actorName: string | null;
+    actorEmail: string | null;
+  }>;
+  actions: string[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+};
 
-            {canManageMembers ? (
-              <form className="mt-5 rounded-2xl border border-dashed p-4" onSubmit={inviteMember}>
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <MailPlus className="size-4 text-primary" /> Invite a member
-                </div>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Tsewa emails a private seven-day link and records the delivery result.
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-                  <Input
-                    aria-label="Invitee email"
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                    placeholder="person@example.org"
-                    required
-                    type="email"
-                    value={inviteEmail}
-                  />
-                  <Select
-                    onValueChange={(value) => setInviteGroup(value as typeof inviteGroup)}
-                    value={inviteGroup}
-                  >
-                    <SelectTrigger className="w-full rounded-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button disabled={busy === "invite"} type="submit">
-                    {busy === "invite" ? <LoaderCircle className="animate-spin" /> : <MailPlus />}
-                    Invite
-                  </Button>
-                </div>
-                {invitationUrl ? (
-                  <div className="mt-3 flex gap-2 rounded-xl bg-muted p-2 pl-3">
-                    <p className="min-w-0 flex-1 self-center truncate font-mono text-xs text-muted-foreground">
-                      {invitationUrl}
-                    </p>
-                    <Button
-                      onClick={() => {
-                        void navigator.clipboard.writeText(invitationUrl);
-                        setMessage("Invitation link copied.");
-                      }}
-                      size="sm"
-                      type="button"
-                      variant="secondary"
-                    >
-                      <Copy /> Copy
-                    </Button>
-                  </div>
-                ) : null}
-              </form>
-            ) : null}
+function AuditSettings({ canRead }: { canRead: boolean }) {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const query = search.auditQ ?? "";
+  const action = search.auditAction ?? "all";
+  const page = search.auditPage ?? 1;
+  const [state, setState] = useState<AuditState | null>(null);
+  const [error, setError] = useState("");
 
-            {state.invitations.length ? (
-              <div className="pt-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Pending invitations
-                </p>
-                {state.invitations.map((invitation) => (
-                  <div className="flex items-center gap-3 border-t py-3" key={invitation.id}>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{invitation.email}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {groupLabel(invitation.group)} ·{" "}
-                        {invitation.emailStatus === "sent"
-                          ? "emailed"
-                          : invitation.emailStatus === "failed"
-                            ? "email failed"
-                            : "not emailed"}{" "}
-                        · expires {formatShortDate(invitation.expiresAt)}
-                      </p>
-                    </div>
-                    {canManageMembers ? (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          disabled={busy === `resend-${invitation.id}`}
-                          onClick={() => void resendInvitation(invitation.id)}
-                          size="sm"
-                          variant="ghost"
-                        >
-                          Resend
-                        </Button>
-                        <Button
-                          aria-label={`Revoke invitation for ${invitation.email}`}
-                          disabled={busy === invitation.id}
-                          onClick={() => void revokeInvitation(invitation.id)}
-                          size="icon-sm"
-                          variant="ghost"
-                        >
-                          <X />
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+  useEffect(() => {
+    if (!canRead) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ q: query, action, page: String(page), pageSize: "25" });
+      void fetch(`/api/organization/audit?${params}`, { signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("The audit trail could not be loaded.");
+          return response.json() as Promise<AuditState>;
+        })
+        .then(setState)
+        .catch((cause: unknown) => {
+          if ((cause as { name?: string }).name !== "AbortError") {
+            setError(
+              cause instanceof Error ? cause.message : "The audit trail could not be loaded.",
+            );
+          }
+        });
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [action, canRead, page, query]);
+
+  function updateFilters(next: { q?: string; action?: string; page?: number }) {
+    void navigate({
+      replace: true,
+      search: (current) => ({
+        ...current,
+        view: "settings",
+        settingsTab: "audit",
+        auditQ: next.q ?? current.auditQ,
+        auditAction: next.action ?? current.auditAction,
+        auditPage: next.page ?? current.auditPage,
+      }),
+    });
+  }
+
+  if (!canRead) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <LockKeyhole className="mx-auto size-6 text-muted-foreground" />
+          <p className="mt-3 font-semibold">Audit access is restricted</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your role does not include permission to view organisation audit history.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <section>
+      <div>
+        <p className="text-sm font-medium text-primary">Audit</p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">Activity and policy</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Review material changes across the organisation. Audit recording cannot be disabled.
+        </p>
       </div>
 
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle>Access groups and functional roles</CardTitle>
-          <CardDescription>
-            Every member belongs to one access group. A group receives explicit permissions through
-            its functional roles; owner always retains every role.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-3">
-          {state.accessModel.groups
-            .filter((group) => group.key !== "owner")
-            .map((group) => (
-              <div className="rounded-2xl border bg-muted/20 p-4" key={group.id}>
-                <div>
-                  <p className="font-semibold">{group.name}</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {group.description}
-                  </p>
-                </div>
-                <div className="mt-4 space-y-2">
-                  {state.accessModel.roles.map((role) => {
-                    const selected = group.roleKeys.includes(role.key);
-                    const nextRoles = selected
-                      ? group.roleKeys.filter((roleKey) => roleKey !== role.key)
-                      : [...group.roleKeys, role.key];
-                    return (
-                      <button
-                        aria-pressed={selected}
-                        className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                          selected
-                            ? "border-primary/30 bg-primary/8"
-                            : "border-border bg-background hover:bg-muted"
-                        }`}
-                        disabled={!canManageRoles || pendingAccessGroups.has(group.key)}
-                        key={role.id}
-                        onClick={() =>
-                          void saveGroupRoles(group.key as Exclude<AccessGroup, "owner">, nextRoles)
-                        }
-                        type="button"
-                      >
-                        <span className="flex items-center justify-between gap-3 text-sm font-medium">
-                          {role.name}
-                          {selected ? <Check className="size-4 text-primary" /> : null}
-                        </span>
-                        <span className="mt-1 block text-xs leading-4 text-muted-foreground">
-                          {role.permissionKeys.length} explicit permissions
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+      <Card className="mt-6 border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <ShieldCheck className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">Mandatory audit policy</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Sign-in, membership, access, profile, and operational changes are recorded with an
+              actor and timestamp. Retention and export controls will be added only after the
+              organisation approves a formal policy.
+            </p>
+          </div>
+          <Badge className="w-fit rounded-full" variant="outline">
+            Always on
+          </Badge>
         </CardContent>
+      </Card>
+
+      <Card className="mt-5 overflow-hidden">
+        <div className="grid gap-3 border-b bg-muted/20 p-4 md:grid-cols-[1fr_240px]">
+          <div className="relative">
+            <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search audit activity"
+              className="pl-10"
+              onChange={(event) => updateFilters({ q: event.target.value, page: 1 })}
+              placeholder="Search action, record, or actor"
+              value={query}
+            />
+          </div>
+          <Select
+            onValueChange={(value) => updateFilters({ action: value, page: 1 })}
+            value={action}
+          >
+            <SelectTrigger className="w-full rounded-full">
+              <SelectValue placeholder="All actions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All actions</SelectItem>
+              {state?.actions.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {formatAuditAction(item)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {error ? (
+          <div className="m-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
+        <CardContent className="divide-y p-0">
+          {state?.events.length ? (
+            state.events.map((event) => (
+              <div className="grid gap-3 px-4 py-4 sm:grid-cols-[1fr_auto]" key={event.id}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{formatAuditAction(event.action)}</p>
+                    <Badge variant="outline">{event.entityType.replaceAll("_", " ")}</Badge>
+                  </div>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    {event.actorName ?? "System"}
+                    {event.actorEmail ? ` · ${event.actorEmail}` : ""}
+                  </p>
+                  {event.entityId ? (
+                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                      {event.entityId}
+                    </p>
+                  ) : null}
+                </div>
+                <time className="text-xs text-muted-foreground" dateTime={event.occurredAt}>
+                  {formatDateTime(event.occurredAt)}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+              {state ? "No audit activity matches these filters." : "Loading audit activity…"}
+            </div>
+          )}
+        </CardContent>
+        {state && state.pagination.totalPages > 1 ? (
+          <div className="flex items-center justify-between border-t px-4 py-3">
+            <p className="text-xs text-muted-foreground">
+              Page {state.pagination.page} of {state.pagination.totalPages} ·{" "}
+              {state.pagination.total.toLocaleString()} events
+            </p>
+            <div className="flex gap-2">
+              <Button
+                disabled={page <= 1}
+                onClick={() => updateFilters({ page: page - 1 })}
+                size="sm"
+                variant="outline"
+              >
+                Previous
+              </Button>
+              <Button
+                disabled={page >= state.pagination.totalPages}
+                onClick={() => updateFilters({ page: page + 1 })}
+                size="sm"
+                variant="outline"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Card>
     </section>
   );
@@ -1283,4 +2274,19 @@ function formatShortDate(value: string): string {
   return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" }).format(
     new Date(value),
   );
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatAuditAction(value: string): string {
+  const words = value.replaceAll(/[._]/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ApiDashboardRouteImport } from './routes/api.dashboard'
 import { Route as ApiOrganizationRouteImport } from './routes/api.organization'
 import { Route as ApiPeopleRouteImport } from './routes/api.people'
 import { Route as ApiPlatformRouteImport } from './routes/api.platform'
@@ -22,7 +24,10 @@ import { Route as ApiHealthHistoryRouteImport } from './routes/api.health.histor
 import { Route as ApiHealthTbRouteImport } from './routes/api.health.tb'
 import { Route as ApiInvitationsAcceptRouteImport } from './routes/api.invitations.accept'
 import { Route as ApiInvitationsPreviewRouteImport } from './routes/api.invitations.preview'
+import { Route as ApiOrganizationAuditRouteImport } from './routes/api.organization.audit'
 import { Route as ApiOrganizationInvitationsRouteImport } from './routes/api.organization.invitations'
+import { Route as ApiOrganizationLogoRouteImport } from './routes/api.organization.logo'
+import { Route as ApiOrganizationSessionsRouteImport } from './routes/api.organization.sessions'
 import { Route as ApiOrganizationTransferRouteImport } from './routes/api.organization.transfer'
 import { Route as ApiPeoplePersonIdRouteImport } from './routes/api.people.$personId'
 import { Route as ApiScholarshipsScholarshipIdRouteImport } from './routes/api.scholarships.$scholarshipId'
@@ -45,6 +50,7 @@ import { Route as ApiSponsorshipSetupRouteImport } from './routes/api.sponsorshi
 import { Route as ApiOrganizationGroupsGroupKeyRouteImport } from './routes/api.organization.groups.$groupKey'
 import { Route as ApiOrganizationInvitationsInvitationIdRouteImport } from './routes/api.organization.invitations.$invitationId'
 import { Route as ApiOrganizationMembersMemberIdRouteImport } from './routes/api.organization.members.$memberId'
+import { Route as ApiOrganizationSessionsSessionIdRouteImport } from './routes/api.organization.sessions.$sessionId'
 import { Route as ApiPeoplePersonIdFamilyRouteImport } from './routes/api.people.$personId.family'
 import { Route as ApiPeoplePersonIdFilesRouteImport } from './routes/api.people.$personId.files'
 import { Route as ApiPeoplePersonIdPlacementsRouteImport } from './routes/api.people.$personId.placements'
@@ -69,6 +75,16 @@ import { Route as ApiSchoolOperationsSchoolsSchoolIdAssignmentsRouteImport } fro
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDashboardRoute = ApiDashboardRouteImport.update({
+  id: '/api/dashboard',
+  path: '/api/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrganizationRoute = ApiOrganizationRouteImport.update({
@@ -131,12 +147,27 @@ const ApiInvitationsPreviewRoute = ApiInvitationsPreviewRouteImport.update({
   path: '/api/invitations/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrganizationAuditRoute = ApiOrganizationAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => ApiOrganizationRoute,
+} as any)
 const ApiOrganizationInvitationsRoute =
   ApiOrganizationInvitationsRouteImport.update({
     id: '/invitations',
     path: '/invitations',
     getParentRoute: () => ApiOrganizationRoute,
   } as any)
+const ApiOrganizationLogoRoute = ApiOrganizationLogoRouteImport.update({
+  id: '/logo',
+  path: '/logo',
+  getParentRoute: () => ApiOrganizationRoute,
+} as any)
+const ApiOrganizationSessionsRoute = ApiOrganizationSessionsRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
+  getParentRoute: () => ApiOrganizationRoute,
+} as any)
 const ApiOrganizationTransferRoute = ApiOrganizationTransferRouteImport.update({
   id: '/transfer',
   path: '/transfer',
@@ -263,6 +294,12 @@ const ApiOrganizationMembersMemberIdRoute =
     path: '/members/$memberId',
     getParentRoute: () => ApiOrganizationRoute,
   } as any)
+const ApiOrganizationSessionsSessionIdRoute =
+  ApiOrganizationSessionsSessionIdRouteImport.update({
+    id: '/$sessionId',
+    path: '/$sessionId',
+    getParentRoute: () => ApiOrganizationSessionsRoute,
+  } as any)
 const ApiPeoplePersonIdFamilyRoute = ApiPeoplePersonIdFamilyRouteImport.update({
   id: '/family',
   path: '/family',
@@ -384,6 +421,8 @@ const ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/api/dashboard': typeof ApiDashboardRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
@@ -396,7 +435,10 @@ export interface FileRoutesByFullPath {
   '/api/health/tb': typeof ApiHealthTbRoute
   '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
   '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
+  '/api/organization/audit': typeof ApiOrganizationAuditRoute
   '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
+  '/api/organization/logo': typeof ApiOrganizationLogoRoute
+  '/api/organization/sessions': typeof ApiOrganizationSessionsRouteWithChildren
   '/api/organization/transfer': typeof ApiOrganizationTransferRoute
   '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
   '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
@@ -419,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
+  '/api/organization/sessions/$sessionId': typeof ApiOrganizationSessionsSessionIdRoute
   '/api/people/$personId/family': typeof ApiPeoplePersonIdFamilyRoute
   '/api/people/$personId/files': typeof ApiPeoplePersonIdFilesRouteWithChildren
   '/api/people/$personId/placements': typeof ApiPeoplePersonIdPlacementsRoute
@@ -442,6 +485,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/api/dashboard': typeof ApiDashboardRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
@@ -454,7 +499,10 @@ export interface FileRoutesByTo {
   '/api/health/tb': typeof ApiHealthTbRoute
   '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
   '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
+  '/api/organization/audit': typeof ApiOrganizationAuditRoute
   '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
+  '/api/organization/logo': typeof ApiOrganizationLogoRoute
+  '/api/organization/sessions': typeof ApiOrganizationSessionsRouteWithChildren
   '/api/organization/transfer': typeof ApiOrganizationTransferRoute
   '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
   '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
@@ -477,6 +525,7 @@ export interface FileRoutesByTo {
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
+  '/api/organization/sessions/$sessionId': typeof ApiOrganizationSessionsSessionIdRoute
   '/api/people/$personId/family': typeof ApiPeoplePersonIdFamilyRoute
   '/api/people/$personId/files': typeof ApiPeoplePersonIdFilesRouteWithChildren
   '/api/people/$personId/placements': typeof ApiPeoplePersonIdPlacementsRoute
@@ -501,6 +550,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/api/dashboard': typeof ApiDashboardRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
@@ -513,7 +564,10 @@ export interface FileRoutesById {
   '/api/health/tb': typeof ApiHealthTbRoute
   '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
   '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
+  '/api/organization/audit': typeof ApiOrganizationAuditRoute
   '/api/organization/invitations': typeof ApiOrganizationInvitationsRouteWithChildren
+  '/api/organization/logo': typeof ApiOrganizationLogoRoute
+  '/api/organization/sessions': typeof ApiOrganizationSessionsRouteWithChildren
   '/api/organization/transfer': typeof ApiOrganizationTransferRoute
   '/api/people/$personId': typeof ApiPeoplePersonIdRouteWithChildren
   '/api/scholarships/$scholarshipId': typeof ApiScholarshipsScholarshipIdRoute
@@ -536,6 +590,7 @@ export interface FileRoutesById {
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
+  '/api/organization/sessions/$sessionId': typeof ApiOrganizationSessionsSessionIdRoute
   '/api/people/$personId/family': typeof ApiPeoplePersonIdFamilyRoute
   '/api/people/$personId/files': typeof ApiPeoplePersonIdFilesRouteWithChildren
   '/api/people/$personId/placements': typeof ApiPeoplePersonIdPlacementsRoute
@@ -561,6 +616,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reset-password'
+    | '/api/dashboard'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
@@ -573,7 +630,10 @@ export interface FileRouteTypes {
     | '/api/health/tb'
     | '/api/invitations/accept'
     | '/api/invitations/preview'
+    | '/api/organization/audit'
     | '/api/organization/invitations'
+    | '/api/organization/logo'
+    | '/api/organization/sessions'
     | '/api/organization/transfer'
     | '/api/people/$personId'
     | '/api/scholarships/$scholarshipId'
@@ -596,6 +656,7 @@ export interface FileRouteTypes {
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
+    | '/api/organization/sessions/$sessionId'
     | '/api/people/$personId/family'
     | '/api/people/$personId/files'
     | '/api/people/$personId/placements'
@@ -619,6 +680,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/reset-password'
+    | '/api/dashboard'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
@@ -631,7 +694,10 @@ export interface FileRouteTypes {
     | '/api/health/tb'
     | '/api/invitations/accept'
     | '/api/invitations/preview'
+    | '/api/organization/audit'
     | '/api/organization/invitations'
+    | '/api/organization/logo'
+    | '/api/organization/sessions'
     | '/api/organization/transfer'
     | '/api/people/$personId'
     | '/api/scholarships/$scholarshipId'
@@ -654,6 +720,7 @@ export interface FileRouteTypes {
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
+    | '/api/organization/sessions/$sessionId'
     | '/api/people/$personId/family'
     | '/api/people/$personId/files'
     | '/api/people/$personId/placements'
@@ -677,6 +744,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/reset-password'
+    | '/api/dashboard'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
@@ -689,7 +758,10 @@ export interface FileRouteTypes {
     | '/api/health/tb'
     | '/api/invitations/accept'
     | '/api/invitations/preview'
+    | '/api/organization/audit'
     | '/api/organization/invitations'
+    | '/api/organization/logo'
+    | '/api/organization/sessions'
     | '/api/organization/transfer'
     | '/api/people/$personId'
     | '/api/scholarships/$scholarshipId'
@@ -712,6 +784,7 @@ export interface FileRouteTypes {
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
+    | '/api/organization/sessions/$sessionId'
     | '/api/people/$personId/family'
     | '/api/people/$personId/files'
     | '/api/people/$personId/placements'
@@ -736,6 +809,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiDashboardRoute: typeof ApiDashboardRoute
   ApiOrganizationRoute: typeof ApiOrganizationRouteWithChildren
   ApiPeopleRoute: typeof ApiPeopleRouteWithChildren
   ApiPlatformRoute: typeof ApiPlatformRoute
@@ -770,6 +845,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/dashboard': {
+      id: '/api/dashboard'
+      path: '/api/dashboard'
+      fullPath: '/api/dashboard'
+      preLoaderRoute: typeof ApiDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/organization': {
@@ -856,11 +945,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInvitationsPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/organization/audit': {
+      id: '/api/organization/audit'
+      path: '/audit'
+      fullPath: '/api/organization/audit'
+      preLoaderRoute: typeof ApiOrganizationAuditRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
     '/api/organization/invitations': {
       id: '/api/organization/invitations'
       path: '/invitations'
       fullPath: '/api/organization/invitations'
       preLoaderRoute: typeof ApiOrganizationInvitationsRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/organization/logo': {
+      id: '/api/organization/logo'
+      path: '/logo'
+      fullPath: '/api/organization/logo'
+      preLoaderRoute: typeof ApiOrganizationLogoRouteImport
+      parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/organization/sessions': {
+      id: '/api/organization/sessions'
+      path: '/sessions'
+      fullPath: '/api/organization/sessions'
+      preLoaderRoute: typeof ApiOrganizationSessionsRouteImport
       parentRoute: typeof ApiOrganizationRoute
     }
     '/api/organization/transfer': {
@@ -1016,6 +1126,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/organization/members/$memberId'
       preLoaderRoute: typeof ApiOrganizationMembersMemberIdRouteImport
       parentRoute: typeof ApiOrganizationRoute
+    }
+    '/api/organization/sessions/$sessionId': {
+      id: '/api/organization/sessions/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/api/organization/sessions/$sessionId'
+      preLoaderRoute: typeof ApiOrganizationSessionsSessionIdRouteImport
+      parentRoute: typeof ApiOrganizationSessionsRoute
     }
     '/api/people/$personId/family': {
       id: '/api/people/$personId/family'
@@ -1190,15 +1307,36 @@ const ApiOrganizationInvitationsRouteWithChildren =
     ApiOrganizationInvitationsRouteChildren,
   )
 
+interface ApiOrganizationSessionsRouteChildren {
+  ApiOrganizationSessionsSessionIdRoute: typeof ApiOrganizationSessionsSessionIdRoute
+}
+
+const ApiOrganizationSessionsRouteChildren: ApiOrganizationSessionsRouteChildren =
+  {
+    ApiOrganizationSessionsSessionIdRoute:
+      ApiOrganizationSessionsSessionIdRoute,
+  }
+
+const ApiOrganizationSessionsRouteWithChildren =
+  ApiOrganizationSessionsRoute._addFileChildren(
+    ApiOrganizationSessionsRouteChildren,
+  )
+
 interface ApiOrganizationRouteChildren {
+  ApiOrganizationAuditRoute: typeof ApiOrganizationAuditRoute
   ApiOrganizationInvitationsRoute: typeof ApiOrganizationInvitationsRouteWithChildren
+  ApiOrganizationLogoRoute: typeof ApiOrganizationLogoRoute
+  ApiOrganizationSessionsRoute: typeof ApiOrganizationSessionsRouteWithChildren
   ApiOrganizationTransferRoute: typeof ApiOrganizationTransferRoute
   ApiOrganizationGroupsGroupKeyRoute: typeof ApiOrganizationGroupsGroupKeyRoute
   ApiOrganizationMembersMemberIdRoute: typeof ApiOrganizationMembersMemberIdRoute
 }
 
 const ApiOrganizationRouteChildren: ApiOrganizationRouteChildren = {
+  ApiOrganizationAuditRoute: ApiOrganizationAuditRoute,
   ApiOrganizationInvitationsRoute: ApiOrganizationInvitationsRouteWithChildren,
+  ApiOrganizationLogoRoute: ApiOrganizationLogoRoute,
+  ApiOrganizationSessionsRoute: ApiOrganizationSessionsRouteWithChildren,
   ApiOrganizationTransferRoute: ApiOrganizationTransferRoute,
   ApiOrganizationGroupsGroupKeyRoute: ApiOrganizationGroupsGroupKeyRoute,
   ApiOrganizationMembersMemberIdRoute: ApiOrganizationMembersMemberIdRoute,
@@ -1416,6 +1554,8 @@ const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  ApiDashboardRoute: ApiDashboardRoute,
   ApiOrganizationRoute: ApiOrganizationRouteWithChildren,
   ApiPeopleRoute: ApiPeopleRouteWithChildren,
   ApiPlatformRoute: ApiPlatformRoute,

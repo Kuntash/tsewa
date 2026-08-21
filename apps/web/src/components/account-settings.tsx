@@ -94,7 +94,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
   }
 
   return (
-    <section className="mt-12" id="account">
+    <section id="account">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-primary">Personal settings</p>
@@ -175,8 +175,8 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   />
                 </div>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  Email delivery is not connected yet, so this change applies immediately after
-                  password confirmation.
+                  Confirm with your current password. You will use the new address the next time you
+                  sign in.
                 </p>
                 <Button
                   disabled={busy === "email" || email === currentEmail}

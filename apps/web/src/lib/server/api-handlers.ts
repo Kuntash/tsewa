@@ -98,6 +98,7 @@ import type { AccessGroupKey, AccessRoleKey, PermissionKey } from "@/lib/access-
 import { nextMarkSheetStatus } from "@/lib/academic-results";
 import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
+import { sendPasswordResetEmail } from "@/lib/auth-email";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { allocationsFitFund, sponsorshipDisplayName } from "@/lib/sponsorship";
 
@@ -107,11 +108,35 @@ const preferenceSchema = z.object({
 
 const organizationSettingsSchema = z.object({
   name: z.string().trim().min(2).max(100),
+  displayTitle: z
+    .string()
+    .trim()
+    .max(120)
+    .nullable()
+    .transform((value) => value || null),
   timezone: z.string().trim().min(1).max(64),
   locale: z
     .string()
     .trim()
     .regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/),
+});
+
+const dashboardQuerySchema = z.object({
+  sessionId: z.uuid(),
+});
+
+const auditQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  action: z.string().trim().max(120).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const academicSessionSettingsSchema = z.object({
+  name: z.string().trim().min(2).max(40),
+  startsOn: z.iso.date(),
+  endsOn: z.iso.date(),
+  isActive: z.boolean().default(true),
 });
 
 const memberRoleSchema = z.object({
@@ -810,6 +835,10 @@ export const apiDispatcher = {
       return handlePlatformRequest(request);
     }
 
+    if (url.pathname === "/api/dashboard") {
+      return getDashboard(request);
+    }
+
     if (url.pathname === "/api/people") {
       return getPeopleRegistry(request);
     }
@@ -1018,6 +1047,23 @@ export const apiDispatcher = {
       return handleOrganizationRequest(request);
     }
 
+    if (url.pathname === "/api/organization/audit") {
+      return getOrganizationAudit(request);
+    }
+
+    if (url.pathname === "/api/organization/logo") {
+      return handleOrganizationLogo(request);
+    }
+
+    if (url.pathname === "/api/organization/sessions") {
+      return handleOrganizationSessions(request);
+    }
+
+    const organizationSessionMatch = url.pathname.match(/^\/api\/organization\/sessions\/([^/]+)$/);
+    if (organizationSessionMatch) {
+      return updateOrganizationSession(request, organizationSessionMatch[1]);
+    }
+
     if (url.pathname === "/api/organization/invitations") {
       return createOrganizationInvitation(request);
     }
@@ -1108,10 +1154,12 @@ async function readSignUpInput(request: { json(): Promise<unknown> }) {
 function createRequestAuth(request: Request, allowSignUp: boolean) {
   const runtime = getRuntimeEnv();
   return createAuth({
+    appName: runtime.APP_NAME,
     database: runtime.DB,
     secret: runtime.BETTER_AUTH_SECRET,
     baseURL: new URL(request.url).origin,
     allowSignUp,
+    sendPasswordReset: (input) => sendPasswordResetEmail(runtime, input),
   });
 }
 
@@ -10288,6 +10336,9 @@ async function getPlatformStatus(request: Request): Promise<Response> {
       ? runtime.ORM.select({
           id: organization.id,
           name: organization.name,
+          displayTitle: organization.displayTitle,
+          logoAssetKey: organization.logoAssetKey,
+          updatedAt: organization.updatedAt,
           group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
         })
           .from(organizationMember)
@@ -10328,6 +10379,9 @@ async function getPlatformStatus(request: Request): Promise<Response> {
     activeOrganizationId: context?.organizationId ?? null,
     organizations: memberships.map((membership) => ({
       ...membership,
+      logoUrl: membership.logoAssetKey
+        ? `/api/organization/logo?v=${encodeURIComponent(membership.updatedAt)}`
+        : null,
       defaultSessionId: defaultSessionByOrganization.get(membership.id) ?? null,
     })),
   });
@@ -10382,6 +10436,147 @@ async function savePlatformPreference(request: Request): Promise<Response> {
   return Response.json({ ok: true });
 }
 
+async function getDashboard(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const parsed = dashboardQuerySchema.safeParse({
+    sessionId: new URL(request.url).searchParams.get("sessionId"),
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Select a valid academic session." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const session = await runtime.ORM.select({
+    id: academicSession.id,
+    name: academicSession.name,
+    startsOn: academicSession.startsOn,
+    endsOn: academicSession.endsOn,
+  })
+    .from(academicSession)
+    .where(
+      and(
+        eq(academicSession.id, parsed.data.sessionId),
+        eq(academicSession.organizationId, context.organizationId),
+        eq(academicSession.isActive, 1),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!session) return Response.json({ error: "Academic session not found." }, { status: 404 });
+
+  const [
+    peopleSummary,
+    schoolSummary,
+    scholarshipSummary,
+    sponsorshipSummary,
+    healthSummary,
+    activity,
+  ] = await Promise.all([
+    hasPermission(context, "people.read")
+      ? runtime.ORM.select({
+          total: count(),
+          active: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
+        })
+          .from(person)
+          .where(eq(person.organizationId, context.organizationId))
+          .then((rows) => rows[0])
+      : Promise.resolve(null),
+    hasPermission(context, "school.read")
+      ? runtime.ORM.select({
+          total: count(),
+          current: sql<number>`sum(case when ${studentEnrollment.status} in ('recorded', 'enrolled') then 1 else 0 end)`,
+        })
+          .from(studentEnrollment)
+          .where(
+            and(
+              eq(studentEnrollment.organizationId, context.organizationId),
+              eq(studentEnrollment.academicSessionId, session.id),
+            ),
+          )
+          .then((rows) => rows[0])
+      : Promise.resolve(null),
+    hasPermission(context, "scholarship.read")
+      ? runtime.ORM.select({
+          total: count(),
+          active: sql<number>`sum(case when lower(${scholarshipRecord.status}) not in ('closed', 'rejected') then 1 else 0 end)`,
+        })
+          .from(scholarshipRecord)
+          .where(
+            and(
+              eq(scholarshipRecord.organizationId, context.organizationId),
+              eq(scholarshipRecord.academicSessionId, session.id),
+            ),
+          )
+          .then((rows) => rows[0])
+      : Promise.resolve(null),
+    hasPermission(context, "sponsorship.read")
+      ? runtime.ORM.select({ total: count() })
+          .from(sponsorshipAssignment)
+          .where(
+            and(
+              eq(sponsorshipAssignment.organizationId, context.organizationId),
+              eq(sponsorshipAssignment.academicSessionId, session.id),
+            ),
+          )
+          .then((rows) => rows[0])
+      : Promise.resolve(null),
+    hasPermission(context, "health.read")
+      ? runtime.ORM.select({
+          total: count(),
+          recent: sql<number>`sum(case when ${healthVisit.checkupDate} >= date('now', '-30 days') then 1 else 0 end)`,
+        })
+          .from(healthVisit)
+          .where(eq(healthVisit.organizationId, context.organizationId))
+          .then((rows) => rows[0])
+      : Promise.resolve(null),
+    hasPermission(context, "audit.read")
+      ? runtime.ORM.select({
+          id: auditEvent.id,
+          action: auditEvent.action,
+          entityType: auditEvent.entityType,
+          entityId: auditEvent.entityId,
+          occurredAt: auditEvent.occurredAt,
+          actorName: user.name,
+        })
+          .from(auditEvent)
+          .leftJoin(user, eq(user.id, auditEvent.actorUserId))
+          .where(eq(auditEvent.organizationId, context.organizationId))
+          .orderBy(desc(auditEvent.occurredAt))
+          .limit(8)
+      : Promise.resolve([]),
+  ]);
+
+  return Response.json({
+    session,
+    metrics: {
+      people: peopleSummary
+        ? { value: Number(peopleSummary.active ?? 0), total: Number(peopleSummary.total ?? 0) }
+        : null,
+      school: schoolSummary
+        ? { value: Number(schoolSummary.current ?? 0), total: Number(schoolSummary.total ?? 0) }
+        : null,
+      scholarships: scholarshipSummary
+        ? {
+            value: Number(scholarshipSummary.active ?? 0),
+            total: Number(scholarshipSummary.total ?? 0),
+          }
+        : null,
+      sponsorships: sponsorshipSummary
+        ? {
+            value: Number(sponsorshipSummary.total ?? 0),
+            total: Number(sponsorshipSummary.total ?? 0),
+          }
+        : null,
+      health: healthSummary
+        ? { value: Number(healthSummary.recent ?? 0), total: Number(healthSummary.total ?? 0) }
+        : null,
+    },
+    activity,
+  });
+}
+
 async function handleOrganizationRequest(request: Request): Promise<Response> {
   if (request.method === "GET") return getOrganization(request);
   if (request.method === "PATCH") return updateOrganization(request);
@@ -10400,8 +10595,11 @@ async function getOrganization(request: Request): Promise<Response> {
         id: organization.id,
         name: organization.name,
         slug: organization.slug,
+        displayTitle: organization.displayTitle,
+        logoAssetKey: organization.logoAssetKey,
         timezone: organization.timezone,
         locale: organization.locale,
+        updatedAt: organization.updatedAt,
       })
         .from(organization)
         .where(eq(organization.id, context.organizationId))
@@ -10488,7 +10686,12 @@ async function getOrganization(request: Request): Promise<Response> {
     return Response.json({ error: "Organization not found" }, { status: 404 });
 
   return Response.json({
-    organization: organizationState,
+    organization: {
+      ...organizationState,
+      logoUrl: organizationState.logoAssetKey
+        ? `/api/organization/logo?v=${encodeURIComponent(organizationState.updatedAt)}`
+        : null,
+    },
     currentMember: {
       id: context.memberId,
       group: context.group,
@@ -10536,6 +10739,7 @@ async function updateOrganization(request: Request): Promise<Response> {
     runtime.ORM.update(organization)
       .set({
         name: parsed.data.name,
+        displayTitle: parsed.data.displayTitle,
         timezone: parsed.data.timezone,
         locale: parsed.data.locale,
         updatedAt: sql`CURRENT_TIMESTAMP`,
@@ -10549,12 +10753,299 @@ async function updateOrganization(request: Request): Promise<Response> {
       context.organizationId,
       {
         name: parsed.data.name,
+        displayTitle: parsed.data.displayTitle,
         timezone: parsed.data.timezone,
         locale: parsed.data.locale,
       },
     ),
   ]);
 
+  return Response.json({ ok: true });
+}
+
+const MAX_ORGANIZATION_LOGO_BYTES = 2 * 1024 * 1024;
+
+async function handleOrganizationLogo(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  const runtime = getRuntimeEnv();
+  const current = await runtime.ORM.select({
+    logoAssetKey: organization.logoAssetKey,
+    updatedAt: organization.updatedAt,
+  })
+    .from(organization)
+    .where(eq(organization.id, context.organizationId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!current) return Response.json({ error: "Organization not found." }, { status: 404 });
+
+  if (request.method === "GET") {
+    if (!current.logoAssetKey)
+      return Response.json({ error: "Organization logo not found." }, { status: 404 });
+    const object = await runtime.FILES.get(current.logoAssetKey);
+    if (!object) return Response.json({ error: "Stored logo not found." }, { status: 404 });
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("Content-Length", String(object.size));
+    headers.set("Content-Disposition", "inline");
+    headers.set("Cache-Control", "private, max-age=3600");
+    headers.set("ETag", object.httpEtag);
+    headers.set("X-Content-Type-Options", "nosniff");
+    return new Response(object.body, { headers });
+  }
+
+  if (!isSameOrigin(request)) return forbidden();
+  if (!hasPermission(context, "organization.settings.manage")) return forbidden();
+
+  if (request.method === "DELETE") {
+    if (!current.logoAssetKey) return Response.json({ ok: true });
+    await runtime.ORM.batch([
+      runtime.ORM.update(organization)
+        .set({ logoAssetKey: null, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(organization.id, context.organizationId)),
+      auditInsert(
+        runtime.ORM,
+        context,
+        "organization.logo_removed",
+        "organization",
+        context.organizationId,
+      ),
+    ]);
+    await runtime.FILES.delete(current.logoAssetKey);
+    return Response.json({ ok: true });
+  }
+
+  if (request.method !== "POST") return methodNotAllowed("GET, POST, DELETE");
+  const form = await request.formData().catch(() => null);
+  const file = form?.get("file");
+  if (!(file instanceof File)) {
+    return Response.json({ error: "Choose a logo file." }, { status: 400 });
+  }
+  if (file.size === 0 || file.size > MAX_ORGANIZATION_LOGO_BYTES) {
+    return Response.json({ error: "Logos must be between 1 byte and 2 MB." }, { status: 400 });
+  }
+  if (!PHOTO_CONTENT_TYPES.has(file.type)) {
+    return Response.json({ error: "Use a JPEG, PNG, or WebP logo." }, { status: 400 });
+  }
+
+  const objectKey = `organizations/${context.organizationId}/profile/logo-${crypto.randomUUID()}`;
+  await runtime.FILES.put(objectKey, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type },
+  });
+  try {
+    await runtime.ORM.batch([
+      runtime.ORM.update(organization)
+        .set({ logoAssetKey: objectKey, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(organization.id, context.organizationId)),
+      auditInsert(
+        runtime.ORM,
+        context,
+        current.logoAssetKey ? "organization.logo_replaced" : "organization.logo_added",
+        "organization",
+        context.organizationId,
+      ),
+    ]);
+  } catch (error) {
+    await runtime.FILES.delete(objectKey);
+    throw error;
+  }
+  if (current.logoAssetKey) await runtime.FILES.delete(current.logoAssetKey);
+  return Response.json({ ok: true, logoUrl: `/api/organization/logo?v=${Date.now()}` });
+}
+
+async function getOrganizationAudit(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "audit.read")) return forbidden();
+  const url = new URL(request.url);
+  const parsed = auditQuerySchema.safeParse({
+    q: url.searchParams.get("q") ?? "",
+    action: url.searchParams.get("action") ?? "all",
+    page: url.searchParams.get("page") ?? "1",
+    pageSize: url.searchParams.get("pageSize") ?? "25",
+  });
+  if (!parsed.success) {
+    return Response.json({ error: "Check the audit filters." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const { q, action, page, pageSize } = parsed.data;
+  const conditions = [eq(auditEvent.organizationId, context.organizationId)];
+  if (action !== "all") conditions.push(eq(auditEvent.action, action));
+  if (q) {
+    const search = `%${escapeLikePattern(q.toLowerCase())}%`;
+    conditions.push(
+      or(
+        sql`lower(${auditEvent.action}) like ${search} escape '\\'`,
+        sql`lower(${auditEvent.entityType}) like ${search} escape '\\'`,
+        sql`lower(coalesce(${auditEvent.entityId}, '')) like ${search} escape '\\'`,
+        sql`lower(coalesce(${user.name}, '')) like ${search} escape '\\'`,
+      )!,
+    );
+  }
+  const where = and(...conditions);
+  const [countRow, events, actions] = await Promise.all([
+    runtime.ORM.select({ total: count() })
+      .from(auditEvent)
+      .leftJoin(user, eq(user.id, auditEvent.actorUserId))
+      .where(where)
+      .then((rows) => rows[0]),
+    runtime.ORM.select({
+      id: auditEvent.id,
+      action: auditEvent.action,
+      entityType: auditEvent.entityType,
+      entityId: auditEvent.entityId,
+      metadataJson: auditEvent.metadataJson,
+      occurredAt: auditEvent.occurredAt,
+      actorName: user.name,
+      actorEmail: user.email,
+    })
+      .from(auditEvent)
+      .leftJoin(user, eq(user.id, auditEvent.actorUserId))
+      .where(where)
+      .orderBy(desc(auditEvent.occurredAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    runtime.ORM.selectDistinct({ action: auditEvent.action })
+      .from(auditEvent)
+      .where(eq(auditEvent.organizationId, context.organizationId))
+      .orderBy(asc(auditEvent.action)),
+  ]);
+  const total = Number(countRow?.total ?? 0);
+  return Response.json({
+    events,
+    actions: actions.map((item) => item.action),
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+}
+
+async function handleOrganizationSessions(request: Request): Promise<Response> {
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "organization.settings.read")) return forbidden();
+  const runtime = getRuntimeEnv();
+
+  if (request.method === "GET") {
+    const sessions = await runtime.ORM.select({
+      id: academicSession.id,
+      name: academicSession.name,
+      startsOn: academicSession.startsOn,
+      endsOn: academicSession.endsOn,
+      isActive: academicSession.isActive,
+    })
+      .from(academicSession)
+      .where(eq(academicSession.organizationId, context.organizationId))
+      .orderBy(desc(academicSession.startsOn));
+    return Response.json({
+      sessions: sessions.map((session) => ({ ...session, isActive: Boolean(session.isActive) })),
+      capabilities: {
+        manage: hasPermission(context, "organization.settings.manage"),
+      },
+    });
+  }
+
+  if (request.method !== "POST") return methodNotAllowed("GET, POST");
+  if (!isSameOrigin(request)) return forbidden();
+  if (!hasPermission(context, "organization.settings.manage")) return forbidden();
+  const parsed = academicSessionSettingsSchema.safeParse(await readJson(request));
+  if (!parsed.success || parsed.data.startsOn >= parsed.data.endsOn) {
+    return Response.json(
+      { error: "Enter a name and an end date after the start date." },
+      { status: 400 },
+    );
+  }
+  const duplicate = await runtime.ORM.select({ id: academicSession.id })
+    .from(academicSession)
+    .where(
+      and(
+        eq(academicSession.organizationId, context.organizationId),
+        eq(sql<string>`lower(${academicSession.name})`, parsed.data.name.toLowerCase()),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (duplicate) {
+    return Response.json(
+      { error: "An academic session with this name already exists." },
+      { status: 409 },
+    );
+  }
+  const id = crypto.randomUUID();
+  await runtime.ORM.batch([
+    runtime.ORM.insert(academicSession).values({
+      id,
+      organizationId: context.organizationId,
+      name: parsed.data.name,
+      startsOn: parsed.data.startsOn,
+      endsOn: parsed.data.endsOn,
+      isActive: parsed.data.isActive ? 1 : 0,
+      sourceSystem: "tsewa",
+      sourceTable: "academic_session",
+      sourceId: id,
+    }),
+    auditInsert(runtime.ORM, context, "academic_session.created", "academic_session", id, {
+      name: parsed.data.name,
+      startsOn: parsed.data.startsOn,
+      endsOn: parsed.data.endsOn,
+      isActive: parsed.data.isActive,
+    }),
+  ]);
+  return Response.json({ id }, { status: 201 });
+}
+
+async function updateOrganizationSession(request: Request, sessionId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "organization.settings.manage")) return forbidden();
+  const parsedId = z.uuid().safeParse(sessionId);
+  const parsed = academicSessionSettingsSchema.safeParse(await readJson(request));
+  if (!parsedId.success || !parsed.success || parsed.data.startsOn >= parsed.data.endsOn) {
+    return Response.json({ error: "Check the academic session details." }, { status: 400 });
+  }
+  const runtime = getRuntimeEnv();
+  const existing = await runtime.ORM.select({ id: academicSession.id })
+    .from(academicSession)
+    .where(
+      and(
+        eq(academicSession.id, parsedId.data),
+        eq(academicSession.organizationId, context.organizationId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+  if (!existing) return Response.json({ error: "Academic session not found." }, { status: 404 });
+  await runtime.ORM.batch([
+    runtime.ORM.update(academicSession)
+      .set({
+        name: parsed.data.name,
+        startsOn: parsed.data.startsOn,
+        endsOn: parsed.data.endsOn,
+        isActive: parsed.data.isActive ? 1 : 0,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(academicSession.id, parsedId.data),
+          eq(academicSession.organizationId, context.organizationId),
+        ),
+      ),
+    auditInsert(
+      runtime.ORM,
+      context,
+      "academic_session.updated",
+      "academic_session",
+      parsedId.data,
+      {
+        name: parsed.data.name,
+        startsOn: parsed.data.startsOn,
+        endsOn: parsed.data.endsOn,
+        isActive: parsed.data.isActive,
+      },
+    ),
+  ]);
   return Response.json({ ok: true });
 }
 
@@ -11193,7 +11684,7 @@ function auditInsert(
   action: string,
   entityType: string,
   entityId: string,
-  metadata?: Record<string, string>,
+  metadata?: Record<string, string | number | boolean | null>,
 ) {
   return database.insert(auditEvent).values({
     id: crypto.randomUUID(),
