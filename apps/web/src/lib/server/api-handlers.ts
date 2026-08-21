@@ -9,6 +9,7 @@ import {
   inArray,
   isNull,
   ne,
+  notExists,
   or,
   sql,
 } from "drizzle-orm";
@@ -16,7 +17,6 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
 import type { Database } from "@/db/client";
-import type { QueryDatabase } from "@/db/query";
 import {
   academicAssessment,
   academicClassMaster,
@@ -41,6 +41,7 @@ import {
   organizationInvitation,
   organizationMember,
   person,
+  personAcademicRecord,
   personFamilyProfile,
   personFile,
   personImportBatch,
@@ -3222,69 +3223,76 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
   const scope = await getSchoolSessionScope(request, parsed.data.sessionId);
   if (!scope) return forbidden();
   const conditions = [
-    "offering.organization_id = ?",
-    "offering.academic_session_id = ?",
-    "offering.is_active = 1",
+    eq(schoolClassOffering.organizationId, scope.organizationId),
+    eq(schoolClassOffering.academicSessionId, scope.session.id),
+    eq(schoolClassOffering.isActive, 1),
   ];
-  const bindings: Array<string | number> = [scope.organizationId, scope.session.id];
-  if (parsed.data.school !== "all") {
-    conditions.push("school.id = ?");
-    bindings.push(parsed.data.school);
-  }
+  if (parsed.data.school !== "all") conditions.push(eq(schoolMaster.id, parsed.data.school));
   if (parsed.data.q) {
     const search = `%${escapeLikePattern(parsed.data.q.toLowerCase())}%`;
     conditions.push(
-      `(lower(school.name) LIKE ? ESCAPE '\\' OR lower(${classDisplayName("class")}) LIKE ? ESCAPE '\\')`,
+      or(
+        sql`lower(${schoolMaster.name}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end) LIKE ${search} ESCAPE '\\'`,
+      )!,
     );
-    bindings.push(search, search);
   }
 
   const runtime = getRuntimeEnv();
-  const rosters = await runtime.DATABASE.prepare(
-    `SELECT min(offering.id) AS id, school.id AS schoolId, school.name AS schoolName,
-            ${classDisplayName("class")} AS classId,
-            ${classDisplayName("class")} AS className,
-            max(class.level) AS classLevel, max(class.section) AS classSection,
-            COUNT(DISTINCT enrollment.id) AS students,
-            COUNT(DISTINCT CASE WHEN person.status = 'active' THEN enrollment.person_id END)
-              AS currentActiveStudents,
-            COUNT(DISTINCT CASE WHEN person.gender = 'female' THEN enrollment.person_id END)
-              AS femaleStudents,
-            COUNT(DISTINCT CASE WHEN person.gender = 'male' THEN enrollment.person_id END)
-              AS maleStudents,
-            COUNT(DISTINCT enrollment.house_id) AS houses
-     FROM school_class_offering offering
-     JOIN school_master school ON school.id = offering.school_id
-       AND school.organization_id = offering.organization_id
-     JOIN academic_class_master class ON class.id = offering.academic_class_id
-       AND class.organization_id = offering.organization_id
-     LEFT JOIN student_enrollment enrollment
-       ON enrollment.school_class_offering_id = offering.id
-      AND enrollment.organization_id = offering.organization_id
-     LEFT JOIN person ON person.id = enrollment.person_id
-       AND person.organization_id = enrollment.organization_id
-     WHERE ${conditions.join(" AND ")}
-     GROUP BY school.id, school.name, ${classDisplayName("class")}
-     ORDER BY school.name COLLATE NOCASE, coalesce(min(class.sort_order), 999),
-              coalesce(max(class.level), 999), className COLLATE NOCASE`,
-  )
-    .bind(...bindings)
-    .all<{
-      id: string;
-      schoolId: string;
-      schoolName: string;
-      classId: string;
-      className: string;
-      classLevel: number | null;
-      classSection: string | null;
-      students: number;
-      currentActiveStudents: number;
-      femaleStudents: number;
-      maleStudents: number;
-      houses: number;
-    }>();
+  const classNameExpression = sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`;
+  const rosters = await runtime.ORM.select({
+    id: sql<string>`min(${schoolClassOffering.id})`,
+    schoolId: schoolMaster.id,
+    schoolName: schoolMaster.name,
+    classId: classNameExpression,
+    className: classNameExpression,
+    classLevel: sql<number | null>`max(${academicClassMaster.level})`,
+    classSection: sql<string | null>`max(${academicClassMaster.section})`,
+    students: sql<number>`count(distinct ${studentEnrollment.id})`,
+    currentActiveStudents: sql<number>`count(distinct case when ${person.status} = 'active' then ${studentEnrollment.personId} end)`,
+    femaleStudents: sql<number>`count(distinct case when ${person.gender} = 'female' then ${studentEnrollment.personId} end)`,
+    maleStudents: sql<number>`count(distinct case when ${person.gender} = 'male' then ${studentEnrollment.personId} end)`,
+    houses: sql<number>`count(distinct ${studentEnrollment.houseId})`,
+  })
+    .from(schoolClassOffering)
+    .innerJoin(
+      schoolMaster,
+      and(
+        eq(schoolMaster.id, schoolClassOffering.schoolId),
+        eq(schoolMaster.organizationId, schoolClassOffering.organizationId),
+      ),
+    )
+    .innerJoin(
+      academicClassMaster,
+      and(
+        eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+        eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+      ),
+    )
+    .leftJoin(
+      studentEnrollment,
+      and(
+        eq(studentEnrollment.schoolClassOfferingId, schoolClassOffering.id),
+        eq(studentEnrollment.organizationId, schoolClassOffering.organizationId),
+      ),
+    )
+    .leftJoin(
+      person,
+      and(
+        eq(person.id, studentEnrollment.personId),
+        eq(person.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .where(and(...conditions))
+    .groupBy(schoolMaster.id, schoolMaster.name, classNameExpression)
+    .orderBy(
+      asc(sql`lower(${schoolMaster.name})`),
+      asc(sql`coalesce(min(${academicClassMaster.sortOrder}), 999)`),
+      asc(sql`coalesce(max(${academicClassMaster.level}), 999)`),
+      asc(sql`lower(${classNameExpression})`),
+    );
 
-  return Response.json({ session: scope.session, rosters: rosters.results });
+  return Response.json({ session: scope.session, rosters });
 }
 
 async function getHistoricalResultsOverview(request: Request): Promise<Response> {
@@ -3299,21 +3307,31 @@ async function getHistoricalResultsOverview(request: Request): Promise<Response>
   if (!parsed.success)
     return Response.json({ error: "Select a valid result year." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const sessions = await runtime.DATABASE.prepare(
-    `SELECT session.id, session.name, COUNT(DISTINCT sheet.id) AS markSheets,
-            COUNT(mark.id) AS results
-     FROM academic_session session
-     JOIN mark_sheet sheet ON sheet.academic_session_id = session.id
-       AND sheet.organization_id = session.organization_id
-     LEFT JOIN student_mark mark ON mark.mark_sheet_id = sheet.id
-       AND mark.organization_id = sheet.organization_id
-     WHERE session.organization_id = ?
-     GROUP BY session.id, session.name, session.starts_on
-     ORDER BY session.starts_on DESC`,
-  )
-    .bind(context.organizationId)
-    .all<{ id: string; name: string; markSheets: number; results: number }>();
-  const selectedId = parsed.data.sessionId ?? sessions.results[0]?.id;
+  const sessions = await runtime.ORM.select({
+    id: academicSession.id,
+    name: academicSession.name,
+    markSheets: sql<number>`count(distinct ${markSheet.id})`,
+    results: count(studentMark.id),
+  })
+    .from(academicSession)
+    .innerJoin(
+      markSheet,
+      and(
+        eq(markSheet.academicSessionId, academicSession.id),
+        eq(markSheet.organizationId, academicSession.organizationId),
+      ),
+    )
+    .leftJoin(
+      studentMark,
+      and(
+        eq(studentMark.markSheetId, markSheet.id),
+        eq(studentMark.organizationId, markSheet.organizationId),
+      ),
+    )
+    .where(eq(academicSession.organizationId, context.organizationId))
+    .groupBy(academicSession.id, academicSession.name, academicSession.startsOn)
+    .orderBy(desc(academicSession.startsOn));
+  const selectedId = parsed.data.sessionId ?? sessions[0]?.id;
   if (!selectedId)
     return Response.json({
       sessions: [],
@@ -3321,54 +3339,124 @@ async function getHistoricalResultsOverview(request: Request): Promise<Response>
       summary: { markSheets: 0, results: 0, students: 0 },
       filters: { schools: [], classes: [], subjects: [], terms: [] },
     });
-  if (!sessions.results.some((session) => session.id === selectedId)) return forbidden();
+  if (!sessions.some((session) => session.id === selectedId)) return forbidden();
 
   const [summary, schools, classes, subjects, terms] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(DISTINCT sheet.id) AS markSheets, COUNT(mark.id) AS results,
-      COUNT(DISTINCT mark.person_id) AS students FROM mark_sheet sheet
-      LEFT JOIN student_mark mark ON mark.mark_sheet_id=sheet.id AND mark.organization_id=sheet.organization_id
-      WHERE sheet.organization_id=? AND sheet.academic_session_id=?`)
-      .bind(context.organizationId, selectedId)
-      .first<{ markSheets: number; results: number; students: number }>(),
-    resultFilter(
-      runtime.DATABASE,
-      context.organizationId,
-      selectedId,
-      "school.id",
-      "school.name",
-      "school_master school",
-      "school.id=sheet.school_id",
-    ),
-    resultFilter(
-      runtime.DATABASE,
-      context.organizationId,
-      selectedId,
-      "class.id",
-      classDisplayName("class"),
-      "academic_class_master class",
-      "class.id=sheet.academic_class_id",
-    ),
-    resultFilter(
-      runtime.DATABASE,
-      context.organizationId,
-      selectedId,
-      "subject.id",
-      "subject.name",
-      "academic_subject subject",
-      "subject.id=sheet.subject_id",
-    ),
-    resultFilter(
-      runtime.DATABASE,
-      context.organizationId,
-      selectedId,
-      "term.id",
-      "term.name",
-      "academic_term term",
-      "term.id=sheet.term_id",
-    ),
+    runtime.ORM.select({
+      markSheets: sql<number>`count(distinct ${markSheet.id})`,
+      results: count(studentMark.id),
+      students: sql<number>`count(distinct ${studentMark.personId})`,
+    })
+      .from(markSheet)
+      .leftJoin(
+        studentMark,
+        and(
+          eq(studentMark.markSheetId, markSheet.id),
+          eq(studentMark.organizationId, markSheet.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(markSheet.organizationId, context.organizationId),
+          eq(markSheet.academicSessionId, selectedId),
+        ),
+      )
+      .then((values) => values[0] ?? null),
+    runtime.ORM.select({
+      id: schoolMaster.id,
+      name: schoolMaster.name,
+      count: count(studentMark.id),
+    })
+      .from(markSheet)
+      .innerJoin(schoolMaster, eq(schoolMaster.id, markSheet.schoolId))
+      .leftJoin(
+        studentMark,
+        and(
+          eq(studentMark.markSheetId, markSheet.id),
+          eq(studentMark.organizationId, markSheet.organizationId),
+          eq(studentMark.isActive, 1),
+        ),
+      )
+      .where(
+        and(
+          eq(markSheet.organizationId, context.organizationId),
+          eq(markSheet.academicSessionId, selectedId),
+        ),
+      )
+      .groupBy(schoolMaster.id, schoolMaster.name)
+      .orderBy(asc(sql`lower(${schoolMaster.name})`)),
+    runtime.ORM.select({
+      id: academicClassMaster.id,
+      name: sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`,
+      count: count(studentMark.id),
+    })
+      .from(markSheet)
+      .innerJoin(academicClassMaster, eq(academicClassMaster.id, markSheet.academicClassId))
+      .leftJoin(
+        studentMark,
+        and(
+          eq(studentMark.markSheetId, markSheet.id),
+          eq(studentMark.organizationId, markSheet.organizationId),
+          eq(studentMark.isActive, 1),
+        ),
+      )
+      .where(
+        and(
+          eq(markSheet.organizationId, context.organizationId),
+          eq(markSheet.academicSessionId, selectedId),
+        ),
+      )
+      .groupBy(academicClassMaster.id, academicClassMaster.name, academicClassMaster.section)
+      .orderBy(asc(sql`lower(${academicClassMaster.name})`)),
+    runtime.ORM.select({
+      id: academicSubject.id,
+      name: academicSubject.name,
+      count: count(studentMark.id),
+    })
+      .from(markSheet)
+      .innerJoin(academicSubject, eq(academicSubject.id, markSheet.subjectId))
+      .leftJoin(
+        studentMark,
+        and(
+          eq(studentMark.markSheetId, markSheet.id),
+          eq(studentMark.organizationId, markSheet.organizationId),
+          eq(studentMark.isActive, 1),
+        ),
+      )
+      .where(
+        and(
+          eq(markSheet.organizationId, context.organizationId),
+          eq(markSheet.academicSessionId, selectedId),
+        ),
+      )
+      .groupBy(academicSubject.id, academicSubject.name)
+      .orderBy(asc(sql`lower(${academicSubject.name})`)),
+    runtime.ORM.select({
+      id: academicTerm.id,
+      name: academicTerm.name,
+      count: count(studentMark.id),
+    })
+      .from(markSheet)
+      .innerJoin(academicTerm, eq(academicTerm.id, markSheet.termId))
+      .leftJoin(
+        studentMark,
+        and(
+          eq(studentMark.markSheetId, markSheet.id),
+          eq(studentMark.organizationId, markSheet.organizationId),
+          eq(studentMark.isActive, 1),
+        ),
+      )
+      .where(
+        and(
+          eq(markSheet.organizationId, context.organizationId),
+          eq(markSheet.academicSessionId, selectedId),
+        ),
+      )
+      .groupBy(academicTerm.id, academicTerm.name)
+      .orderBy(asc(sql`lower(${academicTerm.name})`)),
   ]);
   return Response.json({
-    sessions: sessions.results,
+    sessions,
     selectedSessionId: selectedId,
     summary: {
       markSheets: Number(summary?.markSheets ?? 0),
@@ -3376,32 +3464,12 @@ async function getHistoricalResultsOverview(request: Request): Promise<Response>
       students: Number(summary?.students ?? 0),
     },
     filters: {
-      schools: schools.results,
-      classes: classes.results,
-      subjects: subjects.results,
-      terms: terms.results,
+      schools,
+      classes,
+      subjects,
+      terms,
     },
   });
-}
-
-function resultFilter(
-  database: QueryDatabase,
-  organizationId: string,
-  sessionId: string,
-  idSql: string,
-  nameSql: string,
-  joinTable: string,
-  joinOn: string,
-) {
-  return database
-    .prepare(`SELECT ${idSql} AS id, ${nameSql} AS name, COUNT(mark.id) AS count
-    FROM mark_sheet sheet JOIN ${joinTable} ON ${joinOn}
-    LEFT JOIN student_mark mark ON mark.mark_sheet_id=sheet.id
-      AND mark.organization_id=sheet.organization_id AND mark.is_active=1
-    WHERE sheet.organization_id=? AND sheet.academic_session_id=?
-    GROUP BY ${idSql}, ${nameSql} ORDER BY ${nameSql} COLLATE NOCASE`)
-    .bind(organizationId, sessionId)
-    .all<{ id: string; name: string; count: number }>();
 }
 
 async function handleAcademicResults(request: Request): Promise<Response> {
@@ -3429,57 +3497,83 @@ async function getHistoricalResults(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Check the result filters." }, { status: 400 });
   const { sessionId, q, school, className, subject, term, page, pageSize } = parsed.data;
-  const conditions = ["sheet.organization_id=?", "sheet.academic_session_id=?", "mark.is_active=1"];
-  const bindings: Array<string | number> = [context.organizationId, sessionId];
-  for (const [value, sql] of [
-    [school, "sheet.school_id"],
-    [className, "sheet.academic_class_id"],
-    [subject, "sheet.subject_id"],
-    [term, "sheet.term_id"],
-  ] as const) {
-    if (value !== "all") {
-      conditions.push(`${sql}=?`);
-      bindings.push(value);
-    }
-  }
+  const conditions = [
+    eq(markSheet.organizationId, context.organizationId),
+    eq(markSheet.academicSessionId, sessionId),
+    eq(studentMark.isActive, 1),
+  ];
+  if (school !== "all") conditions.push(eq(markSheet.schoolId, school));
+  if (className !== "all") conditions.push(eq(markSheet.academicClassId, className));
+  if (subject !== "all") conditions.push(eq(markSheet.subjectId, subject));
+  if (term !== "all") conditions.push(eq(markSheet.termId, term));
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
     conditions.push(
-      "(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\')",
+      or(
+        sql`lower(${person.displayName}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(${person.primaryIdentifier}) LIKE ${search} ESCAPE '\\'`,
+      )!,
     );
-    bindings.push(search, search);
   }
-  const where = conditions.join(" AND ");
+  const where = and(...conditions);
   const runtime = getRuntimeEnv();
-  const [count, rows] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT COUNT(*) AS total FROM student_mark mark
-      JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
-      JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
-      WHERE ${where}`)
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(`SELECT mark.id, person.id AS personId, person.display_name AS studentName,
-      person.primary_identifier AS admissionNumber, school.name AS schoolName,
-      ${classDisplayName("class")} AS className, subject.name AS subjectName, term.name AS termName,
-      assessment.name AS assessmentName, mark.marks, mark.maximum_marks AS maximumMarks,
-      mark.note, sheet.recorded_on AS recordedOn, sheet.is_verified AS isVerified,
-      sheet.status AS sheetStatus, sheet.id AS markSheetId, sheet.source_system AS sourceSystem
-      FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
-      JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
-      JOIN school_master school ON school.id=sheet.school_id
-      JOIN academic_class_master class ON class.id=sheet.academic_class_id
-      JOIN academic_subject subject ON subject.id=sheet.subject_id
-      JOIN academic_term term ON term.id=sheet.term_id
-      JOIN academic_assessment assessment ON assessment.id=mark.assessment_id
-      WHERE ${where}
-      ORDER BY person.display_name COLLATE NOCASE, subject.name COLLATE NOCASE, assessment.name COLLATE NOCASE
-      LIMIT ? OFFSET ?`)
-      .bind(...bindings, pageSize, (page - 1) * pageSize)
-      .all<{ isVerified: number; [key: string]: unknown }>(),
+  const [countRows, rows] = await Promise.all([
+    runtime.ORM.select({ total: count() })
+      .from(studentMark)
+      .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
+      .innerJoin(
+        person,
+        and(
+          eq(person.id, studentMark.personId),
+          eq(person.organizationId, studentMark.organizationId),
+        ),
+      )
+      .where(where),
+    runtime.ORM.select({
+      id: studentMark.id,
+      personId: person.id,
+      studentName: person.displayName,
+      admissionNumber: person.primaryIdentifier,
+      schoolName: schoolMaster.name,
+      className: sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`,
+      subjectName: academicSubject.name,
+      termName: academicTerm.name,
+      assessmentName: academicAssessment.name,
+      marks: studentMark.marks,
+      maximumMarks: studentMark.maximumMarks,
+      note: studentMark.note,
+      recordedOn: markSheet.recordedOn,
+      isVerified: markSheet.isVerified,
+      sheetStatus: markSheet.status,
+      markSheetId: markSheet.id,
+      sourceSystem: markSheet.sourceSystem,
+    })
+      .from(studentMark)
+      .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
+      .innerJoin(
+        person,
+        and(
+          eq(person.id, studentMark.personId),
+          eq(person.organizationId, studentMark.organizationId),
+        ),
+      )
+      .innerJoin(schoolMaster, eq(schoolMaster.id, markSheet.schoolId))
+      .innerJoin(academicClassMaster, eq(academicClassMaster.id, markSheet.academicClassId))
+      .innerJoin(academicSubject, eq(academicSubject.id, markSheet.subjectId))
+      .innerJoin(academicTerm, eq(academicTerm.id, markSheet.termId))
+      .innerJoin(academicAssessment, eq(academicAssessment.id, studentMark.assessmentId))
+      .where(where)
+      .orderBy(
+        asc(sql`lower(${person.displayName})`),
+        asc(sql`lower(${academicSubject.name})`),
+        asc(sql`lower(${academicAssessment.name})`),
+      )
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
   ]);
-  const total = Number(count?.total ?? 0);
+  const total = Number(countRows[0]?.total ?? 0);
   return Response.json({
-    results: rows.results.map((row) => ({ ...row, isVerified: Boolean(row.isVerified) })),
+    results: rows.map((row) => ({ ...row, isVerified: Boolean(row.isVerified) })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     capabilities: { manage: hasPermission(context, "school.results.manage") },
   });
@@ -4213,77 +4307,133 @@ async function getAcademicResultSetup(request: Request): Promise<Response> {
     classSubjects,
     assessmentLimits,
   ] = await Promise.all([
-    runtime.DATABASE.prepare(`SELECT DISTINCT school.id,school.name FROM school_class_offering offering
-      JOIN school_master school ON school.id=offering.school_id
-      WHERE offering.organization_id=? AND offering.academic_session_id=? AND offering.is_active=1
-      ORDER BY school.name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all<{ id: string; name: string }>(),
-    runtime.DATABASE.prepare(`SELECT offering.school_id AS schoolId,class.id,
-      ${classDisplayName("class")} AS name FROM school_class_offering offering
-      JOIN academic_class_master class ON class.id=offering.academic_class_id
-      WHERE offering.organization_id=? AND offering.academic_session_id=? AND offering.is_active=1
-      ORDER BY coalesce(class.level,999),name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all<{ schoolId: string; id: string; name: string }>(),
-    runtime.DATABASE.prepare(`SELECT id,name,short_name AS shortName,is_optional AS isOptional,
-      passing_percentage AS passingPercentage FROM academic_subject
-      WHERE organization_id=? AND academic_session_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all<{
-        id: string;
-        name: string;
-        shortName: string | null;
-        isOptional: number;
-        passingPercentage: number | null;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id,name FROM academic_term WHERE organization_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`,
-    )
-      .bind(scope.organizationId)
-      .all<{ id: string; name: string }>(),
-    runtime.DATABASE.prepare(`SELECT id,term_id AS termId,name FROM academic_assessment
-      WHERE organization_id=? AND academic_session_id=? AND is_active=1 ORDER BY name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all<{ id: string; termId: string; name: string }>(),
-    runtime.DATABASE.prepare(`SELECT enrollment.school_id AS schoolId,enrollment.academic_class_id AS academicClassId,
-      person.id,person.display_name AS name,person.primary_identifier AS admissionNumber
-      FROM student_enrollment enrollment JOIN person ON person.id=enrollment.person_id
-      WHERE enrollment.organization_id=? AND enrollment.academic_session_id=?
-        AND enrollment.status IN ('recorded','enrolled') AND person.status='active'
-      ORDER BY person.display_name COLLATE NOCASE`)
-      .bind(scope.organizationId, scope.session.id)
-      .all<{
-        schoolId: string;
-        academicClassId: string;
-        id: string;
-        name: string;
-        admissionNumber: string;
-      }>(),
-    runtime.DATABASE.prepare(`SELECT academic_class_id AS academicClassId,subject_id AS subjectId,
-      maximum_marks AS maximumMarks,display_order AS displayOrder FROM academic_class_subject
-      WHERE organization_id=? AND academic_session_id=? ORDER BY academic_class_id,display_order`)
-      .bind(scope.organizationId, scope.session.id)
-      .all(),
-    runtime.DATABASE.prepare(`SELECT academic_class_id AS academicClassId,subject_id AS subjectId,
-      assessment_id AS assessmentId,maximum_marks AS maximumMarks
-      FROM academic_class_subject_assessment WHERE organization_id=? AND academic_session_id=?`)
-      .bind(scope.organizationId, scope.session.id)
-      .all(),
+    runtime.ORM.selectDistinct({ id: schoolMaster.id, name: schoolMaster.name })
+      .from(schoolClassOffering)
+      .innerJoin(schoolMaster, eq(schoolMaster.id, schoolClassOffering.schoolId))
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, scope.organizationId),
+          eq(schoolClassOffering.academicSessionId, scope.session.id),
+          eq(schoolClassOffering.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${schoolMaster.name})`)),
+    runtime.ORM.select({
+      schoolId: schoolClassOffering.schoolId,
+      id: academicClassMaster.id,
+      name: sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`,
+    })
+      .from(schoolClassOffering)
+      .innerJoin(
+        academicClassMaster,
+        eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+      )
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, scope.organizationId),
+          eq(schoolClassOffering.academicSessionId, scope.session.id),
+          eq(schoolClassOffering.isActive, 1),
+        ),
+      )
+      .orderBy(
+        asc(sql`coalesce(${academicClassMaster.level}, 999)`),
+        asc(sql`lower(${academicClassMaster.name})`),
+      ),
+    runtime.ORM.select({
+      id: academicSubject.id,
+      name: academicSubject.name,
+      shortName: academicSubject.shortName,
+      isOptional: academicSubject.isOptional,
+      passingPercentage: academicSubject.passingPercentage,
+    })
+      .from(academicSubject)
+      .where(
+        and(
+          eq(academicSubject.organizationId, scope.organizationId),
+          eq(academicSubject.academicSessionId, scope.session.id),
+          eq(academicSubject.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicSubject.name})`)),
+    runtime.ORM.select({ id: academicTerm.id, name: academicTerm.name })
+      .from(academicTerm)
+      .where(
+        and(eq(academicTerm.organizationId, scope.organizationId), eq(academicTerm.isActive, 1)),
+      )
+      .orderBy(asc(sql`lower(${academicTerm.name})`)),
+    runtime.ORM.select({
+      id: academicAssessment.id,
+      termId: academicAssessment.termId,
+      name: academicAssessment.name,
+    })
+      .from(academicAssessment)
+      .where(
+        and(
+          eq(academicAssessment.organizationId, scope.organizationId),
+          eq(academicAssessment.academicSessionId, scope.session.id),
+          eq(academicAssessment.isActive, 1),
+        ),
+      )
+      .orderBy(asc(sql`lower(${academicAssessment.name})`)),
+    runtime.ORM.select({
+      schoolId: studentEnrollment.schoolId,
+      academicClassId: studentEnrollment.academicClassId,
+      id: person.id,
+      name: person.displayName,
+      admissionNumber: person.primaryIdentifier,
+    })
+      .from(studentEnrollment)
+      .innerJoin(person, eq(person.id, studentEnrollment.personId))
+      .where(
+        and(
+          eq(studentEnrollment.organizationId, scope.organizationId),
+          eq(studentEnrollment.academicSessionId, scope.session.id),
+          inArray(studentEnrollment.status, ["recorded", "enrolled"]),
+          eq(person.status, "active"),
+        ),
+      )
+      .orderBy(asc(sql`lower(${person.displayName})`)),
+    runtime.ORM.select({
+      academicClassId: academicClassSubject.academicClassId,
+      subjectId: academicClassSubject.subjectId,
+      maximumMarks: academicClassSubject.maximumMarks,
+      displayOrder: academicClassSubject.displayOrder,
+    })
+      .from(academicClassSubject)
+      .where(
+        and(
+          eq(academicClassSubject.organizationId, scope.organizationId),
+          eq(academicClassSubject.academicSessionId, scope.session.id),
+        ),
+      )
+      .orderBy(asc(academicClassSubject.academicClassId), asc(academicClassSubject.displayOrder)),
+    runtime.ORM.select({
+      academicClassId: academicClassSubjectAssessment.academicClassId,
+      subjectId: academicClassSubjectAssessment.subjectId,
+      assessmentId: academicClassSubjectAssessment.assessmentId,
+      maximumMarks: academicClassSubjectAssessment.maximumMarks,
+    })
+      .from(academicClassSubjectAssessment)
+      .where(
+        and(
+          eq(academicClassSubjectAssessment.organizationId, scope.organizationId),
+          eq(academicClassSubjectAssessment.academicSessionId, scope.session.id),
+        ),
+      ),
   ]);
   return Response.json({
     session: scope.session,
-    schools: schools.results,
-    classes: classes.results,
-    subjects: subjects.results.map((subject) => ({
+    schools,
+    classes,
+    subjects: subjects.map((subject) => ({
       ...subject,
       isOptional: Boolean(subject.isOptional),
     })),
-    terms: terms.results,
-    assessments: assessments.results,
-    students: students.results,
-    classSubjects: classSubjects.results,
-    assessmentLimits: assessmentLimits.results,
+    terms,
+    assessments,
+    students,
+    classSubjects,
+    assessmentLimits,
     capabilities: { manage: hasPermission(scope, "school.results.manage") },
   });
 }
@@ -4855,58 +5005,107 @@ async function getAcademicResultSummaries(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Check the summary filters." }, { status: 400 });
   const { sessionId, q, school, className, subject, term, page, pageSize } = parsed.data;
-  const conditions = ["sheet.organization_id=?", "sheet.academic_session_id=?", "mark.is_active=1"];
-  const bindings: Array<string | number> = [context.organizationId, sessionId];
-  for (const [value, column] of [
-    [school, "sheet.school_id"],
-    [className, "sheet.academic_class_id"],
-    [subject, "sheet.subject_id"],
-    [term, "sheet.term_id"],
-  ] as const) {
-    if (value !== "all") {
-      conditions.push(`${column}=?`);
-      bindings.push(value);
-    }
-  }
+  const conditions = [
+    eq(markSheet.organizationId, context.organizationId),
+    eq(markSheet.academicSessionId, sessionId),
+    eq(studentMark.isActive, 1),
+  ];
+  if (school !== "all") conditions.push(eq(markSheet.schoolId, school));
+  if (className !== "all") conditions.push(eq(markSheet.academicClassId, className));
+  if (subject !== "all") conditions.push(eq(markSheet.subjectId, subject));
+  if (term !== "all") conditions.push(eq(markSheet.termId, term));
   if (q) {
     const search = `%${escapeLikePattern(q.toLowerCase())}%`;
     conditions.push(
-      "(lower(person.display_name) LIKE ? ESCAPE '\\' OR lower(person.primary_identifier) LIKE ? ESCAPE '\\')",
+      or(
+        sql`lower(${person.displayName}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(${person.primaryIdentifier}) LIKE ${search} ESCAPE '\\'`,
+      )!,
     );
-    bindings.push(search, search);
   }
-  const where = conditions.join(" AND ");
-  const group = `person.id,person.display_name,person.primary_identifier,school.id,school.name,
-    class.id,class.name,class.title,class.level,term.id,term.name`;
-  const joins = `FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
-    JOIN person ON person.id=mark.person_id AND person.organization_id=mark.organization_id
-    JOIN school_master school ON school.id=sheet.school_id
-    JOIN academic_class_master class ON class.id=sheet.academic_class_id
-    JOIN academic_term term ON term.id=sheet.term_id WHERE ${where}`;
+  const where = and(...conditions);
   const runtime = getRuntimeEnv();
-  const [count, summaries] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT COUNT(*) AS total FROM (SELECT person.id ${joins} GROUP BY ${group}) grouped`,
+  const groupedResults = runtime.ORM.select({ personId: person.id })
+    .from(studentMark)
+    .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
+    .innerJoin(
+      person,
+      and(
+        eq(person.id, studentMark.personId),
+        eq(person.organizationId, studentMark.organizationId),
+      ),
     )
-      .bind(...bindings)
-      .first<{ total: number }>(),
-    runtime.DATABASE.prepare(`SELECT person.id AS personId,person.display_name AS studentName,
-      person.primary_identifier AS admissionNumber,school.id AS schoolId,school.name AS schoolName,
-      class.id AS academicClassId,${classDisplayName("class")} AS className,
-      term.id AS termId,term.name AS termName,COUNT(DISTINCT sheet.subject_id) AS subjectCount,
-      SUM(CASE WHEN mark.marks IS NOT NULL THEN mark.marks ELSE 0 END) AS totalMarks,
-      SUM(CASE WHEN mark.marks IS NOT NULL THEN mark.maximum_marks ELSE 0 END) AS totalMaximum,
-      SUM(CASE WHEN mark.marks IS NOT NULL THEN 1 ELSE 0 END) AS recordedCount,
-      SUM(CASE WHEN sheet.status='draft' THEN 1 ELSE 0 END) AS draftEntries,
-      SUM(CASE WHEN sheet.status<>'final' THEN 1 ELSE 0 END) AS nonFinalEntries
-      ${joins} GROUP BY ${group}
-      ORDER BY person.display_name COLLATE NOCASE,term.name COLLATE NOCASE LIMIT ? OFFSET ?`)
-      .bind(...bindings, pageSize, (page - 1) * pageSize)
-      .all<Record<string, unknown>>(),
+    .innerJoin(schoolMaster, eq(schoolMaster.id, markSheet.schoolId))
+    .innerJoin(academicClassMaster, eq(academicClassMaster.id, markSheet.academicClassId))
+    .innerJoin(academicTerm, eq(academicTerm.id, markSheet.termId))
+    .where(where)
+    .groupBy(
+      person.id,
+      person.displayName,
+      person.primaryIdentifier,
+      schoolMaster.id,
+      schoolMaster.name,
+      academicClassMaster.id,
+      academicClassMaster.name,
+      academicClassMaster.title,
+      academicClassMaster.level,
+      academicTerm.id,
+      academicTerm.name,
+    )
+    .as("grouped_results");
+  const [countRows, summaries] = await Promise.all([
+    runtime.ORM.select({ total: count() }).from(groupedResults),
+    runtime.ORM.select({
+      personId: person.id,
+      studentName: person.displayName,
+      admissionNumber: person.primaryIdentifier,
+      schoolId: schoolMaster.id,
+      schoolName: schoolMaster.name,
+      academicClassId: academicClassMaster.id,
+      className: sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`,
+      termId: academicTerm.id,
+      termName: academicTerm.name,
+      subjectCount: sql<number>`count(distinct ${markSheet.subjectId})`,
+      totalMarks: sql<number>`sum(case when ${studentMark.marks} is not null then ${studentMark.marks} else 0 end)`,
+      totalMaximum: sql<number>`sum(case when ${studentMark.marks} is not null then ${studentMark.maximumMarks} else 0 end)`,
+      recordedCount: sql<number>`sum(case when ${studentMark.marks} is not null then 1 else 0 end)`,
+      draftEntries: sql<number>`sum(case when ${markSheet.status} = 'draft' then 1 else 0 end)`,
+      nonFinalEntries: sql<number>`sum(case when ${markSheet.status} <> 'final' then 1 else 0 end)`,
+    })
+      .from(studentMark)
+      .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
+      .innerJoin(
+        person,
+        and(
+          eq(person.id, studentMark.personId),
+          eq(person.organizationId, studentMark.organizationId),
+        ),
+      )
+      .innerJoin(schoolMaster, eq(schoolMaster.id, markSheet.schoolId))
+      .innerJoin(academicClassMaster, eq(academicClassMaster.id, markSheet.academicClassId))
+      .innerJoin(academicTerm, eq(academicTerm.id, markSheet.termId))
+      .where(where)
+      .groupBy(
+        person.id,
+        person.displayName,
+        person.primaryIdentifier,
+        schoolMaster.id,
+        schoolMaster.name,
+        academicClassMaster.id,
+        academicClassMaster.name,
+        academicClassMaster.section,
+        academicClassMaster.title,
+        academicClassMaster.level,
+        academicTerm.id,
+        academicTerm.name,
+      )
+      .orderBy(asc(sql`lower(${person.displayName})`), asc(sql`lower(${academicTerm.name})`))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
   ]);
-  const total = Number(count?.total ?? 0);
+  const total = Number(countRows[0]?.total ?? 0);
   return Response.json({
-    summaries: summaries.results.map((row) => ({
+    summaries: summaries.map((row) => ({
       ...row,
       percentage:
         Number(row.totalMaximum) > 0
@@ -4936,57 +5135,111 @@ async function getAcademicReportCard(request: Request): Promise<Response> {
   if (!parsed.success)
     return Response.json({ error: "Choose a valid student, session, and term." }, { status: 400 });
   const runtime = getRuntimeEnv();
-  const [organization, session, student, rows, grades] = await Promise.all([
-    runtime.DATABASE.prepare("SELECT name FROM organization WHERE id=?")
-      .bind(context.organizationId)
-      .first<{ name: string }>(),
-    runtime.DATABASE.prepare(
-      "SELECT id,name,starts_on AS startsOn,ends_on AS endsOn FROM academic_session WHERE id=? AND organization_id=?",
-    )
-      .bind(parsed.data.sessionId, context.organizationId)
-      .first<{ id: string; name: string; startsOn: string; endsOn: string }>(),
-    runtime.DATABASE.prepare(`SELECT person.id AS personId,person.display_name AS studentName,
-      person.primary_identifier AS admissionNumber,school.name AS schoolName,
-      ${classDisplayName("class")} AS className,term.id AS termId,term.name AS termName
-      FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
-      JOIN person ON person.id=mark.person_id JOIN school_master school ON school.id=sheet.school_id
-      JOIN academic_class_master class ON class.id=sheet.academic_class_id
-      JOIN academic_term term ON term.id=sheet.term_id
-      WHERE mark.organization_id=? AND mark.person_id=? AND sheet.academic_session_id=?
-        AND sheet.term_id=? AND mark.is_active=1 LIMIT 1`)
-      .bind(context.organizationId, parsed.data.personId, parsed.data.sessionId, parsed.data.termId)
-      .first<Record<string, unknown>>(),
-    runtime.DATABASE.prepare(`SELECT subject.id AS subjectId,subject.name AS subjectName,
-      subject.grade_type_id AS gradeTypeId,subject.passing_percentage AS passingPercentage,assessment.id AS assessmentId,
-      assessment.name AS assessmentName,mark.marks,mark.maximum_marks AS maximumMarks,
-      mark.note,sheet.status,sheet.source_system AS sourceSystem
-      FROM student_mark mark JOIN mark_sheet sheet ON sheet.id=mark.mark_sheet_id
-      JOIN academic_subject subject ON subject.id=sheet.subject_id
-      JOIN academic_assessment assessment ON assessment.id=mark.assessment_id
-      WHERE mark.organization_id=? AND mark.person_id=? AND sheet.academic_session_id=?
-        AND sheet.term_id=? AND mark.is_active=1
-      ORDER BY subject.name COLLATE NOCASE,assessment.name COLLATE NOCASE`)
-      .bind(context.organizationId, parsed.data.personId, parsed.data.sessionId, parsed.data.termId)
-      .all<Record<string, unknown>>(),
-    runtime.DATABASE.prepare(`SELECT grade.grade_type_id AS gradeTypeId,grade.name,
-      grade.starts_at AS startsAt,grade.ends_at AS endsAt FROM academic_grade grade
-      JOIN academic_grade_type type ON type.id=grade.grade_type_id
-      WHERE grade.organization_id=? AND type.academic_session_id=? ORDER BY grade.starts_at DESC`)
-      .bind(context.organizationId, parsed.data.sessionId)
-      .all(),
+  const [organizationRecord, session, student, rows, grades] = await Promise.all([
+    runtime.ORM.select({ name: organization.name })
+      .from(organization)
+      .where(eq(organization.id, context.organizationId))
+      .limit(1)
+      .then((values) => values[0] ?? null),
+    runtime.ORM.select({
+      id: academicSession.id,
+      name: academicSession.name,
+      startsOn: academicSession.startsOn,
+      endsOn: academicSession.endsOn,
+    })
+      .from(academicSession)
+      .where(
+        and(
+          eq(academicSession.id, parsed.data.sessionId),
+          eq(academicSession.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((values) => values[0] ?? null),
+    runtime.ORM.select({
+      personId: person.id,
+      studentName: person.displayName,
+      admissionNumber: person.primaryIdentifier,
+      schoolName: schoolMaster.name,
+      className: sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`,
+      termId: academicTerm.id,
+      termName: academicTerm.name,
+    })
+      .from(studentMark)
+      .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
+      .innerJoin(person, eq(person.id, studentMark.personId))
+      .innerJoin(schoolMaster, eq(schoolMaster.id, markSheet.schoolId))
+      .innerJoin(academicClassMaster, eq(academicClassMaster.id, markSheet.academicClassId))
+      .innerJoin(academicTerm, eq(academicTerm.id, markSheet.termId))
+      .where(
+        and(
+          eq(studentMark.organizationId, context.organizationId),
+          eq(studentMark.personId, parsed.data.personId),
+          eq(markSheet.academicSessionId, parsed.data.sessionId),
+          eq(markSheet.termId, parsed.data.termId),
+          eq(studentMark.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((values) => values[0] ?? null),
+    runtime.ORM.select({
+      subjectId: academicSubject.id,
+      subjectName: academicSubject.name,
+      gradeTypeId: academicSubject.gradeTypeId,
+      passingPercentage: academicSubject.passingPercentage,
+      assessmentId: academicAssessment.id,
+      assessmentName: academicAssessment.name,
+      marks: studentMark.marks,
+      maximumMarks: studentMark.maximumMarks,
+      note: studentMark.note,
+      status: markSheet.status,
+      sourceSystem: markSheet.sourceSystem,
+    })
+      .from(studentMark)
+      .innerJoin(markSheet, eq(markSheet.id, studentMark.markSheetId))
+      .innerJoin(academicSubject, eq(academicSubject.id, markSheet.subjectId))
+      .innerJoin(academicAssessment, eq(academicAssessment.id, studentMark.assessmentId))
+      .where(
+        and(
+          eq(studentMark.organizationId, context.organizationId),
+          eq(studentMark.personId, parsed.data.personId),
+          eq(markSheet.academicSessionId, parsed.data.sessionId),
+          eq(markSheet.termId, parsed.data.termId),
+          eq(studentMark.isActive, 1),
+        ),
+      )
+      .orderBy(
+        asc(sql`lower(${academicSubject.name})`),
+        asc(sql`lower(${academicAssessment.name})`),
+      ),
+    runtime.ORM.select({
+      gradeTypeId: academicGrade.gradeTypeId,
+      name: academicGrade.name,
+      startsAt: academicGrade.startsAt,
+      endsAt: academicGrade.endsAt,
+    })
+      .from(academicGrade)
+      .innerJoin(academicGradeType, eq(academicGradeType.id, academicGrade.gradeTypeId))
+      .where(
+        and(
+          eq(academicGrade.organizationId, context.organizationId),
+          eq(academicGradeType.academicSessionId, parsed.data.sessionId),
+        ),
+      )
+      .orderBy(desc(academicGrade.startsAt)),
   ]);
-  if (!session || !student || !rows.results.length)
+  if (!session || !student || !rows.length)
     return Response.json(
       { error: "No result card was found for that selection." },
       { status: 404 },
     );
   return Response.json({
     generatedAt: new Date().toISOString(),
-    organizationName: organization?.name ?? "School",
+    organizationName: organizationRecord?.name ?? "School",
     session,
     student,
-    results: rows.results,
-    grades: grades.results,
+    results: rows,
+    grades,
   });
 }
 
@@ -8067,8 +8320,56 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   }
 
   const runtime = getRuntimeEnv();
+  const relatedPerson = alias(person, "related_person");
+  const rankedEndChanges = runtime.ORM.select({
+    enrollmentId: studentEnrollmentChange.enrollmentId,
+    effectiveOn: studentEnrollmentChange.effectiveOn,
+    note: studentEnrollmentChange.note,
+    rank: sql<number>`row_number() over (partition by ${studentEnrollmentChange.enrollmentId} order by ${studentEnrollmentChange.createdAt} desc)`.as(
+      "change_rank",
+    ),
+  })
+    .from(studentEnrollmentChange)
+    .where(
+      and(
+        eq(studentEnrollmentChange.organizationId, context.organizationId),
+        inArray(studentEnrollmentChange.changeType, ["withdrawn", "completed", "transferred"]),
+      ),
+    )
+    .as("ranked_end_change");
+  const latestEndChange = runtime.ORM.select({
+    enrollmentId: rankedEndChanges.enrollmentId,
+    effectiveOn: rankedEndChanges.effectiveOn,
+    note: rankedEndChanges.note,
+  })
+    .from(rankedEndChanges)
+    .where(eq(rankedEndChanges.rank, 1))
+    .as("latest_end_change");
+  const reciprocalRelationships = runtime.ORM.select({
+    id: personRelationship.id,
+    relationshipType: personRelationship.relationshipType,
+    reviewFlag: personRelationship.reviewFlag,
+    sourceId: personRelationship.sourceId,
+    counterpartId:
+      sql<string>`case when ${personRelationship.personId} = ${parsedId.data} then ${personRelationship.relatedPersonId} else ${personRelationship.personId} end`.as(
+        "counterpart_id",
+      ),
+  })
+    .from(personRelationship)
+    .where(
+      and(
+        eq(personRelationship.organizationId, context.organizationId),
+        eq(personRelationship.relationshipType, "sibling"),
+        eq(personRelationship.isActive, 1),
+        or(
+          eq(personRelationship.personId, parsedId.data),
+          eq(personRelationship.relatedPersonId, parsedId.data),
+        ),
+      ),
+    )
+    .as("reciprocal_relationship");
   const [
-    person,
+    personRecord,
     placements,
     academicRecords,
     schoolEnrollments,
@@ -8076,277 +8377,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
     relationships,
     files,
   ] = await Promise.all([
-    runtime.DATABASE.prepare(
-      `SELECT id, kind, status, identifier_kind AS identifierKind,
-              primary_identifier AS primaryIdentifier, display_name AS displayName,
-              gender, date_of_birth AS dateOfBirth,
-              admitted_or_joined_on AS admittedOrJoinedOn,
-              campus_or_location AS campusOrLocation, nationality,
-              CASE WHEN photo_asset_key IS NULL THEN 0 ELSE 1 END AS photoReferencePresent,
-              source_system AS sourceSystem, source_table AS sourceTable,
-              source_id AS sourceId, imported_at AS importedAt,
-              CASE WHEN date_of_birth IS NULL THEN 1 ELSE 0 END AS dateOfBirthMissing,
-              CASE WHEN admitted_or_joined_on IS NULL THEN 1 ELSE 0 END AS eventDateMissing,
-              CASE WHEN date(admitted_or_joined_on) < '1900-01-01' THEN 1 ELSE 0 END AS eventDateBefore1900,
-              CASE WHEN date(admitted_or_joined_on) < date(date_of_birth) THEN 1 ELSE 0 END AS eventBeforeBirth
-       FROM person
-       WHERE id = ? AND organization_id = ?`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{
-        id: string;
-        kind: "child" | "elderly" | "staff";
-        status: "active" | "inactive";
-        identifierKind: "admission" | "staff";
-        primaryIdentifier: string;
-        displayName: string;
-        gender: "female" | "male" | "other" | "unknown" | null;
-        dateOfBirth: string | null;
-        admittedOrJoinedOn: string | null;
-        campusOrLocation: string | null;
-        nationality: string | null;
-        photoReferencePresent: number;
-        sourceSystem: string;
-        sourceTable: string;
-        sourceId: string;
-        importedAt: string | null;
-        dateOfBirthMissing: number;
-        eventDateMissing: number;
-        eventDateBefore1900: number;
-        eventBeforeBirth: number;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, home_name AS homeName, location_name AS locationName,
-              placement_type AS placementType, started_on AS startedOn,
-              ended_on AS endedOn, reason, remarks, is_current AS isCurrent,
-              source_id AS sourceId
-       FROM person_placement
-       WHERE person_id = ? AND organization_id = ?
-       ORDER BY is_current DESC, date(started_on) DESC, CAST(source_id AS INTEGER) DESC`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        homeName: string;
-        locationName: string | null;
-        placementType: string | null;
-        startedOn: string;
-        endedOn: string | null;
-        reason: string | null;
-        remarks: string | null;
-        isCurrent: number;
-        sourceId: string;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, class_name AS className, class_level AS classLevel,
-              class_section AS classSection, class_title AS classTitle,
-              school_name AS schoolName, house_name AS houseName,
-              academic_session AS academicSession, recorded_on AS recordedOn,
-              result, roll_number AS rollNumber,
-              board_registration_number AS boardRegistrationNumber,
-              description, is_latest AS isLatest, source_id AS sourceId
-       FROM person_academic_record
-       WHERE person_id = ? AND organization_id = ?
-       ORDER BY is_latest DESC, date(recorded_on) DESC, CAST(source_id AS INTEGER) DESC`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        className: string;
-        classLevel: number | null;
-        classSection: string | null;
-        classTitle: string | null;
-        schoolName: string | null;
-        houseName: string | null;
-        academicSession: string;
-        recordedOn: string;
-        result: string | null;
-        rollNumber: string | null;
-        boardRegistrationNumber: string | null;
-        description: string | null;
-        isLatest: number;
-        sourceId: string;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT enrollment.id, session.name AS academicSession,
-                session.starts_on AS sessionStartsOn, session.ends_on AS sessionEndsOn,
-                school.name AS schoolName, ${classDisplayName("class")} AS className,
-                house.name AS houseName, enrollment.roll_number AS rollNumber,
-                enrollment.status, enrollment.started_on AS startedOn,
-                coalesce(end_change.effective_on, enrollment.ended_on) AS endedOn,
-                end_change.note AS endReason
-         FROM student_enrollment enrollment
-         JOIN academic_session session ON session.id = enrollment.academic_session_id
-           AND session.organization_id = enrollment.organization_id
-         JOIN academic_class_master class ON class.id = enrollment.academic_class_id
-           AND class.organization_id = enrollment.organization_id
-         LEFT JOIN school_master school ON school.id = enrollment.school_id
-           AND school.organization_id = enrollment.organization_id
-         LEFT JOIN house_master house ON house.id = enrollment.house_id
-           AND house.organization_id = enrollment.organization_id
-         LEFT JOIN student_enrollment_change end_change ON end_change.id = (
-           SELECT change.id FROM student_enrollment_change change
-           WHERE change.organization_id = enrollment.organization_id
-             AND change.enrollment_id = enrollment.id
-             AND change.change_type IN ('withdrawn', 'completed', 'transferred')
-           ORDER BY change.created_at DESC LIMIT 1
-         )
-         WHERE enrollment.person_id = ? AND enrollment.organization_id = ?
-         ORDER BY date(session.starts_on) DESC, enrollment.created_at DESC`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        academicSession: string;
-        sessionStartsOn: string;
-        sessionEndsOn: string;
-        schoolName: string | null;
-        className: string;
-        houseName: string | null;
-        rollNumber: string | null;
-        status: "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed" | "graduated";
-        startedOn: string;
-        endedOn: string | null;
-        endReason: string | null;
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT parentage_status AS parentageStatus,
-              mother_name AS motherName, father_name AS fatherName,
-              mother_occupation AS motherOccupation,
-              father_occupation AS fatherOccupation,
-              parents_phone AS parentsPhone,
-              parents_permanent_address AS parentsPermanentAddress,
-              guardian_1_name AS guardian1Name,
-              guardian_1_address AS guardian1Address,
-              guardian_1_email AS guardian1Email,
-              guardian_1_phone AS guardian1Phone,
-              guardian_1_mobile AS guardian1Mobile,
-              guardian_2_name AS guardian2Name,
-              guardian_2_address AS guardian2Address,
-              guardian_2_email AS guardian2Email,
-              guardian_2_phone AS guardian2Phone,
-              guardian_2_mobile AS guardian2Mobile,
-              marital_status AS maritalStatus, spouse_name AS spouseName,
-              number_of_children AS numberOfChildren
-       FROM person_family_profile
-       WHERE person_id = ? AND organization_id = ?`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .first<{
-        parentageStatus: string | null;
-        motherName: string | null;
-        fatherName: string | null;
-        motherOccupation: string | null;
-        fatherOccupation: string | null;
-        parentsPhone: string | null;
-        parentsPermanentAddress: string | null;
-        guardian1Name: string | null;
-        guardian1Address: string | null;
-        guardian1Email: string | null;
-        guardian1Phone: string | null;
-        guardian1Mobile: string | null;
-        guardian2Name: string | null;
-        guardian2Address: string | null;
-        guardian2Email: string | null;
-        guardian2Phone: string | null;
-        guardian2Mobile: string | null;
-        maritalStatus: string | null;
-        spouseName: string | null;
-        numberOfChildren: string | null;
-      }>(),
-    runtime.DATABASE.prepare(
-      `WITH reciprocal_relationships AS (
-         SELECT relationship.*,
-                CASE
-                  WHEN relationship.person_id = ? THEN relationship.related_person_id
-                  ELSE relationship.person_id
-                END AS counterpart_id
-         FROM person_relationship AS relationship
-         WHERE relationship.organization_id = ?
-           AND relationship.relationship_type = 'sibling'
-           AND relationship.is_active = 1
-           AND (relationship.person_id = ? OR relationship.related_person_id = ?)
-       ), ranked_relationships AS (
-         SELECT reciprocal_relationships.*,
-                ROW_NUMBER() OVER (
-                  PARTITION BY counterpart_id
-                  ORDER BY
-                    CASE WHEN review_flag IS NULL THEN 1 ELSE 0 END,
-                    CAST(source_id AS INTEGER), id
-                ) AS relationship_rank
-         FROM reciprocal_relationships
-       )
-       SELECT relationship.id, relationship.relationship_type AS relationshipType,
-              relationship.review_flag AS reviewFlag,
-              related.id AS personId, related.display_name AS displayName,
-              related.primary_identifier AS primaryIdentifier,
-              related.identifier_kind AS identifierKind,
-              related.kind, related.status
-       FROM ranked_relationships AS relationship
-       JOIN person AS related
-         ON related.id = relationship.counterpart_id
-        AND related.organization_id = relationship.organization_id
-       WHERE relationship.relationship_rank = 1
-       ORDER BY related.display_name COLLATE NOCASE, relationship.source_id`,
-    )
-      .bind(parsedId.data, context.organizationId, parsedId.data, parsedId.data)
-      .all<{
-        id: string;
-        relationshipType: "sibling";
-        reviewFlag: "self_reference" | "duplicate_source_link" | null;
-        personId: string;
-        displayName: string;
-        primaryIdentifier: string;
-        identifierKind: "admission" | "staff";
-        kind: "child" | "elderly" | "staff";
-        status: "active" | "inactive";
-      }>(),
-    runtime.DATABASE.prepare(
-      `SELECT id, category, label, file_name AS fileName,
-              content_type AS contentType, byte_size AS byteSize,
-              is_primary AS isPrimary
-       FROM person_file
-       WHERE person_id = ? AND organization_id = ? AND is_active = 1
-       ORDER BY
-         CASE category
-           WHEN 'profile_photo' THEN 0
-           WHEN 'parents_photo' THEN 1
-           WHEN 'guardian_1_photo' THEN 2
-           WHEN 'guardian_2_photo' THEN 3
-           ELSE 4
-         END,
-         label COLLATE NOCASE, source_id`,
-    )
-      .bind(parsedId.data, context.organizationId)
-      .all<{
-        id: string;
-        category:
-          | "profile_photo"
-          | "parents_photo"
-          | "guardian_1_photo"
-          | "guardian_2_photo"
-          | "document";
-        label: string;
-        fileName: string;
-        contentType: string;
-        byteSize: number;
-        isPrimary: number;
-      }>(),
-  ]);
-
-  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
-
-  const canEdit = hasPermission(context, "people.update");
-
-  const reviewFlags = [
-    person.dateOfBirthMissing ? "date_of_birth_missing" : null,
-    person.eventDateMissing ? "event_date_missing" : null,
-    person.eventDateBefore1900 ? "event_date_before_1900" : null,
-    person.eventBeforeBirth ? "event_before_birth" : null,
-  ].filter((flag): flag is string => Boolean(flag));
-
-  return Response.json({
-    person: {
+    runtime.ORM.select({
       id: person.id,
       kind: person.kind,
       status: person.status,
@@ -8358,15 +8389,246 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       admittedOrJoinedOn: person.admittedOrJoinedOn,
       campusOrLocation: person.campusOrLocation,
       nationality: person.nationality,
-      photoReferencePresent: Boolean(person.photoReferencePresent),
+      photoReferencePresent: sql<number>`case when ${person.photoAssetKey} is null then 0 else 1 end`,
       sourceSystem: person.sourceSystem,
       sourceTable: person.sourceTable,
       sourceId: person.sourceId,
       importedAt: person.importedAt,
+      dateOfBirthMissing: sql<number>`case when ${person.dateOfBirth} is null then 1 else 0 end`,
+      eventDateMissing: sql<number>`case when ${person.admittedOrJoinedOn} is null then 1 else 0 end`,
+      eventDateBefore1900: sql<number>`case when date(${person.admittedOrJoinedOn}) < '1900-01-01' then 1 else 0 end`,
+      eventBeforeBirth: sql<number>`case when date(${person.admittedOrJoinedOn}) < date(${person.dateOfBirth}) then 1 else 0 end`,
+    })
+      .from(person)
+      .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({
+      id: personPlacement.id,
+      homeName: personPlacement.homeName,
+      locationName: personPlacement.locationName,
+      placementType: personPlacement.placementType,
+      startedOn: personPlacement.startedOn,
+      endedOn: personPlacement.endedOn,
+      reason: personPlacement.reason,
+      remarks: personPlacement.remarks,
+      isCurrent: personPlacement.isCurrent,
+      sourceId: personPlacement.sourceId,
+    })
+      .from(personPlacement)
+      .where(
+        and(
+          eq(personPlacement.personId, parsedId.data),
+          eq(personPlacement.organizationId, context.organizationId),
+        ),
+      )
+      .orderBy(
+        desc(personPlacement.isCurrent),
+        desc(sql`date(${personPlacement.startedOn})`),
+        desc(sql`cast(${personPlacement.sourceId} as integer)`),
+      ),
+    runtime.ORM.select({
+      id: personAcademicRecord.id,
+      className: personAcademicRecord.className,
+      classLevel: personAcademicRecord.classLevel,
+      classSection: personAcademicRecord.classSection,
+      classTitle: personAcademicRecord.classTitle,
+      schoolName: personAcademicRecord.schoolName,
+      houseName: personAcademicRecord.houseName,
+      academicSession: personAcademicRecord.academicSession,
+      recordedOn: personAcademicRecord.recordedOn,
+      result: personAcademicRecord.result,
+      rollNumber: personAcademicRecord.rollNumber,
+      boardRegistrationNumber: personAcademicRecord.boardRegistrationNumber,
+      description: personAcademicRecord.description,
+      isLatest: personAcademicRecord.isLatest,
+      sourceId: personAcademicRecord.sourceId,
+    })
+      .from(personAcademicRecord)
+      .where(
+        and(
+          eq(personAcademicRecord.personId, parsedId.data),
+          eq(personAcademicRecord.organizationId, context.organizationId),
+        ),
+      )
+      .orderBy(
+        desc(personAcademicRecord.isLatest),
+        desc(sql`date(${personAcademicRecord.recordedOn})`),
+        desc(sql`cast(${personAcademicRecord.sourceId} as integer)`),
+      ),
+    runtime.ORM.select({
+      id: studentEnrollment.id,
+      academicSession: academicSession.name,
+      sessionStartsOn: academicSession.startsOn,
+      sessionEndsOn: academicSession.endsOn,
+      schoolName: schoolMaster.name,
+      className: sql<string>`case when ${academicClassMaster.section} is null or trim(${academicClassMaster.section}) = '' then ${academicClassMaster.name} else ${academicClassMaster.name} || ' · ' || ${academicClassMaster.section} end`,
+      houseName: houseMaster.name,
+      rollNumber: studentEnrollment.rollNumber,
+      status: studentEnrollment.status,
+      startedOn: studentEnrollment.startedOn,
+      endedOn: sql<
+        string | null
+      >`coalesce(${latestEndChange.effectiveOn}, ${studentEnrollment.endedOn})`,
+      endReason: latestEndChange.note,
+    })
+      .from(studentEnrollment)
+      .innerJoin(
+        academicSession,
+        and(
+          eq(academicSession.id, studentEnrollment.academicSessionId),
+          eq(academicSession.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, studentEnrollment.academicClassId),
+          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .leftJoin(
+        schoolMaster,
+        and(
+          eq(schoolMaster.id, studentEnrollment.schoolId),
+          eq(schoolMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .leftJoin(
+        houseMaster,
+        and(
+          eq(houseMaster.id, studentEnrollment.houseId),
+          eq(houseMaster.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .leftJoin(latestEndChange, eq(latestEndChange.enrollmentId, studentEnrollment.id))
+      .where(
+        and(
+          eq(studentEnrollment.personId, parsedId.data),
+          eq(studentEnrollment.organizationId, context.organizationId),
+        ),
+      )
+      .orderBy(desc(sql`date(${academicSession.startsOn})`), desc(studentEnrollment.createdAt)),
+    runtime.ORM.select({
+      parentageStatus: personFamilyProfile.parentageStatus,
+      motherName: personFamilyProfile.motherName,
+      fatherName: personFamilyProfile.fatherName,
+      motherOccupation: personFamilyProfile.motherOccupation,
+      fatherOccupation: personFamilyProfile.fatherOccupation,
+      parentsPhone: personFamilyProfile.parentsPhone,
+      parentsPermanentAddress: personFamilyProfile.parentsPermanentAddress,
+      guardian1Name: personFamilyProfile.guardian1Name,
+      guardian1Address: personFamilyProfile.guardian1Address,
+      guardian1Email: personFamilyProfile.guardian1Email,
+      guardian1Phone: personFamilyProfile.guardian1Phone,
+      guardian1Mobile: personFamilyProfile.guardian1Mobile,
+      guardian2Name: personFamilyProfile.guardian2Name,
+      guardian2Address: personFamilyProfile.guardian2Address,
+      guardian2Email: personFamilyProfile.guardian2Email,
+      guardian2Phone: personFamilyProfile.guardian2Phone,
+      guardian2Mobile: personFamilyProfile.guardian2Mobile,
+      maritalStatus: personFamilyProfile.maritalStatus,
+      spouseName: personFamilyProfile.spouseName,
+      numberOfChildren: personFamilyProfile.numberOfChildren,
+    })
+      .from(personFamilyProfile)
+      .where(
+        and(
+          eq(personFamilyProfile.personId, parsedId.data),
+          eq(personFamilyProfile.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({
+      id: reciprocalRelationships.id,
+      relationshipType: reciprocalRelationships.relationshipType,
+      reviewFlag: reciprocalRelationships.reviewFlag,
+      sourceId: reciprocalRelationships.sourceId,
+      personId: relatedPerson.id,
+      displayName: relatedPerson.displayName,
+      primaryIdentifier: relatedPerson.primaryIdentifier,
+      identifierKind: relatedPerson.identifierKind,
+      kind: relatedPerson.kind,
+      status: relatedPerson.status,
+    })
+      .from(reciprocalRelationships)
+      .innerJoin(
+        relatedPerson,
+        and(
+          eq(relatedPerson.id, reciprocalRelationships.counterpartId),
+          eq(relatedPerson.organizationId, context.organizationId),
+        ),
+      )
+      .orderBy(
+        asc(sql`case when ${reciprocalRelationships.reviewFlag} is null then 1 else 0 end`),
+        asc(sql`cast(${reciprocalRelationships.sourceId} as integer)`),
+        asc(reciprocalRelationships.id),
+      ),
+    runtime.ORM.select({
+      id: personFile.id,
+      category: personFile.category,
+      label: personFile.label,
+      fileName: personFile.fileName,
+      contentType: personFile.contentType,
+      byteSize: personFile.byteSize,
+      isPrimary: personFile.isPrimary,
+    })
+      .from(personFile)
+      .where(
+        and(
+          eq(personFile.personId, parsedId.data),
+          eq(personFile.organizationId, context.organizationId),
+          eq(personFile.isActive, 1),
+        ),
+      )
+      .orderBy(
+        asc(
+          sql`case ${personFile.category} when 'profile_photo' then 0 when 'parents_photo' then 1 when 'guardian_1_photo' then 2 when 'guardian_2_photo' then 3 else 4 end`,
+        ),
+        asc(sql`lower(${personFile.label})`),
+        asc(personFile.sourceId),
+      ),
+  ]);
+
+  if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
+
+  const canEdit = hasPermission(context, "people.update");
+  const uniqueRelationships = [
+    ...new Map(relationships.map((item) => [item.personId, item])).values(),
+  ]
+    .map(({ sourceId: _sourceId, ...item }) => item)
+    .sort((left, right) => left.displayName.localeCompare(right.displayName));
+
+  const reviewFlags = [
+    personRecord.dateOfBirthMissing ? "date_of_birth_missing" : null,
+    personRecord.eventDateMissing ? "event_date_missing" : null,
+    personRecord.eventDateBefore1900 ? "event_date_before_1900" : null,
+    personRecord.eventBeforeBirth ? "event_before_birth" : null,
+  ].filter((flag): flag is string => Boolean(flag));
+
+  return Response.json({
+    person: {
+      id: personRecord.id,
+      kind: personRecord.kind,
+      status: personRecord.status,
+      identifierKind: personRecord.identifierKind,
+      primaryIdentifier: personRecord.primaryIdentifier,
+      displayName: personRecord.displayName,
+      gender: personRecord.gender,
+      dateOfBirth: personRecord.dateOfBirth,
+      admittedOrJoinedOn: personRecord.admittedOrJoinedOn,
+      campusOrLocation: personRecord.campusOrLocation,
+      nationality: personRecord.nationality,
+      photoReferencePresent: Boolean(personRecord.photoReferencePresent),
+      sourceSystem: personRecord.sourceSystem,
+      sourceTable: personRecord.sourceTable,
+      sourceId: personRecord.sourceId,
+      importedAt: personRecord.importedAt,
       canEdit,
       editRestriction: canEdit ? null : "permission",
       reviewFlags,
-      placements: placements.results.map((placement) => ({
+      placements: placements.map((placement) => ({
         id: placement.id,
         homeName: placement.homeName,
         locationName: placement.locationName,
@@ -8378,7 +8640,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         isCurrent: Boolean(placement.isCurrent),
         sourceId: placement.sourceId,
       })),
-      academicRecords: academicRecords.results.map((record) => ({
+      academicRecords: academicRecords.map((record) => ({
         id: record.id,
         className: record.className,
         classLevel: record.classLevel,
@@ -8395,14 +8657,14 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         isLatest: Boolean(record.isLatest),
         sourceId: record.sourceId,
       })),
-      schoolEnrollments: schoolEnrollments.results.map((enrollment) => ({
+      schoolEnrollments: schoolEnrollments.map((enrollment) => ({
         ...enrollment,
         canCorrectEndDetails:
           canEdit && ["withdrawn", "completed", "graduated"].includes(enrollment.status),
       })),
       family: familyProfile ?? null,
-      relationships: relationships.results,
-      files: files.results.map((file) => ({
+      relationships: uniqueRelationships,
+      files: files.map((file) => ({
         ...file,
         isPrimary: Boolean(file.isPrimary),
         url: `/api/files/${file.id}`,
@@ -8713,52 +8975,62 @@ async function getSiblingOptions(request: Request, personId: string): Promise<Re
   if (!context) return unauthorized();
   if (!hasPermission(context, "people.read")) return forbidden();
   const runtime = getRuntimeEnv();
-  const person = await runtime.DATABASE.prepare(
-    `SELECT id FROM person WHERE id = ? AND organization_id = ?`,
-  )
-    .bind(parsedId.data, context.organizationId)
-    .first<{ id: string }>();
-  if (!person) return Response.json({ error: "Person not found" }, { status: 404 });
+  const personRecord = await runtime.ORM.select({ id: person.id })
+    .from(person)
+    .where(and(eq(person.id, parsedId.data), eq(person.organizationId, context.organizationId)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
 
-  const bindings: Array<string> = [
-    context.organizationId,
-    parsedId.data,
-    context.organizationId,
-    parsedId.data,
-    parsedId.data,
-  ];
+  const candidate = alias(person, "candidate");
+  const existingRelationship = runtime.ORM.select({ value: sql<number>`1` })
+    .from(personRelationship)
+    .where(
+      and(
+        eq(personRelationship.organizationId, context.organizationId),
+        eq(personRelationship.relationshipType, "sibling"),
+        eq(personRelationship.isActive, 1),
+        or(
+          and(
+            eq(personRelationship.personId, parsedId.data),
+            eq(personRelationship.relatedPersonId, candidate.id),
+          ),
+          and(
+            eq(personRelationship.relatedPersonId, parsedId.data),
+            eq(personRelationship.personId, candidate.id),
+          ),
+        ),
+      ),
+    );
   const conditions = [
-    "candidate.organization_id = ?",
-    "candidate.id <> ?",
-    `NOT EXISTS (
-       SELECT 1 FROM person_relationship relationship
-       WHERE relationship.organization_id = ? AND relationship.relationship_type = 'sibling'
-         AND relationship.is_active = 1
-         AND ((relationship.person_id = ? AND relationship.related_person_id = candidate.id)
-           OR (relationship.related_person_id = ? AND relationship.person_id = candidate.id))
-     )`,
+    eq(candidate.organizationId, context.organizationId),
+    ne(candidate.id, parsedId.data),
+    notExists(existingRelationship),
   ];
   if (parsedQuery.data.q) {
     const search = `%${escapeLikePattern(parsedQuery.data.q.toLowerCase())}%`;
     conditions.push(
-      `(lower(candidate.display_name) LIKE ? ESCAPE '\\' OR lower(candidate.primary_identifier) LIKE ? ESCAPE '\\')`,
+      or(
+        sql`lower(${candidate.displayName}) LIKE ${search} ESCAPE '\\'`,
+        sql`lower(${candidate.primaryIdentifier}) LIKE ${search} ESCAPE '\\'`,
+      )!,
     );
-    bindings.push(search, search);
   }
 
-  const candidates = await runtime.DATABASE.prepare(
-    `SELECT candidate.id, candidate.display_name AS displayName,
-            candidate.primary_identifier AS primaryIdentifier,
-            candidate.identifier_kind AS identifierKind, candidate.kind, candidate.status
-     FROM person candidate
-     WHERE ${conditions.join(" AND ")}
-     ORDER BY candidate.display_name COLLATE NOCASE, candidate.primary_identifier
-     LIMIT 20`,
-  )
-    .bind(...bindings)
-    .all();
+  const candidates = await runtime.ORM.select({
+    id: candidate.id,
+    displayName: candidate.displayName,
+    primaryIdentifier: candidate.primaryIdentifier,
+    identifierKind: candidate.identifierKind,
+    kind: candidate.kind,
+    status: candidate.status,
+  })
+    .from(candidate)
+    .where(and(...conditions))
+    .orderBy(asc(sql`lower(${candidate.displayName})`), asc(candidate.primaryIdentifier))
+    .limit(20);
 
-  return Response.json({ people: candidates.results });
+  return Response.json({ people: candidates });
 }
 
 async function addSiblingRelationship(request: Request, personId: string): Promise<Response> {
