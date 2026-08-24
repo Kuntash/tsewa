@@ -57,18 +57,6 @@ const reports: ReportDefinition[] = [
     description: "Current student awards, courses, institutes, and status.",
   },
   {
-    id: "newStudents",
-    domain: "scholarship",
-    name: "New scholarship students",
-    description: "New award recipients for review and follow-up.",
-  },
-  {
-    id: "courseCompleted",
-    domain: "scholarship",
-    name: "Courses completed",
-    description: "Students whose scholarship course has closed as completed.",
-  },
-  {
     id: "ledger",
     domain: "scholarship",
     name: "Scholarship ledger",
@@ -93,18 +81,6 @@ const reports: ReportDefinition[] = [
     description: "Sponsor contacts, organisation, category, and beneficiaries.",
   },
   {
-    id: "addresses",
-    domain: "sponsorship",
-    name: "Sponsor addresses",
-    description: "A contact-focused register for correspondence.",
-  },
-  {
-    id: "homeWise",
-    domain: "sponsorship",
-    name: "Sponsors by home",
-    description: "Beneficiaries and sponsors grouped by current home.",
-  },
-  {
     id: "organizationWise",
     domain: "sponsorship",
     name: "Sponsors by organisation",
@@ -115,12 +91,6 @@ const reports: ReportDefinition[] = [
     domain: "sponsorship",
     name: "Student completion",
     description: "Completed and discontinued student sponsorships.",
-  },
-  {
-    id: "completionElderly",
-    domain: "sponsorship",
-    name: "Elderly completion",
-    description: "Completed and discontinued elderly sponsorships.",
   },
   {
     id: "caseHistoryStudent",
@@ -145,12 +115,6 @@ const reports: ReportDefinition[] = [
     domain: "sponsorship",
     name: "Sponsorship payments",
     description: "All sponsorship remittances and allocations.",
-  },
-  {
-    id: "visitors",
-    domain: "sponsorship",
-    name: "Visitors list",
-    description: "Visits, related people, gifts, and visit summaries.",
   },
 ];
 

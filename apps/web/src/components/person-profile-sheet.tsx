@@ -2043,8 +2043,8 @@ function academicRecordMatchesEnrollment(
   return !recordSchool || !enrollmentSchool || recordSchool === enrollmentSchool;
 }
 
-function normalizeHistoryValue(value: string): string {
-  return value
+function normalizeHistoryValue(value: string | null | undefined): string {
+  return (value ?? "")
     .trim()
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, "");

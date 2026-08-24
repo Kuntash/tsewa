@@ -80,6 +80,8 @@ type StudentRow = {
   primaryIdentifier: string;
   status: "active" | "inactive";
   gender: "female" | "male" | "other" | "unknown" | null;
+  dateOfBirth: string | null;
+  currentPlacement: string | null;
   schoolName: string | null;
   className: string;
   classSection: string | null;
@@ -1107,17 +1109,19 @@ function StudentResults({
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{student.displayName}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {student.primaryIdentifier} ·{" "}
-                    {student.rollNumber ? `Roll ${student.rollNumber}` : "No roll number"}
+                    {student.primaryIdentifier} · {student.classTitle ?? student.className}
                   </p>
                 </div>
                 <EnrollmentStatusBadge status={student.enrollmentStatus} />
               </div>
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                <Detail label="School" value={student.schoolName ?? "School not set"} />
                 <Detail label="Class" value={student.classTitle ?? student.className} />
-                <Detail label="House" value={student.houseName ?? "No house"} />
-                <Detail label="Status" value={enrollmentStatusLabel(student.enrollmentStatus)} />
+                <Detail label="Gender" value={studentGenderLabel(student.gender)} />
+                <Detail label="Date of birth" value={studentDate(student.dateOfBirth)} />
+                <Detail
+                  label="Current placement"
+                  value={student.currentPlacement ?? "Not recorded"}
+                />
               </div>
             </button>
             <div className="px-4 pb-4">
@@ -1134,15 +1138,15 @@ function StudentResults({
         ))}
       </div>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-muted/45 text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
-              <th className="px-5 py-3 font-semibold">Student</th>
-              <th className="px-4 py-3 font-semibold">School</th>
+              <th className="px-5 py-3 font-semibold">Admission no.</th>
+              <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Class</th>
-              <th className="px-4 py-3 font-semibold">House</th>
-              <th className="px-4 py-3 font-semibold">Roll</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Gender</th>
+              <th className="px-4 py-3 font-semibold">Date of birth</th>
+              <th className="px-4 py-3 font-semibold">Current placement</th>
               <th className="px-5 py-3 text-right font-semibold">Actions</th>
             </tr>
           </thead>
@@ -1150,19 +1154,16 @@ function StudentResults({
             {data.students.map((student) => (
               <tr className="transition-colors hover:bg-muted/35" key={student.personId}>
                 <td className="px-5 py-3.5">
-                  <p className="font-medium">{student.displayName}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {student.primaryIdentifier}
-                  </p>
+                  <p className="font-medium tabular-nums">{student.primaryIdentifier}</p>
                 </td>
-                <td className="max-w-48 px-4 py-3.5">
-                  <p className="truncate">{student.schoolName ?? "School not set"}</p>
+                <td className="max-w-56 px-4 py-3.5">
+                  <p className="truncate font-medium">{student.displayName}</p>
                 </td>
                 <td className="px-4 py-3.5">{student.classTitle ?? student.className}</td>
-                <td className="px-4 py-3.5">{student.houseName ?? "No house"}</td>
-                <td className="px-4 py-3.5 text-muted-foreground">{student.rollNumber ?? "—"}</td>
-                <td className="px-4 py-3.5">
-                  <EnrollmentStatusBadge status={student.enrollmentStatus} />
+                <td className="px-4 py-3.5">{studentGenderLabel(student.gender)}</td>
+                <td className="px-4 py-3.5 tabular-nums">{studentDate(student.dateOfBirth)}</td>
+                <td className="max-w-52 px-4 py-3.5">
+                  <p className="truncate">{student.currentPlacement ?? "Not recorded"}</p>
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <div className="flex justify-end gap-1">
@@ -1322,6 +1323,23 @@ function enrollmentStatusLabel(status: StudentRow["enrollmentStatus"]): string {
     completed: "Completed",
     graduated: "Completed",
   }[status];
+}
+
+function studentGenderLabel(gender: StudentRow["gender"]): string {
+  if (!gender || gender === "unknown") return "Not recorded";
+  return gender.charAt(0).toUpperCase() + gender.slice(1);
+}
+
+function studentDate(value: string | null): string {
+  if (!value) return "Not recorded";
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date);
 }
 
 function optionLabel(options: CountOption[], value: string, fallback: string) {

@@ -13,8 +13,6 @@ type AcademicClass = {
   name: string;
   baseName: string;
   section: string | null;
-  level: number | null;
-  sortOrder: number | null;
   isActive: boolean;
 };
 
@@ -25,6 +23,26 @@ type MasterData = {
   classes: AcademicClass[];
   houses: House[];
 };
+
+const schoolStages = [
+  { id: "nursery", label: "Nursery" },
+  { id: "primary", label: "Primary" },
+  { id: "middle", label: "Middle school" },
+  { id: "high", label: "High school" },
+  { id: "vocational", label: "Vocational" },
+] as const;
+
+type SchoolStage = (typeof schoolStages)[number]["id"];
+
+function classStage(academicClass: AcademicClass): SchoolStage {
+  const name = academicClass.baseName.trim().toLowerCase().replaceAll(/\s+/g, " ");
+  if (/^(oil painting|tailoring|thangka)( section)?$/.test(name)) return "vocational";
+  if (name === "opportunity class" || /^stage (i|ii|iii|1|2|3)$/.test(name)) return "nursery";
+  if (/^(xi|xii)(\b|\s)/.test(name) || /^(11|12)(\b|\s)/.test(name)) return "high";
+  if (/^(vi|vii|viii|ix|x)(\b|\s|[a-g]$)/.test(name) || /^(6|7|8|9|10)(\b|\s)/.test(name))
+    return "middle";
+  return "primary";
+}
 
 type Editor =
   | { kind: "class"; value: AcademicClass | null }
@@ -109,24 +127,37 @@ export function SchoolMasterData({
           title="Classes and sections"
         >
           {data.classes.length ? (
-            <div className="divide-y">
-              {data.classes.map((academicClass) => (
-                <MasterRow
-                  active={academicClass.isActive}
-                  key={academicClass.id}
-                  name={academicClass.name}
-                  onEdit={
-                    data.canEdit
-                      ? () => setEditor({ kind: "class", value: academicClass })
-                      : undefined
-                  }
-                  secondary={
-                    academicClass.level === null
-                      ? "Level not set"
-                      : `Level ${academicClass.level}${academicClass.sortOrder === null ? "" : ` · Order ${academicClass.sortOrder}`}`
-                  }
-                />
-              ))}
+            <div>
+              {schoolStages.map((stage) => {
+                const classes = data.classes.filter(
+                  (academicClass) => classStage(academicClass) === stage.id,
+                );
+                if (!classes.length) return null;
+                return (
+                  <section className="border-b last:border-b-0" key={stage.id}>
+                    <div className="bg-muted/45 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                      {stage.label}
+                    </div>
+                    <div className="divide-y">
+                      {classes.map((academicClass) => (
+                        <MasterRow
+                          active={academicClass.isActive}
+                          key={academicClass.id}
+                          name={academicClass.name}
+                          onEdit={
+                            data.canEdit
+                              ? () => setEditor({ kind: "class", value: academicClass })
+                              : undefined
+                          }
+                          secondary={
+                            academicClass.section ? `Section ${academicClass.section}` : stage.label
+                          }
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           ) : (
             <EmptyRecord label="No classes have been added." />
@@ -258,8 +289,6 @@ function MasterDataEditor({
   const value = editor?.value;
   const [name, setName] = useState("");
   const [section, setSection] = useState("");
-  const [level, setLevel] = useState("");
-  const [sortOrder, setSortOrder] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -272,20 +301,6 @@ function MasterDataEditor({
         : ((value as House | null)?.name ?? ""),
     );
     setSection(isClass ? ((value as AcademicClass | null)?.section ?? "") : "");
-    setLevel(
-      isClass &&
-        (value as AcademicClass | null)?.level !== null &&
-        (value as AcademicClass | null)?.level !== undefined
-        ? String((value as AcademicClass).level)
-        : "",
-    );
-    setSortOrder(
-      isClass &&
-        (value as AcademicClass | null)?.sortOrder !== null &&
-        (value as AcademicClass | null)?.sortOrder !== undefined
-        ? String((value as AcademicClass).sortOrder)
-        : "",
-    );
     setIsActive(value?.isActive ?? true);
     setError("");
   }, [editor, isClass, value]);
@@ -305,8 +320,6 @@ function MasterDataEditor({
             ? {
                 name,
                 section: section.trim() || null,
-                level: level === "" ? null : Number(level),
-                sortOrder: sortOrder === "" ? null : Number(sortOrder),
                 isActive,
               }
             : { name, isActive },
@@ -361,7 +374,7 @@ function MasterDataEditor({
                 />
               </Field>
               {isClass ? (
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div>
                   <Field htmlFor="master-section" label="Section">
                     <Input
                       id="master-section"
@@ -369,27 +382,6 @@ function MasterDataEditor({
                       onChange={(event) => setSection(event.target.value)}
                       placeholder="A"
                       value={section}
-                    />
-                  </Field>
-                  <Field htmlFor="master-level" label="Level">
-                    <Input
-                      id="master-level"
-                      max={30}
-                      min={0}
-                      onChange={(event) => setLevel(event.target.value)}
-                      placeholder="1"
-                      type="number"
-                      value={level}
-                    />
-                  </Field>
-                  <Field htmlFor="master-order" label="Display order">
-                    <Input
-                      id="master-order"
-                      max={1000}
-                      min={0}
-                      onChange={(event) => setSortOrder(event.target.value)}
-                      type="number"
-                      value={sortOrder}
                     />
                   </Field>
                 </div>

@@ -44,7 +44,7 @@ export async function findStaffDirectory(
   }
 
   const where = and(...conditions);
-  const [countRows, staff, summary, departments, designations, categories] = await database.batch([
+  const [countRows, staff, summary, departments, designations, categories] = await Promise.all([
     database
       .select({ total: count() })
       .from(staffProfile)

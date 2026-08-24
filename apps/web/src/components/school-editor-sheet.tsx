@@ -1,4 +1,4 @@
-import { Building2, LoaderCircle, Save } from "lucide-react";
+import { Building2, LoaderCircle, Save, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,28 @@ export function SchoolEditorSheet({
       onSaved(school ? `${name.trim()} was updated.` : `${name.trim()} was added.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The school could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeSchool() {
+    if (
+      !school ||
+      !window.confirm(`Delete ${school.name}? This is only allowed when it has no student records.`)
+    )
+      return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/school-operations/schools/${school.id}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "The school could not be deleted.");
+      onSaved(`${school.name} was deleted.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The school could not be deleted.");
     } finally {
       setSaving(false);
     }
@@ -140,6 +162,17 @@ export function SchoolEditorSheet({
           </div>
 
           <footer className="flex flex-col-reverse gap-2 border-t bg-background/95 px-5 py-4 sm:flex-row sm:justify-end sm:px-8">
+            {school ? (
+              <Button
+                className="sm:mr-auto"
+                disabled={saving}
+                onClick={() => void removeSchool()}
+                type="button"
+                variant="destructive"
+              >
+                <Trash2 /> Delete school
+              </Button>
+            ) : null}
             <Button
               disabled={saving}
               onClick={() => onOpenChange(false)}

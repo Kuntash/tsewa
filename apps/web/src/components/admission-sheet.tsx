@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { ComponentProps, FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DatePickerField } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -43,6 +44,8 @@ export function AdmissionSheet({
   const [academicClassId, setAcademicClassId] = useState("");
   const [houseId, setHouseId] = useState("none");
   const [gender, setGender] = useState("unknown");
+  const [admittedOn, setAdmittedOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dateOfBirth, setDateOfBirth] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +96,9 @@ export function AdmissionSheet({
         admittedOn: data.get("admittedOn"),
         rollNumber: data.get("rollNumber") || undefined,
         gender,
+        educationNumber: data.get("educationNumber") || undefined,
+        registrationCertificateNumber: data.get("registrationCertificateNumber") || undefined,
+        identityCertificateNumber: data.get("identityCertificateNumber") || undefined,
         schoolId,
         academicClassId,
         houseId: houseId === "none" ? undefined : houseId,
@@ -112,7 +118,6 @@ export function AdmissionSheet({
     onOpenChange(false);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
   const classOptions = optionsForSchool(setup?.classes ?? [], schoolId);
   const houseOptions = optionsForSchool(setup?.houses ?? [], schoolId);
 
@@ -157,14 +162,24 @@ export function AdmissionSheet({
               <Field label="Roll number (optional)" name="rollNumber" placeholder="1" />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                defaultValue={today}
+              <DatePickerField
                 label="Admission date"
                 name="admittedOn"
+                onChange={setAdmittedOn}
                 required
-                type="date"
+                value={admittedOn}
               />
-              <Field label="Date of birth (optional)" name="dateOfBirth" type="date" />
+              <DatePickerField
+                label="Date of birth (optional)"
+                name="dateOfBirth"
+                onChange={setDateOfBirth}
+                value={dateOfBirth}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Education number (optional)" name="educationNumber" />
+              <Field label="RC number (optional)" name="registrationCertificateNumber" />
+              <Field label="IC number (optional)" name="identityCertificateNumber" />
             </div>
             <div className="space-y-2">
               <Label>Gender</Label>

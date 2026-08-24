@@ -5,8 +5,8 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1786821457.4615238,
-    "ast_hash": "a2041f2f42f252f37b27b85d8ec0bb4e",
+    "mtime": 1787557144.8785303,
+    "ast_hash": "5445d84070d410733ea4c22650774254",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1787552269.320595,
-    "ast_hash": "2321e13df80158a1cb96af1a84a36354",
+    "mtime": 1787557178.9076457,
+    "ast_hash": "68abd692e2fd3b030db42567383786d0",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "pnpm-workspace.yaml": {
-    "mtime": 1786651087.630052,
-    "ast_hash": "782c8f281b6206aec8ad070f9072c441",
+    "mtime": 1787557144.8785293,
+    "ast_hash": "301e214a099772f1517339dad75856fc",
     "semantic_hash": ""
   },
   ".githooks/pre-commit": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1787309271.3629348,
-    "ast_hash": "95ca2f5f91043a8d44c1ae1610318c8a",
+    "mtime": 1787557512.3088944,
+    "ast_hash": "c20044dc2bcc367e85828dbeac420201",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/admission-sheet.tsx": {
-    "mtime": 1786451896.8639941,
-    "ast_hash": "fee4d8ffe2f6b548407e4af0d1e08563",
+    "mtime": 1787557512.3053448,
+    "ast_hash": "a0403467fd9b5b666845e12c5b610a0f",
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-editor-sheet.tsx": {
-    "mtime": 1786450270.3910744,
-    "ast_hash": "fb424d3b2c5cebbb43c091430f2c39d5",
+    "mtime": 1787557512.3085294,
+    "ast_hash": "5e79eb5cb118e54ed04aebcd1f39cdcd",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260811_121341_great__continue_with_the_next_parity_slice.md": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-master-data.tsx": {
-    "mtime": 1786450807.1613433,
-    "ast_hash": "520149082204a6d6d6a552236358a5de",
+    "mtime": 1787557622.4065378,
+    "ast_hash": "5256225432dd3ceda3b8af646acb4c75",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260811_122458_continue.md": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1787552193.6886728,
-    "ast_hash": "fcd89af6ef12854c30694e5c533b7799",
+    "mtime": 1787557512.33261,
+    "ast_hash": "c7d029fca3f6ad8eed50d29454b8e1d4",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -765,8 +765,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.school-operations.schools.$schoolId.ts": {
-    "mtime": 1786650430.0439456,
-    "ast_hash": "dc2cee88867906606a14d4d4dd19400c",
+    "mtime": 1787557373.3560293,
+    "ast_hash": "67562e165d7d818f0ac8d853ca0c2055",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.school-operations.schools.ts": {
@@ -1015,8 +1015,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/reports-centre.tsx": {
-    "mtime": 1787309943.9900756,
-    "ast_hash": "d1d09bdaad278ae1b0f55259b4f42b52",
+    "mtime": 1787557433.9848158,
+    "ast_hash": "e8d28be8bc8c3c7b6b70bcd2aebac736",
     "semantic_hash": ""
   },
   "apps/web/src/lib/auth-email.ts": {
@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/staff-repository.ts": {
-    "mtime": 1787315931.6448357,
-    "ast_hash": "bf1d041943bc245d3177b5805670e569",
+    "mtime": 1787557178.9069586,
+    "ast_hash": "cc9d33c1352be2e3d4443066968765a7",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.staff.$personId.ts": {
@@ -1202,6 +1202,21 @@
   "graphify-out/memory/query_20260821_121928_what_is_next.md": {
     "mtime": 1787314768.2153716,
     "ast_hash": "6eaf85a551834b864911a196a965b3ab",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/ui/calendar.tsx": {
+    "mtime": 1787557512.3081524,
+    "ast_hash": "23aa22ce080fb806f74eeb6590252067",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/ui/date-picker.tsx": {
+    "mtime": 1787557512.3081589,
+    "ast_hash": "1317f5e81f356c9ae67b9c74a003ce45",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/ui/popover.tsx": {
+    "mtime": 1787557251.2296846,
+    "ast_hash": "2edb8ae0e4204bc0867451204857289d",
     "semantic_hash": ""
   }
 }

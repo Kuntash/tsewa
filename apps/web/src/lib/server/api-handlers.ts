@@ -298,8 +298,6 @@ const academicClassMasterSchema = z.object({
     .max(30)
     .nullable()
     .transform((value) => value || null),
-  level: z.number().int().min(0).max(30).nullable(),
-  sortOrder: z.number().int().min(0).max(1_000).nullable(),
   isActive: z.boolean(),
 });
 
@@ -322,6 +320,9 @@ const admissionSchema = z.object({
   displayName: z.string().trim().min(2).max(120),
   gender: z.enum(["female", "male", "other", "unknown"]).optional(),
   dateOfBirth: isoDateSchema.optional(),
+  educationNumber: z.string().trim().max(100).optional(),
+  registrationCertificateNumber: z.string().trim().max(100).optional(),
+  identityCertificateNumber: z.string().trim().max(100).optional(),
   admittedOn: isoDateSchema,
   schoolId: z.uuid(),
   academicClassId: z.uuid(),
@@ -1722,6 +1723,9 @@ async function createStudentAdmission(request: Request): Promise<Response> {
       displayName,
       gender: parsed.data.gender ?? "unknown",
       dateOfBirth: parsed.data.dateOfBirth ?? null,
+      educationNumber: parsed.data.educationNumber || null,
+      registrationCertificateNumber: parsed.data.registrationCertificateNumber || null,
+      identityCertificateNumber: parsed.data.identityCertificateNumber || null,
       admittedOrJoinedOn: admittedOn,
       campusOrLocation: school.name,
       sourceSystem: "tsewa",
@@ -2433,6 +2437,17 @@ function schoolStudentQuery(database: Database) {
       primaryIdentifier: person.primaryIdentifier,
       status: person.status,
       gender: person.gender,
+      dateOfBirth: person.dateOfBirth,
+      currentPlacement: sql<string | null>`coalesce(
+        (select coalesce(pp.home_name, pp.location_name)
+          from person_placement pp
+          where pp.person_id = ${person.id}
+            and pp.organization_id = ${person.organizationId}
+            and pp.is_current = 1
+          order by date(pp.started_on) desc, pp.created_at desc
+          limit 1),
+        ${person.campusOrLocation}
+      )`,
       schoolName: schoolMaster.name,
       className: academicClassMaster.name,
       classSection: academicClassMaster.section,
@@ -2534,7 +2549,7 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
   const where = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
   const offset = (page - 1) * pageSize;
-  const [countRows, students] = await runtime.ORM.batch([
+  const [countRows, students] = await Promise.all([
     schoolStudentCountQuery(runtime.ORM).where(where),
     schoolStudentQuery(runtime.ORM)
       .where(where)
@@ -2576,7 +2591,7 @@ async function getSchoolOperationsStudentReport(request: Request): Promise<Respo
   if (!scope) return forbidden();
   const where = buildSchoolStudentFilters(scope, parsed.data);
   const runtime = getRuntimeEnv();
-  const [countRows, organizationRows] = await runtime.ORM.batch([
+  const [countRows, organizationRows] = await Promise.all([
     schoolStudentCountQuery(runtime.ORM).where(where),
     runtime.ORM.select({ name: organization.name })
       .from(organization)
@@ -2771,10 +2786,10 @@ async function createAcademicClassMaster(request: Request): Promise<Response> {
       id,
       organizationId: context.organizationId,
       name: parsed.data.name,
-      level: parsed.data.level,
+      level: null,
       section: parsed.data.section,
       title: null,
-      sortOrder: parsed.data.sortOrder,
+      sortOrder: null,
       isActive: parsed.data.isActive ? 1 : 0,
       sourceSystem: "tsewa",
       sourceTable: "academic_class_master",
@@ -2821,8 +2836,8 @@ async function updateAcademicClassMaster(request: Request, classId: string): Pro
         name: parsed.data.name,
         title: null,
         section: parsed.data.section,
-        level: parsed.data.level,
-        sortOrder: parsed.data.sortOrder,
+        level: null,
+        sortOrder: null,
         isActive: parsed.data.isActive ? 1 : 0,
         updatedAt: sql`CURRENT_TIMESTAMP`,
       })
@@ -3060,19 +3075,78 @@ async function createSchoolMaster(request: Request): Promise<Response> {
 }
 
 async function updateSchoolMaster(request: Request, schoolId: string): Promise<Response> {
-  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (request.method !== "PATCH" && request.method !== "DELETE") {
+    return methodNotAllowed("PATCH, DELETE");
+  }
   if (!isSameOrigin(request)) return forbidden();
   const context = await getMembershipContext(request);
   if (!context) return unauthorized();
   if (!hasPermission(context, "school.setup.manage")) return forbidden();
 
   const parsedId = z.uuid().safeParse(schoolId);
+  if (!parsedId.success) return Response.json({ error: "Invalid school." }, { status: 400 });
+  const runtime = getRuntimeEnv();
+  if (request.method === "DELETE") {
+    const [school, enrollmentRows] = await Promise.all([
+      runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+        .from(schoolMaster)
+        .where(
+          and(
+            eq(schoolMaster.id, parsedId.data),
+            eq(schoolMaster.organizationId, context.organizationId),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
+      runtime.ORM.select({ total: count() })
+        .from(studentEnrollment)
+        .where(
+          and(
+            eq(studentEnrollment.schoolId, parsedId.data),
+            eq(studentEnrollment.organizationId, context.organizationId),
+          ),
+        ),
+    ]);
+    if (!school) return Response.json({ error: "School not found" }, { status: 404 });
+    const enrollments = Number(enrollmentRows[0]?.total ?? 0);
+    if (enrollments > 0) {
+      return Response.json(
+        {
+          error: `This school has ${enrollments.toLocaleString()} student records. Mark it inactive to preserve their history.`,
+        },
+        { status: 409 },
+      );
+    }
+    await runtime.ORM.batch([
+      runtime.ORM.delete(schoolClassOffering).where(
+        and(
+          eq(schoolClassOffering.schoolId, parsedId.data),
+          eq(schoolClassOffering.organizationId, context.organizationId),
+        ),
+      ),
+      runtime.ORM.delete(schoolHouseMaster).where(
+        and(
+          eq(schoolHouseMaster.schoolId, parsedId.data),
+          eq(schoolHouseMaster.organizationId, context.organizationId),
+        ),
+      ),
+      runtime.ORM.delete(schoolMaster).where(
+        and(
+          eq(schoolMaster.id, parsedId.data),
+          eq(schoolMaster.organizationId, context.organizationId),
+        ),
+      ),
+      auditInsert(runtime.ORM, context, "school.deleted", "school_master", parsedId.data, {
+        name: school.name,
+      }),
+    ]);
+    return Response.json({ ok: true, deleted: true });
+  }
   const parsed = schoolMasterSchema.safeParse(await readJson(request));
   if (!parsedId.success || !parsed.success) {
     return Response.json({ error: "Check the school details." }, { status: 400 });
   }
 
-  const runtime = getRuntimeEnv();
   const [school, duplicate] = await Promise.all([
     runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
       .from(schoolMaster)
@@ -6904,7 +6978,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
       .from(sponsorshipAssignment)
       .groupBy(sponsorshipAssignment.sponsorIndividualId)
       .as("sponsor_assignment_counts");
-    const [totalRows, result] = await runtime.ORM.batch([
+    const [totalRows, result] = await Promise.all([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipIndividual)
         .leftJoin(
@@ -6962,7 +7036,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         )!,
       );
     const where = and(...conditions);
-    const [totalRows, result] = await runtime.ORM.batch([
+    const [totalRows, result] = await Promise.all([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipAssignment)
         .innerJoin(person, eq(person.id, sponsorshipAssignment.personId))
@@ -7028,7 +7102,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
       .from(sponsorshipFundAllocation)
       .groupBy(sponsorshipFundAllocation.fundId)
       .as("fund_allocation_counts");
-    const [totalRows, result] = await runtime.ORM.batch([
+    const [totalRows, result] = await Promise.all([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipFund)
         .innerJoin(sponsorshipFundType, eq(sponsorshipFundType.id, sponsorshipFund.fundTypeId))
@@ -7090,7 +7164,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         )!,
       );
     const where = and(...conditions);
-    const [totalRows, result] = await runtime.ORM.batch([
+    const [totalRows, result] = await Promise.all([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipLetter)
         .innerJoin(
@@ -7143,7 +7217,7 @@ async function getSponsorshipRecords(request: Request): Promise<Response> {
         )!,
       );
     const where = and(...conditions);
-    const [totalRows, result] = await runtime.ORM.batch([
+    const [totalRows, result] = await Promise.all([
       runtime.ORM.select({ total: count() })
         .from(sponsorshipVisitor)
         .leftJoin(
@@ -7259,7 +7333,7 @@ async function getSponsorshipSetup(request: Request): Promise<Response> {
     people,
     individuals,
     visitors,
-  ] = await runtime.ORM.batch([
+  ] = await Promise.all([
     runtime.ORM.select({
       id: sponsorshipOrganization.id,
       name: sponsorshipOrganization.name,
@@ -9126,7 +9200,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
     familyProfileRows,
     relationships,
     files,
-  ] = await runtime.ORM.batch([
+  ] = await Promise.all([
     runtime.ORM.select({
       id: person.id,
       kind: person.kind,
