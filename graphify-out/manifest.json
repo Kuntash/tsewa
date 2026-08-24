@@ -25,9 +25,9 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
-    "mtime": 1785946383.239248,
-    "ast_hash": "781d1abd922c8617470561a8eede32ae",
-    "semantic_hash": "781d1abd922c8617470561a8eede32ae"
+    "mtime": 1787569832.1528926,
+    "ast_hash": "7a9cf97a7d605ef03929aa0a78202d99",
+    "semantic_hash": ""
   },
   "apps/web/src/components/ui/avatar.tsx": {
     "mtime": 1785946383.2437632,
@@ -100,7 +100,7 @@
     "semantic_hash": "d9837f38cc05303254571985e3164050"
   },
   "apps/web/src/routeTree.gen.ts": {
-    "mtime": 1787315766.107784,
+    "mtime": 1787570091.9031987,
     "ast_hash": "a72a14c1ed0ae02b3388b8079242b17d",
     "semantic_hash": ""
   },
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787315598.003296,
-    "ast_hash": "f362eec24d7dc66bba625a937f8e5459",
+    "mtime": 1787569844.3554118,
+    "ast_hash": "0e21c5f9166135913f2cea07871ca374",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/admission-sheet.tsx": {
-    "mtime": 1787557512.3053448,
-    "ast_hash": "a0403467fd9b5b666845e12c5b610a0f",
+    "mtime": 1787569832.151889,
+    "ast_hash": "2e02e8a9bb0d8ccb6069332a4f3c6876",
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-master-data.tsx": {
-    "mtime": 1787557622.4065378,
-    "ast_hash": "5256225432dd3ceda3b8af646acb4c75",
+    "mtime": 1787569832.151284,
+    "ast_hash": "04fd7124902716f5485de4ea6b91edf8",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260811_122458_continue.md": {
@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/db/schema.ts": {
-    "mtime": 1787551927.2737122,
-    "ast_hash": "243f09ede64532ea85820061c969cc02",
+    "mtime": 1787569938.261917,
+    "ast_hash": "f36e3c2bb9e4b246473507f2490045c5",
     "semantic_hash": ""
   },
   "apps/web/src/lib/access-control.ts": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1787557512.33261,
-    "ast_hash": "c7d029fca3f6ad8eed50d29454b8e1d4",
+    "mtime": 1787569938.2793655,
+    "ast_hash": "11a09227c5abd8378a076fbd66309882",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1205,18 +1205,23 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/ui/calendar.tsx": {
-    "mtime": 1787557512.3081524,
-    "ast_hash": "23aa22ce080fb806f74eeb6590252067",
+    "mtime": 1787569872.5139182,
+    "ast_hash": "80b784a5d750aa751dee82982a52d39b",
     "semantic_hash": ""
   },
   "apps/web/src/components/ui/date-picker.tsx": {
-    "mtime": 1787557512.3081589,
-    "ast_hash": "1317f5e81f356c9ae67b9c74a003ce45",
+    "mtime": 1787569872.5142093,
+    "ast_hash": "6e101abe5e2bb92505cadacc49da3803",
     "semantic_hash": ""
   },
   "apps/web/src/components/ui/popover.tsx": {
     "mtime": 1787557251.2296846,
     "ast_hash": "2edb8ae0e4204bc0867451204857289d",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0031_enrollment_offering_performance.sql": {
+    "mtime": 1787569923.2649837,
+    "ast_hash": "4ca6e194e51c2ca5b947d9195685d0af",
     "semantic_hash": ""
   }
 }

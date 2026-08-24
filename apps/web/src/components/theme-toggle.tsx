@@ -29,7 +29,7 @@ export function ThemeToggle() {
   return (
     <Button
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-      className="size-10 rounded-full"
+      className="size-7 rounded-full"
       onClick={toggleTheme}
       size="icon"
       type="button"

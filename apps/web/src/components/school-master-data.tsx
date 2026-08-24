@@ -149,9 +149,6 @@ export function SchoolMasterData({
                               ? () => setEditor({ kind: "class", value: academicClass })
                               : undefined
                           }
-                          secondary={
-                            academicClass.section ? `Section ${academicClass.section}` : stage.label
-                          }
                         />
                       ))}
                     </div>
@@ -250,7 +247,7 @@ function MasterRow({
   active: boolean;
   name: string;
   onEdit?: () => void;
-  secondary: string;
+  secondary?: string;
 }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
@@ -261,7 +258,7 @@ function MasterRow({
             {active ? "Active" : "Inactive"}
           </Badge>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">{secondary}</p>
+        {secondary ? <p className="mt-1 text-xs text-muted-foreground">{secondary}</p> : null}
       </div>
       {onEdit ? (
         <Button onClick={onEdit} size="sm" variant="outline">

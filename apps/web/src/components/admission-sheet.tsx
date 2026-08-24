@@ -177,9 +177,21 @@ export function AdmissionSheet({
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Education number (optional)" name="educationNumber" />
-              <Field label="RC number (optional)" name="registrationCertificateNumber" />
-              <Field label="IC number (optional)" name="identityCertificateNumber" />
+              <Field
+                label="Education number (optional)"
+                name="educationNumber"
+                placeholder="Education number"
+              />
+              <Field
+                label="RC number (optional)"
+                name="registrationCertificateNumber"
+                placeholder="RC number"
+              />
+              <Field
+                label="IC number (optional)"
+                name="identityCertificateNumber"
+                placeholder="IC number"
+              />
             </div>
             <div className="space-y-2">
               <Label>Gender</Label>

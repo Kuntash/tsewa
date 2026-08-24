@@ -61,7 +61,7 @@ export function DatePickerField({
             {displayDate(value)}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-3">
+        <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             captionLayout="dropdown"
             endMonth={new Date()}

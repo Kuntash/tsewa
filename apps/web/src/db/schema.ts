@@ -1034,6 +1034,7 @@ export const studentEnrollment = sqliteTable(
       table.academicClassId,
       table.status,
     ),
+    index("student_enrollment_offering_idx").on(table.organizationId, table.schoolClassOfferingId),
   ],
 );
 

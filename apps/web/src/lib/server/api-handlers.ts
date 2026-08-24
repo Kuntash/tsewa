@@ -2711,8 +2711,8 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
     .leftJoin(enrollmentCounts, eq(enrollmentCounts.schoolId, schoolMaster.id))
     .leftJoin(offeringCounts, eq(offeringCounts.schoolId, schoolMaster.id))
     .leftJoin(houseCounts, eq(houseCounts.schoolId, schoolMaster.id))
-    .where(eq(schoolMaster.organizationId, scope.organizationId))
-    .orderBy(desc(schoolMaster.isActive), sql`${schoolMaster.name} collate nocase`);
+    .where(and(eq(schoolMaster.organizationId, scope.organizationId), eq(schoolMaster.isActive, 1)))
+    .orderBy(sql`${schoolMaster.name} collate nocase`);
 
   return Response.json({
     session: scope.session,

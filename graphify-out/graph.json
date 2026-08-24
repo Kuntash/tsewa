@@ -1552,6 +1552,17 @@
       "norm_label": "0030_person_identity_numbers.sql"
     },
     {
+      "label": "0031_enrollment_offering_performance.sql",
+      "file_type": "code",
+      "source_file": "apps/web/migrations/0031_enrollment_offering_performance.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "apps_web_migrations_0031_enrollment_offering_performance",
+      "community": 410,
+      "community_name": "0031_enrollment_offering_performance.sql",
+      "norm_label": "0031_enrollment_offering_performance.sql"
+    },
+    {
       "label": "web/package.json",
       "file_type": "code",
       "source_file": "apps/web/package.json",
@@ -1910,8 +1921,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "apps_web_package_dependencies_class_variance_authority",
-      "community": 14,
-      "community_name": "dependencies",
+      "community": 399,
+      "community_name": "class-variance-authority",
       "norm_label": "class-variance-authority"
     },
     {
@@ -1921,8 +1932,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "class_variance_authority",
-      "community": 14,
-      "community_name": "dependencies",
+      "community": 399,
+      "community_name": "class-variance-authority",
       "norm_label": "class-variance-authority"
     },
     {
@@ -1932,8 +1943,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "apps_web_package_dependencies_clsx",
-      "community": 382,
-      "community_name": "clsx",
+      "community": 14,
+      "community_name": "dependencies",
       "norm_label": "clsx"
     },
     {
@@ -1943,8 +1954,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "clsx",
-      "community": 382,
-      "community_name": "clsx",
+      "community": 14,
+      "community_name": "dependencies",
       "norm_label": "clsx"
     },
     {
@@ -2765,8 +2776,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_account_settings",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "account-settings.tsx"
     },
     {
@@ -2778,8 +2789,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_account_settings_accountsettingsprops",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "accountsettingsprops"
     },
     {
@@ -2801,8 +2812,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "admission-sheet.tsx"
     },
     {
@@ -2814,8 +2825,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet_option",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "option"
     },
     {
@@ -2827,8 +2838,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet_setup",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "setup"
     },
     {
@@ -2839,44 +2850,44 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet_admissionsheet",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "admissionsheet()"
     },
     {
       "label": "optionsForSchool()",
       "file_type": "code",
       "source_file": "apps/web/src/components/admission-sheet.tsx",
-      "source_location": "L246",
+      "source_location": "L258",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet_optionsforschool",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "optionsforschool()"
     },
     {
       "label": "Field()",
       "file_type": "code",
       "source_file": "apps/web/src/components/admission-sheet.tsx",
-      "source_location": "L257",
+      "source_location": "L269",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet_field",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "field()"
     },
     {
       "label": "OptionField()",
       "file_type": "code",
       "source_file": "apps/web/src/components/admission-sheet.tsx",
-      "source_location": "L270",
+      "source_location": "L282",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_admission_sheet_optionfield",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "optionfield()"
     },
     {
@@ -3069,8 +3080,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "health-operations.tsx"
     },
     {
@@ -3082,8 +3093,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthvisit",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthvisit"
     },
     {
@@ -3095,8 +3106,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthresponse",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthresponse"
     },
     {
@@ -3108,8 +3119,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_tbcase",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "tbcase"
     },
     {
@@ -3121,8 +3132,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_tbresponse",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "tbresponse"
     },
     {
@@ -3134,8 +3145,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_medicaladvance",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "medicaladvance"
     },
     {
@@ -3147,8 +3158,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_medicaladvanceresponse",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "medicaladvanceresponse"
     },
     {
@@ -3158,8 +3169,8 @@
       "source_location": "L165",
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_emptyhealth",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptyhealth"
     },
     {
@@ -3171,8 +3182,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthfilters",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthfilters"
     },
     {
@@ -3183,8 +3194,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthoperations",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthoperations()"
     },
     {
@@ -3194,8 +3205,8 @@
       "source_location": "L487",
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_emptytb",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptytb"
     },
     {
@@ -3206,8 +3217,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_tbhistory",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "tbhistory()"
     },
     {
@@ -3217,8 +3228,8 @@
       "source_location": "L772",
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_emptymedicaladvances",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptymedicaladvances"
     },
     {
@@ -3229,8 +3240,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_medicaladvances",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "medicaladvances()"
     },
     {
@@ -3241,8 +3252,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_detail",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "detail()"
     },
     {
@@ -3253,8 +3264,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_summarycard",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "summarycard()"
     },
     {
@@ -3265,8 +3276,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_formatdate",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatdate()"
     },
     {
@@ -3277,8 +3288,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_kindlabel",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "kindlabel()"
     },
     {
@@ -3289,8 +3300,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_formatperiod",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatperiod()"
     },
     {
@@ -3301,8 +3312,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_formatcurrency",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatcurrency()"
     },
     {
@@ -3483,8 +3494,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "mark-entry-sheet.tsx"
     },
     {
@@ -3496,8 +3507,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_option",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "option"
     },
     {
@@ -3509,8 +3520,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_classoption",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "classoption"
     },
     {
@@ -3522,8 +3533,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_assessment",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "assessment"
     },
     {
@@ -3535,8 +3546,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_student",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "student"
     },
     {
@@ -3548,8 +3559,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_setup",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "setup"
     },
     {
@@ -3561,8 +3572,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_editablesheet",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "editablesheet"
     },
     {
@@ -3585,8 +3596,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_catalogform",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "catalogform()"
     },
     {
@@ -3597,8 +3608,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_choice",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "choice()"
     },
     {
@@ -3609,8 +3620,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_field",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "field()"
     },
     {
@@ -3621,8 +3632,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_mark_entry_sheet_emptysetup",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "emptysetup()"
     },
     {
@@ -3644,8 +3655,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "people-registry.tsx"
     },
     {
@@ -3657,8 +3668,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_personkind",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "personkind"
     },
     {
@@ -3670,8 +3681,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_personstatus",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "personstatus"
     },
     {
@@ -3683,8 +3694,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_personrow",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "personrow"
     },
     {
@@ -3696,8 +3707,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_registryresponse",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "registryresponse"
     },
     {
@@ -3707,8 +3718,8 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_emptyregistry",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptyregistry"
     },
     {
@@ -3720,8 +3731,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_peoplefilters",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "peoplefilters"
     },
     {
@@ -3732,8 +3743,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_peopleregistry",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "peopleregistry()"
     },
     {
@@ -3744,8 +3755,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_registrynavitem",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "registrynavitem()"
     },
     {
@@ -3756,8 +3767,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_peopleresults",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "peopleresults()"
     },
     {
@@ -3768,8 +3779,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_kindbadge",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "kindbadge()"
     },
     {
@@ -3780,8 +3791,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_statusbadge",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "statusbadge()"
     },
     {
@@ -3792,8 +3803,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_formatdate",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatdate()"
     },
     {
@@ -5028,7 +5039,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_assignments_sheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "school-assignments-sheet.tsx"
     },
     {
@@ -5041,7 +5052,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_assignments_sheet_assignmentoption",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "assignmentoption"
     },
     {
@@ -5054,7 +5065,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_assignments_sheet_assignmentdata",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "assignmentdata"
     },
     {
@@ -5066,7 +5077,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_assignments_sheet_schoolassignmentssheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "schoolassignmentssheet()"
     },
     {
@@ -5078,7 +5089,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_assignments_sheet_assignmentsection",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "assignmentsection()"
     },
     {
@@ -5090,7 +5101,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_assignments_sheet_filteroptions",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "filteroptions()"
     },
     {
@@ -5101,7 +5112,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_editor_sheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "school-editor-sheet.tsx"
     },
     {
@@ -5113,8 +5124,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_editor_sheet_editableschool",
-      "community": 54,
-      "community_name": "school-operations.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "editableschool"
     },
     {
@@ -5125,8 +5136,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_editor_sheet_schooleditorsheet",
-      "community": 54,
-      "community_name": "school-operations.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "schooleditorsheet()"
     },
     {
@@ -5138,7 +5149,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_school_editor_sheet_field",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "field()"
     },
     {
@@ -5148,7 +5159,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "school-master-data.tsx"
     },
@@ -5161,7 +5172,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_academicclass",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "academicclass"
     },
@@ -5174,7 +5185,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_house",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "house"
     },
@@ -5187,7 +5198,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_masterdata",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "masterdata"
     },
@@ -5198,7 +5209,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_schoolstages",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "schoolstages"
     },
@@ -5211,7 +5222,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_schoolstage",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "schoolstage"
     },
@@ -5223,7 +5234,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_classstage",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "classstage()"
     },
@@ -5236,7 +5247,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_editor",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "editor"
     },
@@ -5248,7 +5259,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_schoolmasterdata",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "schoolmasterdata()"
     },
@@ -5256,11 +5267,11 @@
       "label": "MasterList()",
       "file_type": "code",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L212",
+      "source_location": "L209",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_masterlist",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "masterlist()"
     },
@@ -5268,11 +5279,11 @@
       "label": "MasterRow()",
       "file_type": "code",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L244",
+      "source_location": "L241",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_masterrow",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "masterrow()"
     },
@@ -5280,11 +5291,11 @@
       "label": "EmptyRecord()",
       "file_type": "code",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L275",
+      "source_location": "L272",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_emptyrecord",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "emptyrecord()"
     },
@@ -5292,11 +5303,11 @@
       "label": "MasterDataEditor()",
       "file_type": "code",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L279",
+      "source_location": "L276",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_masterdataeditor",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "masterdataeditor()"
     },
@@ -5304,11 +5315,11 @@
       "label": "Field()",
       "file_type": "code",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L425",
+      "source_location": "L422",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_school_master_data_field",
-      "community": 197,
+      "community": 382,
       "community_name": "school-master-data.tsx",
       "norm_label": "field()"
     },
@@ -6308,8 +6319,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffoperations",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "staffoperations()"
     },
     {
@@ -6464,7 +6475,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "student-report-sheet.tsx"
     },
     {
@@ -6477,7 +6488,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_reportstudent",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "reportstudent"
     },
     {
@@ -6490,7 +6501,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_studentreportresponse",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "studentreportresponse"
     },
     {
@@ -6503,7 +6514,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_studentreportrequest",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "studentreportrequest"
     },
     {
@@ -6515,7 +6526,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_studentreportsheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "studentreportsheet()"
     },
     {
@@ -6527,7 +6538,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_parsereportresponse",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "parsereportresponse()"
     },
     {
@@ -6539,7 +6550,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_csvcell",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "csvcell()"
     },
     {
@@ -6551,7 +6562,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_safefilename",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "safefilename()"
     },
     {
@@ -6563,7 +6574,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_genderlabel",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "genderlabel()"
     },
     {
@@ -6575,7 +6586,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_student_report_sheet_enrollmentstatuslabel",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "enrollmentstatuslabel()"
     },
     {
@@ -6716,8 +6727,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_badge",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 404,
+      "community_name": "enrollment-change-sheet.tsx",
       "norm_label": "badge.tsx"
     },
     {
@@ -6727,8 +6738,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_badge_badgevariants",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 404,
+      "community_name": "enrollment-change-sheet.tsx",
       "norm_label": "badgevariants"
     },
     {
@@ -6739,8 +6750,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_badge_badge",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 404,
+      "community_name": "enrollment-change-sheet.tsx",
       "norm_label": "badge()"
     },
     {
@@ -6801,14 +6812,26 @@
       "norm_label": "calendar()"
     },
     {
+      "label": "CalendarDayButton()",
+      "file_type": "code",
+      "source_file": "apps/web/src/components/ui/calendar.tsx",
+      "source_location": "L93",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_web_src_components_ui_calendar_calendardaybutton",
+      "community": 6,
+      "community_name": "cn",
+      "norm_label": "calendardaybutton()"
+    },
+    {
       "label": "card.tsx",
       "file_type": "code",
       "source_file": "apps/web/src/components/ui/card.tsx",
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "card.tsx"
     },
     {
@@ -6819,8 +6842,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_card",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "card()"
     },
     {
@@ -6831,8 +6854,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_cardheader",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "cardheader()"
     },
     {
@@ -6843,8 +6866,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_cardtitle",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "cardtitle()"
     },
     {
@@ -6855,8 +6878,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_carddescription",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "carddescription()"
     },
     {
@@ -6867,8 +6890,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_cardaction",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "cardaction()"
     },
     {
@@ -6879,8 +6902,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_cardcontent",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "cardcontent()"
     },
     {
@@ -6891,8 +6914,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_card_cardfooter",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "cardfooter()"
     },
     {
@@ -7152,8 +7175,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_input",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "input.tsx"
     },
     {
@@ -7164,8 +7187,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_input_input",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "input()"
     },
     {
@@ -7175,8 +7198,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_label",
-      "community": 6,
-      "community_name": "cn",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "label.tsx"
     },
     {
@@ -7187,8 +7210,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_label_label",
-      "community": 6,
-      "community_name": "cn",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "label()"
     },
     {
@@ -7221,8 +7244,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "select.tsx"
     },
     {
@@ -7245,8 +7268,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectgroup",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "selectgroup()"
     },
     {
@@ -7257,8 +7280,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectvalue",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 285,
+      "community_name": "historical-results.tsx",
       "norm_label": "selectvalue()"
     },
     {
@@ -7269,8 +7292,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selecttrigger",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 197,
+      "community_name": "admission-sheet.tsx",
       "norm_label": "selecttrigger()"
     },
     {
@@ -7281,8 +7304,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectcontent",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "selectcontent()"
     },
     {
@@ -7293,8 +7316,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectlabel",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "selectlabel()"
     },
     {
@@ -7317,8 +7340,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectseparator",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "selectseparator()"
     },
     {
@@ -7329,8 +7352,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectscrollupbutton",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "selectscrollupbutton()"
     },
     {
@@ -7341,8 +7364,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_select_selectscrolldownbutton",
-      "community": 404,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 6,
+      "community_name": "cn",
       "norm_label": "selectscrolldownbutton()"
     },
     {
@@ -7376,7 +7399,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheet.tsx"
     },
     {
@@ -7388,7 +7411,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheet",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheet()"
     },
     {
@@ -7400,7 +7423,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheetportal",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheetportal()"
     },
     {
@@ -7412,7 +7435,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheetclose",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheetclose()"
     },
     {
@@ -7424,7 +7447,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheetoverlay",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheetoverlay()"
     },
     {
@@ -7436,7 +7459,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheetcontent",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheetcontent()"
     },
     {
@@ -7448,7 +7471,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheettitle",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheettitle()"
     },
     {
@@ -7460,7 +7483,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_ui_sheet_sheetdescription",
       "community": 197,
-      "community_name": "school-master-data.tsx",
+      "community_name": "admission-sheet.tsx",
       "norm_label": "sheetdescription()"
     },
     {
@@ -8438,7 +8461,7 @@
       "label": "historicalResultsImportBatch",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1040",
+      "source_location": "L1041",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_historicalresultsimportbatch",
       "community": 185,
@@ -8449,7 +8472,7 @@
       "label": "academicCatalogColumns()",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1061",
+      "source_location": "L1062",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academiccatalogcolumns",
@@ -8461,7 +8484,7 @@
       "label": "academicSubjectType",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1082",
+      "source_location": "L1083",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicsubjecttype",
       "community": 185,
@@ -8472,7 +8495,7 @@
       "label": "academicSubjectHead",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1083",
+      "source_location": "L1084",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicsubjecthead",
       "community": 185,
@@ -8483,7 +8506,7 @@
       "label": "academicGradeType",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1084",
+      "source_location": "L1085",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicgradetype",
       "community": 185,
@@ -8494,7 +8517,7 @@
       "label": "academicGrade",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1086",
+      "source_location": "L1087",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicgrade",
       "community": 185,
@@ -8505,7 +8528,7 @@
       "label": "academicSubject",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1110",
+      "source_location": "L1111",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicsubject",
       "community": 185,
@@ -8516,7 +8539,7 @@
       "label": "academicTerm",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1157",
+      "source_location": "L1158",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicterm",
       "community": 185,
@@ -8527,7 +8550,7 @@
       "label": "academicAssessment",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1179",
+      "source_location": "L1180",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicassessment",
       "community": 185,
@@ -8538,7 +8561,7 @@
       "label": "academicClassSubject",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1207",
+      "source_location": "L1208",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicclasssubject",
       "community": 185,
@@ -8549,7 +8572,7 @@
       "label": "academicClassSubjectAssessment",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1235",
+      "source_location": "L1236",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_academicclasssubjectassessment",
       "community": 185,
@@ -8560,7 +8583,7 @@
       "label": "markSheet",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1265",
+      "source_location": "L1266",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_marksheet",
       "community": 185,
@@ -8571,7 +8594,7 @@
       "label": "studentMark",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1342",
+      "source_location": "L1343",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_studentmark",
       "community": 185,
@@ -8582,7 +8605,7 @@
       "label": "studentEnrollmentChange",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1394",
+      "source_location": "L1395",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_studentenrollmentchange",
       "community": 185,
@@ -8593,7 +8616,7 @@
       "label": "healthHistoryImportBatch",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1450",
+      "source_location": "L1451",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthhistoryimportbatch",
       "community": 185,
@@ -8604,7 +8627,7 @@
       "label": "healthVisit",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1475",
+      "source_location": "L1476",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthvisit",
       "community": 185,
@@ -8615,7 +8638,7 @@
       "label": "healthDiagnosis",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1517",
+      "source_location": "L1518",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthdiagnosis",
       "community": 185,
@@ -8626,7 +8649,7 @@
       "label": "healthTbCase",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1553",
+      "source_location": "L1554",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthtbcase",
       "community": 185,
@@ -8637,7 +8660,7 @@
       "label": "healthTbDetail",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1605",
+      "source_location": "L1606",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthtbdetail",
       "community": 185,
@@ -8648,7 +8671,7 @@
       "label": "healthMedicalAdvance",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1638",
+      "source_location": "L1639",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthmedicaladvance",
       "community": 185,
@@ -8659,7 +8682,7 @@
       "label": "healthMedicalAdvanceDetail",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1675",
+      "source_location": "L1676",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthmedicaladvancedetail",
       "community": 185,
@@ -8670,7 +8693,7 @@
       "label": "healthMedicalSettlement",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1731",
+      "source_location": "L1732",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_healthmedicalsettlement",
       "community": 185,
@@ -8681,7 +8704,7 @@
       "label": "scholarshipImportBatch",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1772",
+      "source_location": "L1773",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipimportbatch",
       "community": 185,
@@ -8692,7 +8715,7 @@
       "label": "scholarshipSourceColumns()",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1792",
+      "source_location": "L1793",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipsourcecolumns",
@@ -8704,7 +8727,7 @@
       "label": "scholarshipCourseCategory",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1810",
+      "source_location": "L1811",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipcoursecategory",
       "community": 185,
@@ -8715,7 +8738,7 @@
       "label": "scholarshipCourse",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1820",
+      "source_location": "L1821",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipcourse",
       "community": 185,
@@ -8726,7 +8749,7 @@
       "label": "scholarshipHead",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1833",
+      "source_location": "L1834",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshiphead",
       "community": 185,
@@ -8737,7 +8760,7 @@
       "label": "scholarshipRecord",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1843",
+      "source_location": "L1844",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshiprecord",
       "community": 185,
@@ -8748,7 +8771,7 @@
       "label": "scholarshipAnnualDetail",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1880",
+      "source_location": "L1881",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipannualdetail",
       "community": 185,
@@ -8759,7 +8782,7 @@
       "label": "scholarshipSanction",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1901",
+      "source_location": "L1902",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipsanction",
       "community": 185,
@@ -8770,7 +8793,7 @@
       "label": "scholarshipSanctionLine",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1922",
+      "source_location": "L1923",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipsanctionline",
       "community": 185,
@@ -8781,7 +8804,7 @@
       "label": "scholarshipCityAdvance",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1942",
+      "source_location": "L1943",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshipcityadvance",
       "community": 185,
@@ -8792,7 +8815,7 @@
       "label": "scholarshipLimit",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1955",
+      "source_location": "L1956",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_scholarshiplimit",
       "community": 185,
@@ -8803,7 +8826,7 @@
       "label": "sponsorshipImportBatch",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1967",
+      "source_location": "L1968",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipimportbatch",
       "community": 185,
@@ -8814,7 +8837,7 @@
       "label": "sponsorshipSourceColumns()",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1987",
+      "source_location": "L1988",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipsourcecolumns",
@@ -8826,7 +8849,7 @@
       "label": "sponsorshipOrganization",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2005",
+      "source_location": "L2006",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshiporganization",
       "community": 185,
@@ -8837,7 +8860,7 @@
       "label": "sponsorshipSponsorType",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2018",
+      "source_location": "L2019",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipsponsortype",
       "community": 185,
@@ -8848,7 +8871,7 @@
       "label": "sponsorshipSponsorCategory",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2028",
+      "source_location": "L2029",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipsponsorcategory",
       "community": 185,
@@ -8859,7 +8882,7 @@
       "label": "sponsorshipStatus",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2038",
+      "source_location": "L2039",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipstatus",
       "community": 185,
@@ -8870,7 +8893,7 @@
       "label": "sponsorshipIndividual",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2048",
+      "source_location": "L2049",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipindividual",
       "community": 185,
@@ -8881,7 +8904,7 @@
       "label": "sponsorshipAssignment",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2076",
+      "source_location": "L2077",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipassignment",
       "community": 185,
@@ -8892,7 +8915,7 @@
       "label": "sponsorshipFundType",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2098",
+      "source_location": "L2099",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipfundtype",
       "community": 185,
@@ -8903,7 +8926,7 @@
       "label": "sponsorshipVisitorType",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2108",
+      "source_location": "L2109",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipvisitortype",
       "community": 185,
@@ -8914,7 +8937,7 @@
       "label": "sponsorshipVisitor",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2118",
+      "source_location": "L2119",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipvisitor",
       "community": 185,
@@ -8925,7 +8948,7 @@
       "label": "sponsorshipFund",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2143",
+      "source_location": "L2144",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipfund",
       "community": 185,
@@ -8936,7 +8959,7 @@
       "label": "sponsorshipFundAllocation",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2173",
+      "source_location": "L2174",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipfundallocation",
       "community": 185,
@@ -8947,7 +8970,7 @@
       "label": "sponsorshipCorrespondenceType",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2194",
+      "source_location": "L2195",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipcorrespondencetype",
       "community": 185,
@@ -8958,7 +8981,7 @@
       "label": "sponsorshipLetter",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2204",
+      "source_location": "L2205",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_sponsorshipletter",
       "community": 185,
@@ -8969,7 +8992,7 @@
       "label": "staffImportBatch",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2228",
+      "source_location": "L2229",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffimportbatch",
       "community": 185,
@@ -8980,7 +9003,7 @@
       "label": "staffSourceColumns()",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2249",
+      "source_location": "L2250",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffsourcecolumns",
@@ -8992,7 +9015,7 @@
       "label": "staffDepartment",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2267",
+      "source_location": "L2268",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffdepartment",
       "community": 1,
@@ -9003,7 +9026,7 @@
       "label": "staffDesignation",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2283",
+      "source_location": "L2284",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffdesignation",
       "community": 1,
@@ -9014,7 +9037,7 @@
       "label": "staffCategory",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2308",
+      "source_location": "L2309",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffcategory",
       "community": 1,
@@ -9025,7 +9048,7 @@
       "label": "staffProfile",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2318",
+      "source_location": "L2319",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffprofile",
       "community": 1,
@@ -9036,7 +9059,7 @@
       "label": "staffEmploymentEvent",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2375",
+      "source_location": "L2376",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_staffemploymentevent",
       "community": 185,
@@ -9047,7 +9070,7 @@
       "label": "accessPermission",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2408",
+      "source_location": "L2409",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_accesspermission",
       "community": 185,
@@ -9058,7 +9081,7 @@
       "label": "accessRole",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2418",
+      "source_location": "L2419",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_accessrole",
       "community": 185,
@@ -9069,7 +9092,7 @@
       "label": "accessRolePermission",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2439",
+      "source_location": "L2440",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_accessrolepermission",
       "community": 185,
@@ -9080,7 +9103,7 @@
       "label": "accessGroup",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2457",
+      "source_location": "L2458",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_accessgroup",
       "community": 185,
@@ -9091,7 +9114,7 @@
       "label": "accessGroupRole",
       "file_type": "code",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2478",
+      "source_location": "L2479",
       "_origin": "ast",
       "id": "apps_web_src_db_schema_accessgrouprole",
       "community": 185,
@@ -9178,8 +9201,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_academic_results_nextmarksheetstatus",
-      "community": 285,
-      "community_name": "historical-results.tsx",
+      "community": 183,
+      "community_name": "api-handlers.ts",
       "norm_label": "nextmarksheetstatus()"
     },
     {
@@ -9331,8 +9354,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_lib_auth_client",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "auth-client.ts"
     },
     {
@@ -9342,8 +9365,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_lib_auth_client_authclient",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "authclient"
     },
     {
@@ -10310,8 +10333,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_classdisplayname",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 377,
+      "community_name": "changeStudentEnrollment",
       "norm_label": "classdisplayname()"
     },
     {
@@ -10373,7 +10396,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_handleapirequest",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "handleapirequest()"
     },
     {
@@ -10504,8 +10527,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschooloperationsoverview",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 186,
+      "community_name": "getRuntimeEnv",
       "norm_label": "getschooloperationsoverview()"
     },
     {
@@ -10638,8 +10661,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_buildschoolstudentfilters",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 377,
+      "community_name": "changeStudentEnrollment",
       "norm_label": "buildschoolstudentfilters()"
     },
     {
@@ -10650,8 +10673,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_schoolstudentquery",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 377,
+      "community_name": "changeStudentEnrollment",
       "norm_label": "schoolstudentquery()"
     },
     {
@@ -10662,8 +10685,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_schoolstudentcountquery",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 377,
+      "community_name": "changeStudentEnrollment",
       "norm_label": "schoolstudentcountquery()"
     },
     {
@@ -10674,8 +10697,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschooloperationsstudents",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 377,
+      "community_name": "changeStudentEnrollment",
       "norm_label": "getschooloperationsstudents()"
     },
     {
@@ -10686,8 +10709,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschooloperationsstudentreport",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 377,
+      "community_name": "changeStudentEnrollment",
       "norm_label": "getschooloperationsstudentreport()"
     },
     {
@@ -10698,8 +10721,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschooloperationsschools",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 186,
+      "community_name": "getRuntimeEnv",
       "norm_label": "getschooloperationsschools()"
     },
     {
@@ -10724,7 +10747,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschoolmasterdata",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "getschoolmasterdata()"
     },
     {
@@ -10736,7 +10759,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_createacademicclassmaster",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "createacademicclassmaster()"
     },
     {
@@ -10748,7 +10771,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_updateacademicclassmaster",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "updateacademicclassmaster()"
     },
     {
@@ -10784,7 +10807,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_readacademicclassrows",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "readacademicclassrows()"
     },
     {
@@ -10796,7 +10819,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_groupacademicclasses",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "groupacademicclasses()"
     },
     {
@@ -10808,7 +10831,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_groupacademicclassrows",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "groupacademicclassrows()"
     },
     {
@@ -10820,7 +10843,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_academicclassrowname",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "academicclassrowname()"
     },
     {
@@ -10832,7 +10855,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_academicclassname",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "academicclassname()"
     },
     {
@@ -10844,7 +10867,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_canonicalmastername",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "canonicalmastername()"
     },
     {
@@ -10880,7 +10903,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_handleschoolassignments",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "handleschoolassignments()"
     },
     {
@@ -10892,7 +10915,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschoolassignments",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "getschoolassignments()"
     },
     {
@@ -10904,7 +10927,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_updateschoolassignments",
       "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community_name": "createAcademicClassMaster",
       "norm_label": "updateschoolassignments()"
     },
     {
@@ -11167,8 +11190,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_handlescholarshiprecord",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "handlescholarshiprecord()"
     },
     {
@@ -11191,8 +11214,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_updatescholarshiprecord",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "updatescholarshiprecord()"
     },
     {
@@ -11215,8 +11238,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_handlesponsorship",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "handlesponsorship()"
     },
     {
@@ -11263,8 +11286,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_writesponsorshiprecord",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "writesponsorshiprecord()"
     },
     {
@@ -11288,8 +11311,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_writesponsorshipcatalog",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "writesponsorshipcatalog()"
     },
     {
@@ -11300,8 +11323,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_sponsorshipentityexists",
-      "community": 183,
-      "community_name": "api-handlers.ts",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "sponsorshipentityexists()"
     },
     {
@@ -11312,8 +11335,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_scholarshiprecordwrite",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "scholarshiprecordwrite()"
     },
     {
@@ -11324,8 +11347,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_validscholarshipreferences",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "validscholarshipreferences()"
     },
     {
@@ -11336,8 +11359,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_scholarshipsessionexists",
-      "community": 186,
-      "community_name": "getRuntimeEnv",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "scholarshipsessionexists()"
     },
     {
@@ -11396,8 +11419,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_server_api_handlers_getschoolsessionscope",
-      "community": 381,
-      "community_name": "getSchoolSessionScope",
+      "community": 186,
+      "community_name": "getRuntimeEnv",
       "norm_label": "getschoolsessionscope()"
     },
     {
@@ -12078,7 +12101,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "file-route.ts"
     },
     {
@@ -12089,7 +12112,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_readroute",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "readroute"
     },
     {
@@ -12111,7 +12134,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_readwriteroute",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "readwriteroute"
     },
     {
@@ -12122,7 +12145,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_readwritedeleteroute",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "readwritedeleteroute"
     },
     {
@@ -12143,8 +12166,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_deleteroute",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "deleteroute"
     },
     {
@@ -12154,8 +12177,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_readpatchroute",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "readpatchroute"
     },
     {
@@ -12165,8 +12188,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_patchdeleteroute",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "patchdeleteroute"
     },
     {
@@ -12177,7 +12200,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_readputroute",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "readputroute"
     },
     {
@@ -12306,8 +12329,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_lib_sponsorship_test",
-      "community": 183,
-      "community_name": "api-handlers.ts",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "sponsorship.test.ts"
     },
     {
@@ -12317,8 +12340,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_lib_sponsorship",
-      "community": 183,
-      "community_name": "api-handlers.ts",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "sponsorship.ts"
     },
     {
@@ -12329,8 +12352,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_sponsorship_sponsorshipdisplayname",
-      "community": 183,
-      "community_name": "api-handlers.ts",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "sponsorshipdisplayname()"
     },
     {
@@ -12341,8 +12364,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_sponsorship_allocationsfitfund",
-      "community": 183,
-      "community_name": "api-handlers.ts",
+      "community": 386,
+      "community_name": "writeSponsorshipRecord",
       "norm_label": "allocationsfitfund()"
     },
     {
@@ -12352,8 +12375,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_lib_use_debounced_value",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "use-debounced-value.ts"
     },
     {
@@ -12364,8 +12387,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_lib_use_debounced_value_usedebouncedvalue",
-      "community": 399,
-      "community_name": "health-operations.tsx",
+      "community": 4,
+      "community_name": "staff-operations.tsx",
       "norm_label": "usedebouncedvalue()"
     },
     {
@@ -13301,7 +13324,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_routetree_gen_fileroutesbypath",
-      "community": 387,
+      "community": 376,
       "community_name": "FileRoutesByPath",
       "norm_label": "fileroutesbypath"
     },
@@ -13861,7 +13884,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_auth",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.auth.$.ts"
     },
     {
@@ -13872,7 +13895,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_auth_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -13883,7 +13906,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_dashboard",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.dashboard.ts"
     },
     {
@@ -13894,7 +13917,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_dashboard_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -13905,7 +13928,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_files_fileid",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.files.$fileid.ts"
     },
     {
@@ -13916,7 +13939,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_files_fileid_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -13927,7 +13950,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_health_advances",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.health.advances.ts"
     },
     {
@@ -13938,7 +13961,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_health_advances_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -13949,7 +13972,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_health_history",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.health.history.ts"
     },
     {
@@ -13960,7 +13983,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_health_history_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -13971,7 +13994,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_health_tb",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.health.tb.ts"
     },
     {
@@ -13982,7 +14005,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_health_tb_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14015,7 +14038,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_invitations_preview",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.invitations.preview.ts"
     },
     {
@@ -14026,7 +14049,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_invitations_preview_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14037,7 +14060,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_audit",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.organization.audit.ts"
     },
     {
@@ -14048,7 +14071,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_audit_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14102,8 +14125,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_invitations_invitationid",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.organization.invitations.$invitationid.ts"
     },
     {
@@ -14113,8 +14136,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_invitations_invitationid_route",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14147,7 +14170,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_logo",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.organization.logo.ts"
     },
     {
@@ -14158,7 +14181,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_logo_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14213,7 +14236,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_sessions",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.organization.sessions.ts"
     },
     {
@@ -14224,7 +14247,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_sessions_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14256,8 +14279,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.organization.ts"
     },
     {
@@ -14267,8 +14290,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_organization_route",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14300,8 +14323,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_files_fileid",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.people.$personid.files.$fileid.ts"
     },
     {
@@ -14311,8 +14334,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_files_fileid_route",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14367,7 +14390,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_sibling_options",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.people.$personid.sibling-options.ts"
     },
     {
@@ -14378,7 +14401,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_sibling_options_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14388,8 +14411,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_siblings_relatedpersonid",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.people.$personid.siblings.$relatedpersonid.ts"
     },
     {
@@ -14399,8 +14422,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_siblings_relatedpersonid_route",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14432,8 +14455,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.people.$personid.ts"
     },
     {
@@ -14443,8 +14466,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_personid_route",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14455,7 +14478,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.people.ts"
     },
     {
@@ -14466,7 +14489,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_people_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14477,7 +14500,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_platform",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.platform.ts"
     },
     {
@@ -14488,7 +14511,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_platform_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14498,8 +14521,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_scholarshipid",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.scholarships.$scholarshipid.ts"
     },
     {
@@ -14509,8 +14532,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_scholarshipid_route",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14521,7 +14544,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_reports",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.scholarships.reports.ts"
     },
     {
@@ -14532,7 +14555,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_reports_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14543,7 +14566,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_setup",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.scholarships.setup.ts"
     },
     {
@@ -14554,7 +14577,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_setup_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14565,7 +14588,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.scholarships.ts"
     },
     {
@@ -14576,7 +14599,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_scholarships_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14587,7 +14610,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_academic_configuration",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.school-operations.academic-configuration.ts"
     },
     {
@@ -14598,7 +14621,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_academic_configuration_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14696,8 +14719,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_enrollments_enrollmentid",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.enrollments.$enrollmentid.ts"
     },
     {
@@ -14707,8 +14730,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_enrollments_enrollmentid_route",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14763,7 +14786,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_master_data",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.master-data.ts"
     },
     {
@@ -14774,7 +14797,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_master_data_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14785,7 +14808,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_overview",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.overview.ts"
     },
     {
@@ -14796,7 +14819,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_overview_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14828,8 +14851,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_marksheetid",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.results.$marksheetid.ts"
     },
     {
@@ -14839,8 +14862,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_marksheetid_route",
-      "community": 386,
-      "community_name": "readPatchRoute",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14851,7 +14874,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_overview",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.results.overview.ts"
     },
     {
@@ -14862,7 +14885,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_overview_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14873,7 +14896,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_report_card",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.results.report-card.ts"
     },
     {
@@ -14884,7 +14907,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_report_card_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14895,7 +14918,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_setup",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.school-operations.results.setup.ts"
     },
     {
@@ -14906,7 +14929,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_setup_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14917,7 +14940,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_summaries",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.results.summaries.ts"
     },
     {
@@ -14928,7 +14951,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_summaries_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14939,7 +14962,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.school-operations.results.ts"
     },
     {
@@ -14950,7 +14973,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_results_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -14961,7 +14984,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_rosters",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.rosters.ts"
     },
     {
@@ -14972,7 +14995,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_rosters_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -14983,7 +15006,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_schoolid_assignments",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.schools.$schoolid.assignments.ts"
     },
     {
@@ -14993,7 +15016,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_schoolid_assignments_route",
-      "community": 387,
+      "community": 376,
       "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
@@ -15004,8 +15027,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_schoolid",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.schools.$schoolid.ts"
     },
     {
@@ -15015,8 +15038,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_schoolid_route",
-      "community": 410,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -15027,7 +15050,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.school-operations.schools.ts"
     },
     {
@@ -15038,7 +15061,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -15049,7 +15072,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_setup",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.setup.ts"
     },
     {
@@ -15060,7 +15083,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_setup_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -15071,7 +15094,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_student_report",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.student-report.ts"
     },
     {
@@ -15082,7 +15105,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_student_report_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -15093,7 +15116,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_students",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.school-operations.students.ts"
     },
     {
@@ -15104,7 +15127,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_students_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -15115,7 +15138,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_sponsorship_reports",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.sponsorship.reports.ts"
     },
     {
@@ -15126,7 +15149,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_sponsorship_reports_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -15137,7 +15160,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_sponsorship_setup",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.sponsorship.setup.ts"
     },
     {
@@ -15148,7 +15171,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_sponsorship_setup_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -15159,7 +15182,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_sponsorship",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "api.sponsorship.ts"
     },
     {
@@ -15170,7 +15193,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_sponsorship_route",
       "community": 387,
-      "community_name": "FileRoutesByPath",
+      "community_name": "readWriteRoute",
       "norm_label": "route"
     },
     {
@@ -15203,7 +15226,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_staff",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "api.staff.ts"
     },
     {
@@ -15214,7 +15237,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_api_staff_route",
       "community": 376,
-      "community_name": "file-route.ts",
+      "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
     {
@@ -15586,7 +15609,7 @@
       "label": "Dashboard()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1150",
+      "source_location": "L1112",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_dashboard",
@@ -15598,7 +15621,7 @@
       "label": "SettingsWorkspace()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1357",
+      "source_location": "L1319",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_settingsworkspace",
@@ -15610,7 +15633,7 @@
       "label": "AdministrationPanel()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1429",
+      "source_location": "L1391",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_administrationpanel",
@@ -15622,7 +15645,7 @@
       "label": "SessionSettingsState",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2173",
+      "source_location": "L2135",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -15635,7 +15658,7 @@
       "label": "AcademicSessionSettings()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2178",
+      "source_location": "L2140",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_academicsessionsettings",
@@ -15647,7 +15670,7 @@
       "label": "AuditState",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2376",
+      "source_location": "L2338",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
@@ -15660,7 +15683,7 @@
       "label": "AuditSettings()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2391",
+      "source_location": "L2353",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_auditsettings",
@@ -15672,7 +15695,7 @@
       "label": "groupLabel()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2575",
+      "source_location": "L2537",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_grouplabel",
@@ -15684,7 +15707,7 @@
       "label": "sameRoleKeys()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2579",
+      "source_location": "L2541",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_samerolekeys",
@@ -15696,7 +15719,7 @@
       "label": "initials()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2583",
+      "source_location": "L2545",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_initials",
@@ -15708,7 +15731,7 @@
       "label": "formatShortDate()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2591",
+      "source_location": "L2553",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_formatshortdate",
@@ -15720,7 +15743,7 @@
       "label": "formatDateTime()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2597",
+      "source_location": "L2559",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_formatdatetime",
@@ -15732,7 +15755,7 @@
       "label": "formatAuditAction()",
       "file_type": "code",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2607",
+      "source_location": "L2569",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_index_formatauditaction",
@@ -15849,8 +15872,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_reset_password",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "reset-password.tsx"
     },
     {
@@ -15862,8 +15885,8 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_reset_password_resetsearch",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "resetsearch"
     },
     {
@@ -15873,7 +15896,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "apps_web_src_routes_reset_password_route",
-      "community": 387,
+      "community": 376,
       "community_name": "FileRoutesByPath",
       "norm_label": "route"
     },
@@ -15885,8 +15908,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_routes_reset_password_resetpassword",
-      "community": 372,
-      "community_name": "index.tsx",
+      "community": 382,
+      "community_name": "school-master-data.tsx",
       "norm_label": "resetpassword()"
     },
     {
@@ -75956,7 +75979,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/admission-sheet.tsx",
-      "source_location": "L257",
+      "source_location": "L269",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_admission_sheet",
@@ -75978,7 +76001,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/admission-sheet.tsx",
-      "source_location": "L270",
+      "source_location": "L282",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_admission_sheet",
@@ -75989,7 +76012,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/admission-sheet.tsx",
-      "source_location": "L246",
+      "source_location": "L258",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_admission_sheet",
@@ -82566,7 +82589,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L275",
+      "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_school_master_data",
@@ -82577,7 +82600,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L425",
+      "source_location": "L422",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_school_master_data",
@@ -82610,7 +82633,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L279",
+      "source_location": "L276",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_school_master_data",
@@ -82621,7 +82644,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L212",
+      "source_location": "L209",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_school_master_data",
@@ -82632,7 +82655,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/school-master-data.tsx",
-      "source_location": "L244",
+      "source_location": "L241",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_school_master_data",
@@ -86392,7 +86415,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/ui/calendar.tsx",
-      "source_location": "L23",
+      "source_location": "L29",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_ui_calendar_calendar",
@@ -86409,6 +86432,18 @@
       "_origin": "ast",
       "source": "apps_web_src_components_ui_button_button",
       "target": "apps_web_src_lib_utils_cn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/components/ui/calendar.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_web_src_components_ui_calendar",
+      "target": "apps_web_src_components_ui_button_button",
       "confidence_score": 1.0
     },
     {
@@ -86459,6 +86494,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/components/ui/calendar.tsx",
+      "source_location": "L93",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_web_src_components_ui_calendar",
+      "target": "apps_web_src_components_ui_calendar_calendardaybutton",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -86495,11 +86541,23 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "indirect_call",
+      "context": "collection",
+      "confidence": "INFERRED",
+      "source_file": "apps/web/src/components/ui/calendar.tsx",
+      "source_location": "L82",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_web_src_components_ui_calendar_calendar",
+      "target": "apps_web_src_components_ui_calendar_calendardaybutton",
+      "confidence_score": 0.5
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/ui/calendar.tsx",
-      "source_location": "L16",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_ui_calendar_calendar",
@@ -86516,6 +86574,18 @@
       "_origin": "ast",
       "source": "apps_web_src_components_ui_date_picker",
       "target": "apps_web_src_components_ui_calendar_calendar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/components/ui/calendar.tsx",
+      "source_location": "L106",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_web_src_components_ui_calendar_calendardaybutton",
+      "target": "apps_web_src_lib_utils_cn",
       "confidence_score": 1.0
     },
     {
@@ -89435,7 +89505,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1179",
+      "source_location": "L1180",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89446,7 +89516,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1061",
+      "source_location": "L1062",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89468,7 +89538,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1207",
+      "source_location": "L1208",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89479,7 +89549,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1235",
+      "source_location": "L1236",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89490,7 +89560,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1086",
+      "source_location": "L1087",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89501,7 +89571,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1084",
+      "source_location": "L1085",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89523,7 +89593,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1110",
+      "source_location": "L1111",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89534,7 +89604,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1083",
+      "source_location": "L1084",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89545,7 +89615,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1082",
+      "source_location": "L1083",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89556,7 +89626,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1157",
+      "source_location": "L1158",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89567,7 +89637,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2457",
+      "source_location": "L2458",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89578,7 +89648,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2478",
+      "source_location": "L2479",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89589,7 +89659,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2408",
+      "source_location": "L2409",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89600,7 +89670,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2418",
+      "source_location": "L2419",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89611,7 +89681,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2439",
+      "source_location": "L2440",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89655,7 +89725,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1517",
+      "source_location": "L1518",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89666,7 +89736,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1450",
+      "source_location": "L1451",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89677,7 +89747,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1638",
+      "source_location": "L1639",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89688,7 +89758,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1675",
+      "source_location": "L1676",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89699,7 +89769,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1731",
+      "source_location": "L1732",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89710,7 +89780,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1553",
+      "source_location": "L1554",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89721,7 +89791,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1605",
+      "source_location": "L1606",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89732,7 +89802,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1475",
+      "source_location": "L1476",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89743,7 +89813,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1040",
+      "source_location": "L1041",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89765,7 +89835,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1265",
+      "source_location": "L1266",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89952,7 +90022,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1880",
+      "source_location": "L1881",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89963,7 +90033,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1942",
+      "source_location": "L1943",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89974,7 +90044,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1820",
+      "source_location": "L1821",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89985,7 +90055,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1810",
+      "source_location": "L1811",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -89996,7 +90066,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1833",
+      "source_location": "L1834",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90007,7 +90077,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1772",
+      "source_location": "L1773",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90018,7 +90088,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1955",
+      "source_location": "L1956",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90029,7 +90099,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1843",
+      "source_location": "L1844",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90040,7 +90110,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1901",
+      "source_location": "L1902",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90051,7 +90121,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1922",
+      "source_location": "L1923",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90062,7 +90132,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1792",
+      "source_location": "L1793",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90128,7 +90198,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2076",
+      "source_location": "L2077",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90139,7 +90209,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2194",
+      "source_location": "L2195",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90150,7 +90220,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2143",
+      "source_location": "L2144",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90161,7 +90231,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2173",
+      "source_location": "L2174",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90172,7 +90242,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2098",
+      "source_location": "L2099",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90183,7 +90253,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1967",
+      "source_location": "L1968",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90194,7 +90264,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2048",
+      "source_location": "L2049",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90205,7 +90275,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2204",
+      "source_location": "L2205",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90216,7 +90286,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2005",
+      "source_location": "L2006",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90227,7 +90297,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1987",
+      "source_location": "L1988",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90238,7 +90308,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2028",
+      "source_location": "L2029",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90249,7 +90319,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2018",
+      "source_location": "L2019",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90260,7 +90330,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2038",
+      "source_location": "L2039",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90271,7 +90341,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2118",
+      "source_location": "L2119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90282,7 +90352,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2108",
+      "source_location": "L2109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90293,7 +90363,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2308",
+      "source_location": "L2309",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90304,7 +90374,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2267",
+      "source_location": "L2268",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90315,7 +90385,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2283",
+      "source_location": "L2284",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90326,7 +90396,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2375",
+      "source_location": "L2376",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90337,7 +90407,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2228",
+      "source_location": "L2229",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90348,7 +90418,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2318",
+      "source_location": "L2319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90359,7 +90429,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L2249",
+      "source_location": "L2250",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90381,7 +90451,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1394",
+      "source_location": "L1395",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -90403,7 +90473,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/db/schema.ts",
-      "source_location": "L1342",
+      "source_location": "L1343",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_db_schema",
@@ -109927,7 +109997,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2178",
+      "source_location": "L2140",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -109971,7 +110041,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1429",
+      "source_location": "L1391",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110015,7 +110085,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2391",
+      "source_location": "L2353",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110026,7 +110096,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2376",
+      "source_location": "L2338",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110059,7 +110129,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1150",
+      "source_location": "L1112",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110092,7 +110162,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2607",
+      "source_location": "L2569",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110103,7 +110173,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2597",
+      "source_location": "L2559",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110114,7 +110184,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2591",
+      "source_location": "L2553",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110125,7 +110195,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2575",
+      "source_location": "L2537",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110148,7 +110218,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2583",
+      "source_location": "L2545",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110269,7 +110339,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2579",
+      "source_location": "L2541",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110280,7 +110350,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2173",
+      "source_location": "L2135",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110313,7 +110383,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1357",
+      "source_location": "L1319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index",
@@ -110565,7 +110635,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1336",
+      "source_location": "L1298",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_dashboard",
@@ -110577,7 +110647,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1339",
+      "source_location": "L1301",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_dashboard",
@@ -110589,7 +110659,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1238",
+      "source_location": "L1200",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_dashboard",
@@ -110601,7 +110671,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2076",
+      "source_location": "L2038",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_administrationpanel",
@@ -110613,7 +110683,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1715",
+      "source_location": "L1677",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_administrationpanel",
@@ -110625,7 +110695,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1832",
+      "source_location": "L1794",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_administrationpanel",
@@ -110637,7 +110707,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L1704",
+      "source_location": "L1666",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_administrationpanel",
@@ -110649,7 +110719,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2295",
+      "source_location": "L2257",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_academicsessionsettings",
@@ -110661,7 +110731,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2503",
+      "source_location": "L2465",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_auditsettings",
@@ -110673,7 +110743,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/routes/index.tsx",
-      "source_location": "L2534",
+      "source_location": "L2496",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_routes_index_auditsettings",
@@ -163642,5 +163712,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "1db9593b54cc6b3e66397f865e2b1497b165d197"
+  "built_at_commit": "8d6057a7edafff4ebe22509a68b62063b59fb616"
 }

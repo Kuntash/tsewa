@@ -1014,17 +1014,6 @@ function Launchpad({
     }
   }
 
-  async function changeOrganization(organizationId: string) {
-    const organization = platform.organizations.find((item) => item.id === organizationId);
-    if (!organization?.defaultSessionId) return;
-    const response = await fetch("/api/platform", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ academicSessionId: organization.defaultSessionId }),
-    });
-    if (response.ok) window.location.reload();
-  }
-
   if (view === "school") {
     return (
       <SchoolOperations
@@ -1047,33 +1036,6 @@ function Launchpad({
           organizationTitle={activeOrganization?.displayTitle}
         />
         <div className="ml-auto flex items-center gap-3">
-          {platform.organizations.length > 1 ? (
-            <Select
-              onValueChange={(value) => void changeOrganization(value)}
-              value={platform.activeOrganizationId ?? undefined}
-            >
-              <SelectTrigger
-                aria-label="Organization"
-                className="w-10 rounded-full px-0 sm:w-48 sm:px-3 md:w-52"
-              >
-                <Building2 className="size-4" />
-                <span className="hidden min-w-0 truncate sm:block">
-                  <SelectValue placeholder="Organization" />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {platform.organizations.map((organization) => (
-                  <SelectItem
-                    disabled={!organization.defaultSessionId}
-                    key={organization.id}
-                    value={organization.id}
-                  >
-                    {organization.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
           <Select onValueChange={(value) => void changeSession(value)} value={activeSessionId}>
             <SelectTrigger
               aria-label="Academic session"
