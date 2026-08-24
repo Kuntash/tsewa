@@ -1,7 +1,7 @@
 # Graph Report - tsewa  (2026-08-24)
 
 ## Corpus Check
-- 265 files · ~285,364 words
+- 265 files · ~285,431 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `de3fc2b2`
+- Built from commit: `d9481e67`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -432,7 +432,7 @@
 - Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance
 - Q: what is next?
 - AiSearchJobs
-- @cloudflare/vite-plugin
+- tailwindcss
 
 ## God Nodes (most connected - your core abstractions)
 1. `getRuntimeEnv()` - 82 edges
@@ -501,7 +501,7 @@ Nodes (19): buildImportSql(), confirmedDatabaseId, database, mapGender(), option
 
 ### Community 10 - "devDependencies"
 Cohesion: 0.07
-Nodes (27): devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @tanstack/router-cli, tw-animate-css, @types/node, @types/react (+19 more)
+Nodes (27): devDependencies, @cloudflare/vite-plugin, drizzle-kit, @tailwindcss/vite, @tanstack/router-cli, tw-animate-css, @types/node, @types/react (+19 more)
 
 ### Community 11 - "compilerOptions"
 Cohesion: 0.08

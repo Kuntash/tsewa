@@ -348,6 +348,30 @@ function buildSql(data, batchId, importedAt) {
     ]),
     "department_id=excluded.department_id,designation_id=excluded.designation_id,category_id=excluded.category_id,legacy_department_id=excluded.legacy_department_id,legacy_designation_id=excluded.legacy_designation_id,permanent_on=excluded.permanent_on,spouse_name=excluded.spouse_name,settlement_name=excluded.settlement_name,allocated_place=excluded.allocated_place,mother_name=excluded.mother_name,father_name=excluded.father_name,address=excluded.address,marital_status=excluded.marital_status,registration_certificate_number=excluded.registration_certificate_number,pan_number=excluded.pan_number,phone=excluded.phone,email=excluded.email,quarter_number=excluded.quarter_number,nominee=excluded.nominee,birth_place=excluded.birth_place,city=excluded.city,region=excluded.region,country=excluded.country,withdrawal_reason=excluded.withdrawal_reason,withdrawal_on=excluded.withdrawal_on,identity_card_number=excluded.identity_card_number,green_book_number=excluded.green_book_number,remarks=excluded.remarks,import_batch_id=excluded.import_batch_id,imported_at=excluded.imported_at,updated_at=excluded.updated_at",
   );
+  statements.push(
+    `UPDATE person
+     SET registration_certificate_number = (
+           SELECT profile.registration_certificate_number
+           FROM staff_profile profile
+           WHERE profile.person_id = person.id
+             AND profile.organization_id = person.organization_id
+         ),
+         identity_certificate_number = (
+           SELECT profile.identity_card_number
+           FROM staff_profile profile
+           WHERE profile.person_id = person.id
+             AND profile.organization_id = person.organization_id
+         ),
+         updated_at = ${sqlLiteral(importedAt)}
+     WHERE organization_id = ${organizationId.sql}
+       AND kind = 'staff'
+       AND EXISTS (
+         SELECT 1
+         FROM staff_profile profile
+         WHERE profile.person_id = person.id
+           AND profile.organization_id = person.organization_id
+       )`,
+  );
   addRows(
     statements,
     "staff_employment_event",
