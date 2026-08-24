@@ -5,8 +5,8 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1787590879.7667024,
-    "ast_hash": "5bad1e1fb5c61b3d9aaad8fe87e90f46",
+    "mtime": 1787592197.5366108,
+    "ast_hash": "aec7785b96a1f0dd3695819b35d875e9",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787590410.9671433,
-    "ast_hash": "61182ac76a275c161730151edcff2ce9",
+    "mtime": 1787591693.1411283,
+    "ast_hash": "906ad9b8e71db6cabcadd703dd8f9f56",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787572757.4049976,
-    "ast_hash": "3c2576c8b5527dd55c9fc1cb5ec74b75",
+    "mtime": 1787591693.1415703,
+    "ast_hash": "da71677f29409a7250e7d425fbc944a1",
     "semantic_hash": ""
   },
   "apps/web/README.md": {

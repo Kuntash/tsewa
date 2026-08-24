@@ -23,6 +23,11 @@ feature ships or THF confirms that a historical workflow is still needed.
 ## Product foundations
 
 - [ ] Fix theme consistency across every page, component, and interaction state.
+- [x] Increase the THS organization logo size on the anonymous `ths.kunga.dev`
+      landing and sign-in page.
+- [ ] Build the `gettsewa.com` marketing and pricing site around the hosted product.
+      Keep customer-managed deployment and enhanced data controls out of primary
+      landing-page copy; mention them in the FAQ as Enterprise-tier options.
 - [x] Persist the user's theme preference across browser sessions.
 - [x] Make every persistent page search URL-first, validate URL parameters, and derive search,
       filter, sort, and page state safely from the URL.

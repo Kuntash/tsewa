@@ -684,6 +684,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
             logoUrl={platform.brand.logoUrl}
             organizationName={platform.brand.organizationName}
             organizationTitle={platform.brand.organizationTitle}
+            prominent
           />
           <h1 className="mt-14 text-balance text-5xl font-semibold tracking-[-0.045em] text-foreground">
             One place for people, school, care, and records.
@@ -715,6 +716,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
               logoUrl={platform.brand.logoUrl}
               organizationName={platform.brand.organizationName}
               organizationTitle={platform.brand.organizationTitle}
+              prominent
             />
             <ThemeToggle />
           </div>
@@ -811,7 +813,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                     </Select>
                     {selectedSession ? (
                       <p className="text-xs text-muted-foreground">
-                        {selectedSession.startsOn} — {selectedSession.endsOn}
+                        {formatSessionRange(selectedSession)}
                       </p>
                     ) : null}
                   </div>
@@ -882,9 +884,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
             </CardContent>
           </Card>
           <p className="mt-5 text-center text-xs text-muted-foreground">
-            {platform.deployment.mode === "self-hosted"
-              ? "Private installation · Your organization owns its data"
-              : "Hosted securely by Tsewa"}
+            Secure access for authorized staff
           </p>
         </section>
       </div>
@@ -918,6 +918,7 @@ function EmailVerificationScreen({
             logoUrl={brand.logoUrl}
             organizationName={brand.organizationName}
             organizationTitle={brand.organizationTitle}
+            prominent
           />
           <ThemeToggle />
         </div>
@@ -966,34 +967,62 @@ function Brand({
   organizationName,
   organizationTitle,
   logoUrl,
+  prominent = false,
 }: {
   organizationName?: string | null;
   organizationTitle?: string | null;
   logoUrl?: string | null;
+  prominent?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className={prominent ? "flex items-center gap-4" : "flex items-center gap-3"}>
       {logoUrl ? (
         <img
           alt={`${organizationName ?? "Organization"} logo`}
-          className="size-10 rounded-xl border bg-white object-contain p-1 shadow-sm"
+          className={
+            prominent
+              ? "size-16 rounded-2xl border bg-white object-contain p-1.5 shadow-sm"
+              : "size-10 rounded-xl border bg-white object-contain p-1 shadow-sm"
+          }
+          fetchPriority={prominent ? "high" : "auto"}
+          loading={prominent ? "eager" : "lazy"}
           src={logoUrl}
         />
       ) : (
-        <div className="grid size-10 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
+        <div
+          className={
+            prominent
+              ? "grid size-16 place-items-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground shadow-sm"
+              : "grid size-10 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm"
+          }
+        >
           {organizationName ? initials(organizationName) : "TS"}
         </div>
       )}
       <div>
-        <div className="text-sm font-semibold tracking-tight text-foreground">
+        <div
+          className={`${prominent ? "text-base" : "text-sm"} font-semibold tracking-tight text-foreground`}
+        >
           {organizationTitle || "Tsewa"}
         </div>
-        <div className="text-xs text-muted-foreground">
+        <div className={`${prominent ? "text-sm" : "text-xs"} text-muted-foreground`}>
           {organizationName || "School & Care Operations"}
         </div>
       </div>
     </div>
   );
+}
+
+function formatSessionRange(session: AcademicSession): string {
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return `${formatter.format(new Date(`${session.startsOn}T00:00:00Z`))} — ${formatter.format(
+    new Date(`${session.endsOn}T00:00:00Z`),
+  )}`;
 }
 
 function Launchpad({
