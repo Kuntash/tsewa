@@ -38,6 +38,18 @@ describe("deployment policy", () => {
     );
   });
 
+  it("opens verified account and organization onboarding in hosted mode", () => {
+    const deployment = getDeploymentConfig({
+      DEPLOYMENT_MODE: "hosted",
+      PUBLIC_APP_URL: "https://app.gettsewa.com",
+    });
+
+    expect(deployment.capabilities.allowsInitialOwnerBootstrap).toBe(false);
+    expect(deployment.capabilities.allowsPublicSignup).toBe(true);
+    expect(deployment.capabilities.requiresEmailVerification).toBe(true);
+    expect(deployment.capabilities.supportsMultipleOrganizations).toBe(true);
+  });
+
   it("rejects organization-specific defaults in hosted mode", () => {
     expect(() =>
       getDeploymentConfig({

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -20,6 +21,7 @@ import { Route as SchoolRouteImport } from './routes/school'
 import { Route as SponsorshipsRouteImport } from './routes/sponsorships'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ApiDashboardRouteImport } from './routes/api.dashboard'
+import { Route as ApiOnboardingRouteImport } from './routes/api.onboarding'
 import { Route as ApiOrganizationRouteImport } from './routes/api.organization'
 import { Route as ApiPeopleRouteImport } from './routes/api.people'
 import { Route as ApiPlatformRouteImport } from './routes/api.platform'
@@ -100,6 +102,11 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
   path: '/people',
@@ -138,6 +145,11 @@ const StaffRoute = StaffRouteImport.update({
 const ApiDashboardRoute = ApiDashboardRouteImport.update({
   id: '/api/dashboard',
   path: '/api/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOnboardingRoute = ApiOnboardingRouteImport.update({
+  id: '/api/onboarding',
+  path: '/api/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrganizationRoute = ApiOrganizationRouteImport.update({
@@ -501,6 +513,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/health': typeof HealthRoute
+  '/onboarding': typeof OnboardingRoute
   '/people': typeof PeopleRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -509,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/sponsorships': typeof SponsorshipsRoute
   '/staff': typeof StaffRoute
   '/api/dashboard': typeof ApiDashboardRoute
+  '/api/onboarding': typeof ApiOnboardingRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
@@ -578,6 +592,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/health': typeof HealthRoute
+  '/onboarding': typeof OnboardingRoute
   '/people': typeof PeopleRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -586,6 +601,7 @@ export interface FileRoutesByTo {
   '/sponsorships': typeof SponsorshipsRoute
   '/staff': typeof StaffRoute
   '/api/dashboard': typeof ApiDashboardRoute
+  '/api/onboarding': typeof ApiOnboardingRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
@@ -656,6 +672,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/health': typeof HealthRoute
+  '/onboarding': typeof OnboardingRoute
   '/people': typeof PeopleRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -664,6 +681,7 @@ export interface FileRoutesById {
   '/sponsorships': typeof SponsorshipsRoute
   '/staff': typeof StaffRoute
   '/api/dashboard': typeof ApiDashboardRoute
+  '/api/onboarding': typeof ApiOnboardingRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
@@ -735,6 +753,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/health'
+    | '/onboarding'
     | '/people'
     | '/reports'
     | '/reset-password'
@@ -743,6 +762,7 @@ export interface FileRouteTypes {
     | '/sponsorships'
     | '/staff'
     | '/api/dashboard'
+    | '/api/onboarding'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
@@ -812,6 +832,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/health'
+    | '/onboarding'
     | '/people'
     | '/reports'
     | '/reset-password'
@@ -820,6 +841,7 @@ export interface FileRouteTypes {
     | '/sponsorships'
     | '/staff'
     | '/api/dashboard'
+    | '/api/onboarding'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
@@ -889,6 +911,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/health'
+    | '/onboarding'
     | '/people'
     | '/reports'
     | '/reset-password'
@@ -897,6 +920,7 @@ export interface FileRouteTypes {
     | '/sponsorships'
     | '/staff'
     | '/api/dashboard'
+    | '/api/onboarding'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
@@ -967,6 +991,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   HealthRoute: typeof HealthRoute
+  OnboardingRoute: typeof OnboardingRoute
   PeopleRoute: typeof PeopleRoute
   ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -975,6 +1000,7 @@ export interface RootRouteChildren {
   SponsorshipsRoute: typeof SponsorshipsRoute
   StaffRoute: typeof StaffRoute
   ApiDashboardRoute: typeof ApiDashboardRoute
+  ApiOnboardingRoute: typeof ApiOnboardingRoute
   ApiOrganizationRoute: typeof ApiOrganizationRouteWithChildren
   ApiPeopleRoute: typeof ApiPeopleRouteWithChildren
   ApiPlatformRoute: typeof ApiPlatformRoute
@@ -1027,6 +1053,13 @@ declare module '@tanstack/react-router' {
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/people': {
@@ -1083,6 +1116,13 @@ declare module '@tanstack/react-router' {
       path: '/api/dashboard'
       fullPath: '/api/dashboard'
       preLoaderRoute: typeof ApiDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding': {
+      id: '/api/onboarding'
+      path: '/api/onboarding'
+      fullPath: '/api/onboarding'
+      preLoaderRoute: typeof ApiOnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/organization': {
@@ -1827,6 +1867,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   HealthRoute: HealthRoute,
+  OnboardingRoute: OnboardingRoute,
   PeopleRoute: PeopleRoute,
   ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -1835,6 +1876,7 @@ const rootRouteChildren: RootRouteChildren = {
   SponsorshipsRoute: SponsorshipsRoute,
   StaffRoute: StaffRoute,
   ApiDashboardRoute: ApiDashboardRoute,
+  ApiOnboardingRoute: ApiOnboardingRoute,
   ApiOrganizationRoute: ApiOrganizationRouteWithChildren,
   ApiPeopleRoute: ApiPeopleRouteWithChildren,
   ApiPlatformRoute: ApiPlatformRoute,

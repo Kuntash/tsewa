@@ -45,7 +45,7 @@ export function getDeploymentConfig(runtime: DeploymentEnvironment): DeploymentC
     defaultOrganization,
     capabilities: {
       allowsInitialOwnerBootstrap: mode === "self-hosted",
-      allowsPublicSignup: false,
+      allowsPublicSignup: mode === "hosted",
       requiresBilling: mode === "hosted",
       requiresEmailVerification: mode === "hosted",
       supportsMultipleOrganizations: mode === "hosted",

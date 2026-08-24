@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tsewa-hosted",
+  "compatibility_date": "2026-08-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server.ts",
+  "routes": [{ "pattern": "app.gettsewa.com", "custom_domain": true }],
+  "secrets": { "required": ["BETTER_AUTH_SECRET"] },
+  "observability": { "enabled": true },
+  "vars": {
+    "APP_NAME": "Tsewa",
+    "DEPLOYMENT_MODE": "hosted",
+    "PUBLIC_APP_URL": "https://app.gettsewa.com",
+    "TRANSACTIONAL_FROM_EMAIL": "hello@gettsewa.com",
+  },
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["hello@gettsewa.com"] }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tsewa-hosted-db",
+      "database_id": "679ffb6b-0990-4db4-b8c4-e78eb450f11e",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "tsewa-hosted-files" }],
+  "assets": { "directory": "dist/client" },
+}

@@ -5,8 +5,8 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1787592197.5366108,
-    "ast_hash": "aec7785b96a1f0dd3695819b35d875e9",
+    "mtime": 1787593931.6522977,
+    "ast_hash": "009f151723397e9582558e4262a2a9ca",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
@@ -100,8 +100,8 @@
     "semantic_hash": "d9837f38cc05303254571985e3164050"
   },
   "apps/web/src/routeTree.gen.ts": {
-    "mtime": 1787590657.7924368,
-    "ast_hash": "daa5aed333ebb9ca5cacde18a56407db",
+    "mtime": 1787593800.369731,
+    "ast_hash": "709e4399ddb25089f931746e16675434",
     "semantic_hash": ""
   },
   "apps/web/src/router.tsx": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787591693.1411283,
-    "ast_hash": "906ad9b8e71db6cabcadd703dd8f9f56",
+    "mtime": 1787593781.7277548,
+    "ast_hash": "9ece16dd852148edb071d365cfe64438",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787590879.7674408,
-    "ast_hash": "5743f71995d94f679b6c98c0df82a36c",
+    "mtime": 1787593931.6527607,
+    "ast_hash": "1d90ba824a3edb8e93e173f0f8493b08",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1787590427.1027858,
-    "ast_hash": "6a10513dae2ada32810577d114a57bbc",
+    "mtime": 1787595024.272762,
+    "ast_hash": "9d7277b282b80e9ff2fbf04e3e5d4590",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1210,8 +1210,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/ui/date-picker.tsx": {
-    "mtime": 1787569872.5142093,
-    "ast_hash": "6e101abe5e2bb92505cadacc49da3803",
+    "mtime": 1787594858.6733644,
+    "ast_hash": "81da3dc91b572bc189924e69bb641b4a",
     "semantic_hash": ""
   },
   "apps/web/src/components/ui/popover.tsx": {
@@ -1240,13 +1240,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/deployment.test.ts": {
-    "mtime": 1787573796.0085692,
-    "ast_hash": "78b7b5980676796c8c57e729b15b9349",
+    "mtime": 1787593352.7190533,
+    "ast_hash": "8528db8a14a1013e40a27b437db68dc9",
     "semantic_hash": ""
   },
   "apps/web/src/lib/deployment.ts": {
-    "mtime": 1787590427.0749056,
-    "ast_hash": "416f5556c1dce5256d854b5b2428cd56",
+    "mtime": 1787593352.7186906,
+    "ast_hash": "5506512058565fb191236de07358ada2",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.installation.logo.ts": {
@@ -1260,8 +1260,8 @@
     "semantic_hash": ""
   },
   "docs/deployment-modes.md": {
-    "mtime": 1787590515.8002758,
-    "ast_hash": "bfaf64acc3869c374237db7631bfc823",
+    "mtime": 1787595197.7449162,
+    "ast_hash": "3fa793aaf67310b3a86611c5b5eafaba",
     "semantic_hash": ""
   },
   "docs/self-hosting.md": {
@@ -1272,6 +1272,21 @@
   "docs/ths-cloudflare-handover.md": {
     "mtime": 1787590515.8029296,
     "ast_hash": "a5fb9041ae3f1c0e926f8a7900d350d3",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/hosted-onboarding.tsx": {
+    "mtime": 1787593788.7136693,
+    "ast_hash": "ecf1bb8bc790a1b82ef6587cd8902069",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/api.onboarding.ts": {
+    "mtime": 1787593525.7403345,
+    "ast_hash": "ce0c8cb35037712bdc3a93b8cbaf302f",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/onboarding.tsx": {
+    "mtime": 1787593744.2338817,
+    "ast_hash": "18c22a197ff4e67f71408514540f7be8",
     "semantic_hash": ""
   }
 }

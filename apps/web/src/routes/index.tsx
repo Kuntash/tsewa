@@ -278,6 +278,9 @@ function Home() {
   }
 
   if (session.data?.user) {
+    if (platform.deployment.mode === "hosted" && !platform.activeOrganizationId) {
+      return <Navigate replace to="/onboarding" />;
+    }
     if (search.view === "settings") {
       return (
         <Navigate params={{ tab: search.settingsTab ?? "general" }} replace to="/settings/$tab" />
@@ -483,6 +486,9 @@ export function AuthenticatedApp({
   }
 
   if (!session.data?.user) return <Navigate replace to="/" />;
+  if (platform.deployment.mode === "hosted" && !platform.activeOrganizationId) {
+    return <Navigate replace to="/onboarding" />;
+  }
 
   return (
     <Launchpad
@@ -540,7 +546,12 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
     const result =
       mode === "setup"
         ? await authClient.signUp.email(
-            { name, email, password },
+            {
+              name,
+              email,
+              password,
+              callbackURL: platform.deployment.mode === "hosted" ? "/onboarding" : "/dashboard",
+            },
             isInvitation ? { headers: { "x-tsewa-invitation": inviteToken } } : undefined,
           )
         : await authClient.signIn.email(
@@ -645,7 +656,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
     setSubmitting(true);
     const result = await authClient.sendVerificationEmail({
       email: verificationEmail,
-      callbackURL: "/dashboard",
+      callbackURL: platform.deployment.mode === "hosted" ? "/onboarding" : "/dashboard",
     });
     setSubmitting(false);
     if (result.error) {
@@ -734,7 +745,9 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                     ? `Join ${platform.invitation?.organizationName}`
                     : "Sign in to accept"
                   : mode === "setup"
-                    ? "Create the first owner"
+                    ? platform.deployment.mode === "hosted"
+                      ? "Create your Tsewa account"
+                      : "Create the first owner"
                     : mode === "recovery"
                       ? "Reset your password"
                       : "Welcome back"}
@@ -743,7 +756,9 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                 {isInvitation
                   ? `You have been invited as ${platform.invitation?.group}. Use ${platform.invitation?.email}.`
                   : mode === "setup"
-                    ? `Create the first owner account for ${platform.brand.organizationName ?? "this installation"}.`
+                    ? platform.deployment.mode === "hosted"
+                      ? "Verify your email, then set up your organization and first academic year."
+                      : `Create the first owner account for ${platform.brand.organizationName ?? "this installation"}.`
                     : mode === "recovery"
                       ? "We will email a private reset link if the account exists."
                       : "Sign in to your organization."}
@@ -835,7 +850,9 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                 >
                   {submitting ? <LoaderCircle className="animate-spin" /> : null}
                   {mode === "setup"
-                    ? "Create account"
+                    ? platform.deployment.mode === "hosted"
+                      ? "Continue with email"
+                      : "Create account"
                     : mode === "recovery"
                       ? "Send reset link"
                       : "Sign in"}
@@ -878,7 +895,9 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                     ? "I already have an account"
                     : isInvitation
                       ? "Create a new account"
-                      : "Set up this installation"}
+                      : platform.deployment.mode === "hosted"
+                        ? "Create a new organization"
+                        : "Set up this installation"}
                 </button>
               ) : null}
             </CardContent>

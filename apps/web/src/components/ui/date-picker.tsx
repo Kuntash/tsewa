@@ -35,10 +35,14 @@ export function DatePickerField({
   required = false,
   value,
   onChange,
+  endMonth = new Date(),
+  startMonth = new Date(1930, 0),
 }: {
+  endMonth?: Date;
   label: string;
   name: string;
   required?: boolean;
+  startMonth?: Date;
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -64,7 +68,8 @@ export function DatePickerField({
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             captionLayout="dropdown"
-            endMonth={new Date()}
+            defaultMonth={parseDate(value)}
+            endMonth={endMonth}
             mode="single"
             onSelect={(date) => {
               if (!date && required) return;
@@ -72,7 +77,7 @@ export function DatePickerField({
               if (date) setOpen(false);
             }}
             selected={parseDate(value)}
-            startMonth={new Date(1930, 0)}
+            startMonth={startMonth}
           />
         </PopoverContent>
       </Popover>

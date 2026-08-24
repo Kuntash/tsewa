@@ -165,6 +165,63 @@ const invitationSchema = z.object({
   group: z.enum(["admin", "staff", "viewer"]),
 });
 
+const hostedOnboardingSchema = z.object({
+  organization: z.object({
+    name: z.string().trim().min(2).max(100),
+    slug: z
+      .string()
+      .trim()
+      .min(3)
+      .max(48)
+      .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/),
+    displayTitle: z
+      .string()
+      .trim()
+      .max(120)
+      .nullable()
+      .transform((value) => value || null),
+    timezone: z.string().trim().min(1).max(64),
+    locale: z
+      .string()
+      .trim()
+      .regex(/^[a-z]{2,3}(?:-[A-Z]{2})?$/),
+  }),
+  session: z.object({
+    name: z.string().trim().min(2).max(40),
+    startsOn: z.iso.date(),
+    endsOn: z.iso.date(),
+  }),
+  school: z.object({
+    name: z.string().trim().min(2).max(160),
+    locationName: z
+      .string()
+      .trim()
+      .max(160)
+      .nullable()
+      .transform((value) => value || null),
+    affiliationNumber: z
+      .string()
+      .trim()
+      .max(100)
+      .nullable()
+      .transform((value) => value || null),
+  }),
+  classes: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(100),
+        section: z
+          .string()
+          .trim()
+          .max(30)
+          .nullable()
+          .transform((value) => value || null),
+      }),
+    )
+    .min(1)
+    .max(40),
+});
+
 const groupRolesSchema = z.object({
   roleKeys: z
     .array(
@@ -898,6 +955,10 @@ export const apiDispatcher = {
       return handlePlatformRequest(request);
     }
 
+    if (url.pathname === "/api/onboarding") {
+      return createHostedOrganization(request);
+    }
+
     if (url.pathname === "/api/installation/logo") {
       return handleInstallationLogo(request);
     }
@@ -1329,49 +1390,62 @@ async function ensureAccessControlSeeded(
   database: Database,
   organizationId: string,
 ): Promise<void> {
+  const writes: BatchItem<"sqlite">[] = [];
   for (const [key, name, category] of permissionCatalog) {
-    await database.insert(accessPermission).values({ key, name, category }).onConflictDoNothing();
+    writes.push(
+      database.insert(accessPermission).values({ key, name, category }).onConflictDoNothing(),
+    );
   }
 
   for (const role of roleCatalog) {
     const roleId = accessRoleId(organizationId, role.key);
-    await database
-      .insert(accessRole)
-      .values({
-        id: roleId,
-        organizationId,
-        key: role.key,
-        name: role.name,
-        description: role.description,
-      })
-      .onConflictDoNothing();
+    writes.push(
+      database
+        .insert(accessRole)
+        .values({
+          id: roleId,
+          organizationId,
+          key: role.key,
+          name: role.name,
+          description: role.description,
+        })
+        .onConflictDoNothing(),
+    );
     for (const permission of rolePermissionDefaults[role.key]) {
-      await database
-        .insert(accessRolePermission)
-        .values({ roleId, permissionKey: permission })
-        .onConflictDoNothing();
+      writes.push(
+        database
+          .insert(accessRolePermission)
+          .values({ roleId, permissionKey: permission })
+          .onConflictDoNothing(),
+      );
     }
   }
 
   for (const group of groupCatalog) {
     const groupId = accessGroupId(organizationId, group.key);
-    await database
-      .insert(accessGroup)
-      .values({
-        id: groupId,
-        organizationId,
-        key: group.key,
-        name: group.name,
-        description: group.description,
-      })
-      .onConflictDoNothing();
+    writes.push(
+      database
+        .insert(accessGroup)
+        .values({
+          id: groupId,
+          organizationId,
+          key: group.key,
+          name: group.name,
+          description: group.description,
+        })
+        .onConflictDoNothing(),
+    );
     for (const roleKey of groupRoleDefaults[group.key]) {
-      await database
-        .insert(accessGroupRole)
-        .values({ groupId, roleId: accessRoleId(organizationId, roleKey) })
-        .onConflictDoNothing();
+      writes.push(
+        database
+          .insert(accessGroupRole)
+          .values({ groupId, roleId: accessRoleId(organizationId, roleKey) })
+          .onConflictDoNothing(),
+      );
     }
   }
+
+  await database.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
 async function bootstrapFirstOrganization(
@@ -1439,6 +1513,190 @@ async function bootstrapFirstOrganization(
       groupId: accessGroupId(organizationRow.id, "owner"),
     })
     .onConflictDoNothing();
+}
+
+async function createHostedOrganization(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+
+  const runtime = getRuntimeEnv();
+  if (runtime.deployment.mode !== "hosted") return forbidden();
+
+  const authSession = await getSession(request);
+  if (!authSession?.user.id) return unauthorized();
+  if (!authSession.user.emailVerified) {
+    return Response.json(
+      { error: "Verify your email before creating an organization." },
+      { status: 403 },
+    );
+  }
+
+  const parsed = hostedOnboardingSchema.safeParse(await readJson(request));
+  if (
+    !parsed.success ||
+    !isValidTimezone(parsed.data.organization.timezone) ||
+    parsed.data.session.startsOn >= parsed.data.session.endsOn
+  ) {
+    return Response.json(
+      { error: "Check the organization and academic-year details." },
+      { status: 400 },
+    );
+  }
+
+  const uniqueClasses = new Set<string>();
+  for (const item of parsed.data.classes) {
+    const key = `${item.name.trim().toLowerCase()}::${item.section?.trim().toLowerCase() ?? ""}`;
+    if (uniqueClasses.has(key)) {
+      return Response.json({ error: "Each class and section must be unique." }, { status: 400 });
+    }
+    uniqueClasses.add(key);
+  }
+
+  const [existingMembership, existingOrganization] = await Promise.all([
+    runtime.ORM.select({ id: organizationMember.id })
+      .from(organizationMember)
+      .where(eq(organizationMember.userId, authSession.user.id))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({ id: organization.id })
+      .from(organization)
+      .where(eq(sql`lower(${organization.slug})`, parsed.data.organization.slug.toLowerCase()))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
+  if (existingMembership) {
+    return Response.json(
+      { error: "Your account already belongs to an organization." },
+      { status: 409 },
+    );
+  }
+  if (existingOrganization) {
+    return Response.json({ error: "That workspace address is already in use." }, { status: 409 });
+  }
+
+  const organizationId = crypto.randomUUID();
+  const sessionId = crypto.randomUUID();
+  const schoolId = crypto.randomUUID();
+  const memberId = crypto.randomUUID();
+  const classRows = parsed.data.classes.map((item) => ({ ...item, id: crypto.randomUUID() }));
+  const ownerContext: MembershipContext = {
+    memberId,
+    organizationId,
+    group: "owner",
+    permissions: permissionCatalog.map(([key]) => key),
+    activeSessionId: sessionId,
+    userId: authSession.user.id,
+  };
+
+  try {
+    await runtime.ORM.insert(organization).values({
+      id: organizationId,
+      name: parsed.data.organization.name,
+      slug: parsed.data.organization.slug,
+      displayTitle: parsed.data.organization.displayTitle,
+      timezone: parsed.data.organization.timezone,
+      locale: parsed.data.organization.locale,
+    });
+    await ensureAccessControlSeeded(runtime.ORM, organizationId);
+
+    const writes: BatchItem<"sqlite">[] = [
+      runtime.ORM.insert(academicSession).values({
+        id: sessionId,
+        organizationId,
+        name: parsed.data.session.name,
+        startsOn: parsed.data.session.startsOn,
+        endsOn: parsed.data.session.endsOn,
+        isActive: 1,
+        sourceSystem: "tsewa",
+        sourceTable: "academic_session",
+        sourceId: sessionId,
+      }),
+      runtime.ORM.insert(schoolMaster).values({
+        id: schoolId,
+        organizationId,
+        name: parsed.data.school.name,
+        locationName: parsed.data.school.locationName,
+        affiliationNumber: parsed.data.school.affiliationNumber,
+        isActive: 1,
+        sourceSystem: "tsewa",
+        sourceTable: "school_master",
+        sourceId: schoolId,
+      }),
+      runtime.ORM.insert(organizationMember).values({
+        id: memberId,
+        organizationId,
+        userId: authSession.user.id,
+        role: "owner",
+        groupId: accessGroupId(organizationId, "owner"),
+      }),
+      runtime.ORM.insert(userPreference)
+        .values({
+          userId: authSession.user.id,
+          activeOrganizationId: organizationId,
+          activeAcademicSessionId: sessionId,
+        })
+        .onConflictDoUpdate({
+          target: userPreference.userId,
+          set: {
+            activeOrganizationId: organizationId,
+            activeAcademicSessionId: sessionId,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          },
+        }),
+      auditInsert(
+        runtime.ORM,
+        ownerContext,
+        "hosted.organization_created",
+        "organization",
+        organizationId,
+        {
+          name: parsed.data.organization.name,
+          session: parsed.data.session.name,
+          school: parsed.data.school.name,
+          classCount: classRows.length,
+        },
+      ),
+    ];
+
+    for (const item of classRows) {
+      const offeringId = crypto.randomUUID();
+      writes.push(
+        runtime.ORM.insert(academicClassMaster).values({
+          id: item.id,
+          organizationId,
+          name: item.name,
+          section: item.section,
+          isActive: 1,
+          sourceSystem: "tsewa",
+          sourceTable: "academic_class_master",
+          sourceId: item.id,
+        }),
+        runtime.ORM.insert(schoolClassOffering).values({
+          id: offeringId,
+          organizationId,
+          academicSessionId: sessionId,
+          schoolId,
+          academicClassId: item.id,
+          isActive: 1,
+          origin: "manual",
+          sourceSystem: "tsewa",
+          sourceTable: "school_class_offering",
+          sourceId: offeringId,
+        }),
+      );
+    }
+
+    await runtime.ORM.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+  } catch (error) {
+    try {
+      await runtime.ORM.delete(organization).where(eq(organization.id, organizationId));
+    } catch {
+      console.error("Hosted onboarding cleanup failed", { organizationId });
+    }
+    throw error;
+  }
+
+  return Response.json({ organizationId, sessionId, schoolId }, { status: 201 });
 }
 
 async function handlePlatformRequest(request: Request): Promise<Response> {
