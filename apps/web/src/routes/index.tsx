@@ -66,6 +66,22 @@ type AcademicSession = {
 };
 
 type PlatformState = {
+  deployment: {
+    appName: string;
+    mode: "hosted" | "self-hosted";
+    capabilities: {
+      allowsInitialOwnerBootstrap: boolean;
+      allowsPublicSignup: boolean;
+      requiresBilling: boolean;
+      requiresEmailVerification: boolean;
+      supportsMultipleOrganizations: boolean;
+    };
+  };
+  brand: {
+    organizationName: string | null;
+    organizationTitle: string | null;
+    logoUrl: string | null;
+  };
   needsSetup: boolean;
   sessions: AcademicSession[];
   activeSessionId?: string | null;
@@ -497,6 +513,8 @@ function legacyViewPath(view?: AppView) {
 
 function AccessScreen({ platform, inviteToken }: { platform: PlatformState; inviteToken: string }) {
   const isInvitation = Boolean(inviteToken && platform.invitation);
+  const canCreateAccount =
+    platform.needsSetup || isInvitation || platform.deployment.capabilities.allowsPublicSignup;
   const [mode, setMode] = useState<"sign-in" | "setup" | "recovery" | "verify">(
     platform.needsSetup || isInvitation ? "setup" : "sign-in",
   );
@@ -546,11 +564,20 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
       return;
     }
 
-    if (mode === "setup" && !isInvitation) {
+    if (
+      mode === "setup" &&
+      !isInvitation &&
+      platform.deployment.capabilities.requiresEmailVerification
+    ) {
       setVerificationEmail(email.trim().toLowerCase());
       setNotice("Your account was created and a verification link is on its way.");
       setMode("verify");
       setSubmitting(false);
+      return;
+    }
+
+    if (mode === "setup" && !isInvitation) {
+      window.location.assign("/dashboard");
       return;
     }
 
@@ -631,6 +658,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
   if (mode === "verify") {
     return (
       <EmailVerificationScreen
+        brand={platform.brand}
         email={verificationEmail}
         error={error}
         notice={notice}
@@ -652,7 +680,11 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
 
       <div className="relative grid w-full max-w-5xl gap-14 lg:grid-cols-[1fr_430px] lg:items-center">
         <section className="hidden max-w-lg lg:block">
-          <Brand />
+          <Brand
+            logoUrl={platform.brand.logoUrl}
+            organizationName={platform.brand.organizationName}
+            organizationTitle={platform.brand.organizationTitle}
+          />
           <h1 className="mt-14 text-balance text-5xl font-semibold tracking-[-0.045em] text-foreground">
             One place for people, school, care, and records.
           </h1>
@@ -679,7 +711,11 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
 
         <section>
           <div className="mb-6 flex items-center justify-between lg:hidden">
-            <Brand />
+            <Brand
+              logoUrl={platform.brand.logoUrl}
+              organizationName={platform.brand.organizationName}
+              organizationTitle={platform.brand.organizationTitle}
+            />
             <ThemeToggle />
           </div>
           <div className="mb-5 hidden justify-end lg:flex">
@@ -705,7 +741,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                 {isInvitation
                   ? `You have been invited as ${platform.invitation?.group}. Use ${platform.invitation?.email}.`
                   : mode === "setup"
-                    ? "Create your organization and its first owner account."
+                    ? `Create the first owner account for ${platform.brand.organizationName ?? "this installation"}.`
                     : mode === "recovery"
                       ? "We will email a private reset link if the account exists."
                       : "Sign in to your organization."}
@@ -830,7 +866,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
                   Return to sign in
                 </button>
               ) : null}
-              {platform.needsSetup || isInvitation ? (
+              {canCreateAccount ? (
                 <button
                   className="mt-5 w-full text-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                   onClick={() => setMode(mode === "setup" ? "sign-in" : "setup")}
@@ -846,7 +882,9 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
             </CardContent>
           </Card>
           <p className="mt-5 text-center text-xs text-muted-foreground">
-            Self-hosted on Cloudflare · Your data stays with your organization
+            {platform.deployment.mode === "self-hosted"
+              ? "Private installation · Your organization owns its data"
+              : "Hosted securely by Tsewa"}
           </p>
         </section>
       </div>
@@ -855,6 +893,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
 }
 
 function EmailVerificationScreen({
+  brand,
   email,
   error,
   notice,
@@ -862,6 +901,7 @@ function EmailVerificationScreen({
   onResend,
   submitting,
 }: {
+  brand: PlatformState["brand"];
   email: string;
   error: string;
   notice: string;
@@ -874,7 +914,11 @@ function EmailVerificationScreen({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,color-mix(in_oklch,var(--primary)_11%,transparent),transparent_34%),radial-gradient(circle_at_85%_85%,color-mix(in_oklch,var(--primary)_7%,transparent),transparent_36%)]" />
       <div className="relative w-full max-w-md">
         <div className="mb-5 flex items-center justify-between">
-          <Brand />
+          <Brand
+            logoUrl={brand.logoUrl}
+            organizationName={brand.organizationName}
+            organizationTitle={brand.organizationTitle}
+          />
           <ThemeToggle />
         </div>
         <Card className="border-border/80 bg-card/95 shadow-[0_24px_80px_-32px_color-mix(in_oklch,var(--foreground)_28%,transparent)] backdrop-blur">
@@ -919,11 +963,11 @@ function EmailVerificationScreen({
 }
 
 function Brand({
-  organizationName = "Tibetan Homes Foundation",
+  organizationName,
   organizationTitle,
   logoUrl,
 }: {
-  organizationName?: string;
+  organizationName?: string | null;
   organizationTitle?: string | null;
   logoUrl?: string | null;
 }) {
@@ -931,20 +975,22 @@ function Brand({
     <div className="flex items-center gap-3">
       {logoUrl ? (
         <img
-          alt=""
+          alt={`${organizationName ?? "Organization"} logo`}
           className="size-10 rounded-xl border bg-white object-contain p-1 shadow-sm"
           src={logoUrl}
         />
       ) : (
         <div className="grid size-10 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
-          TS
+          {organizationName ? initials(organizationName) : "TS"}
         </div>
       )}
       <div>
         <div className="text-sm font-semibold tracking-tight text-foreground">
           {organizationTitle || "Tsewa"}
         </div>
-        <div className="text-xs text-muted-foreground">{organizationName}</div>
+        <div className="text-xs text-muted-foreground">
+          {organizationName || "School & Care Operations"}
+        </div>
       </div>
     </div>
   );

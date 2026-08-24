@@ -103,6 +103,8 @@ import { nextMarkSheetStatus } from "@/lib/academic-results";
 import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { sendEmailVerification, sendPasswordResetEmail } from "@/lib/auth-email";
+import { publicAppOrigin } from "@/lib/deployment";
+import type { DeploymentConfig } from "@/lib/deployment";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { findDashboard } from "@/lib/server/repositories/dashboard-repository";
 import { findPeopleRegistry } from "@/lib/server/repositories/people-repository";
@@ -896,6 +898,10 @@ export const apiDispatcher = {
       return handlePlatformRequest(request);
     }
 
+    if (url.pathname === "/api/installation/logo") {
+      return handleInstallationLogo(request);
+    }
+
     if (url.pathname === "/api/dashboard") {
       return getDashboard(request);
     }
@@ -1214,7 +1220,12 @@ async function handleAuthRequest(request: Request): Promise<Response> {
         .then((rows) => rows[0] ?? null)
     : null;
   const isFirstUser = isEmailSignUp && Number(userCount?.count ?? 0) === 0;
-  const auth = createRequestAuth(request, isFirstUser || Boolean(invitation));
+  const isOwnerBootstrap =
+    isFirstUser && runtime.deployment.capabilities.allowsInitialOwnerBootstrap && !invitation;
+  const auth = createRequestAuth(
+    request,
+    isOwnerBootstrap || runtime.deployment.capabilities.allowsPublicSignup || Boolean(invitation),
+  );
   let authRequest = request;
   if (invitationToken && !invitation) {
     const headers = new Headers(request.headers);
@@ -1238,8 +1249,8 @@ async function handleAuthRequest(request: Request): Promise<Response> {
     const payload = (await response.clone().json()) as SignUpPayload;
     const userId = payload.user?.id;
 
-    if (userId && isFirstUser) {
-      await bootstrapFirstOrganization(runtime.ORM, userId);
+    if (userId && isOwnerBootstrap) {
+      await bootstrapFirstOrganization(runtime.ORM, runtime.deployment, userId);
     } else if (userId && invitation) {
       await acceptInvitation(runtime.ORM, invitation, userId);
     }
@@ -1264,11 +1275,12 @@ async function readAuthEmail(request: { json(): Promise<unknown> }) {
 function createRequestAuth(request: Request, allowSignUp: boolean) {
   const runtime = getRuntimeEnv();
   return createAuth({
-    appName: runtime.APP_NAME,
+    appName: runtime.deployment.appName,
     database: runtime.DB,
     secret: runtime.BETTER_AUTH_SECRET,
-    baseURL: new URL(request.url).origin,
+    baseURL: publicAppOrigin(runtime.deployment, request),
     allowSignUp,
+    requireEmailVerification: runtime.deployment.capabilities.requiresEmailVerification,
     sendPasswordReset: (input) => sendPasswordResetEmail(runtime, input),
     sendVerificationEmail: (input) => sendEmailVerification(runtime, input),
   });
@@ -1362,41 +1374,49 @@ async function ensureAccessControlSeeded(
   }
 }
 
-async function bootstrapFirstOrganization(database: Database, userId: string): Promise<void> {
+async function bootstrapFirstOrganization(
+  database: Database,
+  deployment: DeploymentConfig,
+  userId: string,
+): Promise<void> {
+  const configured = deployment.defaultOrganization;
+  if (!configured) throw new Error("Self-hosted organization configuration is missing.");
   const organizationId = crypto.randomUUID();
   const memberId = crypto.randomUUID();
   const sessionId = crypto.randomUUID();
   const auditId = crypto.randomUUID();
 
-  const organizationRow = await database
-    .insert(organization)
-    .values({
-      id: organizationId,
-      name: "Tibetan Homes Foundation",
-      slug: "tibetan-homes-foundation",
-    })
-    .onConflictDoNothing()
-    .returning({ id: organization.id })
-    .then(
-      async (rows) =>
-        rows[0] ??
-        database
-          .select({ id: organization.id })
-          .from(organization)
-          .where(eq(organization.slug, "tibetan-homes-foundation"))
-          .limit(1)
-          .then((existing) => existing[0]),
-    );
+  const existingOrganization = await database
+    .select({ id: organization.id })
+    .from(organization)
+    .where(eq(organization.slug, configured.slug))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  const organizationRow =
+    existingOrganization ??
+    (await database
+      .insert(organization)
+      .values({
+        id: organizationId,
+        name: configured.name,
+        slug: configured.slug,
+        displayTitle: configured.title,
+        timezone: configured.timezone,
+        locale: configured.locale,
+      })
+      .returning({ id: organization.id })
+      .then((rows) => rows[0]));
   if (!organizationRow) throw new Error("The initial organization could not be created.");
 
+  const year = new Date().getUTCFullYear();
   await database
     .insert(academicSession)
     .values({
       id: sessionId,
       organizationId: organizationRow.id,
-      name: "2026–27",
-      startsOn: "2026-04-01",
-      endsOn: "2027-03-31",
+      name: String(year),
+      startsOn: `${year}-01-01`,
+      endsOn: `${year}-12-31`,
       isActive: 1,
     })
     .onConflictDoNothing();
@@ -10470,28 +10490,55 @@ function inlineContentDisposition(fileName: string): string {
 
 async function getPlatformStatus(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
+  const deployment = runtime.deployment;
+  const deploymentState = {
+    appName: deployment.appName,
+    mode: deployment.mode,
+    capabilities: deployment.capabilities,
+  };
   const context = await getMembershipContext(request);
   if (!context) {
-    const [userCountRows, sessions] = await Promise.all([
+    const configured = deployment.defaultOrganization;
+    const [userCountRows, sessions, installationOrganization] = await Promise.all([
       runtime.ORM.select({ count: count() }).from(user),
-      runtime.ORM.select({
-        id: academicSession.id,
-        name: academicSession.name,
-        startsOn: academicSession.startsOn,
-        endsOn: academicSession.endsOn,
-      })
-        .from(academicSession)
-        .innerJoin(organization, eq(organization.id, academicSession.organizationId))
-        .where(
-          and(
-            eq(organization.slug, runtime.DEFAULT_ORGANIZATION_SLUG),
-            eq(academicSession.isActive, 1),
-          ),
-        )
-        .orderBy(desc(academicSession.startsOn)),
+      configured
+        ? runtime.ORM.select({
+            id: academicSession.id,
+            name: academicSession.name,
+            startsOn: academicSession.startsOn,
+            endsOn: academicSession.endsOn,
+          })
+            .from(academicSession)
+            .innerJoin(organization, eq(organization.id, academicSession.organizationId))
+            .where(and(eq(organization.slug, configured.slug), eq(academicSession.isActive, 1)))
+            .orderBy(desc(academicSession.startsOn))
+        : Promise.resolve([]),
+      configured
+        ? runtime.ORM.select({
+            name: organization.name,
+            displayTitle: organization.displayTitle,
+            logoAssetKey: organization.logoAssetKey,
+            updatedAt: organization.updatedAt,
+          })
+            .from(organization)
+            .where(eq(organization.slug, configured.slug))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : Promise.resolve(null),
     ]);
     return Response.json({
-      needsSetup: Number(userCountRows[0]?.count ?? 0) === 0,
+      deployment: deploymentState,
+      brand: {
+        organizationName: installationOrganization?.name ?? configured?.name ?? null,
+        organizationTitle:
+          installationOrganization?.displayTitle ?? configured?.title ?? deployment.appName,
+        logoUrl: installationOrganization?.logoAssetKey
+          ? `/api/installation/logo?v=${encodeURIComponent(installationOrganization.updatedAt)}`
+          : null,
+      },
+      needsSetup:
+        deployment.capabilities.allowsInitialOwnerBootstrap &&
+        Number(userCountRows[0]?.count ?? 0) === 0,
       sessions,
       activeSessionId: sessions[0]?.id ?? null,
       activeOrganizationId: null,
@@ -10538,6 +10585,13 @@ async function getPlatformStatus(request: Request): Promise<Response> {
     if (!memberships.has(membership.id)) memberships.set(membership.id, membership);
   }
   return Response.json({
+    deployment: deploymentState,
+    brand: {
+      organizationName: deployment.defaultOrganization?.name ?? null,
+      organizationTitle:
+        deployment.defaultOrganization?.title ?? deployment.defaultOrganization?.name ?? null,
+      logoUrl: null,
+    },
     needsSetup: false,
     sessions,
     activeSessionId: context?.activeSessionId ?? sessions[0]?.id ?? null,
@@ -10842,6 +10896,24 @@ async function updateOrganization(request: Request): Promise<Response> {
 
 const MAX_ORGANIZATION_LOGO_BYTES = 2 * 1024 * 1024;
 
+async function handleInstallationLogo(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const runtime = getRuntimeEnv();
+  const configured = runtime.deployment.defaultOrganization;
+  if (!configured) return Response.json({ error: "Installation logo not found." }, { status: 404 });
+  const current = await runtime.ORM.select({ logoAssetKey: organization.logoAssetKey })
+    .from(organization)
+    .where(eq(organization.slug, configured.slug))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!current?.logoAssetKey) {
+    return Response.json({ error: "Installation logo not found." }, { status: 404 });
+  }
+  const object = await runtime.FILES.get(current.logoAssetKey);
+  if (!object) return Response.json({ error: "Stored logo not found." }, { status: 404 });
+  return inlineR2Image(object, "public, max-age=3600, stale-while-revalidate=86400");
+}
+
 async function handleOrganizationLogo(request: Request): Promise<Response> {
   const context = await getMembershipContext(request);
   if (!context) return unauthorized();
@@ -10861,14 +10933,7 @@ async function handleOrganizationLogo(request: Request): Promise<Response> {
       return Response.json({ error: "Organization logo not found." }, { status: 404 });
     const object = await runtime.FILES.get(current.logoAssetKey);
     if (!object) return Response.json({ error: "Stored logo not found." }, { status: 404 });
-    const headers = new Headers();
-    object.writeHttpMetadata(headers);
-    headers.set("Content-Length", String(object.size));
-    headers.set("Content-Disposition", "inline");
-    headers.set("Cache-Control", "private, max-age=3600");
-    headers.set("ETag", object.httpEtag);
-    headers.set("X-Content-Type-Options", "nosniff");
-    return new Response(object.body, { headers });
+    return inlineR2Image(object, "private, max-age=3600");
   }
 
   if (!isSameOrigin(request)) return forbidden();
@@ -10928,6 +10993,17 @@ async function handleOrganizationLogo(request: Request): Promise<Response> {
   }
   if (current.logoAssetKey) await runtime.FILES.delete(current.logoAssetKey);
   return Response.json({ ok: true, logoUrl: `/api/organization/logo?v=${Date.now()}` });
+}
+
+function inlineR2Image(object: R2ObjectBody, cacheControl: string): Response {
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("Content-Length", String(object.size));
+  headers.set("Content-Disposition", "inline");
+  headers.set("Cache-Control", cacheControl);
+  headers.set("ETag", object.httpEtag);
+  headers.set("X-Content-Type-Options", "nosniff");
+  return new Response(object.body, { headers });
 }
 
 async function getOrganizationAudit(request: Request): Promise<Response> {
@@ -11214,9 +11290,7 @@ async function createOrganizationInvitation(request: Request): Promise<Response>
     ),
   ]);
 
-  const invitationUrl = new URL(request.url);
-  invitationUrl.pathname = `/invite/${token}`;
-  invitationUrl.search = "";
+  const invitationUrl = new URL(`/invite/${token}`, publicAppOrigin(runtime.deployment, request));
 
   const delivery = await deliverOrganizationInvitation(
     runtime,
@@ -11512,9 +11586,7 @@ async function resendOrganizationInvitation(
     })
     .where(eq(organizationInvitation.id, invitation.id));
 
-  const invitationUrl = new URL(request.url);
-  invitationUrl.pathname = `/invite/${token}`;
-  invitationUrl.search = "";
+  const invitationUrl = new URL(`/invite/${token}`, publicAppOrigin(runtime.deployment, request));
   const delivery = await deliverOrganizationInvitation(
     runtime,
     context,

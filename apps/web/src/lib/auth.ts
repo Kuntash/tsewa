@@ -10,6 +10,7 @@ type AuthOptions = {
   secret: string;
   baseURL: string;
   allowSignUp: boolean;
+  requireEmailVerification: boolean;
   sendPasswordReset: (input: { email: string; name: string; url: string }) => Promise<void>;
   sendVerificationEmail: (input: { email: string; name: string; url: string }) => Promise<void>;
 };
@@ -20,6 +21,7 @@ export function createAuth({
   secret,
   baseURL,
   allowSignUp,
+  requireEmailVerification,
   sendPasswordReset,
   sendVerificationEmail,
 }: AuthOptions) {
@@ -33,7 +35,7 @@ export function createAuth({
       enabled: true,
       disableSignUp: !allowSignUp,
       minPasswordLength: 10,
-      requireEmailVerification: true,
+      requireEmailVerification,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
         await sendPasswordReset({ email: user.email, name: user.name, url });

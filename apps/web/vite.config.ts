@@ -6,10 +6,15 @@ import viteReact from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 
+const wranglerConfigPath = process.env.TSEWA_WRANGLER_CONFIG;
+
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    cloudflare({
+      ...(wranglerConfigPath ? { configPath: wranglerConfigPath } : {}),
+      viteEnvironment: { name: "ssr" },
+    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),

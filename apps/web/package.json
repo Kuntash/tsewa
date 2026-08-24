@@ -10,13 +10,20 @@
     "dev": "vp dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vp build",
+    "build:ths": "TSEWA_WRANGLER_CONFIG=wrangler.ths.jsonc vp build",
+    "build:self-hosted": "TSEWA_WRANGLER_CONFIG=wrangler.self-hosted.jsonc vp build",
     "preview": "vp preview",
     "test": "vitest run --config vitest.config.ts",
-    "deploy": "vp run build && wrangler deploy",
+    "deploy": "wrangler d1 migrations apply DB --remote && vp build && wrangler deploy",
+    "deploy:ths": "vp run build:ths && wrangler deploy --config dist/server/wrangler.json",
+    "deploy:self-hosted": "vp run build:self-hosted && wrangler deploy --config dist/server/wrangler.json",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "db:migrate:remote": "wrangler d1 migrations apply DB --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:migrate:ths": "wrangler d1 migrations apply DB --remote --config wrangler.ths.jsonc",
+    "db:migrate:self-hosted": "wrangler d1 migrations apply DB --remote --config wrangler.self-hosted.jsonc",
+    "self-host:check": "node scripts/check-self-host-config.mjs && TSEWA_WRANGLER_CONFIG=wrangler.self-hosted.jsonc vp build && wrangler deploy --dry-run --config dist/server/wrangler.json"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "latest",
@@ -28,11 +35,11 @@
     "better-auth": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
-    "drizzle-orm": "catalog:",
+    "drizzle-orm": "^0.45.2",
     "lucide-react": "latest",
     "radix-ui": "latest",
     "react": "^19.2.0",
-    "react-day-picker": "catalog:",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.0",
     "shadcn": "^4.16.1",
     "tailwind-merge": "latest",
@@ -42,16 +49,46 @@
     "@cloudflare/vite-plugin": "^1.26.0",
     "@tailwindcss/vite": "latest",
     "@tanstack/router-cli": "1.167.22",
-    "@types/node": "catalog:",
+    "@types/node": "^24.12.3",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
-    "drizzle-kit": "catalog:",
+    "drizzle-kit": "^0.31.10",
     "tailwindcss": "latest",
     "tw-animate-css": "latest",
-    "typescript": "catalog:",
-    "vite": "catalog:",
+    "typescript": "^6.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vite-plus": "0.2.7",
     "vitest": "^4.1.10",
     "wrangler": "^4.70.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.0.9",
+  "cloudflare": {
+    "bindings": {
+      "BETTER_AUTH_SECRET": {
+        "description": "Generate a unique secret of at least 32 random bytes for authentication."
+      },
+      "DEFAULT_ORGANIZATION_NAME": {
+        "description": "The school or care organization shown on the sign-in screen."
+      },
+      "DEFAULT_ORGANIZATION_SLUG": {
+        "description": "A stable lowercase identifier such as `example-school`."
+      },
+      "DEFAULT_ORGANIZATION_TITLE": {
+        "description": "The short installation title shown above the organization name."
+      },
+      "DEFAULT_TIMEZONE": {
+        "description": "The organization's IANA timezone, such as `Asia/Kolkata`."
+      },
+      "DEFAULT_LOCALE": {
+        "description": "The organization's locale, such as `en-IN`."
+      },
+      "TRANSACTIONAL_FROM_EMAIL": {
+        "description": "The sender to use after its domain and EMAIL binding are configured."
+      }
+    }
   }
 }

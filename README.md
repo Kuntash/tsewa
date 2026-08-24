@@ -2,6 +2,8 @@
 
 Open-source operations software for schools and care communities. This repository contains the first self-hosted installation and is the foundation for the future hosted service.
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Kuntash/tsewa/tree/main/apps/web)
+
 ## Workspace
 
 - Vite+ provides the shared package manager, formatter, linter, type checker,
@@ -25,12 +27,19 @@ in `graphify-out/` so each commit carries the graph for the code it contains.
 
 The local app runs at `http://localhost:3000`.
 
+## Deployment modes
+
+The same codebase supports private, organization-owned installations and the future hosted service.
+`gettsewa.com` is the product and pricing site; `app.gettsewa.com` is reserved for hosted SaaS.
+See [`docs/deployment-modes.md`](docs/deployment-modes.md) and
+[`docs/self-hosting.md`](docs/self-hosting.md).
+
 ## THF deployment
 
 The first self-hosted instance is deployed to `https://ths.kunga.dev` as the
 `tsewa-self-hosted` Cloudflare Worker. Its custom domain, D1 database, R2
 bucket, and required `BETTER_AUTH_SECRET` are declared or managed through
-`apps/web/wrangler.jsonc` and Wrangler.
+`apps/web/wrangler.ths.jsonc` and Wrangler.
 
 ## Cloudflare resources
 
@@ -42,10 +51,19 @@ The first self-hosted instance uses:
 Apply remote migrations only after reviewing them:
 
 ```bash
-vp run db:migrate:remote
+pnpm db:migrate:ths
 ```
 
 `BETTER_AUTH_SECRET` is never committed. Add it locally in `.dev.vars`, and set it for a deployed Worker with `wrangler secret put BETTER_AUTH_SECRET`.
+
+Deploy the current THS overlay explicitly:
+
+```sh
+pnpm deploy:ths
+```
+
+The handover into a THS-owned Cloudflare account is documented in
+[`docs/ths-cloudflare-handover.md`](docs/ths-cloudflare-handover.md).
 
 ## License
 

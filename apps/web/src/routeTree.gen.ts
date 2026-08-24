@@ -33,6 +33,7 @@ import { Route as ApiFilesFileIdRouteImport } from './routes/api.files.$fileId'
 import { Route as ApiHealthAdvancesRouteImport } from './routes/api.health.advances'
 import { Route as ApiHealthHistoryRouteImport } from './routes/api.health.history'
 import { Route as ApiHealthTbRouteImport } from './routes/api.health.tb'
+import { Route as ApiInstallationLogoRouteImport } from './routes/api.installation.logo'
 import { Route as ApiInvitationsAcceptRouteImport } from './routes/api.invitations.accept'
 import { Route as ApiInvitationsPreviewRouteImport } from './routes/api.invitations.preview'
 import { Route as ApiOrganizationAuditRouteImport } from './routes/api.organization.audit'
@@ -202,6 +203,11 @@ const ApiHealthHistoryRoute = ApiHealthHistoryRouteImport.update({
 const ApiHealthTbRoute = ApiHealthTbRouteImport.update({
   id: '/api/health/tb',
   path: '/api/health/tb',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInstallationLogoRoute = ApiInstallationLogoRouteImport.update({
+  id: '/api/installation/logo',
+  path: '/api/installation/logo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiInvitationsAcceptRoute = ApiInvitationsAcceptRouteImport.update({
@@ -516,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/api/health/advances': typeof ApiHealthAdvancesRoute
   '/api/health/history': typeof ApiHealthHistoryRoute
   '/api/health/tb': typeof ApiHealthTbRoute
+  '/api/installation/logo': typeof ApiInstallationLogoRoute
   '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
   '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
   '/api/organization/audit': typeof ApiOrganizationAuditRoute
@@ -592,6 +599,7 @@ export interface FileRoutesByTo {
   '/api/health/advances': typeof ApiHealthAdvancesRoute
   '/api/health/history': typeof ApiHealthHistoryRoute
   '/api/health/tb': typeof ApiHealthTbRoute
+  '/api/installation/logo': typeof ApiInstallationLogoRoute
   '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
   '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
   '/api/organization/audit': typeof ApiOrganizationAuditRoute
@@ -669,6 +677,7 @@ export interface FileRoutesById {
   '/api/health/advances': typeof ApiHealthAdvancesRoute
   '/api/health/history': typeof ApiHealthHistoryRoute
   '/api/health/tb': typeof ApiHealthTbRoute
+  '/api/installation/logo': typeof ApiInstallationLogoRoute
   '/api/invitations/accept': typeof ApiInvitationsAcceptRoute
   '/api/invitations/preview': typeof ApiInvitationsPreviewRoute
   '/api/organization/audit': typeof ApiOrganizationAuditRoute
@@ -747,6 +756,7 @@ export interface FileRouteTypes {
     | '/api/health/advances'
     | '/api/health/history'
     | '/api/health/tb'
+    | '/api/installation/logo'
     | '/api/invitations/accept'
     | '/api/invitations/preview'
     | '/api/organization/audit'
@@ -823,6 +833,7 @@ export interface FileRouteTypes {
     | '/api/health/advances'
     | '/api/health/history'
     | '/api/health/tb'
+    | '/api/installation/logo'
     | '/api/invitations/accept'
     | '/api/invitations/preview'
     | '/api/organization/audit'
@@ -899,6 +910,7 @@ export interface FileRouteTypes {
     | '/api/health/advances'
     | '/api/health/history'
     | '/api/health/tb'
+    | '/api/installation/logo'
     | '/api/invitations/accept'
     | '/api/invitations/preview'
     | '/api/organization/audit'
@@ -976,6 +988,7 @@ export interface RootRouteChildren {
   ApiHealthAdvancesRoute: typeof ApiHealthAdvancesRoute
   ApiHealthHistoryRoute: typeof ApiHealthHistoryRoute
   ApiHealthTbRoute: typeof ApiHealthTbRoute
+  ApiInstallationLogoRoute: typeof ApiInstallationLogoRoute
   ApiInvitationsAcceptRoute: typeof ApiInvitationsAcceptRoute
   ApiInvitationsPreviewRoute: typeof ApiInvitationsPreviewRoute
   ApiSchoolOperationsAcademicConfigurationRoute: typeof ApiSchoolOperationsAcademicConfigurationRoute
@@ -1161,6 +1174,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health/tb'
       fullPath: '/api/health/tb'
       preLoaderRoute: typeof ApiHealthTbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/installation/logo': {
+      id: '/api/installation/logo'
+      path: '/api/installation/logo'
+      fullPath: '/api/installation/logo'
+      preLoaderRoute: typeof ApiInstallationLogoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/invitations/accept': {
@@ -1828,6 +1848,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthAdvancesRoute: ApiHealthAdvancesRoute,
   ApiHealthHistoryRoute: ApiHealthHistoryRoute,
   ApiHealthTbRoute: ApiHealthTbRoute,
+  ApiInstallationLogoRoute: ApiInstallationLogoRoute,
   ApiInvitationsAcceptRoute: ApiInvitationsAcceptRoute,
   ApiInvitationsPreviewRoute: ApiInvitationsPreviewRoute,
   ApiSchoolOperationsAcademicConfigurationRoute:

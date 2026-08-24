@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 
 import { createDatabase } from "@/db/client";
+import { getDeploymentConfig } from "@/lib/deployment";
 
 type SecretBindings = {
   BETTER_AUTH_SECRET?: string;
@@ -17,9 +18,11 @@ export function getRuntimeEnv() {
 
   return {
     ...runtime,
+    deployment: getDeploymentConfig(runtime),
     ORM: createDatabase(runtime.DB),
   } as Env & {
     BETTER_AUTH_SECRET: string;
+    deployment: ReturnType<typeof getDeploymentConfig>;
     ORM: ReturnType<typeof createDatabase>;
   };
 }

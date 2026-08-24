@@ -1,19 +1,24 @@
-# web
+# Tsewa web application
 
-A minimal TanStack Start app with one route and plain CSS.
+This directory is both the TanStack Start application and the standalone Cloudflare deployment
+template. It intentionally contains no dependencies on files outside this directory.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Kuntash/tsewa/tree/main/apps/web)
 
 ```bash
-npm install
-npm run dev
+pnpm install
+cp .dev.vars.example .dev.vars
+pnpm db:migrate:local
+pnpm dev
 ```
 
-Edit `src/routes/index.tsx` to get started. Add route files under
-`src/routes`; TanStack Router updates `src/routeTree.gen.ts` for you.
+The default `wrangler.jsonc` is a generic self-hosted template. THS production uses the explicit
+`wrangler.ths.jsonc` overlay so organization-owned configuration does not leak into product code.
 
 Build the production app with:
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## Deploy to Cloudflare Workers
