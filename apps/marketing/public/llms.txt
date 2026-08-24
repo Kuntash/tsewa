@@ -1,0 +1,34 @@
+# Tsewa
+
+> Tsewa is a hosted, person-centred management platform for education, care, and community organisations. Its core principle is: Every person. Every role. One connected record.
+
+Tsewa gives each person one shared identity with multiple time-bound dimensions, such as student, resident, patient, staff member, scholarship recipient, sponsored beneficiary, guardian, or sponsor. It connects context without flattening the specialised work of schools, care homes, clinics, programmes, and administration teams.
+
+The standard product is hosted SaaS at https://app.gettsewa.com. Customer-owned infrastructure and additional deployment controls are Enterprise options only. The public demo uses fictional data and has no connection to production records.
+
+## Primary pages
+
+- [Tsewa product site](https://gettsewa.com/): Product positioning, interactive fictional-data demo, capabilities, hosted onboarding, work areas, migration, plans, and FAQ.
+- [Hosted application](https://app.gettsewa.com/): Account creation, email verification, organisation onboarding, sign-in, and the hosted Tsewa product.
+- [Security](https://gettsewa.com/security/): Current safeguards, operational practices, customer responsibilities, and vulnerability reporting.
+- [Privacy](https://gettsewa.com/privacy/): Website and hosted-service privacy information.
+- [Data processing](https://gettsewa.com/data-processing/): Controller/processor responsibilities and processing overview.
+- [Terms](https://gettsewa.com/terms/): Public website and hosted-service terms.
+
+## Product areas
+
+- People and family: identity, relationships, placements, and protected documents.
+- Education: admissions, academic sessions, classes, enrolment, assessments, results, and history.
+- Health and care: visits, diagnoses, treatments, follow-ups, and care history.
+- Support programmes: scholarships, sponsorships, correspondence, and outcomes.
+- Staff: employment, departments, designations, and contact records.
+- Reports and audit: exports, document workflows, and traceable activity.
+
+## Contact
+
+- Email: kunga@gettsewa.com
+- Product enquiries, migration discussions, security reports, and Enterprise requirements are accepted at this address.
+
+## Optional
+
+- [Expanded AI-readable product context](https://gettsewa.com/llms-full.txt): Longer factual product, audience, terminology, deployment, and citation guidance.

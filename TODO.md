@@ -28,6 +28,13 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [x] Build the `gettsewa.com` marketing and pricing site around the hosted product.
       Keep customer-managed deployment and enhanced data controls out of primary
       landing-page copy; mention them in the FAQ as Enterprise-tier options.
+- [x] Add public privacy, terms, security, and data-processing pages plus favicon,
+      social-sharing assets, sitemap, robots rules, structured data, and AI-readable
+      `llms.txt` discovery files.
+- [ ] Configure Dodo Payments test products and implement organisation-level hosted
+      subscriptions after validating the launch pricing hypothesis.
+- [ ] Add privacy-reviewed PostHog events for the marketing-to-activation funnel;
+      keep autocapture and session replay disabled in the hosted application.
 - [x] Persist the user's theme preference across browser sessions.
 - [x] Make every persistent page search URL-first, validate URL parameters, and derive search,
       filter, sort, and page state safely from the URL.

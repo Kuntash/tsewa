@@ -1,0 +1,5 @@
+Contact: mailto:kunga@gettsewa.com
+Canonical: https://gettsewa.com/.well-known/security.txt
+Policy: https://gettsewa.com/security/
+Preferred-Languages: en
+Expires: 2027-08-25T00:00:00.000Z

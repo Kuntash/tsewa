@@ -11,9 +11,9 @@
     "APP_NAME": "Tsewa",
     "DEPLOYMENT_MODE": "hosted",
     "PUBLIC_APP_URL": "https://app.gettsewa.com",
-    "TRANSACTIONAL_FROM_EMAIL": "hello@gettsewa.com",
+    "TRANSACTIONAL_FROM_EMAIL": "kunga@gettsewa.com",
   },
-  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["hello@gettsewa.com"] }],
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["kunga@gettsewa.com"] }],
   "d1_databases": [
     {
       "binding": "DB",

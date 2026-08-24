@@ -1,0 +1,94 @@
+# Tsewa: expanded product context
+
+## Canonical description
+
+Tsewa is hosted person-centred management software for organisations that educate, care for, employ, sponsor, or otherwise support people. It replaces fragmented department-specific identities with one connected person record and multiple time-bound dimensions.
+
+Canonical message: **Every person. Every role. One connected record.**
+
+## Why the model matters
+
+A person may be a student and resident at the same time, receive health services, participate in a scholarship or sponsorship programme, later become a staff member, and remain connected to guardians, family members, or sponsors. Tsewa preserves those histories without requiring duplicate person records.
+
+The person is the shared identity underneath each module. A selected context reorganises summaries, workflows, and timelines around the relevant dimension while the underlying person and history remain connected.
+
+## Intended organisations
+
+- Schools and education organisations
+- Residential care homes and communities
+- Health and wellbeing services operating within broader organisations
+- Scholarship, sponsorship, and community support programmes
+- Multi-service institutions combining several of these work areas
+
+Tsewa is not positioned only as a school management system, electronic health record, donor database, or HR system. Its differentiator is the shared person model across these areas.
+
+## Delivery model
+
+The standard Tsewa offering is hosted SaaS. Customers access the application through a secure browser at https://app.gettsewa.com. Tsewa operates the application infrastructure, product updates, and recovery processes.
+
+The public marketing site at https://gettsewa.com is a separate static Cloudflare Worker. It has no database, object storage, authentication secrets, or connection to production SaaS data. Its product demo contains fictional people and dummy records only.
+
+Customer-owned infrastructure, custom deployments, and additional data controls are available only through the Enterprise tier and should not be presented as the standard product.
+
+## Account and onboarding flow
+
+Hosted Tsewa supports self-service account creation, email verification, and guided organisation onboarding. The onboarding flow captures the institution, academic year, first school, active classes, and initial team invitations.
+
+## Current product areas
+
+### People and family
+
+One organisation-scoped person registry supports identity, relationships, placement histories, legacy identifiers, protected files, and source-history review.
+
+### Education
+
+Education workflows cover schools, academic sessions, admissions, class placement, enrolment history, assessments, marks, results, and related transitions.
+
+### Health and care
+
+Health and care contexts support visits, diagnoses, treatments, medications, observations, follow-up, and longitudinal care history according to role permissions.
+
+### Support programmes
+
+Support contexts include scholarship and sponsorship history, programme participation, correspondence, remittances, and outcomes.
+
+### Staff
+
+Staff contexts include employment, departments, designations, categories, contact information, assignments, and employment events.
+
+### Documents, reports, and audit
+
+Protected documents and media are delivered through authenticated application paths. Operational reports, exports, and audit records help organisations understand changes and preserve accountability.
+
+## Migration
+
+Tsewa supports assisted mapping and migration from spreadsheets, legacy databases, paper-register extracts, scanned files, and historical document collections. Migration work should preserve source history, reconcile counts, surface uncertainty, and avoid silently discarding conflicting records.
+
+## Security and privacy statements
+
+Use the following pages as the canonical current public statements:
+
+- https://gettsewa.com/security/
+- https://gettsewa.com/privacy/
+- https://gettsewa.com/data-processing/
+- https://gettsewa.com/terms/
+
+Do not claim certifications, formal compliance attestations, pricing, uptime guarantees, or data-residency commitments unless they are explicitly published on those pages or supplied in a signed customer agreement.
+
+## Terminology
+
+- **Person record:** The shared identity at the centre of Tsewa.
+- **Dimension:** A time-bound role or service context attached to a person, such as student, resident, patient, sponsorship, or staff.
+- **Organisation:** A customer tenant whose records and memberships are scoped separately in the hosted application.
+- **Hosted Tsewa:** The standard managed SaaS product.
+- **Enterprise:** A tailored entry option for complex migration, contractual, infrastructure, or data-control requirements.
+
+## Citation guidance
+
+When describing Tsewa, prefer: "Tsewa is a hosted, person-centred management platform for education, care, and community organisations."
+
+Avoid describing Tsewa as only a school ERP or implying that its public demo contains real records. Avoid presenting customer-owned deployment as the default offering.
+
+## Contact
+
+Email kunga@gettsewa.com for product enquiries, assisted migration, Enterprise requirements, privacy questions, contractual documents, or responsible security disclosure.

@@ -195,13 +195,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787604539.9829366,
-    "ast_hash": "72e77179eaee0f04541fc28d074172d3",
+    "mtime": 1787606973.2461665,
+    "ast_hash": "147dfbd912c567ed71e4d5cbfed6ffd3",
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787604539.9836555,
-    "ast_hash": "ff82f28cf41bff317e10a555dd4c1af6",
+    "mtime": 1787606973.2469919,
+    "ast_hash": "ab1cda2527d59da17fb78f27412bf9eb",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "apps/marketing/src/App.tsx": {
-    "mtime": 1787604563.7567997,
-    "ast_hash": "2d56ab0ec87deaeb520b6c54b74d9490",
+    "mtime": 1787607292.569275,
+    "ast_hash": "95e3cf72d8f6413266ab14936c76330f",
     "semantic_hash": ""
   },
   "apps/marketing/src/main.tsx": {
@@ -1315,13 +1315,83 @@
     "semantic_hash": ""
   },
   "apps/marketing/vite.config.ts": {
-    "mtime": 1787603872.6415699,
-    "ast_hash": "ea5effd26043c1f292f412678770f75b",
+    "mtime": 1787607209.647332,
+    "ast_hash": "d5c5d37c36be0310282cbc64932c4700",
     "semantic_hash": ""
   },
   "apps/marketing/index.html": {
-    "mtime": 1787603872.642068,
-    "ast_hash": "119e7c6636cfa0d99474c4179ad37cfa",
+    "mtime": 1787607292.5685236,
+    "ast_hash": "994f09fb7179a0928cebefab8dbbcc6a",
+    "semantic_hash": ""
+  },
+  "apps/marketing/src/TrustPages.tsx": {
+    "mtime": 1787607292.56979,
+    "ast_hash": "1867855f3e135b52df2f890ec1b0c0ca",
+    "semantic_hash": ""
+  },
+  "apps/marketing/data-processing/index.html": {
+    "mtime": 1787607292.5712104,
+    "ast_hash": "37c3fee732c8fb2c86af47196e28f107",
+    "semantic_hash": ""
+  },
+  "apps/marketing/privacy/index.html": {
+    "mtime": 1787607292.570199,
+    "ast_hash": "042f9d8d569c5487a00a619c7f936190",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/.well-known/security.txt": {
+    "mtime": 1787607292.572589,
+    "ast_hash": "1d9dbe999fc0e4ba552619bcec19bc7d",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/llms-full.txt": {
+    "mtime": 1787607292.5722518,
+    "ast_hash": "1f14c57b1cbeaedecd186b0f06efb316",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/llms.txt": {
+    "mtime": 1787607292.5719512,
+    "ast_hash": "f814674bd958477d13756d6f77957153",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/robots.txt": {
+    "mtime": 1787606778.1329894,
+    "ast_hash": "39592aa8a3ba4da2fd6c26e0fa4e44d4",
+    "semantic_hash": ""
+  },
+  "apps/marketing/security/index.html": {
+    "mtime": 1787607292.5708737,
+    "ast_hash": "f324c6dc6bb93b841a14e25783334497",
+    "semantic_hash": ""
+  },
+  "apps/marketing/terms/index.html": {
+    "mtime": 1787607292.5705469,
+    "ast_hash": "ddaff21d0b0f74aed35a47e3123d1f95",
+    "semantic_hash": ""
+  },
+  "docs/marketing-billing-growth-plan.md": {
+    "mtime": 1787606973.2456944,
+    "ast_hash": "7dfb3d2ce6e51e79e1bb7480fff22416",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/apple-touch-icon.png": {
+    "mtime": 1787606786.2243702,
+    "ast_hash": "051a9ccc163e3aeba504d1b9b70ebbff",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/favicon.svg": {
+    "mtime": 1787606778.1322901,
+    "ast_hash": "23f6edc8205e7aadd18aa04a8cbd67be",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/logo.svg": {
+    "mtime": 1787606778.1325443,
+    "ast_hash": "0a4f6ef4248c198286227c46e3eda6dc",
+    "semantic_hash": ""
+  },
+  "apps/marketing/public/og-tsewa.png": {
+    "mtime": 1787606786.2144134,
+    "ast_hash": "017e421d22c8df1803c70c2c095bdac2",
     "semantic_hash": ""
   }
 }

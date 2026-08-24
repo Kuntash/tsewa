@@ -22,6 +22,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 
+import { TrustPage, trustPageForPath } from "./TrustPages";
+
 type DemoView = "overview" | "student" | "resident" | "health" | "sponsorship" | "staff";
 
 type DemoPerson = {
@@ -334,6 +336,14 @@ const faq = [
 ];
 
 export function App() {
+  const trustPage = trustPageForPath(window.location.pathname);
+
+  if (trustPage) return <TrustPage pageKey={trustPage} />;
+
+  return <MarketingPage />;
+}
+
+function MarketingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -655,7 +665,7 @@ export function App() {
                 We can help map, reconcile, and migrate existing records into Tsewa’s connected
                 person model—preserving source history and making uncertainty visible.
               </p>
-              <a href="mailto:hello@gettsewa.com?subject=Tsewa%20data%20migration">
+              <a href="mailto:kunga@gettsewa.com?subject=Tsewa%20data%20migration">
                 Discuss a migration <ArrowRight />
               </a>
             </div>
@@ -704,7 +714,7 @@ export function App() {
                   options when required.
                 </p>
               </div>
-              <a className="text-arrow" href="mailto:hello@gettsewa.com?subject=Tsewa%20Enterprise">
+              <a className="text-arrow" href="mailto:kunga@gettsewa.com?subject=Tsewa%20Enterprise">
                 Talk to us <ArrowRight />
               </a>
             </Reveal>
@@ -733,7 +743,7 @@ export function App() {
               </a>
               <a
                 className="button button-outline-light"
-                href="mailto:hello@gettsewa.com?subject=Tsewa%20walkthrough"
+                href="mailto:kunga@gettsewa.com?subject=Tsewa%20walkthrough"
               >
                 Book a walkthrough
               </a>
@@ -751,9 +761,12 @@ export function App() {
           </div>
         </div>
         <div className="footer-links">
-          <a href="mailto:hello@gettsewa.com">hello@gettsewa.com</a>
+          <a href="mailto:kunga@gettsewa.com">kunga@gettsewa.com</a>
           <a href="https://app.gettsewa.com">Sign in</a>
-          <a href="#top">Back to top ↑</a>
+          <a href="/security/">Security</a>
+          <a href="/privacy/">Privacy</a>
+          <a href="/terms/">Terms</a>
+          <a href="/data-processing/">Data processing</a>
         </div>
         <p className="footer-legal">© {new Date().getFullYear()} Tsewa. Built around people.</p>
       </footer>

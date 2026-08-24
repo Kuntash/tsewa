@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-08-25)
 
 ## Corpus Check
-- 287 files · ~297,557 words
+- 289 files · ~340,037 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5969 nodes · 8526 edges · 432 communities (134 shown, 298 thin omitted)
+- 5999 nodes · 8560 edges · 433 communities (136 shown, 297 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 48 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `44b796d0`
+- Built from commit: `9175eb66`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,7 @@
 - staff-repository.ts
 - ServiceWorkerGlobalScope
 - Event
-- health-operations.tsx
+- staff-operations.tsx
 - scripts
 - cn
 - import-academic-history.mjs
@@ -75,7 +75,7 @@
 - ReadableStreamBYOBReader
 - VectorizeIndex
 - WorkflowInstance
-- Tsewa
+- Tsewa launch, billing, analytics, and growth plan
 - AiSearchItem
 - AiSearchItems
 - Artifacts
@@ -299,7 +299,7 @@
 - scholarship-operations.tsx
 - Crypto
 - D1DatabaseSession
-- result-summary-panel.tsx
+- mark-entry-sheet.tsx
 - academic-configuration.tsx
 - HTMLRewriterElementContentHandlers
 - ImageTransformationResult
@@ -381,11 +381,11 @@
 - import-staff-operations.mjs
 - Q: continue
 - Q: continue
-- index.tsx
+- route-search.ts
 - PerformanceResourceTiming
 - Q: continue, make sure the printable design aligns and looks professional.
 - writeRoute
-- file-route.ts
+- FileRoutesByPath
 - changeStudentEnrollment
 - patchRoute
 - ExtendableEvent
@@ -396,7 +396,7 @@
 - EventCounts
 - AbortSignal
 - compilerOptions
-- FileRoutesByPath
+- readPatchRoute
 - router.tsx
 - EventTarget
 - WebSocket
@@ -413,9 +413,9 @@
 - bindings
 - check-self-host-config.mjs
 - enrollment-change-sheet.tsx
-- reports-centre.tsx
+- historical-results.tsx
 - deployment.ts
-- staff-operations.tsx
+- people-registry.tsx
 - package.json
 - person-files-dry-run.mjs
 - EndTag
@@ -425,13 +425,14 @@
 - Q: continue until you are done with all drizzle migration
 - Q: continue to next
 - Q: whats next
-- Route
+- index.tsx
 - Cache
 - MediaTransformationResult
 - Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance
 - Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance
 - Q: what is next?
 - AiSearchJobs
+- api.school-operations.schools.$schoolId.assignments.ts
 
 ## God Nodes (most connected - your core abstractions)
 1. `getRuntimeEnv()` - 87 edges
@@ -460,7 +461,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (432 total, 298 thin omitted)
+## Communities (433 total, 297 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -474,17 +475,17 @@ Nodes (16): createDatabase(), Database, person, personImportBatch, staffCategory
 Cohesion: 0.06
 Nodes (6): CloseEvent, CustomEvent, ErrorEvent, Event, MessageEvent, PromiseRejectionEvent
 
-### Community 4 - "health-operations.tsx"
-Cohesion: 0.08
-Nodes (28): emptyHealth, emptyMedicalAdvances, emptyTb, formatCurrency(), formatDate(), formatPeriod(), HealthOperations(), HealthResponse (+20 more)
+### Community 4 - "staff-operations.tsx"
+Cohesion: 0.06
+Nodes (35): emptyHealth, emptyMedicalAdvances, emptyTb, formatCurrency(), formatDate(), formatPeriod(), HealthOperations(), HealthResponse (+27 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.04
 Nodes (53): scripts, build, cf-typegen, db:migrate:hosted, db:migrate:local, db:migrate:remote, db:migrate:self-hosted, db:migrate:ths (+45 more)
 
 ### Community 6 - "cn"
-Cohesion: 0.06
-Nodes (42): classPresets, ClassRow, HostedOnboarding(), InvitationRow, localeOptions, slugify(), steps, timezoneOptions (+34 more)
+Cohesion: 0.09
+Nodes (31): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), Button(), buttonVariants (+23 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -568,11 +569,11 @@ Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
 
 ### Community 54 - "school-operations.tsx"
 Cohesion: 0.09
-Nodes (20): HistoricalResultsFilters, AcademicSession, CountOption, emptyStudents, EnrollmentStatusBadge(), enrollmentStatusLabel(), handleLoadError(), optionLabel() (+12 more)
+Nodes (19): AcademicSession, CountOption, emptyStudents, EnrollmentStatusBadge(), enrollmentStatusLabel(), handleLoadError(), optionLabel(), OverviewResponse (+11 more)
 
-### Community 60 - "Tsewa"
-Cohesion: 0.09
-Nodes (18): Hosted, Runtime contract, Self-hosted, Tsewa deployment modes, Backups and upgrades, Manual and downstream deployment, One-click deployment, Self-hosting Tsewa on Cloudflare (+10 more)
+### Community 60 - "Tsewa launch, billing, analytics, and growth plan"
+Cohesion: 0.05
+Nodes (39): Hosted, Runtime contract, Self-hosted, Tsewa deployment modes, Analytics recommendation, Authority and distribution, Brand and domain recommendation, Content that can earn rankings (+31 more)
 
 ### Community 90 - "Q: lets do 1, and 3 first, then 2 and 5."
 Cohesion: 0.40
@@ -758,13 +759,13 @@ Nodes (5): CopyInstruction, fetch(), hasValidToken(), hexToBytes(), parseInstruc
 Cohesion: 0.13
 Nodes (24): AnnualEditor(), csvCell(), Detail, downloadCsv(), emptyList, formatDate(), formText(), ListData (+16 more)
 
-### Community 285 - "result-summary-panel.tsx"
-Cohesion: 0.15
-Nodes (20): entryKey(), MarkEntrySheet(), csvCell(), formatMark(), formatPercentage(), parse(), ReportCardResponse, ReportCardSheet() (+12 more)
+### Community 285 - "mark-entry-sheet.tsx"
+Cohesion: 0.10
+Nodes (26): Assessment, ClassOption, EditableSheet, entryKey(), MarkEntrySheet(), Option, Setup, Student (+18 more)
 
 ### Community 286 - "academic-configuration.tsx"
-Cohesion: 0.05
-Nodes (38): AcademicConfiguration(), AcademicConfigurationProps, blankSubject(), Catalog, CatalogWorkspace(), Data, formText(), Grade (+30 more)
+Cohesion: 0.10
+Nodes (14): AcademicConfiguration(), AcademicConfigurationProps, blankSubject(), Catalog, CatalogWorkspace(), Data, formText(), Grade (+6 more)
 
 ### Community 290 - "import-sponsorship-history.mjs"
 Cohesion: 0.11
@@ -802,9 +803,9 @@ Nodes (4): Answer, Outcome, Q: continue, Source Nodes
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: continue, Source Nodes
 
-### Community 372 - "index.tsx"
-Cohesion: 0.04
-Nodes (54): HealthFilters, PeopleFilters, ReportsFilters, ScholarshipFilters, SchoolFilters, SponsorshipFilters, StaffFilters, enumParam() (+46 more)
+### Community 372 - "route-search.ts"
+Cohesion: 0.05
+Nodes (34): HealthFilters, PeopleFilters, ReportsFilters, ScholarshipFilters, SchoolFilters, SponsorshipFilters, StaffFilters, enumParam() (+26 more)
 
 ### Community 373 - "PerformanceResourceTiming"
 Cohesion: 0.06
@@ -818,9 +819,9 @@ Nodes (4): Answer, Outcome, Q: continue, make sure the printable design aligns a
 Cohesion: 0.08
 Nodes (13): writeRoute, Route, Route, Route, Route, Route, Route, Route (+5 more)
 
-### Community 376 - "file-route.ts"
+### Community 376 - "FileRoutesByPath"
 Cohesion: 0.05
-Nodes (29): handleApiRequest(), readPatchRoute, readPutRoute, readRoute, readWriteDeleteRoute, Route, Route, Route (+21 more)
+Nodes (41): handleApiRequest(), readRoute, readWriteDeleteRoute, readWriteRoute, Route, Route, Route, Route (+33 more)
 
 ### Community 377 - "changeStudentEnrollment"
 Cohesion: 0.60
@@ -850,17 +851,17 @@ Nodes (25): buildEmailVerification(), buildPasswordResetEmail(), EmailVerificati
 Cohesion: 0.09
 Nodes (21): compilerOptions, allowJs, allowSyntheticDefaultImports, esModuleInterop, forceConsistentCasingInFileNames, isolatedModules, jsx, lib (+13 more)
 
-### Community 387 - "FileRoutesByPath"
-Cohesion: 0.06
-Nodes (29): readWriteRoute, Route, Route, Route, Route, Route, Route, Route (+21 more)
+### Community 387 - "readPatchRoute"
+Cohesion: 0.18
+Nodes (6): readPatchRoute, Route, Route, Route, Route, Route
 
 ### Community 388 - "router.tsx"
 Cohesion: 0.33
 Nodes (5): getRouter(), Register, @tanstack/react-router, Register, routeTree
 
 ### Community 391 - "App.tsx"
-Cohesion: 0.11
-Nodes (13): App(), capabilities, demoContent, DemoPerson, DemoView, faq, LifeLine(), people (+5 more)
+Cohesion: 0.09
+Nodes (19): App(), capabilities, demoContent, DemoPerson, DemoView, faq, LifeLine(), people (+11 more)
 
 ### Community 394 - "Q: whats the current status, and what should be the next slice that we should work on?"
 Cohesion: 0.40
@@ -887,20 +888,20 @@ Cohesion: 0.12
 Nodes (16): description, BETTER_AUTH_SECRET, DEFAULT_LOCALE, DEFAULT_ORGANIZATION_NAME, DEFAULT_ORGANIZATION_SLUG, DEFAULT_ORGANIZATION_TITLE, DEFAULT_TIMEZONE, TRANSACTIONAL_FROM_EMAIL (+8 more)
 
 ### Community 403 - "enrollment-change-sheet.tsx"
-Cohesion: 0.06
-Nodes (42): Action, actions, Change, changeDescription(), changeLabel(), dateWithinSession(), Enrollment, EnrollmentChangeSheet() (+34 more)
+Cohesion: 0.05
+Nodes (43): Action, actions, Change, changeDescription(), changeLabel(), dateWithinSession(), Enrollment, EnrollmentChangeSheet() (+35 more)
 
-### Community 404 - "reports-centre.tsx"
-Cohesion: 0.13
-Nodes (20): AccountSettings(), AccountSettingsProps, AcademicSession, csvCell(), printable(), ReportData, ReportDefinition, ReportDomain (+12 more)
+### Community 404 - "historical-results.tsx"
+Cohesion: 0.11
+Nodes (21): AccountSettings(), AccountSettingsProps, formatMark(), HistoricalResults(), HistoricalResultsFilters, message(), Option, Overview (+13 more)
 
 ### Community 405 - "deployment.ts"
 Cohesion: 0.18
 Nodes (13): DEPLOYMENT_MODES, DeploymentConfig, DeploymentEnvironment, DeploymentMode, getDeploymentConfig(), isValidSlug(), normalize(), parseDefaultOrganization() (+5 more)
 
-### Community 407 - "staff-operations.tsx"
-Cohesion: 0.13
-Nodes (13): CatalogItem, dateInput(), Designation, emptyState, legacyLabel(), nullable(), nullableChoice(), StaffEditor() (+5 more)
+### Community 407 - "people-registry.tsx"
+Cohesion: 0.06
+Nodes (35): AdmissionSheet(), Option, optionsForSchool(), Setup, classPresets, ClassRow, HostedOnboarding(), InvitationRow (+27 more)
 
 ### Community 411 - "package.json"
 Cohesion: 0.17
@@ -909,6 +910,10 @@ Nodes (11): devDependencies, vite-plus, engines, node, vite-plus, license, name,
 ### Community 412 - "person-files-dry-run.mjs"
 Cohesion: 0.25
 Nodes (7): assertAggregateOnly(), database, options, outputPath, repositoryRoot, sourcePath, visit()
+
+### Community 415 - "invite.$token.tsx"
+Cohesion: 0.21
+Nodes (4): InvitationPage(), Route, Route, FileRoutesById
 
 ### Community 416 - "Q: continue working on this"
 Cohesion: 0.40
@@ -926,6 +931,10 @@ Nodes (4): Answer, Outcome, Q: continue to next, Source Nodes
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: whats next, Source Nodes
 
+### Community 420 - "index.tsx"
+Cohesion: 0.09
+Nodes (28): AcademicSession, AcademicSessionSettings(), AccessGroup, AccessRole, AccessScreen(), AdministrationPanel(), AppView, AuditSettings() (+20 more)
+
 ### Community 424 - "Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance, Source Nodes
@@ -939,9 +948,9 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: what is next?, Source Nodes
 
 ## Knowledge Gaps
-- **2678 isolated node(s):** `name`, `version`, `private`, `type`, `dev` (+2673 more)
+- **2696 isolated node(s):** `name`, `version`, `private`, `type`, `dev` (+2691 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **298 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **297 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
@@ -961,13 +970,13 @@ Nodes (4): Answer, Outcome, Q: what is next?, Source Nodes
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AbortSignal` connect `AbortSignal` to `web/worker-configuration.d.ts`, `scholarship-operations.tsx`, `EventTarget`?**
-  _High betweenness centrality (0.085) - this node is a cross-community bridge._
-- **Why does `ScholarshipOperations()` connect `scholarship-operations.tsx` to `index.tsx`, `health-operations.tsx`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `ScholarshipOperations()` connect `scholarship-operations.tsx` to `index.tsx`, `staff-operations.tsx`?**
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
 - **Why does `getRuntimeEnv()` connect `getRuntimeEnv` to `staff-repository.ts`, `deployment.ts`, `api-handlers.ts`, `changeStudentEnrollment`, `getSchoolSessionScope`, `createHostedOrganization`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **What connects `name`, `version`, `private` to the rest of the system?**
-  _2678 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2696 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `web/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0023094688221709007 - nodes in this community are weakly interconnected._
 - **Should `staff-repository.ts` be split into smaller, more focused modules?**

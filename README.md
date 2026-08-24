@@ -39,6 +39,11 @@ Build or deploy only the marketing Worker with `vp run marketing:build` or
 `vp run marketing:deploy`. The deployment targets `gettsewa.com` and
 `www.gettsewa.com`; the hosted application remains at `app.gettsewa.com`.
 
+The public site's trust pages, machine-readable discovery files, and brand assets
+live with `apps/marketing`. The current pricing, billing, analytics, SEO, and
+first-customer hypothesis is documented in
+[`docs/marketing-billing-growth-plan.md`](docs/marketing-billing-growth-plan.md).
+
 ## Deployment modes
 
 The same codebase supports private, organization-owned installations and the future hosted service.

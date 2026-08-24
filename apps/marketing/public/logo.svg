@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" role="img" aria-labelledby="title desc">
+  <title id="title">Tsewa</title>
+  <desc id="desc">Tsewa circular T monogram and wordmark</desc>
+  <circle cx="48" cy="48" r="39" fill="#0d2c24"/>
+  <circle cx="48" cy="48" r="31" fill="none" stroke="#f3eddf" stroke-width="2"/>
+  <path d="M32 32h32l1 10h-2c-2-5-6-7-13-7v28h8v2H38v-2h8V35c-7 0-11 2-13 7h-2l1-10Z" fill="#f3eddf"/>
+  <circle cx="69" cy="27" r="4" fill="#d66f48"/>
+  <text x="105" y="64" fill="#0d2c24" font-family="Newsreader, Georgia, serif" font-size="55" font-weight="600">Tsewa</text>
+</svg>
