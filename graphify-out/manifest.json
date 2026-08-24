@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
-    "mtime": 1787307517.0591073,
-    "ast_hash": "604d980a620c130fb11ba37a524b75a6",
+    "mtime": 1787571695.3529532,
+    "ast_hash": "9a050f03408922a9c7e0fb0e9888ee45",
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
@@ -85,8 +85,8 @@
     "semantic_hash": "7e5ffd0852aee321277975c6e0ef14a2"
   },
   "apps/web/src/lib/auth.ts": {
-    "mtime": 1787307946.0882182,
-    "ast_hash": "081840fcab11fdaea4a9f63b90a4c182",
+    "mtime": 1787572065.633311,
+    "ast_hash": "849acce5a314b19e79eb8c4df87c24c3",
     "semantic_hash": ""
   },
   "apps/web/src/lib/runtime-env.ts": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787569844.3554118,
-    "ast_hash": "0e21c5f9166135913f2cea07871ca374",
+    "mtime": 1787572065.6361513,
+    "ast_hash": "60fce9d0b191da9e6b62e1de81903d2b",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787552234.602345,
-    "ast_hash": "d67e974d32453944b13cf053c821da1a",
+    "mtime": 1787571672.5385385,
+    "ast_hash": "237593881365f606bf1aa5b34ba384c4",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1787569938.2793655,
-    "ast_hash": "11a09227c5abd8378a076fbd66309882",
+    "mtime": 1787572121.934914,
+    "ast_hash": "090f21e544e712857cbf99a1704dcec7",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1020,8 +1020,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/auth-email.ts": {
-    "mtime": 1787307946.0884683,
-    "ast_hash": "c614dad0607495a7232ac57c1a447ec5",
+    "mtime": 1787571589.4291966,
+    "ast_hash": "865384ee55431e12409e27645a75b06e",
     "semantic_hash": ""
   },
   "apps/web/src/lib/route-search.test.ts": {
@@ -1222,6 +1222,16 @@
   "apps/web/migrations/0031_enrollment_offering_performance.sql": {
     "mtime": 1787569923.2649837,
     "ast_hash": "4ca6e194e51c2ca5b947d9195685d0af",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0032_verified_email_rollout.sql": {
+    "mtime": 1787571589.4323628,
+    "ast_hash": "23136378c8fe16d2739bab96c99b760d",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/auth-email.test.ts": {
+    "mtime": 1787571672.5379467,
+    "ast_hash": "8f50d4dbefb230758df773281012e41c",
     "semantic_hash": ""
   }
 }

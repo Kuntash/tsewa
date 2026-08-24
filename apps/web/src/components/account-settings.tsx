@@ -20,7 +20,8 @@ type AccountSettingsProps = {
 export function AccountSettings({ user }: AccountSettingsProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [currentEmail, setCurrentEmail] = useState(user.email);
+  const [currentEmail] = useState(user.email);
+  const [pendingEmail, setPendingEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -58,13 +59,32 @@ export function AccountSettings({ user }: AccountSettingsProps) {
       return;
     }
 
-    const result = await authClient.changeEmail({ newEmail: email.trim().toLowerCase() });
+    const nextEmail = email.trim().toLowerCase();
+    const result = await authClient.changeEmail({
+      newEmail: nextEmail,
+      callbackURL: "/settings/general",
+    });
     if (result.error) setError(result.error.message ?? "Your email could not be updated.");
     else {
-      setCurrentEmail(email.trim().toLowerCase());
-      setEmail(email.trim().toLowerCase());
+      setPendingEmail(nextEmail);
       setEmailPassword("");
-      setMessage("Your sign-in email was updated.");
+      setMessage(
+        `Verification sent to ${nextEmail}. Your sign-in email remains ${currentEmail} until you confirm the new address.`,
+      );
+    }
+    setBusy("");
+  }
+
+  async function resendVerification() {
+    startRequest("verification");
+    const result = await authClient.sendVerificationEmail({
+      email: currentEmail,
+      callbackURL: "/settings/general",
+    });
+    if (result.error) {
+      setError(result.error.message ?? "The verification email could not be sent.");
+    } else {
+      setMessage(`Verification sent to ${currentEmail}.`);
     }
     setBusy("");
   }
@@ -122,6 +142,23 @@ export function AccountSettings({ user }: AccountSettingsProps) {
         </div>
       ) : null}
 
+      {!user.emailVerified ? (
+        <div className="mt-5 flex flex-col gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p>Verify {currentEmail} to secure your account and future email changes.</p>
+          <Button
+            className="shrink-0"
+            disabled={busy === "verification"}
+            onClick={() => void resendVerification()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {busy === "verification" ? <LoaderCircle className="animate-spin" /> : <Mail />}
+            Resend verification
+          </Button>
+        </div>
+      ) : null}
+
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -175,9 +212,15 @@ export function AccountSettings({ user }: AccountSettingsProps) {
                   />
                 </div>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  Confirm with your current password. You will use the new address the next time you
-                  sign in.
+                  Confirm with your current password. We will send a private link to the new
+                  address, and your current sign-in email remains active until that link is
+                  confirmed.
                 </p>
+                {pendingEmail ? (
+                  <p className="text-xs font-medium text-primary">
+                    Waiting for confirmation from {pendingEmail}.
+                  </p>
+                ) : null}
                 <Button
                   disabled={busy === "email" || email === currentEmail}
                   size="sm"

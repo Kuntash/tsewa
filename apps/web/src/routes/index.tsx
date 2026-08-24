@@ -6,7 +6,6 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   Check,
-  Copy,
   Crown,
   FileText,
   GraduationCap,
@@ -530,7 +529,7 @@ function legacyViewPath(view?: AppView) {
 
 function AccessScreen({ platform, inviteToken }: { platform: PlatformState; inviteToken: string }) {
   const isInvitation = Boolean(inviteToken && platform.invitation);
-  const [mode, setMode] = useState<"sign-in" | "setup" | "recovery">(
+  const [mode, setMode] = useState<"sign-in" | "setup" | "recovery" | "verify">(
     platform.needsSetup || isInvitation ? "setup" : "sign-in",
   );
   const [name, setName] = useState("");
@@ -540,6 +539,7 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
 
   const selectedSession = useMemo(
     () => platform.sessions.find((item) => item.id === academicSessionId),
@@ -557,12 +557,42 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
             { name, email, password },
             isInvitation ? { headers: { "x-tsewa-invitation": inviteToken } } : undefined,
           )
-        : await authClient.signIn.email({ email, password });
+        : await authClient.signIn.email(
+            { email, password },
+            isInvitation ? { headers: { "x-tsewa-invitation": inviteToken } } : undefined,
+          );
 
     if (result.error) {
+      if (
+        result.error.code === "EMAIL_NOT_VERIFIED" ||
+        result.error.message?.toLowerCase().includes("verify your email")
+      ) {
+        setVerificationEmail(email.trim().toLowerCase());
+        setNotice("We sent a fresh verification link.");
+        setMode("verify");
+        setSubmitting(false);
+        return;
+      }
       setError(result.error.message ?? "We could not complete that request.");
       setSubmitting(false);
       return;
+    }
+
+    if (mode === "setup" && !isInvitation) {
+      setVerificationEmail(email.trim().toLowerCase());
+      setNotice("Your account was created and a verification link is on its way.");
+      setMode("verify");
+      setSubmitting(false);
+      return;
+    }
+
+    if (mode === "setup" && isInvitation) {
+      const signIn = await authClient.signIn.email({ email, password });
+      if (signIn.error) {
+        setError(signIn.error.message ?? "Your account was created, but sign-in failed.");
+        setSubmitting(false);
+        return;
+      }
     }
 
     if (mode === "sign-in" && isInvitation) {
@@ -612,6 +642,39 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
       return;
     }
     setNotice("If that email belongs to an account, a private reset link is on its way.");
+  }
+
+  async function resendVerification() {
+    setError("");
+    setNotice("");
+    setSubmitting(true);
+    const result = await authClient.sendVerificationEmail({
+      email: verificationEmail,
+      callbackURL: "/dashboard",
+    });
+    setSubmitting(false);
+    if (result.error) {
+      setError(result.error.message ?? "We could not send another verification email.");
+      return;
+    }
+    setNotice("A fresh verification link is on its way.");
+  }
+
+  if (mode === "verify") {
+    return (
+      <EmailVerificationScreen
+        email={verificationEmail}
+        error={error}
+        notice={notice}
+        onBack={() => {
+          setError("");
+          setNotice("");
+          setMode("sign-in");
+        }}
+        onResend={() => void resendVerification()}
+        submitting={submitting}
+      />
+    );
   }
 
   return (
@@ -818,6 +881,70 @@ function AccessScreen({ platform, inviteToken }: { platform: PlatformState; invi
             Self-hosted on Cloudflare · Your data stays with your organization
           </p>
         </section>
+      </div>
+    </main>
+  );
+}
+
+function EmailVerificationScreen({
+  email,
+  error,
+  notice,
+  onBack,
+  onResend,
+  submitting,
+}: {
+  email: string;
+  error: string;
+  notice: string;
+  onBack: () => void;
+  onResend: () => void;
+  submitting: boolean;
+}) {
+  return (
+    <main className="relative grid min-h-svh place-items-center overflow-hidden bg-background px-5 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,color-mix(in_oklch,var(--primary)_11%,transparent),transparent_34%),radial-gradient(circle_at_85%_85%,color-mix(in_oklch,var(--primary)_7%,transparent),transparent_36%)]" />
+      <div className="relative w-full max-w-md">
+        <div className="mb-5 flex items-center justify-between">
+          <Brand />
+          <ThemeToggle />
+        </div>
+        <Card className="border-border/80 bg-card/95 shadow-[0_24px_80px_-32px_color-mix(in_oklch,var(--foreground)_28%,transparent)] backdrop-blur">
+          <CardHeader className="space-y-2 px-7 pt-7">
+            <div className="mb-2 grid size-11 place-items-center rounded-full bg-primary/10 text-primary">
+              <ShieldCheck />
+            </div>
+            <CardTitle className="text-2xl tracking-[-0.025em]">Check your email</CardTitle>
+            <CardDescription className="leading-6">
+              We sent a private verification link to <strong>{email}</strong>. Confirm the address
+              to finish signing in. The link expires in one hour.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-7 pb-7">
+            {error ? (
+              <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            {notice ? (
+              <p className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-foreground">
+                {notice}
+              </p>
+            ) : null}
+            <Button
+              className="h-11 w-full rounded-full"
+              disabled={submitting}
+              onClick={onResend}
+              type="button"
+            >
+              {submitting ? <LoaderCircle className="animate-spin" /> : <MailPlus />}
+              Resend verification email
+            </Button>
+            <Button className="w-full" onClick={onBack} type="button" variant="ghost">
+              Return to sign in
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
@@ -1403,7 +1530,6 @@ function AdministrationPanel({
   const [locale, setLocale] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteGroup, setInviteGroup] = useState<"admin" | "staff" | "viewer">("admin");
-  const [invitationUrl, setInvitationUrl] = useState("");
   const [busy, setBusy] = useState("");
   const [pendingMemberGroups, setPendingMemberGroups] = useState<Set<string>>(() => new Set());
   const [pendingAccessGroups, setPendingAccessGroups] = useState<Set<AccessGroup>>(() => new Set());
@@ -1480,7 +1606,6 @@ function AdministrationPanel({
   async function inviteMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startRequest("invite");
-    setInvitationUrl("");
     const response = await fetch("/api/organization/invitations", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1488,16 +1613,14 @@ function AdministrationPanel({
     });
     const payload = (await response.json()) as {
       error?: string;
-      invitationUrl?: string;
       delivery?: { status: "sent" | "failed" };
     };
     if (!response.ok) setError(payload.error ?? "Invitation could not be created.");
-    else if (payload.invitationUrl) {
-      setInvitationUrl(payload.invitationUrl);
+    else {
       setMessage(
         payload.delivery?.status === "sent"
           ? "Invitation created and emailed."
-          : "Invitation created, but email delivery failed. Copy the private link below.",
+          : "Invitation created, but email delivery failed. Use Resend to try again.",
       );
       setInviteEmail("");
       await refresh();
@@ -1611,16 +1734,14 @@ function AdministrationPanel({
     });
     const payload = (await response.json()) as {
       error?: string;
-      invitationUrl?: string;
       delivery?: { status: "sent" | "failed" };
     };
     if (!response.ok) setError(payload.error ?? "Invitation could not be resent.");
     else {
-      setInvitationUrl(payload.invitationUrl ?? "");
       setMessage(
         payload.delivery?.status === "sent"
           ? "A fresh invitation was emailed. The old link no longer works."
-          : "The link was refreshed, but email delivery failed. Copy the new link below.",
+          : "Email delivery failed. Wait a minute, then use Resend to try again.",
       );
       await refresh();
     }
@@ -1998,24 +2119,6 @@ function AdministrationPanel({
                       Invite
                     </Button>
                   </div>
-                  {invitationUrl ? (
-                    <div className="mt-3 flex gap-2 rounded-xl bg-muted p-2 pl-3">
-                      <p className="min-w-0 flex-1 self-center truncate font-mono text-xs text-muted-foreground">
-                        {invitationUrl}
-                      </p>
-                      <Button
-                        onClick={() => {
-                          void navigator.clipboard.writeText(invitationUrl);
-                          setMessage("Invitation link copied.");
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="secondary"
-                      >
-                        <Copy /> Copy
-                      </Button>
-                    </div>
-                  ) : null}
                 </form>
               ) : null}
 

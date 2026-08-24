@@ -16,8 +16,8 @@ feature ships or THF confirms that a historical workflow is still needed.
 
 - [x] Connect provider-configurable transactional email for invitations and
       password reset.
-- [ ] Add email verification delivery and a verified-email onboarding state.
-- [ ] Replace immediate unverified email changes with the verified email-change
+- [x] Add email verification delivery and a verified-email onboarding state.
+- [x] Replace immediate unverified email changes with the verified email-change
       flow after transactional email is available.
 
 ## Product foundations

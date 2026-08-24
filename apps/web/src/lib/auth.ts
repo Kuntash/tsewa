@@ -11,6 +11,7 @@ type AuthOptions = {
   baseURL: string;
   allowSignUp: boolean;
   sendPasswordReset: (input: { email: string; name: string; url: string }) => Promise<void>;
+  sendVerificationEmail: (input: { email: string; name: string; url: string }) => Promise<void>;
 };
 
 export function createAuth({
@@ -20,6 +21,7 @@ export function createAuth({
   baseURL,
   allowSignUp,
   sendPasswordReset,
+  sendVerificationEmail,
 }: AuthOptions) {
   return betterAuth({
     appName,
@@ -31,9 +33,20 @@ export function createAuth({
       enabled: true,
       disableSignUp: !allowSignUp,
       minPasswordLength: 10,
+      requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
         await sendPasswordReset({ email: user.email, name: user.name, url });
+      },
+    },
+    emailVerification: {
+      autoSignInAfterVerification: true,
+      expiresIn: 60 * 60,
+      sendOnSignIn: true,
+      sendOnSignUp: true,
+      sendVerificationEmail: async ({ user, url }, request) => {
+        if (request?.headers.get("x-tsewa-invitation")) return;
+        await sendVerificationEmail({ email: user.email, name: user.name, url });
       },
     },
     session: {
@@ -43,7 +56,7 @@ export function createAuth({
     user: {
       changeEmail: {
         enabled: true,
-        updateEmailWithoutVerification: true,
+        updateEmailWithoutVerification: false,
       },
     },
     advanced: {

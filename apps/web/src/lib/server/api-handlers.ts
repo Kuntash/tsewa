@@ -102,7 +102,7 @@ import type { AccessGroupKey, AccessRoleKey, PermissionKey } from "@/lib/access-
 import { nextMarkSheetStatus } from "@/lib/academic-results";
 import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
-import { sendPasswordResetEmail } from "@/lib/auth-email";
+import { sendEmailVerification, sendPasswordResetEmail } from "@/lib/auth-email";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { findDashboard } from "@/lib/server/repositories/dashboard-repository";
 import { findPeopleRegistry } from "@/lib/server/repositories/people-repository";
@@ -186,10 +186,6 @@ const invitationTokenSchema = z.object({
 
 const transferOwnershipSchema = z.object({
   targetMemberId: z.string().uuid(),
-});
-
-const signUpInputSchema = z.object({
-  email: z.email().transform((value) => value.trim().toLowerCase()),
 });
 
 const peopleQuerySchema = z.object({
@@ -1205,10 +1201,12 @@ async function handleAuthRequest(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const url = new URL(request.url);
   const isEmailSignUp = url.pathname.endsWith("/sign-up/email");
-  const signUpInput = isEmailSignUp ? await readSignUpInput(request.clone()) : null;
-  const invitationToken = isEmailSignUp ? request.headers.get("x-tsewa-invitation") : null;
+  const isEmailSignIn = url.pathname.endsWith("/sign-in/email");
+  const authEmail = isEmailSignUp || isEmailSignIn ? await readAuthEmail(request.clone()) : null;
+  const invitationToken =
+    isEmailSignUp || isEmailSignIn ? request.headers.get("x-tsewa-invitation") : null;
   const invitation = invitationToken
-    ? await findInvitation(runtime.ORM, invitationToken, signUpInput?.email)
+    ? await findInvitation(runtime.ORM, invitationToken, authEmail ?? undefined)
     : null;
   const userCount = isEmailSignUp
     ? await runtime.ORM.select({ count: count() })
@@ -1217,11 +1215,24 @@ async function handleAuthRequest(request: Request): Promise<Response> {
     : null;
   const isFirstUser = isEmailSignUp && Number(userCount?.count ?? 0) === 0;
   const auth = createRequestAuth(request, isFirstUser || Boolean(invitation));
+  let authRequest = request;
+  if (invitationToken && !invitation) {
+    const headers = new Headers(request.headers);
+    headers.delete("x-tsewa-invitation");
+    authRequest = new Request(request, { headers });
+  }
+
+  if (isEmailSignIn && invitation && authEmail) {
+    await runtime.ORM.update(user)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(sql`lower(${user.email})`, authEmail));
+  }
+
   const accountAuditAction = getAccountAuditAction(url.pathname);
   const actorSession = accountAuditAction
     ? await auth.api.getSession({ headers: request.headers })
     : null;
-  const response = await auth.handler(request);
+  const response = await auth.handler(authRequest);
 
   if (isEmailSignUp && response.ok) {
     const payload = (await response.clone().json()) as SignUpPayload;
@@ -1241,10 +1252,10 @@ async function handleAuthRequest(request: Request): Promise<Response> {
   return response;
 }
 
-async function readSignUpInput(request: { json(): Promise<unknown> }) {
+async function readAuthEmail(request: { json(): Promise<unknown> }) {
   try {
-    const parsed = signUpInputSchema.safeParse(await request.json());
-    return parsed.success ? parsed.data : null;
+    const parsed = z.object({ email: z.email() }).safeParse(await request.json());
+    return parsed.success ? parsed.data.email.trim().toLowerCase() : null;
   } catch {
     return null;
   }
@@ -1259,12 +1270,13 @@ function createRequestAuth(request: Request, allowSignUp: boolean) {
     baseURL: new URL(request.url).origin,
     allowSignUp,
     sendPasswordReset: (input) => sendPasswordResetEmail(runtime, input),
+    sendVerificationEmail: (input) => sendEmailVerification(runtime, input),
   });
 }
 
 function getAccountAuditAction(pathname: string): string | null {
   if (pathname.endsWith("/update-user")) return "account.profile_updated";
-  if (pathname.endsWith("/change-email")) return "account.email_changed";
+  if (pathname.endsWith("/change-email")) return "account.email_change_requested";
   if (pathname.endsWith("/change-password")) return "account.password_changed";
   return null;
 }
@@ -11216,10 +11228,7 @@ async function createOrganizationInvitation(request: Request): Promise<Response>
     expiresAt,
   );
 
-  return Response.json(
-    { invitationUrl: invitationUrl.toString(), expiresAt, delivery },
-    { status: 201 },
-  );
+  return Response.json({ expiresAt, delivery }, { status: 201 });
 }
 
 async function previewInvitation(request: Request): Promise<Response> {
@@ -11524,7 +11533,7 @@ async function resendOrganizationInvitation(
     { email: invitation.email, group: invitation.group, delivery: delivery.status },
   );
 
-  return Response.json({ invitationUrl: invitationUrl.toString(), expiresAt, delivery });
+  return Response.json({ expiresAt, delivery });
 }
 
 async function deliverOrganizationInvitation(
@@ -11782,6 +11791,10 @@ async function acceptInvitation(
   const auditId = crypto.randomUUID();
 
   await database.batch([
+    database
+      .update(user)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(and(eq(user.id, userId), eq(sql`lower(${user.email})`, invitation.email))),
     database
       .insert(organizationMember)
       .values({
