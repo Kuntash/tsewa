@@ -1,0 +1,32 @@
+{
+  "name": "@tsewa/marketing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev --port 3100",
+    "build": "vp build",
+    "preview": "vp preview --port 4100",
+    "deploy": "vp build && wrangler deploy --config wrangler.jsonc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/newsreader": "5.3.0",
+    "lucide-react": "1.28.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "typescript": "6.0.3",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.7",
+    "vite-plus": "0.2.7",
+    "wrangler": "4.122.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

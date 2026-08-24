@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tsewa-marketing",
+  "compatibility_date": "2026-08-25",
+  "routes": [
+    { "pattern": "gettsewa.com", "custom_domain": true },
+    { "pattern": "www.gettsewa.com", "custom_domain": true },
+  ],
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+  },
+  "observability": { "enabled": true },
+}

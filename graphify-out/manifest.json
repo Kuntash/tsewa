@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787593931.6527607,
-    "ast_hash": "1d90ba824a3edb8e93e173f0f8493b08",
+    "mtime": 1787604539.9823704,
+    "ast_hash": "6f55c3c410ac829c452f6accba70d77b",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -195,13 +195,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787590566.045693,
-    "ast_hash": "0c4141cea1fa8741bfd7ff0a1c271883",
+    "mtime": 1787604539.9829366,
+    "ast_hash": "72e77179eaee0f04541fc28d074172d3",
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787591693.1415703,
-    "ast_hash": "da71677f29409a7250e7d425fbc944a1",
+    "mtime": 1787604539.9836555,
+    "ast_hash": "ff82f28cf41bff317e10a555dd4c1af6",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -1287,6 +1287,41 @@
   "apps/web/src/routes/onboarding.tsx": {
     "mtime": 1787593744.2338817,
     "ast_hash": "18c22a197ff4e67f71408514540f7be8",
+    "semantic_hash": ""
+  },
+  "apps/marketing/package.json": {
+    "mtime": 1787604557.5690331,
+    "ast_hash": "8ca5cba7c980c91803015a835b6f2f28",
+    "semantic_hash": ""
+  },
+  "apps/marketing/src/App.tsx": {
+    "mtime": 1787604563.7567997,
+    "ast_hash": "2d56ab0ec87deaeb520b6c54b74d9490",
+    "semantic_hash": ""
+  },
+  "apps/marketing/src/main.tsx": {
+    "mtime": 1787603872.6424975,
+    "ast_hash": "1e9dba63b0fc7876fb2ddeef9cd52699",
+    "semantic_hash": ""
+  },
+  "apps/marketing/src/vite-env.d.ts": {
+    "mtime": 1787604563.757195,
+    "ast_hash": "0352474ba2918efe13895edbc3780d94",
+    "semantic_hash": ""
+  },
+  "apps/marketing/tsconfig.json": {
+    "mtime": 1787603872.6412776,
+    "ast_hash": "d01228955b739b81b36922024e414840",
+    "semantic_hash": ""
+  },
+  "apps/marketing/vite.config.ts": {
+    "mtime": 1787603872.6415699,
+    "ast_hash": "ea5effd26043c1f292f412678770f75b",
+    "semantic_hash": ""
+  },
+  "apps/marketing/index.html": {
+    "mtime": 1787603872.642068,
+    "ast_hash": "119e7c6636cfa0d99474c4179ad37cfa",
     "semantic_hash": ""
   }
 }

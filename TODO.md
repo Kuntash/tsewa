@@ -25,7 +25,7 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [ ] Fix theme consistency across every page, component, and interaction state.
 - [x] Increase the THS organization logo size on the anonymous `ths.kunga.dev`
       landing and sign-in page.
-- [ ] Build the `gettsewa.com` marketing and pricing site around the hosted product.
+- [x] Build the `gettsewa.com` marketing and pricing site around the hosted product.
       Keep customer-managed deployment and enhanced data controls out of primary
       landing-page copy; mention them in the FAQ as Enterprise-tier options.
 - [x] Persist the user's theme preference across browser sessions.

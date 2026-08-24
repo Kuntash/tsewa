@@ -9,6 +9,8 @@ Open-source operations software for schools and care communities. This repositor
 - Vite+ provides the shared package manager, formatter, linter, type checker,
   build commands, and cached workspace tasks.
 - `apps/web` — TanStack Start application deployed to Cloudflare Workers.
+- `apps/marketing` — public hosted-product site for `gettsewa.com`, deployed as
+  a separate static Cloudflare Worker with no SaaS data or service bindings.
 - `apps/web/migrations` — versioned D1 schema migrations.
 - `packages` — shared packages will be introduced as domain boundaries stabilize.
 
@@ -26,6 +28,16 @@ The tracked pre-commit hook refreshes and stages the Tsewa-only knowledge graph
 in `graphify-out/` so each commit carries the graph for the code it contains.
 
 The local app runs at `http://localhost:3000`.
+
+Run the public marketing site separately at `http://localhost:3100`:
+
+```bash
+vp run marketing:dev
+```
+
+Build or deploy only the marketing Worker with `vp run marketing:build` or
+`vp run marketing:deploy`. The deployment targets `gettsewa.com` and
+`www.gettsewa.com`; the hosted application remains at `app.gettsewa.com`.
 
 ## Deployment modes
 
