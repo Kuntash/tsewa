@@ -33,61 +33,37 @@
     {
       "canonicalName": "IV B",
       "canonicalSourceId": 20,
-      "sourceIds": [
-        20,
-        142,
-        143
-      ]
+      "sourceIds": [20, 142, 143]
     },
     {
       "canonicalName": "VII A",
       "canonicalSourceId": 12,
-      "sourceIds": [
-        12,
-        126
-      ]
+      "sourceIds": [12, 126]
     },
     {
       "canonicalName": "VII C",
       "canonicalSourceId": 54,
-      "sourceIds": [
-        54,
-        130
-      ]
+      "sourceIds": [54, 130]
     },
     {
       "canonicalName": "VII D",
       "canonicalSourceId": 29,
-      "sourceIds": [
-        29,
-        131
-      ]
+      "sourceIds": [29, 131]
     },
     {
       "canonicalName": "X E",
       "canonicalSourceId": 148,
-      "sourceIds": [
-        146,
-        147,
-        148
-      ]
+      "sourceIds": [146, 147, 148]
     },
     {
       "canonicalName": "XI Arts E",
       "canonicalSourceId": 55,
-      "sourceIds": [
-        55,
-        132
-      ]
+      "sourceIds": [55, 132]
     },
     {
       "canonicalName": "XI G",
       "canonicalSourceId": 149,
-      "sourceIds": [
-        149,
-        150,
-        151
-      ]
+      "sourceIds": [149, 150, 151]
     }
   ]
 }

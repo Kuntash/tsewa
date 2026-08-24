@@ -10,14 +10,7 @@
   "source": {
     "system": "THF Office Manager",
     "database": "tibethomes-newer-d1.sqlite",
-    "tables": [
-      "beneficiary_class",
-      "beneficiary",
-      "session",
-      "school",
-      "class",
-      "school_house"
-    ],
+    "tables": ["beneficiary_class", "beneficiary", "session", "school", "class", "school_house"],
     "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
     "sizeBytes": 42991616,
     "openedReadOnly": true

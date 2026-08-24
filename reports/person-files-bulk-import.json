@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "mode": "bulk_import",
+  "updatedAt": "2026-08-11T06:52:06.409Z",
+  "privacy": {
+    "classification": "aggregate-only",
+    "containsPersonalData": false
+  },
+  "source": {
+    "sha256": "7738b8e4eebad446e577f37dfffa105179e416ca6f5a29b4922a20e8a729d38c",
+    "openedReadOnly": true,
+    "unchanged": true
+  },
+  "target": "remote",
+  "expected": {
+    "files": 46938,
+    "bytes": 17397012993,
+    "people": 7680
+  },
+  "progress": {
+    "files": 46938,
+    "bytes": 17397012993,
+    "filesRemaining": 0,
+    "failedFiles": 0,
+    "bytesRemaining": 0
+  },
+  "policy": {
+    "genericImageDetectionApplied": false,
+    "relayMode": "cloudflare_worker",
+    "targetVerification": "R2 checked the expected SHA-256 during the server-side upload; final reconciliation still required"
+  }
+}
