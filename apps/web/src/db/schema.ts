@@ -300,6 +300,9 @@ export const person = sqliteTable(
     admittedOrJoinedOn: text("admitted_or_joined_on"),
     campusOrLocation: text("campus_or_location"),
     nationality: text(),
+    educationNumber: text("education_number"),
+    registrationCertificateNumber: text("registration_certificate_number"),
+    identityCertificateNumber: text("identity_certificate_number"),
     photoAssetKey: text("photo_asset_key"),
     sourceSystem: text("source_system").notNull(),
     sourceTable: text("source_table").notNull(),
@@ -2221,6 +2224,186 @@ export const sponsorshipLetter = sqliteTable("sponsorship_letter", {
   remarks: text(),
   ...sponsorshipSourceColumns(),
 });
+
+export const staffImportBatch = sqliteTable("staff_import_batch", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  sourceSystem: text("source_system").notNull(),
+  sourceDatabase: text("source_database").notNull(),
+  sourceFingerprint: text("source_fingerprint").notNull(),
+  status: text().notNull(),
+  departmentCount: integer("department_count").default(0).notNull(),
+  designationCount: integer("designation_count").default(0).notNull(),
+  categoryCount: integer("category_count").default(0).notNull(),
+  profileCount: integer("profile_count").default(0).notNull(),
+  employmentEventCount: integer("employment_event_count").default(0).notNull(),
+  startedAt: text("started_at").notNull(),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+const staffSourceColumns = () => ({
+  sourceSystem: text("source_system").notNull(),
+  sourceTable: text("source_table").notNull(),
+  sourceId: text("source_id").notNull(),
+  importBatchId: text("import_batch_id").references(() => staffImportBatch.id, {
+    onDelete: "set null",
+  }),
+  importedAt: text("imported_at"),
+  createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+export const staffDepartment = sqliteTable(
+  "staff_department",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    ...staffSourceColumns(),
+  },
+  (table) => [
+    index("staff_department_name_idx").on(table.organizationId, table.isActive, table.name),
+  ],
+);
+
+export const staffDesignation = sqliteTable(
+  "staff_designation",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    departmentId: text("department_id").references(() => staffDepartment.id, {
+      onDelete: "set null",
+    }),
+    legacyDepartmentId: text("legacy_department_id"),
+    name: text().notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    ...staffSourceColumns(),
+  },
+  (table) => [
+    index("staff_designation_name_idx").on(
+      table.organizationId,
+      table.departmentId,
+      table.isActive,
+      table.name,
+    ),
+  ],
+);
+
+export const staffCategory = sqliteTable("staff_category", {
+  id: text().primaryKey().notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text().notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  ...staffSourceColumns(),
+});
+
+export const staffProfile = sqliteTable(
+  "staff_profile",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    departmentId: text("department_id").references(() => staffDepartment.id, {
+      onDelete: "set null",
+    }),
+    designationId: text("designation_id").references(() => staffDesignation.id, {
+      onDelete: "set null",
+    }),
+    categoryId: text("category_id").references(() => staffCategory.id, {
+      onDelete: "set null",
+    }),
+    legacyDepartmentId: text("legacy_department_id"),
+    legacyDesignationId: text("legacy_designation_id"),
+    permanentOn: text("permanent_on"),
+    spouseName: text("spouse_name"),
+    settlementName: text("settlement_name"),
+    allocatedPlace: text("allocated_place"),
+    motherName: text("mother_name"),
+    fatherName: text("father_name"),
+    address: text(),
+    maritalStatus: text("marital_status"),
+    registrationCertificateNumber: text("registration_certificate_number"),
+    panNumber: text("pan_number"),
+    phone: text(),
+    email: text(),
+    quarterNumber: text("quarter_number"),
+    nominee: text(),
+    birthPlace: text("birth_place"),
+    city: text(),
+    region: text(),
+    country: text(),
+    withdrawalReason: text("withdrawal_reason"),
+    withdrawalOn: text("withdrawal_on"),
+    identityCardNumber: text("identity_card_number"),
+    greenBookNumber: text("green_book_number"),
+    remarks: text(),
+    ...staffSourceColumns(),
+  },
+  (table) => [
+    uniqueIndex("staff_profile_person_idx").on(table.organizationId, table.personId),
+    index("staff_profile_directory_idx").on(
+      table.organizationId,
+      table.departmentId,
+      table.designationId,
+      table.personId,
+    ),
+  ],
+);
+
+export const staffEmploymentEvent = sqliteTable(
+  "staff_employment_event",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    personId: text("person_id")
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    departmentId: text("department_id").references(() => staffDepartment.id, {
+      onDelete: "set null",
+    }),
+    designationId: text("designation_id").references(() => staffDesignation.id, {
+      onDelete: "set null",
+    }),
+    legacyDepartmentId: text("legacy_department_id"),
+    legacyDesignationId: text("legacy_designation_id"),
+    locationName: text("location_name"),
+    effectiveOn: text("effective_on"),
+    transferReason: text("transfer_reason"),
+    remarks: text(),
+    ...staffSourceColumns(),
+  },
+  (table) => [
+    index("staff_employment_event_timeline_idx").on(
+      table.organizationId,
+      table.personId,
+      table.effectiveOn,
+    ),
+  ],
+);
 
 export const accessPermission = sqliteTable("access_permission", {
   key: text().primaryKey().notNull(),

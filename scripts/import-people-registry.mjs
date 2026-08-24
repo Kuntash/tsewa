@@ -102,6 +102,7 @@ function readPeople(databaseConnection, slug) {
               beneficiary.admin_dt AS admittedOrJoinedOn,
               beneficiary.campus AS campusOrLocation,
               nationality.country AS nationality,
+              beneficiary.rc_no AS registrationCertificateNumber,
               beneficiary.photo_asset_id AS photoAssetKey
        FROM beneficiary
        JOIN nationality ON nationality.id = beneficiary.nationality
@@ -120,6 +121,9 @@ function readPeople(databaseConnection, slug) {
       admittedOrJoinedOn: sourceText(row.admittedOrJoinedOn),
       campusOrLocation: optionalText(row.campusOrLocation),
       nationality: optionalText(row.nationality),
+      educationNumber: null,
+      registrationCertificateNumber: optionalText(row.registrationCertificateNumber),
+      identityCertificateNumber: null,
       photoAssetKey: optionalText(row.photoAssetKey),
       sourceTable: "beneficiary",
       sourceId: requiredText(row.sourceId, "beneficiary source ID"),
@@ -131,6 +135,8 @@ function readPeople(databaseConnection, slug) {
               first_name AS firstName, last_name AS lastName, status, sex,
               dob AS dateOfBirth, date_of_joining AS admittedOrJoinedOn,
               place_allocated AS campusOrLocation, country AS nationality,
+              rcno AS registrationCertificateNumber,
+              i_card_no AS identityCertificateNumber,
               photo_asset_id AS photoAssetKey
        FROM staff
        ORDER BY id`,
@@ -150,6 +156,9 @@ function readPeople(databaseConnection, slug) {
       admittedOrJoinedOn: sourceText(row.admittedOrJoinedOn),
       campusOrLocation: optionalText(row.campusOrLocation),
       nationality: optionalText(row.nationality),
+      educationNumber: null,
+      registrationCertificateNumber: optionalText(row.registrationCertificateNumber),
+      identityCertificateNumber: optionalText(row.identityCertificateNumber),
       photoAssetKey: optionalText(row.photoAssetKey),
       sourceTable: "staff",
       sourceId: requiredText(row.sourceId, "staff source ID"),
@@ -206,6 +215,9 @@ function buildImportSql({
           person.admittedOrJoinedOn,
           person.campusOrLocation,
           person.nationality,
+          person.educationNumber,
+          person.registrationCertificateNumber,
+          person.identityCertificateNumber,
           person.photoAssetKey,
           "THF Office Manager",
           person.sourceTable,
@@ -221,7 +233,9 @@ function buildImportSql({
     statements.push(`INSERT INTO person (
       id, organization_id, kind, status, identifier_kind, primary_identifier,
       display_name, gender, date_of_birth, admitted_or_joined_on,
-      campus_or_location, nationality, photo_asset_key, source_system,
+      campus_or_location, nationality, education_number,
+      registration_certificate_number, identity_certificate_number,
+      photo_asset_key, source_system,
       source_table, source_id, import_batch_id, imported_at, created_at, updated_at
     ) VALUES\n      (${values.join("),\n      (")})
     ON CONFLICT(organization_id, source_system, source_table, source_id)
@@ -234,6 +248,9 @@ function buildImportSql({
       admitted_or_joined_on = excluded.admitted_or_joined_on,
       campus_or_location = excluded.campus_or_location,
       nationality = excluded.nationality,
+      education_number = excluded.education_number,
+      registration_certificate_number = excluded.registration_certificate_number,
+      identity_certificate_number = excluded.identity_certificate_number,
       photo_asset_key = excluded.photo_asset_key,
       import_batch_id = excluded.import_batch_id,
       imported_at = excluded.imported_at,

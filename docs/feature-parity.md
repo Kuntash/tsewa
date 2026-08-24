@@ -188,7 +188,7 @@ and `beneficiary_funds` tables are empty.
 ### Staff, leave, holidays, and stipends
 
 - [x] Preserve staff in the shared people registry.
-- [ ] Edit staff employment, department, designation, and contact details.
+- [x] Edit staff employment, department, designation, and contact details.
 - [ ] Staff dependants, qualifications, experience, and transfers.
 - [ ] Staff leave and extra duty.
 - [ ] Student holidays and return dates.

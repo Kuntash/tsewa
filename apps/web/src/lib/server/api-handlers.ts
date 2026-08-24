@@ -80,6 +80,10 @@ import {
   sponsorshipStatus,
   sponsorshipVisitor,
   sponsorshipVisitorType,
+  staffCategory,
+  staffDepartment,
+  staffDesignation,
+  staffProfile,
   studentEnrollment,
   studentEnrollmentChange,
   studentMark,
@@ -102,6 +106,7 @@ import { sendPasswordResetEmail } from "@/lib/auth-email";
 import { getRuntimeEnv } from "@/lib/runtime-env";
 import { findDashboard } from "@/lib/server/repositories/dashboard-repository";
 import { findPeopleRegistry } from "@/lib/server/repositories/people-repository";
+import { findStaffDirectory } from "@/lib/server/repositories/staff-repository";
 import { allocationsFitFund, sponsorshipDisplayName } from "@/lib/sponsorship";
 
 const preferenceSchema = z.object({
@@ -193,6 +198,51 @@ const peopleQuerySchema = z.object({
   status: z.enum(["all", "active", "inactive"]).default("all"),
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const staffQuerySchema = z.object({
+  q: z.string().trim().max(100).default(""),
+  status: z.enum(["all", "active", "inactive"]).default("all"),
+  department: z.string().trim().max(80).default("all"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(25),
+});
+
+const staffNullableText = (maximum: number) =>
+  z
+    .string()
+    .trim()
+    .max(maximum)
+    .nullable()
+    .optional()
+    .transform((value) => value || null);
+
+const staffProfileSchema = z.object({
+  status: z.enum(["active", "inactive"]),
+  departmentId: z.uuid().nullable(),
+  designationId: z.uuid().nullable(),
+  categoryId: z.uuid().nullable(),
+  joinedOn: z.iso.date().nullable(),
+  permanentOn: z.iso.date().nullable(),
+  location: staffNullableText(160),
+  phone: staffNullableText(80),
+  email: z.union([z.email(), z.literal(""), z.null()]).transform((value) => value || null),
+  address: staffNullableText(1_000),
+  maritalStatus: staffNullableText(80),
+  spouseName: staffNullableText(160),
+  settlementName: staffNullableText(160),
+  allocatedPlace: staffNullableText(160),
+  registrationCertificateNumber: staffNullableText(100),
+  panNumber: staffNullableText(100),
+  quarterNumber: staffNullableText(100),
+  nominee: staffNullableText(160),
+  birthPlace: staffNullableText(160),
+  city: staffNullableText(120),
+  region: staffNullableText(120),
+  country: staffNullableText(120),
+  identityCardNumber: staffNullableText(100),
+  greenBookNumber: staffNullableText(100),
+  remarks: staffNullableText(2_000),
 });
 
 const schoolOverviewQuerySchema = z.object({
@@ -751,6 +801,9 @@ const personCoreDetailsSchema = z.object({
   admittedOrJoinedOn: nullablePersonDate,
   campusOrLocation: nullablePersonText(160),
   nationality: nullablePersonText(100),
+  educationNumber: nullablePersonText(100),
+  registrationCertificateNumber: nullablePersonText(100),
+  identityCertificateNumber: nullablePersonText(100),
 });
 
 const personFamilyDetailsSchema = z.object({
@@ -995,6 +1048,15 @@ export const apiDispatcher = {
 
     if (url.pathname === "/api/sponsorship") {
       return handleSponsorship(request);
+    }
+
+    const staffProfileMatch = url.pathname.match(/^\/api\/staff\/([^/]+)$/);
+    if (staffProfileMatch) {
+      return updateStaffProfile(request, staffProfileMatch[1]);
+    }
+
+    if (url.pathname === "/api/staff") {
+      return getStaffDirectory(request);
     }
 
     if (url.pathname === "/api/health/tb") {
@@ -2224,82 +2286,91 @@ async function readStudentEnrollment(
   organizationId: string,
   enrollmentId: string,
 ): Promise<StudentEnrollmentRecord | null> {
-  const [enrollment, latestSession] = await Promise.all([
-    database
-      .select({
-        id: studentEnrollment.id,
-        personId: studentEnrollment.personId,
-        displayName: person.displayName,
-        admissionNumber: person.primaryIdentifier,
-        academicSessionId: studentEnrollment.academicSessionId,
-        sessionName: academicSession.name,
-        sessionStartsOn: academicSession.startsOn,
-        sessionEndsOn: academicSession.endsOn,
-        schoolId: studentEnrollment.schoolId,
-        schoolName: schoolMaster.name,
-        academicClassId: studentEnrollment.academicClassId,
-        className: sql<string>`CASE
+  const enrollment = await database
+    .select({
+      id: studentEnrollment.id,
+      personId: studentEnrollment.personId,
+      displayName: person.displayName,
+      admissionNumber: person.primaryIdentifier,
+      academicSessionId: studentEnrollment.academicSessionId,
+      sessionName: academicSession.name,
+      sessionStartsOn: academicSession.startsOn,
+      sessionEndsOn: academicSession.endsOn,
+      latestSessionId: sql<string | null>`(
+          SELECT latest.id
+          FROM academic_session latest
+          WHERE latest.organization_id = ${studentEnrollment.organizationId}
+            AND latest.is_active = 1
+          ORDER BY latest.starts_on DESC
+          LIMIT 1
+        )`,
+      schoolId: studentEnrollment.schoolId,
+      schoolName: schoolMaster.name,
+      academicClassId: studentEnrollment.academicClassId,
+      className: sql<string>`CASE
           WHEN lower(trim(coalesce(${academicClassMaster.section}, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
             AND lower(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})))
               NOT LIKE '% ' || lower(trim(${academicClassMaster.section}))
           THEN trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
           ELSE trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
         END`,
-        houseId: studentEnrollment.houseId,
-        houseName: houseMaster.name,
-        schoolClassOfferingId: studentEnrollment.schoolClassOfferingId,
-        rollNumber: studentEnrollment.rollNumber,
-        status: studentEnrollment.status,
-        statusSource: studentEnrollment.statusSource,
-        startedOn: studentEnrollment.startedOn,
-        endedOn: studentEnrollment.endedOn,
-      })
-      .from(studentEnrollment)
-      .innerJoin(
-        person,
-        and(
-          eq(person.id, studentEnrollment.personId),
-          eq(person.organizationId, studentEnrollment.organizationId),
-        ),
-      )
-      .innerJoin(
-        academicSession,
-        and(
-          eq(academicSession.id, studentEnrollment.academicSessionId),
-          eq(academicSession.organizationId, studentEnrollment.organizationId),
-        ),
-      )
-      .innerJoin(
-        academicClassMaster,
-        and(
-          eq(academicClassMaster.id, studentEnrollment.academicClassId),
-          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
-        ),
-      )
-      .leftJoin(schoolMaster, eq(schoolMaster.id, studentEnrollment.schoolId))
-      .leftJoin(houseMaster, eq(houseMaster.id, studentEnrollment.houseId))
-      .where(
-        and(
-          eq(studentEnrollment.id, enrollmentId),
-          eq(studentEnrollment.organizationId, organizationId),
-        ),
-      )
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
-    database
-      .select({ id: academicSession.id })
-      .from(academicSession)
-      .where(
-        and(eq(academicSession.organizationId, organizationId), eq(academicSession.isActive, 1)),
-      )
-      .orderBy(desc(academicSession.startsOn))
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
-  ]);
-  if (!enrollment || !latestSession) return null;
+      houseId: studentEnrollment.houseId,
+      houseName: houseMaster.name,
+      schoolClassOfferingId: studentEnrollment.schoolClassOfferingId,
+      rollNumber: studentEnrollment.rollNumber,
+      status: studentEnrollment.status,
+      statusSource: studentEnrollment.statusSource,
+      startedOn: studentEnrollment.startedOn,
+      endedOn: studentEnrollment.endedOn,
+    })
+    .from(studentEnrollment)
+    .innerJoin(
+      person,
+      and(
+        eq(person.id, studentEnrollment.personId),
+        eq(person.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .innerJoin(
+      academicSession,
+      and(
+        eq(academicSession.id, studentEnrollment.academicSessionId),
+        eq(academicSession.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .innerJoin(
+      academicClassMaster,
+      and(
+        eq(academicClassMaster.id, studentEnrollment.academicClassId),
+        eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .leftJoin(
+      schoolMaster,
+      and(
+        eq(schoolMaster.id, studentEnrollment.schoolId),
+        eq(schoolMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .leftJoin(
+      houseMaster,
+      and(
+        eq(houseMaster.id, studentEnrollment.houseId),
+        eq(houseMaster.organizationId, studentEnrollment.organizationId),
+      ),
+    )
+    .where(
+      and(
+        eq(studentEnrollment.id, enrollmentId),
+        eq(studentEnrollment.organizationId, organizationId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!enrollment) return null;
   return {
     ...enrollment,
-    latestSessionId: latestSession.id,
+    latestSessionId: enrollment.latestSessionId ?? enrollment.academicSessionId,
     status: enrollment.status as StudentEnrollmentRecord["status"],
     statusSource: enrollment.statusSource as StudentEnrollmentRecord["statusSource"],
   };
@@ -5000,7 +5071,7 @@ async function getMarkSheet(request: Request, markSheetId: string): Promise<Resp
       edit:
         hasPermission(context, "school.results.manage") &&
         sheet.status === "draft" &&
-        sheet.sourceSystem.toLowerCase() === "tsewa",
+        isTsewaSource(sheet.sourceSystem),
     },
   });
 }
@@ -5033,7 +5104,7 @@ async function updateMarkSheet(request: Request, markSheetId: string): Promise<R
     .limit(1)
     .then((rows) => rows[0] ?? null);
   if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
-  if (sheet.sourceSystem.toLowerCase() !== "tsewa" || sheet.status !== "draft")
+  if (!isTsewaSource(sheet.sourceSystem) || sheet.status !== "draft")
     return Response.json({ error: "Only Tsewa draft mark sheets can be edited." }, { status: 409 });
   const data = parsed.data;
   if (
@@ -8401,7 +8472,7 @@ async function changeMarkSheetStatus(request: Request, markSheetId: string): Pro
     .limit(1)
     .then((rows) => rows[0] ?? null);
   if (!sheet) return Response.json({ error: "Mark sheet not found." }, { status: 404 });
-  if (sheet.sourceSystem.toLowerCase() !== "tsewa") {
+  if (!isTsewaSource(sheet.sourceSystem)) {
     return Response.json(
       { error: "Imported mark sheets are preserved as read-only history." },
       { status: 409 },
@@ -9068,6 +9139,9 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       admittedOrJoinedOn: person.admittedOrJoinedOn,
       campusOrLocation: person.campusOrLocation,
       nationality: person.nationality,
+      educationNumber: person.educationNumber,
+      registrationCertificateNumber: person.registrationCertificateNumber,
+      identityCertificateNumber: person.identityCertificateNumber,
       photoReferencePresent: sql<number>`case when ${person.photoAssetKey} is null then 0 else 1 end`,
       sourceSystem: person.sourceSystem,
       sourceTable: person.sourceTable,
@@ -9299,6 +9373,9 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       admittedOrJoinedOn: personRecord.admittedOrJoinedOn,
       campusOrLocation: personRecord.campusOrLocation,
       nationality: personRecord.nationality,
+      educationNumber: personRecord.educationNumber,
+      registrationCertificateNumber: personRecord.registrationCertificateNumber,
+      identityCertificateNumber: personRecord.identityCertificateNumber,
       photoReferencePresent: Boolean(personRecord.photoReferencePresent),
       sourceSystem: personRecord.sourceSystem,
       sourceTable: personRecord.sourceTable,
@@ -9380,6 +9457,9 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     admittedOrJoinedOn: person.admittedOrJoinedOn,
     campusOrLocation: person.campusOrLocation,
     nationality: person.nationality,
+    educationNumber: person.educationNumber,
+    registrationCertificateNumber: person.registrationCertificateNumber,
+    identityCertificateNumber: person.identityCertificateNumber,
     sourceSystem: person.sourceSystem,
   })
     .from(person)
@@ -9415,6 +9495,17 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
       ["admittedOrJoinedOn", current.admittedOrJoinedOn, next.admittedOrJoinedOn],
       ["campusOrLocation", current.campusOrLocation, next.campusOrLocation],
       ["nationality", current.nationality, next.nationality],
+      ["educationNumber", current.educationNumber, next.educationNumber],
+      [
+        "registrationCertificateNumber",
+        current.registrationCertificateNumber,
+        next.registrationCertificateNumber,
+      ],
+      [
+        "identityCertificateNumber",
+        current.identityCertificateNumber,
+        next.identityCertificateNumber,
+      ],
     ] as const
   )
     .filter(([, before, after]) => before !== after)
@@ -9435,6 +9526,9 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
           admittedOrJoinedOn: next.admittedOrJoinedOn,
           campusOrLocation: next.campusOrLocation,
           nationality: next.nationality,
+          educationNumber: next.educationNumber,
+          registrationCertificateNumber: next.registrationCertificateNumber,
+          identityCertificateNumber: next.identityCertificateNumber,
           updatedByUserId: context.userId,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
@@ -11647,6 +11741,172 @@ async function acceptInvitation(
   ]);
 }
 
+async function getStaffDirectory(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "staff.read")) return forbidden();
+
+  const url = new URL(request.url);
+  const parsed = staffQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid staff filters." }, { status: 400 });
+  }
+
+  const result = await findStaffDirectory(getRuntimeEnv().ORM, context.organizationId, parsed.data);
+  return Response.json({
+    ...result,
+    capabilities: { manage: hasPermission(context, "staff.manage") },
+  });
+}
+
+async function updateStaffProfile(request: Request, personId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "staff.manage")) return forbidden();
+
+  const parsed = staffProfileSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Review the employment and contact details and try again." },
+      { status: 400 },
+    );
+  }
+
+  const database = getRuntimeEnv().ORM;
+  const existing = await database
+    .select({ id: staffProfile.id })
+    .from(staffProfile)
+    .innerJoin(person, eq(person.id, staffProfile.personId))
+    .where(
+      and(
+        eq(staffProfile.personId, personId),
+        eq(staffProfile.organizationId, context.organizationId),
+        eq(person.organizationId, context.organizationId),
+        eq(person.kind, "staff"),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!existing) return Response.json({ error: "Staff profile not found." }, { status: 404 });
+
+  const [departments, designations, categories] = await database.batch([
+    database
+      .select({ id: staffDepartment.id })
+      .from(staffDepartment)
+      .where(
+        and(
+          eq(staffDepartment.organizationId, context.organizationId),
+          eq(staffDepartment.id, parsed.data.departmentId ?? ""),
+          eq(staffDepartment.isActive, 1),
+        ),
+      )
+      .limit(1),
+    database
+      .select({ id: staffDesignation.id, departmentId: staffDesignation.departmentId })
+      .from(staffDesignation)
+      .where(
+        and(
+          eq(staffDesignation.organizationId, context.organizationId),
+          eq(staffDesignation.id, parsed.data.designationId ?? ""),
+          eq(staffDesignation.isActive, 1),
+        ),
+      )
+      .limit(1),
+    database
+      .select({ id: staffCategory.id })
+      .from(staffCategory)
+      .where(
+        and(
+          eq(staffCategory.organizationId, context.organizationId),
+          eq(staffCategory.id, parsed.data.categoryId ?? ""),
+          eq(staffCategory.isActive, 1),
+        ),
+      )
+      .limit(1),
+  ]);
+
+  if (parsed.data.departmentId && !departments[0]) {
+    return Response.json({ error: "Select a valid department." }, { status: 400 });
+  }
+  if (parsed.data.designationId && !designations[0]) {
+    return Response.json({ error: "Select a valid designation." }, { status: 400 });
+  }
+  if (parsed.data.categoryId && !categories[0]) {
+    return Response.json({ error: "Select a valid staff category." }, { status: 400 });
+  }
+  if (
+    parsed.data.departmentId &&
+    designations[0]?.departmentId &&
+    designations[0].departmentId !== parsed.data.departmentId
+  ) {
+    return Response.json(
+      { error: "The designation does not belong to the selected department." },
+      { status: 400 },
+    );
+  }
+
+  const value = parsed.data;
+  await database.batch([
+    database
+      .update(person)
+      .set({
+        status: value.status,
+        admittedOrJoinedOn: value.joinedOn,
+        campusOrLocation: value.location,
+        registrationCertificateNumber: value.registrationCertificateNumber,
+        identityCertificateNumber: value.identityCardNumber,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(and(eq(person.id, personId), eq(person.organizationId, context.organizationId))),
+    database
+      .update(staffProfile)
+      .set({
+        departmentId: value.departmentId,
+        designationId: value.designationId,
+        categoryId: value.categoryId,
+        permanentOn: value.permanentOn,
+        phone: value.phone,
+        email: value.email,
+        address: value.address,
+        maritalStatus: value.maritalStatus,
+        spouseName: value.spouseName,
+        settlementName: value.settlementName,
+        allocatedPlace: value.allocatedPlace,
+        registrationCertificateNumber: value.registrationCertificateNumber,
+        panNumber: value.panNumber,
+        quarterNumber: value.quarterNumber,
+        nominee: value.nominee,
+        birthPlace: value.birthPlace,
+        city: value.city,
+        region: value.region,
+        country: value.country,
+        identityCardNumber: value.identityCardNumber,
+        greenBookNumber: value.greenBookNumber,
+        remarks: value.remarks,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(staffProfile.personId, personId),
+          eq(staffProfile.organizationId, context.organizationId),
+        ),
+      ),
+    auditInsert(database, context, "staff.profile_updated", "staff_profile", existing.id, {
+      personId,
+      status: value.status,
+      departmentId: value.departmentId,
+      designationId: value.designationId,
+    }),
+  ]);
+
+  return Response.json({ ok: true });
+}
+
 function auditInsert(
   database: Database,
   context: MembershipContext,
@@ -11692,6 +11952,10 @@ function isValidTimezone(timezone: string | undefined): boolean {
 
 function escapeLikePattern(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
+function isTsewaSource(value: string | null | undefined): boolean {
+  return value?.toLowerCase() === "tsewa";
 }
 
 function hasPermission(context: MembershipContext, permission: PermissionKey): boolean {

@@ -18,12 +18,14 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ScholarshipsRouteImport } from './routes/scholarships'
 import { Route as SchoolRouteImport } from './routes/school'
 import { Route as SponsorshipsRouteImport } from './routes/sponsorships'
+import { Route as StaffRouteImport } from './routes/staff'
 import { Route as ApiDashboardRouteImport } from './routes/api.dashboard'
 import { Route as ApiOrganizationRouteImport } from './routes/api.organization'
 import { Route as ApiPeopleRouteImport } from './routes/api.people'
 import { Route as ApiPlatformRouteImport } from './routes/api.platform'
 import { Route as ApiScholarshipsRouteImport } from './routes/api.scholarships'
 import { Route as ApiSponsorshipRouteImport } from './routes/api.sponsorship'
+import { Route as ApiStaffRouteImport } from './routes/api.staff'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as SettingsTabRouteImport } from './routes/settings.$tab'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
@@ -56,6 +58,7 @@ import { Route as ApiSchoolOperationsStudentReportRouteImport } from './routes/a
 import { Route as ApiSchoolOperationsStudentsRouteImport } from './routes/api.school-operations.students'
 import { Route as ApiSponsorshipReportsRouteImport } from './routes/api.sponsorship.reports'
 import { Route as ApiSponsorshipSetupRouteImport } from './routes/api.sponsorship.setup'
+import { Route as ApiStaffPersonIdRouteImport } from './routes/api.staff.$personId'
 import { Route as ApiOrganizationGroupsGroupKeyRouteImport } from './routes/api.organization.groups.$groupKey'
 import { Route as ApiOrganizationInvitationsInvitationIdRouteImport } from './routes/api.organization.invitations.$invitationId'
 import { Route as ApiOrganizationMembersMemberIdRouteImport } from './routes/api.organization.members.$memberId'
@@ -126,6 +129,11 @@ const SponsorshipsRoute = SponsorshipsRouteImport.update({
   path: '/sponsorships',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffRoute = StaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDashboardRoute = ApiDashboardRouteImport.update({
   id: '/api/dashboard',
   path: '/api/dashboard',
@@ -154,6 +162,11 @@ const ApiScholarshipsRoute = ApiScholarshipsRouteImport.update({
 const ApiSponsorshipRoute = ApiSponsorshipRouteImport.update({
   id: '/api/sponsorship',
   path: '/api/sponsorship',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStaffRoute = ApiStaffRouteImport.update({
+  id: '/api/staff',
+  path: '/api/staff',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -330,6 +343,11 @@ const ApiSponsorshipSetupRoute = ApiSponsorshipSetupRouteImport.update({
   path: '/setup',
   getParentRoute: () => ApiSponsorshipRoute,
 } as any)
+const ApiStaffPersonIdRoute = ApiStaffPersonIdRouteImport.update({
+  id: '/$personId',
+  path: '/$personId',
+  getParentRoute: () => ApiStaffRoute,
+} as any)
 const ApiOrganizationGroupsGroupKeyRoute =
   ApiOrganizationGroupsGroupKeyRouteImport.update({
     id: '/groups/$groupKey',
@@ -483,12 +501,14 @@ export interface FileRoutesByFullPath {
   '/scholarships': typeof ScholarshipsRoute
   '/school': typeof SchoolRoute
   '/sponsorships': typeof SponsorshipsRoute
+  '/staff': typeof StaffRoute
   '/api/dashboard': typeof ApiDashboardRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
   '/api/scholarships': typeof ApiScholarshipsRouteWithChildren
   '/api/sponsorship': typeof ApiSponsorshipRouteWithChildren
+  '/api/staff': typeof ApiStaffRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/settings/$tab': typeof SettingsTabRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -521,6 +541,7 @@ export interface FileRoutesByFullPath {
   '/api/school-operations/students': typeof ApiSchoolOperationsStudentsRoute
   '/api/sponsorship/reports': typeof ApiSponsorshipReportsRoute
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
+  '/api/staff/$personId': typeof ApiStaffPersonIdRoute
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
@@ -556,12 +577,14 @@ export interface FileRoutesByTo {
   '/scholarships': typeof ScholarshipsRoute
   '/school': typeof SchoolRoute
   '/sponsorships': typeof SponsorshipsRoute
+  '/staff': typeof StaffRoute
   '/api/dashboard': typeof ApiDashboardRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
   '/api/scholarships': typeof ApiScholarshipsRouteWithChildren
   '/api/sponsorship': typeof ApiSponsorshipRouteWithChildren
+  '/api/staff': typeof ApiStaffRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/settings/$tab': typeof SettingsTabRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -594,6 +617,7 @@ export interface FileRoutesByTo {
   '/api/school-operations/students': typeof ApiSchoolOperationsStudentsRoute
   '/api/sponsorship/reports': typeof ApiSponsorshipReportsRoute
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
+  '/api/staff/$personId': typeof ApiStaffPersonIdRoute
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
@@ -630,12 +654,14 @@ export interface FileRoutesById {
   '/scholarships': typeof ScholarshipsRoute
   '/school': typeof SchoolRoute
   '/sponsorships': typeof SponsorshipsRoute
+  '/staff': typeof StaffRoute
   '/api/dashboard': typeof ApiDashboardRoute
   '/api/organization': typeof ApiOrganizationRouteWithChildren
   '/api/people': typeof ApiPeopleRouteWithChildren
   '/api/platform': typeof ApiPlatformRoute
   '/api/scholarships': typeof ApiScholarshipsRouteWithChildren
   '/api/sponsorship': typeof ApiSponsorshipRouteWithChildren
+  '/api/staff': typeof ApiStaffRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/settings/$tab': typeof SettingsTabRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -668,6 +694,7 @@ export interface FileRoutesById {
   '/api/school-operations/students': typeof ApiSchoolOperationsStudentsRoute
   '/api/sponsorship/reports': typeof ApiSponsorshipReportsRoute
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
+  '/api/staff/$personId': typeof ApiStaffPersonIdRoute
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
@@ -705,12 +732,14 @@ export interface FileRouteTypes {
     | '/scholarships'
     | '/school'
     | '/sponsorships'
+    | '/staff'
     | '/api/dashboard'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
     | '/api/scholarships'
     | '/api/sponsorship'
+    | '/api/staff'
     | '/invite/$token'
     | '/settings/$tab'
     | '/api/auth/$'
@@ -743,6 +772,7 @@ export interface FileRouteTypes {
     | '/api/school-operations/students'
     | '/api/sponsorship/reports'
     | '/api/sponsorship/setup'
+    | '/api/staff/$personId'
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
@@ -778,12 +808,14 @@ export interface FileRouteTypes {
     | '/scholarships'
     | '/school'
     | '/sponsorships'
+    | '/staff'
     | '/api/dashboard'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
     | '/api/scholarships'
     | '/api/sponsorship'
+    | '/api/staff'
     | '/invite/$token'
     | '/settings/$tab'
     | '/api/auth/$'
@@ -816,6 +848,7 @@ export interface FileRouteTypes {
     | '/api/school-operations/students'
     | '/api/sponsorship/reports'
     | '/api/sponsorship/setup'
+    | '/api/staff/$personId'
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
@@ -851,12 +884,14 @@ export interface FileRouteTypes {
     | '/scholarships'
     | '/school'
     | '/sponsorships'
+    | '/staff'
     | '/api/dashboard'
     | '/api/organization'
     | '/api/people'
     | '/api/platform'
     | '/api/scholarships'
     | '/api/sponsorship'
+    | '/api/staff'
     | '/invite/$token'
     | '/settings/$tab'
     | '/api/auth/$'
@@ -889,6 +924,7 @@ export interface FileRouteTypes {
     | '/api/school-operations/students'
     | '/api/sponsorship/reports'
     | '/api/sponsorship/setup'
+    | '/api/staff/$personId'
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
@@ -925,12 +961,14 @@ export interface RootRouteChildren {
   ScholarshipsRoute: typeof ScholarshipsRoute
   SchoolRoute: typeof SchoolRoute
   SponsorshipsRoute: typeof SponsorshipsRoute
+  StaffRoute: typeof StaffRoute
   ApiDashboardRoute: typeof ApiDashboardRoute
   ApiOrganizationRoute: typeof ApiOrganizationRouteWithChildren
   ApiPeopleRoute: typeof ApiPeopleRouteWithChildren
   ApiPlatformRoute: typeof ApiPlatformRoute
   ApiScholarshipsRoute: typeof ApiScholarshipsRouteWithChildren
   ApiSponsorshipRoute: typeof ApiSponsorshipRouteWithChildren
+  ApiStaffRoute: typeof ApiStaffRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
   SettingsTabRoute: typeof SettingsTabRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -1020,6 +1058,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorshipsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff': {
+      id: '/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof StaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/dashboard': {
       id: '/api/dashboard'
       path: '/api/dashboard'
@@ -1060,6 +1105,13 @@ declare module '@tanstack/react-router' {
       path: '/api/sponsorship'
       fullPath: '/api/sponsorship'
       preLoaderRoute: typeof ApiSponsorshipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/staff': {
+      id: '/api/staff'
+      path: '/api/staff'
+      fullPath: '/api/staff'
+      preLoaderRoute: typeof ApiStaffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
@@ -1285,6 +1337,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/sponsorship/setup'
       preLoaderRoute: typeof ApiSponsorshipSetupRouteImport
       parentRoute: typeof ApiSponsorshipRoute
+    }
+    '/api/staff/$personId': {
+      id: '/api/staff/$personId'
+      path: '/$personId'
+      fullPath: '/api/staff/$personId'
+      preLoaderRoute: typeof ApiStaffPersonIdRouteImport
+      parentRoute: typeof ApiStaffRoute
     }
     '/api/organization/groups/$groupKey': {
       id: '/api/organization/groups/$groupKey'
@@ -1616,6 +1675,18 @@ const ApiSponsorshipRouteWithChildren = ApiSponsorshipRoute._addFileChildren(
   ApiSponsorshipRouteChildren,
 )
 
+interface ApiStaffRouteChildren {
+  ApiStaffPersonIdRoute: typeof ApiStaffPersonIdRoute
+}
+
+const ApiStaffRouteChildren: ApiStaffRouteChildren = {
+  ApiStaffPersonIdRoute: ApiStaffPersonIdRoute,
+}
+
+const ApiStaffRouteWithChildren = ApiStaffRoute._addFileChildren(
+  ApiStaffRouteChildren,
+)
+
 interface ApiSchoolOperationsClassesRouteChildren {
   ApiSchoolOperationsClassesClassIdRoute: typeof ApiSchoolOperationsClassesClassIdRoute
 }
@@ -1742,12 +1813,14 @@ const rootRouteChildren: RootRouteChildren = {
   ScholarshipsRoute: ScholarshipsRoute,
   SchoolRoute: SchoolRoute,
   SponsorshipsRoute: SponsorshipsRoute,
+  StaffRoute: StaffRoute,
   ApiDashboardRoute: ApiDashboardRoute,
   ApiOrganizationRoute: ApiOrganizationRouteWithChildren,
   ApiPeopleRoute: ApiPeopleRouteWithChildren,
   ApiPlatformRoute: ApiPlatformRoute,
   ApiScholarshipsRoute: ApiScholarshipsRouteWithChildren,
   ApiSponsorshipRoute: ApiSponsorshipRouteWithChildren,
+  ApiStaffRoute: ApiStaffRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
   SettingsTabRoute: SettingsTabRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

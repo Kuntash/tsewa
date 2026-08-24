@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Award,
   Building2,
+  BriefcaseBusiness,
   CalendarDays,
   Check,
   Copy,
@@ -40,6 +41,8 @@ import { ScholarshipOperations } from "@/components/scholarship-operations";
 import type { ScholarshipFilters } from "@/components/scholarship-operations";
 import { SponsorshipOperations } from "@/components/sponsorship-operations";
 import type { SponsorshipFilters } from "@/components/sponsorship-operations";
+import { StaffOperations } from "@/components/staff-operations";
+import type { StaffFilters } from "@/components/staff-operations";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -163,6 +166,7 @@ export type AppView =
   | "health"
   | "scholarship"
   | "sponsorship"
+  | "staff"
   | "reports"
   | "settings";
 export type SettingsTab = "general" | "sessions" | "members" | "roles" | "security" | "audit";
@@ -178,6 +182,7 @@ export type RoutedAppSearch = {
   course?: string;
   outcome?: string;
   settlement?: string;
+  department?: string;
   domain?: string;
   report?: string;
   session?: string;
@@ -228,6 +233,7 @@ const appViews = new Set<AppView>([
   "health",
   "scholarship",
   "sponsorship",
+  "staff",
   "reports",
   "settings",
 ]);
@@ -517,6 +523,7 @@ function legacyViewPath(view?: AppView) {
   if (view === "health") return "/health" as const;
   if (view === "scholarship") return "/scholarships" as const;
   if (view === "sponsorship") return "/sponsorships" as const;
+  if (view === "staff") return "/staff" as const;
   if (view === "reports") return "/reports" as const;
   return "/dashboard" as const;
 }
@@ -914,6 +921,13 @@ function Launchpad({
       open: true,
     },
     {
+      Icon: BriefcaseBusiness,
+      title: "Staff",
+      description: "Employment, departments, designations, and contacts",
+      view: "staff" as const,
+      open: true,
+    },
+    {
       Icon: FileText,
       title: "Reports and documents",
       description: "Preview and export operational reports",
@@ -960,6 +974,16 @@ function Launchpad({
         filters={search as SponsorshipFilters}
         onBack={() => openView("dashboard")}
         onFiltersChange={onSearchChange as ((filters: SponsorshipFilters) => void) | undefined}
+      />
+    );
+  }
+
+  if (view === "staff") {
+    return (
+      <StaffOperations
+        filters={search as StaffFilters}
+        onBack={() => openView("dashboard")}
+        onFiltersChange={onSearchChange as ((filters: StaffFilters) => void) | undefined}
       />
     );
   }

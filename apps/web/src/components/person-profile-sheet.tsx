@@ -85,6 +85,9 @@ type Profile = {
   admittedOrJoinedOn: string | null;
   campusOrLocation: string | null;
   nationality: string | null;
+  educationNumber: string | null;
+  registrationCertificateNumber: string | null;
+  identityCertificateNumber: string | null;
   photoReferencePresent: boolean;
   sourceSystem: string;
   sourceTable: string;
@@ -313,6 +316,13 @@ function ProfileContent({
   const currentPlacement = profile.placements.find((placement) => placement.isCurrent);
   const latestAcademicRecord = profile.academicRecords.find((record) => record.isLatest);
   const latestSchoolEnrollment = profile.schoolEnrollments[0];
+  const legacyAcademicRecords = profile.academicRecords.filter(
+    (record) =>
+      !profile.schoolEnrollments.some((enrollment) =>
+        academicRecordMatchesEnrollment(record, enrollment),
+      ),
+  );
+  const schoolHistoryCount = profile.schoolEnrollments.length + legacyAcademicRecords.length;
   const profilePhoto = profile.files.find((file) => file.category === "profile_photo");
 
   return (
@@ -387,14 +397,17 @@ function ProfileContent({
             </section>
           ) : null}
 
-          <ProfileSection icon={UserRound} label="Identity">
-            {profile.canEdit ? (
-              <div className="mb-4 flex justify-end">
+          <ProfileSection
+            action={
+              profile.canEdit ? (
                 <Button onClick={onEdit} size="sm" variant="outline">
                   <Pencil /> Edit personal details
                 </Button>
-              </div>
-            ) : null}
+              ) : null
+            }
+            icon={UserRound}
+            label="Identity"
+          >
             <div className="grid gap-x-7 gap-y-5 sm:grid-cols-2">
               <ProfileField label="Full name" value={profile.displayName} />
               <ProfileField
@@ -406,6 +419,19 @@ function ProfileContent({
               <ProfileField label="Gender" value={capitalize(profile.gender ?? "unknown")} />
               <ProfileField label="Status" value={capitalize(profile.status)} />
               <ProfileField label="Nationality" value={profile.nationality} />
+              {profile.kind !== "staff" ? (
+                <ProfileField label="Education number" mono value={profile.educationNumber} />
+              ) : null}
+              <ProfileField
+                label="Registration certificate number (RC)"
+                mono
+                value={profile.registrationCertificateNumber}
+              />
+              <ProfileField
+                label="Identity certificate number (IC)"
+                mono
+                value={profile.identityCertificateNumber}
+              />
             </div>
           </ProfileSection>
 
@@ -428,14 +454,17 @@ function ProfileContent({
 
           <Separator />
 
-          <ProfileSection icon={MapPin} label="Placement">
-            {profile.canEdit && profile.kind !== "staff" ? (
-              <div className="mb-4 flex justify-end">
+          <ProfileSection
+            action={
+              profile.canEdit && profile.kind !== "staff" ? (
                 <Button onClick={onEditPlacement} size="sm" variant="outline">
                   <Pencil /> {currentPlacement ? "Change placement" : "Add placement"}
                 </Button>
-              </div>
-            ) : null}
+              ) : null
+            }
+            icon={MapPin}
+            label="Placement"
+          >
             {currentPlacement ? (
               <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
                 <div className="flex items-start gap-3.5">
@@ -616,7 +645,7 @@ function ProfileContent({
               </p>
             )}
 
-            {profile.schoolEnrollments.length ? (
+            {schoolHistoryCount ? (
               <div className="mt-7">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -624,7 +653,7 @@ function ProfileContent({
                     <h4 className="text-sm font-semibold">School history</h4>
                   </div>
                   <Badge className="rounded-full tabular-nums" variant="outline">
-                    {profile.schoolEnrollments.length}
+                    {schoolHistoryCount}
                   </Badge>
                 </div>
                 <ol className="relative ml-2 border-l border-border pl-5">
@@ -682,27 +711,7 @@ function ProfileContent({
                       ) : null}
                     </li>
                   ))}
-                </ol>
-              </div>
-            ) : null}
-
-            {profile.academicRecords.length ? (
-              <div className="mt-7">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <History className="size-4 text-muted-foreground" />
-                    <h4 className="text-sm font-semibold">
-                      {profile.schoolEnrollments.length
-                        ? "Earlier school records"
-                        : "School history"}
-                    </h4>
-                  </div>
-                  <Badge className="rounded-full tabular-nums" variant="outline">
-                    {profile.academicRecords.length}
-                  </Badge>
-                </div>
-                <ol className="relative ml-2 border-l border-border pl-5">
-                  {profile.academicRecords.map((record) => (
+                  {legacyAcademicRecords.map((record) => (
                     <li className="relative pb-6 last:pb-0" key={record.id}>
                       <span
                         className={`absolute -left-[1.59rem] top-1.5 size-2.5 rounded-full border-2 border-background ${
@@ -1029,6 +1038,13 @@ function PersonCoreDetailsForm({
   );
   const [campusOrLocation, setCampusOrLocation] = useState(profile.campusOrLocation ?? "");
   const [nationality, setNationality] = useState(profile.nationality ?? "");
+  const [educationNumber, setEducationNumber] = useState(profile.educationNumber ?? "");
+  const [registrationCertificateNumber, setRegistrationCertificateNumber] = useState(
+    profile.registrationCertificateNumber ?? "",
+  );
+  const [identityCertificateNumber, setIdentityCertificateNumber] = useState(
+    profile.identityCertificateNumber ?? "",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
@@ -1050,6 +1066,9 @@ function PersonCoreDetailsForm({
           admittedOrJoinedOn: admittedOrJoinedOn || null,
           campusOrLocation: campusOrLocation || null,
           nationality: nationality || null,
+          educationNumber: educationNumber || null,
+          registrationCertificateNumber: registrationCertificateNumber || null,
+          identityCertificateNumber: identityCertificateNumber || null,
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -1131,6 +1150,41 @@ function PersonCoreDetailsForm({
                     <SelectItem value="unknown">Not recorded</SelectItem>
                   </SelectContent>
                 </Select>
+              </FormField>
+              {profile.kind !== "staff" ? (
+                <FormField htmlFor="person-education-number" label="Education number">
+                  <Input
+                    className="font-mono"
+                    id="person-education-number"
+                    maxLength={100}
+                    onChange={(event) => setEducationNumber(event.target.value)}
+                    value={educationNumber}
+                  />
+                </FormField>
+              ) : null}
+              <FormField
+                htmlFor="person-registration-certificate-number"
+                label="Registration certificate number (RC)"
+              >
+                <Input
+                  className="font-mono"
+                  id="person-registration-certificate-number"
+                  maxLength={100}
+                  onChange={(event) => setRegistrationCertificateNumber(event.target.value)}
+                  value={registrationCertificateNumber}
+                />
+              </FormField>
+              <FormField
+                htmlFor="person-identity-certificate-number"
+                label="Identity certificate number (IC)"
+              >
+                <Input
+                  className="font-mono"
+                  id="person-identity-certificate-number"
+                  maxLength={100}
+                  onChange={(event) => setIdentityCertificateNumber(event.target.value)}
+                  value={identityCertificateNumber}
+                />
               </FormField>
             </div>
           </fieldset>
@@ -1228,14 +1282,17 @@ function PersonFilesSection({ onEdit, profile }: { onEdit: () => void; profile: 
   const documents = profile.files.filter((file) => file.category === "document");
 
   return (
-    <ProfileSection icon={FileText} label="Media & documents">
-      {profile.canEdit ? (
-        <div className="mb-4 flex justify-end">
+    <ProfileSection
+      action={
+        profile.canEdit ? (
           <Button onClick={onEdit} size="sm" variant="outline">
             <Pencil /> Manage files
           </Button>
-        </div>
-      ) : null}
+        ) : null
+      }
+      icon={FileText}
+      label="Media & documents"
+    >
       {!profile.files.length ? (
         <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
           No photos or documents are available.
@@ -1329,12 +1386,14 @@ function PersonFilesEditor({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [savedMessage, setSavedMessage] = useState("");
 
   async function addFile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return setError("Choose a file to upload.");
     setSaving(true);
     setError("");
+    setSavedMessage("");
     try {
       const form = new FormData();
       form.set("category", category);
@@ -1345,6 +1404,7 @@ function PersonFilesEditor({
       setFile(null);
       (event.currentTarget.elements.namedItem("file") as HTMLInputElement).value = "";
       await onChanged();
+      setSavedMessage("The file was uploaded and saved.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The file could not be uploaded.");
     } finally {
@@ -1368,6 +1428,11 @@ function PersonFilesEditor({
         {error ? (
           <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
+          </p>
+        ) : null}
+        {savedMessage ? (
+          <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
+            {savedMessage}
           </p>
         ) : null}
 
@@ -1471,14 +1536,23 @@ function PersonFileEditorRow({
   const [replacement, setReplacement] = useState<File | null>(null);
   const [busy, setBusy] = useState<"name" | "replace" | "remove" | null>(null);
   const [error, setError] = useState("");
+  const [savedMessage, setSavedMessage] = useState("");
   const endpoint = `/api/people/${personId}/files/${file.id}`;
 
   async function run(action: typeof busy, work: () => Promise<void>) {
     setBusy(action);
     setError("");
+    setSavedMessage("");
     try {
       await work();
       await onChanged();
+      setSavedMessage(
+        action === "name"
+          ? "The file name was saved."
+          : action === "replace"
+            ? "The replacement file was saved."
+            : "The file was removed.",
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The change could not be saved.");
     } finally {
@@ -1593,6 +1667,9 @@ function PersonFileEditorRow({
         </div>
       </div>
       {error ? <p className="mt-3 text-xs text-destructive">{error}</p> : null}
+      {savedMessage ? (
+        <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-300">{savedMessage}</p>
+      ) : null}
     </article>
   );
 }
@@ -1937,6 +2014,40 @@ function formatDate(value: string): string {
     month: "long",
     year: "numeric",
   }).format(date);
+}
+
+function academicRecordMatchesEnrollment(
+  record: Profile["academicRecords"][number],
+  enrollment: Profile["schoolEnrollments"][number],
+): boolean {
+  if (
+    normalizeHistoryValue(record.academicSession) !==
+    normalizeHistoryValue(enrollment.academicSession)
+  ) {
+    return false;
+  }
+  const enrollmentClass = normalizeHistoryValue(enrollment.className);
+  const recordClasses = new Set(
+    [
+      record.className,
+      record.classTitle,
+      [record.className, record.classSection].filter(Boolean).join(" "),
+      [record.classTitle, record.classSection].filter(Boolean).join(" "),
+    ]
+      .filter((value): value is string => Boolean(value))
+      .map(normalizeHistoryValue),
+  );
+  if (!recordClasses.has(enrollmentClass)) return false;
+  const recordSchool = normalizeHistoryValue(record.schoolName ?? "");
+  const enrollmentSchool = normalizeHistoryValue(enrollment.schoolName ?? "");
+  return !recordSchool || !enrollmentSchool || recordSchool === enrollmentSchool;
+}
+
+function normalizeHistoryValue(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "");
 }
 
 function enrollmentStatusLabel(status: Profile["schoolEnrollments"][number]["status"]): string {

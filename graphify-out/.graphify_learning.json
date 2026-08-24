@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-11T13:15:42.133224+00:00",
+  "generated_at": "2026-08-21T12:24:48.542422+00:00",
   "nodes": {
     "apps_web_migrations_0001_platform_foundation_academic_session": {
       "code_fingerprint": "fbd2a72a172df42b0048741a334f17f021364e90fd7ff719d0b740f92da35a56",
@@ -17,42 +17,10 @@
           "q": "okay, why only 2011 and 2012 data? anyways, lets continue and do that."
         }
       ],
-      "score": 1.97916848,
+      "score": 1.572150333,
       "source_file": "apps/web/migrations/0001_platform_foundation.sql",
       "status": "preferred",
       "uses": 2
-    },
-    "apps_web_migrations_0001_platform_foundation_organization": {
-      "code_fingerprint": "fbd2a72a172df42b0048741a334f17f021364e90fd7ff719d0b740f92da35a56",
-      "label": "organization",
-      "last": "2026-08-11T12:13:41.165805+00:00",
-      "provenance": [
-        {
-          "date": "2026-08-11T12:13:41.165805+00:00",
-          "outcome": "useful",
-          "q": "great, continue with the next parity slice?"
-        }
-      ],
-      "score": 0.999005442,
-      "source_file": "apps/web/migrations/0001_platform_foundation.sql",
-      "status": "tentative",
-      "uses": 1
-    },
-    "apps_web_migrations_0003_people_registry_person": {
-      "code_fingerprint": "babb25a09ef819f61f357020f37af6a3df9a42d8227a8beaa1f56f427eab75b6",
-      "label": "person",
-      "last": "2026-08-10T21:40:45.944752+00:00",
-      "provenance": [
-        {
-          "date": "2026-08-10T21:40:45.944752+00:00",
-          "outcome": "useful",
-          "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
-        }
-      ],
-      "score": 0.985110832,
-      "source_file": "apps/web/migrations/0003_people_registry.sql",
-      "status": "tentative",
-      "uses": 1
     },
     "apps_web_migrations_0006_person_academic_history_person_academic_record": {
       "code_fingerprint": "8aab8ac7fcf0cd1f596dc60508ffd031462024226c935321a7ec6a8d1ff8d22c",
@@ -80,7 +48,7 @@
           "q": "So how does a session work? Like if I select 2026, will it show only students that registered this year or all active students of that year?"
         }
       ],
-      "score": 3.942243392,
+      "score": 3.131516759,
       "source_file": "apps/web/migrations/0006_person_academic_history.sql",
       "status": "preferred",
       "uses": 4
@@ -106,7 +74,7 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 2.971049729,
+      "score": 2.360050127,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "preferred",
       "uses": 3
@@ -122,7 +90,7 @@
           "q": "continue"
         }
       ],
-      "score": 0.999186467,
+      "score": 0.793702685,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -138,7 +106,7 @@
           "q": "continue"
         }
       ],
-      "score": 0.999465213,
+      "score": 0.793924107,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -154,7 +122,7 @@
           "q": "great, continue with the next parity slice?"
         }
       ],
-      "score": 0.999005442,
+      "score": 0.793558888,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -170,7 +138,7 @@
           "q": "Okay whats next?"
         }
       ],
-      "score": 0.985138895,
+      "score": 0.782544012,
       "source_file": "apps/web/migrations/0009_school_operations_foundation.sql",
       "status": "tentative",
       "uses": 1
@@ -186,7 +154,7 @@
           "q": "continue"
         }
       ],
-      "score": 0.999465213,
+      "score": 0.793924107,
       "source_file": "apps/web/migrations/0010_student_enrollment_rosters.sql",
       "status": "tentative",
       "uses": 1
@@ -222,13 +190,66 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 5.923025406,
+      "score": 4.704948802,
       "source_file": "apps/web/migrations/0010_student_enrollment_rosters.sql",
       "status": "preferred",
       "uses": 6
     },
+    "apps_web_src_components_account_settings": {
+      "code_fingerprint": "d2a7d0f8935abdb5d83fc164fd459c39b5f08d83e03ca609d3a10865b82557ef",
+      "label": "account-settings.tsx",
+      "last": "2026-08-21T10:40:56.384636+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T10:40:56.384636+00:00",
+          "outcome": "useful",
+          "q": "whats next"
+        },
+        {
+          "date": "2026-08-21T10:31:12.506933+00:00",
+          "outcome": "useful",
+          "q": "continue to next"
+        }
+      ],
+      "score": 1.996513728,
+      "source_file": "apps/web/src/components/account-settings.tsx",
+      "status": "preferred",
+      "uses": 2
+    },
+    "apps_web_src_components_enrollment_change_sheet_enrollment": {
+      "code_fingerprint": "f6f1db4a7802e62c686e61e07f5243005564b414acd361b0877ca91890818070",
+      "label": "Enrollment",
+      "last": "2026-08-11T13:27:31.704103+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-11T13:27:31.704103+00:00",
+          "outcome": "useful",
+          "q": "What is the next feature slice after printable school reports?"
+        }
+      ],
+      "score": 0.794499658,
+      "source_file": "apps/web/src/components/enrollment-change-sheet.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_components_health_operations": {
+      "code_fingerprint": "40615268c014c4f319552d3b329e88b5d4ed8cf2c7616f2d13059264676cddd2",
+      "label": "health-operations.tsx",
+      "last": "2026-08-21T12:19:28.215016+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T12:19:28.215016+00:00",
+          "outcome": "useful",
+          "q": "what is next?"
+        }
+      ],
+      "score": 0.999914342,
+      "source_file": "apps/web/src/components/health-operations.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
     "apps_web_src_components_people_registry": {
-      "code_fingerprint": "198116e91c352a9f148719a1feabf2dd4d536fc9e66ce02c4754954d53b3360a",
+      "code_fingerprint": "8f66d56b5ae78712e1b4f406a6c1f3e72df7af9c944b613e3fadb71c069913a4",
       "label": "people-registry.tsx",
       "last": "2026-08-10T22:54:05.576586+00:00",
       "provenance": [
@@ -238,13 +259,13 @@
           "q": "can't we make the media transfer faster? like no need for doing it one by one is there? second in search, I believe there is no debounce therefore what happens is api keeps getting called but cancelled and aborted by tanstack probably, can we just debounce? also add in the TODO.md that we have to fix theming, making all search url first and derive from url safely."
         }
       ],
-      "score": 0.986270536,
+      "score": 0.78344293,
       "source_file": "apps/web/src/components/people-registry.tsx",
       "status": "tentative",
       "uses": 1
     },
     "apps_web_src_components_person_profile_sheet": {
-      "code_fingerprint": "d7ad03f187f06d3beab31ef54b8773e56c2de91e67740b64912bfb252dd3f460",
+      "code_fingerprint": "19564777d0abfdc7056695dfbad250cb9bb02b3ce0301f775de32de7738cb2cf",
       "label": "person-profile-sheet.tsx",
       "last": "2026-08-11T13:12:02.706793+00:00",
       "provenance": [
@@ -254,16 +275,37 @@
           "q": "whats next?"
         }
       ],
-      "score": 0.999941323,
+      "score": 0.794302305,
+      "source_file": "apps/web/src/components/person-profile-sheet.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_components_person_profile_sheet_profile": {
+      "code_fingerprint": "19564777d0abfdc7056695dfbad250cb9bb02b3ce0301f775de32de7738cb2cf",
+      "label": "Profile",
+      "last": "2026-08-11T13:27:31.704103+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-11T13:27:31.704103+00:00",
+          "outcome": "useful",
+          "q": "What is the next feature slice after printable school reports?"
+        }
+      ],
+      "score": 0.794499658,
       "source_file": "apps/web/src/components/person-profile-sheet.tsx",
       "status": "tentative",
       "uses": 1
     },
     "apps_web_src_components_school_operations": {
-      "code_fingerprint": "5bb7dc831b13e7514b911c21b47ab527f4a343e8cbcb9513305ee669611f7f2b",
+      "code_fingerprint": "7e4eddc2273d9cbccf4c105ec3a16b03b34aab17e835dd5d79ac7bf0c0f689d2",
       "label": "school-operations.tsx",
-      "last": "2026-08-11T13:00:39.547462+00:00",
+      "last": "2026-08-13T15:48:19.641737+00:00",
       "provenance": [
+        {
+          "date": "2026-08-13T15:48:19.641737+00:00",
+          "outcome": "useful",
+          "q": "whats the current status, and what should be the next slice that we should work on?"
+        },
         {
           "date": "2026-08-11T13:00:39.547462+00:00",
           "outcome": "useful",
@@ -283,20 +325,31 @@
           "date": "2026-08-11T12:13:41.165805+00:00",
           "outcome": "useful",
           "q": "great, continue with the next parity slice?"
-        },
-        {
-          "date": "2026-08-10T22:59:27.991445+00:00",
-          "outcome": "useful",
-          "q": "whats next slice? while the migration is ongoing?"
         }
       ],
-      "score": 6.95518079,
+      "score": 6.358797023,
       "source_file": "apps/web/src/components/school-operations.tsx",
       "status": "preferred",
-      "uses": 7
+      "uses": 8
+    },
+    "apps_web_src_components_school_operations_filterselect": {
+      "code_fingerprint": "7e4eddc2273d9cbccf4c105ec3a16b03b34aab17e835dd5d79ac7bf0c0f689d2",
+      "label": "FilterSelect()",
+      "last": "2026-08-21T10:40:56.384636+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T10:40:56.384636+00:00",
+          "outcome": "useful",
+          "q": "whats next"
+        }
+      ],
+      "score": 0.998334797,
+      "source_file": "apps/web/src/components/school-operations.tsx",
+      "status": "tentative",
+      "uses": 1
     },
     "apps_web_src_components_school_operations_rosterrow": {
-      "code_fingerprint": "5bb7dc831b13e7514b911c21b47ab527f4a343e8cbcb9513305ee669611f7f2b",
+      "code_fingerprint": "7e4eddc2273d9cbccf4c105ec3a16b03b34aab17e835dd5d79ac7bf0c0f689d2",
       "label": "RosterRow",
       "last": "2026-08-11T13:00:39.547462+00:00",
       "provenance": [
@@ -311,13 +364,13 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 1.985537425,
+      "score": 1.577209498,
       "source_file": "apps/web/src/components/school-operations.tsx",
       "status": "preferred",
       "uses": 2
     },
     "apps_web_src_components_school_operations_studentsresponse": {
-      "code_fingerprint": "5bb7dc831b13e7514b911c21b47ab527f4a343e8cbcb9513305ee669611f7f2b",
+      "code_fingerprint": "7e4eddc2273d9cbccf4c105ec3a16b03b34aab17e835dd5d79ac7bf0c0f689d2",
       "label": "StudentsResponse",
       "last": "2026-08-11T13:00:39.547462+00:00",
       "provenance": [
@@ -327,13 +380,240 @@
           "q": "continue, make sure the printable design aligns and looks professional."
         }
       ],
-      "score": 0.999758662,
+      "score": 0.794157208,
       "source_file": "apps/web/src/components/school-operations.tsx",
       "status": "tentative",
       "uses": 1
     },
-    "apps_web_src_server_schoolrostersqueryschema": {
-      "code_fingerprint": "48d045f1f98520786b60a85bded8742629bf549c0966c41c275cd398159bd588",
+    "apps_web_src_components_sponsorship_operations_sponsorshipreports": {
+      "code_fingerprint": "364439768cfb0fa8e2b9881de281e9cf73be86839b02c935fdf5cf5ddc561813",
+      "label": "SponsorshipReports()",
+      "last": "2026-08-21T10:40:56.384636+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T10:40:56.384636+00:00",
+          "outcome": "useful",
+          "q": "whats next"
+        }
+      ],
+      "score": 0.998334797,
+      "source_file": "apps/web/src/components/sponsorship-operations.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_components_student_report_sheet_studentreportsheet": {
+      "code_fingerprint": "32830240c0616d1ef27770d5c5903141d5024c9aa54f4dfe076ac6c03a59d6a2",
+      "label": "StudentReportSheet()",
+      "last": "2026-08-21T10:40:56.384636+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T10:40:56.384636+00:00",
+          "outcome": "useful",
+          "q": "whats next"
+        }
+      ],
+      "score": 0.998334797,
+      "source_file": "apps/web/src/components/student-report-sheet.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_db_client_database": {
+      "code_fingerprint": "a4210340f05d3161c0dc2fded82f23b904221bc6af1b99d0d2ed0fc82f59f6b0",
+      "label": "Database",
+      "last": "2026-08-21T11:28:38.715941+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T11:28:38.715941+00:00",
+          "outcome": "corrected",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        },
+        {
+          "date": "2026-08-21T11:12:12.947855+00:00",
+          "outcome": "useful",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        }
+      ],
+      "score": -0.00026334,
+      "source_file": "apps/web/src/db/client.ts",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "dead end"
+    },
+    "apps_web_src_lib_access_control": {
+      "code_fingerprint": "4b7f27be57cb7f1440b67e5a61a12d006988dfe13241189584ee4640d7fd5957",
+      "label": "access-control.ts",
+      "last": "2026-08-21T10:31:12.506933+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T10:31:12.506933+00:00",
+          "outcome": "useful",
+          "q": "continue to next"
+        }
+      ],
+      "score": 0.99817893,
+      "source_file": "apps/web/src/lib/access-control.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_lib_runtime_env": {
+      "code_fingerprint": "71d5a83913c9e2756398f6a0fb4ed4c4d424c468abfe8b8290fe1ab656f1d746",
+      "label": "runtime-env.ts",
+      "last": "2026-08-21T10:08:13.774038+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T10:08:13.774038+00:00",
+          "outcome": "useful",
+          "q": "continue until you are done with all drizzle migration"
+        }
+      ],
+      "score": 0.997810972,
+      "source_file": "apps/web/src/lib/runtime-env.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_lib_server_api_handlers": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "api-handlers.ts",
+      "last": "2026-08-21T11:28:38.715941+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T11:28:38.715941+00:00",
+          "outcome": "corrected",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        },
+        {
+          "date": "2026-08-21T11:12:12.947855+00:00",
+          "outcome": "useful",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        },
+        {
+          "date": "2026-08-21T10:40:56.384636+00:00",
+          "outcome": "useful",
+          "q": "whats next"
+        },
+        {
+          "date": "2026-08-21T10:08:13.774038+00:00",
+          "outcome": "useful",
+          "q": "continue until you are done with all drizzle migration"
+        },
+        {
+          "date": "2026-08-21T09:43:43.318566+00:00",
+          "outcome": "useful",
+          "q": "continue working on this"
+        }
+      ],
+      "score": 2.993301113,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "contested",
+      "uses": 4,
+      "verdict": "useful"
+    },
+    "apps_web_src_lib_server_api_handlers_getmembershipcontext": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "getMembershipContext()",
+      "last": "2026-08-21T11:28:38.715941+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T11:28:38.715941+00:00",
+          "outcome": "corrected",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        },
+        {
+          "date": "2026-08-21T11:12:12.947855+00:00",
+          "outcome": "useful",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        }
+      ],
+      "score": -0.00026334,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "dead end"
+    },
+    "apps_web_src_lib_server_api_handlers_getsponsorshiprecords": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "getSponsorshipRecords()",
+      "last": "2026-08-21T11:28:38.715941+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T11:28:38.715941+00:00",
+          "outcome": "corrected",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        },
+        {
+          "date": "2026-08-21T11:12:12.947855+00:00",
+          "outcome": "useful",
+          "q": "lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
+        }
+      ],
+      "score": -0.00026334,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "dead end"
+    },
+    "apps_web_src_lib_server_api_handlers_invitation": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "Invitation",
+      "last": "2026-08-21T12:19:28.215016+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T12:19:28.215016+00:00",
+          "outcome": "useful",
+          "q": "what is next?"
+        },
+        {
+          "date": "2026-08-21T11:01:41.282562+00:00",
+          "outcome": "useful",
+          "q": "lets do 1, and 3 first, then 2 and 5."
+        },
+        {
+          "date": "2026-08-21T10:31:12.506933+00:00",
+          "outcome": "useful",
+          "q": "continue to next"
+        },
+        {
+          "date": "2026-08-13T19:08:02.700701+00:00",
+          "outcome": "corrected",
+          "q": "Redefine v0 as full legacy operational parity; include database-backed features, RBAC, and Everlittle-style email invitations"
+        }
+      ],
+      "score": 2.160127079,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "contested",
+      "uses": 3,
+      "verdict": "useful"
+    },
+    "apps_web_src_lib_server_api_handlers_membershipcontext": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "MembershipContext",
+      "last": "2026-08-21T10:31:12.506933+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T10:31:12.506933+00:00",
+          "outcome": "useful",
+          "q": "continue to next"
+        },
+        {
+          "date": "2026-08-13T19:08:02.700701+00:00",
+          "outcome": "corrected",
+          "q": "Redefine v0 as full legacy operational parity; include database-backed features, RBAC, and Everlittle-style email invitations"
+        }
+      ],
+      "score": 0.16154553,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "useful"
+    },
+    "apps_web_src_lib_server_api_handlers_schoolrostersqueryschema": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
       "label": "schoolRostersQuerySchema",
       "last": "2026-08-11T13:00:39.547462+00:00",
       "provenance": [
@@ -343,13 +623,45 @@
           "q": "continue, make sure the printable design aligns and looks professional."
         }
       ],
-      "score": 0.999758662,
-      "source_file": "apps/web/src/server.ts",
+      "score": 0.794157208,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
       "status": "tentative",
       "uses": 1
     },
-    "apps_web_src_server_schoolstudentsqueryschema": {
-      "code_fingerprint": "48d045f1f98520786b60a85bded8742629bf549c0966c41c275cd398159bd588",
+    "apps_web_src_lib_server_api_handlers_schoolstudentfilters": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "SchoolStudentFilters",
+      "last": "2026-08-21T11:01:41.282562+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T11:01:41.282562+00:00",
+          "outcome": "useful",
+          "q": "lets do 1, and 3 first, then 2 and 5."
+        }
+      ],
+      "score": 0.998667206,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_lib_server_api_handlers_schoolstudentfiltersschema": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
+      "label": "schoolStudentFiltersSchema",
+      "last": "2026-08-21T11:01:41.282562+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T11:01:41.282562+00:00",
+          "outcome": "useful",
+          "q": "lets do 1, and 3 first, then 2 and 5."
+        }
+      ],
+      "score": 0.998667206,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "apps_web_src_lib_server_api_handlers_schoolstudentsqueryschema": {
+      "code_fingerprint": "0d66e4f7d71dad29ba731c36c74ba5cbd0ddd6488232c1218d4947f23b8dc812",
       "label": "schoolStudentsQuerySchema",
       "last": "2026-08-11T13:00:39.547462+00:00",
       "provenance": [
@@ -359,23 +671,98 @@
           "q": "continue, make sure the printable design aligns and looks professional."
         }
       ],
-      "score": 0.999758662,
-      "source_file": "apps/web/src/server.ts",
+      "score": 0.794157208,
+      "source_file": "apps/web/src/lib/server/api-handlers.ts",
       "status": "tentative",
       "uses": 1
     },
-    "docs_feature_parity_legacy_feature_parity": {
-      "code_fingerprint": "256e61b05e7a7ecea587470ec17715f93b8861b6d44c29f860a2bb2634384f21",
-      "label": "Legacy feature parity",
-      "last": "2026-08-11T13:12:02.706793+00:00",
+    "apps_web_src_routetree_gen_fileroutesbypath": {
+      "code_fingerprint": "990078f945cd484ae643dd1f50a45b2333c2c9d9aa7df8fbd6adb40c324ccb09",
+      "label": "FileRoutesByPath",
+      "last": "2026-08-21T11:01:41.282562+00:00",
       "provenance": [
+        {
+          "date": "2026-08-21T11:01:41.282562+00:00",
+          "outcome": "useful",
+          "q": "lets do 1, and 3 first, then 2 and 5."
+        },
+        {
+          "date": "2026-08-21T10:40:56.384636+00:00",
+          "outcome": "useful",
+          "q": "whats next"
+        },
+        {
+          "date": "2026-08-21T10:31:12.506933+00:00",
+          "outcome": "useful",
+          "q": "continue to next"
+        }
+      ],
+      "score": 2.995180934,
+      "source_file": "apps/web/src/routeTree.gen.ts",
+      "status": "preferred",
+      "uses": 3
+    },
+    "docs_feature_parity_legacy_feature_parity": {
+      "code_fingerprint": "992af2bbc09b265e94a346997789409ff22af2c3afbb1c4398c536739e595194",
+      "label": "Legacy feature parity",
+      "last": "2026-08-21T12:19:28.215016+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-08-21T12:19:28.215016+00:00",
+          "outcome": "useful",
+          "q": "what is next?"
+        },
+        {
+          "date": "2026-08-13T19:08:02.700701+00:00",
+          "outcome": "corrected",
+          "q": "Redefine v0 as full legacy operational parity; include database-backed features, RBAC, and Everlittle-style email invitations"
+        },
+        {
+          "date": "2026-08-13T15:48:19.641737+00:00",
+          "outcome": "useful",
+          "q": "whats the current status, and what should be the next slice that we should work on?"
+        },
         {
           "date": "2026-08-11T13:12:02.706793+00:00",
           "outcome": "useful",
           "q": "whats next?"
         }
       ],
-      "score": 0.999941323,
+      "score": 1.791539959,
+      "source_file": "docs/feature-parity.md",
+      "status": "contested",
+      "uses": 3,
+      "verdict": "useful"
+    },
+    "docs_feature_parity_sponsorship": {
+      "code_fingerprint": "992af2bbc09b265e94a346997789409ff22af2c3afbb1c4398c536739e595194",
+      "label": "Sponsorship",
+      "last": "2026-08-13T15:48:19.641737+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-13T15:48:19.641737+00:00",
+          "outcome": "useful",
+          "q": "whats the current status, and what should be the next slice that we should work on?"
+        }
+      ],
+      "score": 0.833956712,
+      "source_file": "docs/feature-parity.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "docs_feature_parity_staff_leave_holidays_and_stipends": {
+      "code_fingerprint": "992af2bbc09b265e94a346997789409ff22af2c3afbb1c4398c536739e595194",
+      "label": "Staff, leave, holidays, and stipends",
+      "last": "2026-08-21T12:19:28.215016+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-21T12:19:28.215016+00:00",
+          "outcome": "useful",
+          "q": "what is next?"
+        }
+      ],
+      "score": 0.999914342,
       "source_file": "docs/feature-parity.md",
       "status": "tentative",
       "uses": 1
@@ -383,18 +770,23 @@
     "docs_practice_school_practice_school": {
       "code_fingerprint": "410bb421815e253244fb0f5043c0b5a84aeed8d16fa1af0397d55f8d78528293",
       "label": "Practice school",
-      "last": "2026-08-11T13:12:02.706793+00:00",
+      "last": "2026-08-13T15:48:19.641737+00:00",
       "provenance": [
+        {
+          "date": "2026-08-13T15:48:19.641737+00:00",
+          "outcome": "useful",
+          "q": "whats the current status, and what should be the next slice that we should work on?"
+        },
         {
           "date": "2026-08-11T13:12:02.706793+00:00",
           "outcome": "useful",
           "q": "whats next?"
         }
       ],
-      "score": 0.999941323,
+      "score": 1.628259017,
       "source_file": "docs/practice-school.md",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "scripts_import_person_files_progressreportpath": {
       "code_fingerprint": "c739f13defd7dd2204251863529a97137f01062e5ce3772518dd871ca3a3acce",
@@ -412,7 +804,7 @@
           "q": "How can I view media transfer progress, why do class masters show legacy number suffixes, and why is the product copy complex? Do we need the Legacy recorded column?"
         }
       ],
-      "score": 1.9720493,
+      "score": 1.566495221,
       "source_file": "scripts/import-person-files.mjs",
       "status": "preferred",
       "uses": 2
@@ -428,7 +820,7 @@
           "q": "what do you mean by legacy enrollment state? and I believe you said some 2,043 rows are present in the academic rows? also what do you mean by enrollment lifecycle? was it there in the old flow? why do we need it now?"
         }
       ],
-      "score": 0.985638089,
+      "score": 0.782940546,
       "source_file": "scripts/student-enrollment-dry-run.mjs",
       "status": "tentative",
       "uses": 1
@@ -459,7 +851,7 @@
           "q": "Okay whats next?"
         }
       ],
-      "score": 3.95031407,
+      "score": 3.137927693,
       "source_file": "TODO.md",
       "status": "preferred",
       "uses": 4

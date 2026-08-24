@@ -41,6 +41,8 @@
     "migration:scholarship:import": "node scripts/import-scholarship-history.mjs",
     "migration:sponsorship:dry-run": "node scripts/sponsorship-history-dry-run.mjs",
     "migration:sponsorship:import": "node scripts/import-sponsorship-history.mjs",
+    "migration:staff:dry-run": "node scripts/staff-operations-dry-run.mjs",
+    "migration:staff:import": "node scripts/import-staff-operations.mjs",
     "graph:update": "graphify update .",
     "setup:hooks": "sh scripts/install-git-hooks.sh",
     "setup:vp": "vp config"

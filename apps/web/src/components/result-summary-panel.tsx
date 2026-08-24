@@ -423,8 +423,8 @@ function formatMark(marks: number | null, maximum: number | null) {
 function csvCell(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
-function safeFileName(value: string) {
-  return value
+function safeFileName(value: string | null | undefined) {
+  return (value ?? "results")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");

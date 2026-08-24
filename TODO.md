@@ -6,24 +6,35 @@ feature ships or THF confirms that a historical workflow is still needed.
 
 ## Invitation UX follow-ups
 
-- [ ] Show a dedicated invalid, expired, revoked, or already-used invitation
+- [x] Show a dedicated invalid, expired, revoked, or already-used invitation
       screen instead of falling back to the normal sign-in screen.
-- [ ] When an already-authenticated user opens an invitation, show the
+- [x] When an already-authenticated user opens an invitation, show the
       organization and role and require explicit acceptance before entering the
       workspace.
 
 ## Account and email follow-ups
 
-- [ ] Connect provider-configurable transactional email for invitations, email
-      verification, and password reset.
+- [x] Connect provider-configurable transactional email for invitations and
+      password reset.
+- [ ] Add email verification delivery and a verified-email onboarding state.
 - [ ] Replace immediate unverified email changes with the verified email-change
       flow after transactional email is available.
 
 ## Product foundations
 
 - [ ] Fix theme consistency across every page, component, and interaction state.
+- [x] Persist the user's theme preference across browser sessions.
 - [ ] Make every search URL-first, validate URL parameters, and derive search,
       filter, sort, and page state safely from the URL.
+
+## Staff operations
+
+- [x] Add a URL-first, organization-scoped staff employment directory.
+- [x] Preserve legacy departments, designations, categories, contact details,
+      and recorded employment events through an additive Drizzle migration.
+- [x] Allow permission-checked, audited editing of employment and contact details.
+- [ ] Add staff dependants, qualifications, experience, and transfer workflows.
+- [ ] Add staff leave and extra-duty workflows.
 
 ## People Registry migration
 
@@ -35,6 +46,10 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [x] Migrate beneficiary home and placement history.
 - [x] Migrate academic history after placement reconciliation.
 - [x] Add read-only parents, guardians, household context, and sibling relationships.
+- [x] Resolve the duplicate School History and Earlier School Records sections,
+      consolidating them if they represent the same information.
+- [x] Add inputs for education number, registration certificate number (RC), and
+      identity certificate number (IC) to each applicable person record.
 
 ## Documents and media migration
 
@@ -47,6 +62,8 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [x] Reconcile the completed bulk upload: target R2 contains all 46,938 eligible
       objects; D1 contains the same 46,938 rows and 17,397,012,993 bytes, with
       each upload SHA-256 checked by the migration worker.
+- [x] Make media and document saving behave consistently with saving in other
+      sections.
 
 ## School Operations
 
@@ -71,3 +88,11 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [ ] Treat standalone attendance as a new feature, not a parity requirement; no
       legacy attendance-entry workflow or table was found.
 - [ ] Add assessments, marks, results, and promotion.
+- [x] Align the Change placement button horizontally with the Placement title,
+      matching the layout used in other sections.
+- [x] Fix the THS 2026 school-dashboard student list/profile mismatch: the People
+      dashboard shows correct student data and printing works, but opening a
+      profile from the school dashboard can show `legacy_allocation` and
+      "enrollment not found."
+- [x] Fix the Marks and Result page crash that shows "Something went wrong" due
+      to calling `toLowerCase()` on an undefined value.

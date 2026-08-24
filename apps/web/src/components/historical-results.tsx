@@ -51,7 +51,7 @@ type ResultRow = {
   isVerified: boolean;
   markSheetId: string;
   sheetStatus: "draft" | "verified" | "final";
-  sourceSystem: string;
+  sourceSystem?: string | null;
 };
 type Results = {
   results: ResultRow[];
@@ -164,7 +164,7 @@ export function HistoricalResults({
   const manageableSheets = Array.from(
     new Map(
       data.results
-        .filter((row) => row.sourceSystem.toLowerCase() === "tsewa")
+        .filter((row) => row.sourceSystem?.toLowerCase() === "tsewa")
         .map((row) => [row.markSheetId, row]),
     ).values(),
   );
