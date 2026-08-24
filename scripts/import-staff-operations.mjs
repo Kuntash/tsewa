@@ -470,12 +470,18 @@ async function assertTargetBinding() {
   if (!configuration.includes(confirmedDatabaseId)) {
     throw new Error("The confirmed database ID is not present in apps/web/wrangler.jsonc.");
   }
-  const result = spawnSync("pnpm", ["exec", "wrangler", "d1", "info", "DB"], {
+  const result = spawnSync("pnpm", ["exec", "wrangler", "d1", "info", "DB", "--json"], {
     cwd: webRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-  if (result.status !== 0 || !result.stdout.includes(confirmedDatabaseId)) {
+  let liveDatabaseId = "";
+  try {
+    liveDatabaseId = JSON.parse(result.stdout).uuid;
+  } catch {
+    // The generic mismatch below intentionally avoids exposing command output.
+  }
+  if (result.status !== 0 || liveDatabaseId !== confirmedDatabaseId) {
     throw new Error("The live DB binding does not match --confirm-database-id.");
   }
 }

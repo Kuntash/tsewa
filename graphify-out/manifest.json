@@ -1185,8 +1185,8 @@
     "semantic_hash": ""
   },
   "scripts/import-staff-operations.mjs": {
-    "mtime": 1787555384.7683856,
-    "ast_hash": "7a7458c78545fe4563af8f6e0fe529a3",
+    "mtime": 1787555443.914354,
+    "ast_hash": "62502cd425146c5944662f1903f95d56",
     "semantic_hash": ""
   },
   "scripts/staff-operations-dry-run.mjs": {
