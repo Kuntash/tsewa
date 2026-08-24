@@ -2,21 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { SponsorshipFilters } from "@/components/sponsorship-operations";
-import { optionalEnum, optionalPage, optionalString } from "@/lib/route-search";
+import { sponsorshipSearchSchema } from "@/lib/route-search";
 import { AuthenticatedApp } from "@/routes/index";
 
 export const Route = createFileRoute("/sponsorships")({
-  validateSearch: (search) => ({
-    section: optionalEnum(search.section, [
-      "sponsors",
-      "assignments",
-      "funds",
-      "correspondence",
-      "visitors",
-    ] as const),
-    q: optionalString(search.q),
-    page: optionalPage(search.page),
-  }),
+  validateSearch: sponsorshipSearchSchema,
   component: SponsorshipsRoute,
 });
 

@@ -59,22 +59,36 @@ type Results = {
   capabilities?: { manage: boolean };
 };
 
+export type HistoricalResultsFilters = {
+  q: string;
+  session: string;
+  school: string;
+  class: string;
+  subject: string;
+  term: string;
+  page: number;
+};
+
 export function HistoricalResults({
   activeSessionId,
+  filters,
+  onFiltersChange,
   onSelectPerson,
 }: {
   activeSessionId: string;
+  filters: HistoricalResultsFilters;
+  onFiltersChange: (filters: HistoricalResultsFilters) => void;
   onSelectPerson: (id: string) => void;
 }) {
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [sessionId, setSessionId] = useState("");
-  const [query, setQuery] = useState("");
+  const [sessionId, setSessionId] = useState(filters.session);
+  const [query, setQuery] = useState(filters.q);
   const debouncedQuery = useDebouncedValue(query);
-  const [school, setSchool] = useState("all");
-  const [className, setClassName] = useState("all");
-  const [subject, setSubject] = useState("all");
-  const [term, setTerm] = useState("all");
-  const [page, setPage] = useState(1);
+  const [school, setSchool] = useState(filters.school);
+  const [className, setClassName] = useState(filters.class);
+  const [subject, setSubject] = useState(filters.subject);
+  const [term, setTerm] = useState(filters.term);
+  const [page, setPage] = useState(filters.page);
   const [data, setData] = useState<Results>({
     results: [],
     pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
@@ -87,6 +101,36 @@ export function HistoricalResults({
   const [refreshKey, setRefreshKey] = useState(0);
   const [changingSheetId, setChangingSheetId] = useState("");
   const [configurationOpen, setConfigurationOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(filters.q);
+    setSessionId(filters.session);
+    setSchool(filters.school);
+    setClassName(filters.class);
+    setSubject(filters.subject);
+    setTerm(filters.term);
+    setPage(filters.page);
+  }, [
+    filters.class,
+    filters.page,
+    filters.q,
+    filters.school,
+    filters.session,
+    filters.subject,
+    filters.term,
+  ]);
+
+  useEffect(() => {
+    onFiltersChange({
+      q: debouncedQuery,
+      session: sessionId,
+      school,
+      class: className,
+      subject,
+      term,
+      page,
+    });
+  }, [className, debouncedQuery, onFiltersChange, page, school, sessionId, subject, term]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -160,7 +204,7 @@ export function HistoricalResults({
       setChangingSheetId("");
     }
   }
-  const filters = overview?.filters;
+  const overviewFilters = overview?.filters;
   const manageableSheets = Array.from(
     new Map(
       data.results
@@ -231,7 +275,7 @@ export function HistoricalResults({
           <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
             <ResultFilter
               label="All schools"
-              options={filters?.schools ?? []}
+              options={overviewFilters?.schools ?? []}
               value={school}
               onChange={(v) => {
                 setSchool(v);
@@ -240,7 +284,7 @@ export function HistoricalResults({
             />
             <ResultFilter
               label="All classes"
-              options={filters?.classes ?? []}
+              options={overviewFilters?.classes ?? []}
               value={className}
               onChange={(v) => {
                 setClassName(v);
@@ -249,7 +293,7 @@ export function HistoricalResults({
             />
             <ResultFilter
               label="All subjects"
-              options={filters?.subjects ?? []}
+              options={overviewFilters?.subjects ?? []}
               value={subject}
               onChange={(v) => {
                 setSubject(v);
@@ -258,7 +302,7 @@ export function HistoricalResults({
             />
             <ResultFilter
               label="All terms"
-              options={filters?.terms ?? []}
+              options={overviewFilters?.terms ?? []}
               value={term}
               onChange={(v) => {
                 setTerm(v);

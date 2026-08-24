@@ -60,9 +60,9 @@ evidence of a regularly used year-end workflow.
 - [x] View parents, guardians, siblings, and household information.
 - [x] View school, class, house, and home history.
 - [x] View photos and documents with authenticated file access.
-- [x] Create a basic new student and enrollment in the practice organization.
-- [x] Edit a person's core details with validation and an audit entry. Test
-      changes in the practice school rather than on migrated THS records.
+- [x] Create a basic new student and enrollment in the temporary practice environment.
+- [x] Edit a person's core details with validation and an audit entry in the temporary
+      practice environment before it was retired.
 - [x] Add and edit parents and guardians; link, create, and remove sibling
       relationships with reciprocal profile visibility.
 - [x] Add and change a person's home placement while preserving history.
@@ -74,10 +74,10 @@ evidence of a regularly used year-end workflow.
 - [x] Select an academic session.
 - [x] View schools, classes, houses, rosters, and student placements.
 - [x] View imported academic history.
-- [x] Admit a new student in the practice organization.
+- [x] Admit a new student in the temporary practice environment.
 - [x] Change class or house, move school, transfer out, withdraw, or complete an
-      enrollment. Test changes in the practice school rather than on migrated
-      THS records.
+      enrollment. These changes were validated before the temporary practice
+      environment was retired.
 - [x] Create and edit schools, including affiliation number, location, and active status.
 - [x] Create and edit classes/sections and houses.
 - [x] Assign classes and houses to a school, with classes set per academic session.
@@ -89,8 +89,8 @@ evidence of a regularly used year-end workflow.
 
 - [x] Copy all 46,938 referenced media files to the self-hosted R2 bucket.
 - [x] Reconcile target byte sizes and SHA-256 hashes.
-- [ ] Test the complete v0 workflow in **Tsewa Practice School** without changing
-      imported THS records.
+- [x] Test the complete v0 workflow in the temporary practice environment before
+      retiring it.
 - [ ] Let THF staff test the same workflow and record missing fields or steps.
 
 ## v0: legacy-used workflows still required for parity

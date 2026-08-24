@@ -24,7 +24,7 @@ feature ships or THF confirms that a historical workflow is still needed.
 
 - [ ] Fix theme consistency across every page, component, and interaction state.
 - [x] Persist the user's theme preference across browser sessions.
-- [ ] Make every search URL-first, validate URL parameters, and derive search,
+- [x] Make every persistent page search URL-first, validate URL parameters, and derive search,
       filter, sort, and page state safely from the URL.
 
 ## Staff operations
@@ -75,7 +75,7 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [x] Reconcile one canonical student enrollment per person and session without
       discarding the superseded source rows.
 - [x] Add read-only school directories and observed class rosters.
-- [x] Add an isolated practice organization, school, class, and student for testing edits.
+- [x] Retire the temporary practice organization after the write workflows were validated.
 - [x] Add the first editable workflow: a new admission creates the person, current
       enrollment, change history, and audit record together.
 - [ ] Confirm enrollment lifecycle meanings with THS before enabling transfer,

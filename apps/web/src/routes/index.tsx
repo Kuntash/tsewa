@@ -56,6 +56,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
+import { homeSearchSchema } from "@/lib/route-search";
 
 type AcademicSession = {
   id: string;
@@ -188,19 +189,19 @@ export type RoutedAppSearch = {
   auditQ?: string;
   auditAction?: string;
   auditPage?: number;
+  rosterQ?: string;
+  rosterSchool?: string;
+  resultQ?: string;
+  resultSession?: string;
+  resultSchool?: string;
+  resultClass?: string;
+  resultSubject?: string;
+  resultTerm?: string;
+  resultPage?: number;
 };
 type RoutedSearchChange = {
   bivarianceHack(search: RoutedAppSearch): void;
 }["bivarianceHack"];
-type AppSearch = {
-  view?: AppView;
-  settingsTab?: SettingsTab;
-  auditQ?: string;
-  auditAction?: string;
-  auditPage?: number;
-  invite?: string;
-};
-
 type DashboardModule = {
   Icon: LucideIcon;
   title: string;
@@ -225,41 +226,8 @@ type DashboardState = {
   }>;
 };
 
-const appViews = new Set<AppView>([
-  "dashboard",
-  "people",
-  "school",
-  "health",
-  "scholarship",
-  "sponsorship",
-  "staff",
-  "reports",
-  "settings",
-]);
-const settingsTabs = new Set<SettingsTab>([
-  "general",
-  "sessions",
-  "members",
-  "roles",
-  "security",
-  "audit",
-]);
-
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): AppSearch => ({
-    view: appViews.has(search.view as AppView) ? (search.view as AppView) : undefined,
-    settingsTab: settingsTabs.has(search.settingsTab as SettingsTab)
-      ? (search.settingsTab as SettingsTab)
-      : undefined,
-    auditQ: typeof search.auditQ === "string" ? search.auditQ.slice(0, 100) : undefined,
-    auditAction:
-      typeof search.auditAction === "string" ? search.auditAction.slice(0, 120) : undefined,
-    auditPage:
-      typeof search.auditPage === "number" && Number.isInteger(search.auditPage)
-        ? Math.max(1, search.auditPage)
-        : undefined,
-    invite: typeof search.invite === "string" ? search.invite.slice(0, 256) : undefined,
-  }),
+  validateSearch: homeSearchSchema,
   component: Home,
 });
 

@@ -1,20 +1,13 @@
 import { Navigate, createFileRoute } from "@tanstack/react-router";
 
 import { AuthenticatedApp } from "@/routes/index";
-import type { RoutedAppSearch, SettingsTab } from "@/routes/index";
+import type { SettingsTab } from "@/routes/index";
+import { settingsSearchSchema } from "@/lib/route-search";
 
 const tabs = new Set<SettingsTab>(["general", "sessions", "members", "roles", "security", "audit"]);
 
 export const Route = createFileRoute("/settings/$tab")({
-  validateSearch: (search: Record<string, unknown>): RoutedAppSearch => ({
-    auditQ: typeof search.auditQ === "string" ? search.auditQ.slice(0, 100) : undefined,
-    auditAction:
-      typeof search.auditAction === "string" ? search.auditAction.slice(0, 120) : undefined,
-    auditPage:
-      typeof search.auditPage === "number" && Number.isInteger(search.auditPage)
-        ? Math.max(1, search.auditPage)
-        : undefined,
-  }),
+  validateSearch: settingsSearchSchema,
   component: SettingsRoute,
 });
 

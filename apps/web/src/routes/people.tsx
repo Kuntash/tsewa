@@ -2,16 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { PeopleFilters } from "@/components/people-registry";
-import { optionalEnum, optionalPage, optionalString } from "@/lib/route-search";
+import { peopleSearchSchema } from "@/lib/route-search";
 import { AuthenticatedApp } from "@/routes/index";
 
 export const Route = createFileRoute("/people")({
-  validateSearch: (search) => ({
-    q: optionalString(search.q),
-    kind: optionalEnum(search.kind, ["child", "elderly", "staff"] as const),
-    status: optionalEnum(search.status, ["active", "inactive"] as const),
-    page: optionalPage(search.page),
-  }),
+  validateSearch: peopleSearchSchema,
   component: PeopleRoute,
 });
 

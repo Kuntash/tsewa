@@ -2,16 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { StaffFilters } from "@/components/staff-operations";
-import { optionalEnum, optionalPage, optionalString } from "@/lib/route-search";
+import { staffSearchSchema } from "@/lib/route-search";
 import { AuthenticatedApp } from "@/routes/index";
 
 export const Route = createFileRoute("/staff")({
-  validateSearch: (search) => ({
-    q: optionalString(search.q),
-    status: optionalEnum(search.status, ["active", "inactive"] as const),
-    department: optionalString(search.department),
-    page: optionalPage(search.page),
-  }),
+  validateSearch: staffSearchSchema,
   component: StaffRoute,
 });
 

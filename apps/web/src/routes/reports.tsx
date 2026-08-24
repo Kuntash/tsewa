@@ -2,16 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { ReportsFilters } from "@/components/reports-centre";
-import { optionalEnum, optionalString } from "@/lib/route-search";
+import { reportsSearchSchema } from "@/lib/route-search";
 import { AuthenticatedApp } from "@/routes/index";
 
 export const Route = createFileRoute("/reports")({
-  validateSearch: (search) => ({
-    domain: optionalEnum(search.domain, ["scholarship", "sponsorship"] as const),
-    report: optionalString(search.report),
-    session: optionalString(search.session),
-    q: optionalString(search.q),
-  }),
+  validateSearch: reportsSearchSchema,
   component: ReportsRoute,
 });
 

@@ -2,31 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { SchoolFilters } from "@/components/school-operations";
-import { optionalEnum, optionalPage, optionalString } from "@/lib/route-search";
+import { schoolSearchSchema } from "@/lib/route-search";
 import { AuthenticatedApp } from "@/routes/index";
 
 export const Route = createFileRoute("/school")({
-  validateSearch: (search) => ({
-    q: optionalString(search.q),
-    school: optionalString(search.school),
-    class: optionalString(search.class),
-    house: optionalString(search.house),
-    status: optionalEnum(search.status, [
-      "recorded",
-      "enrolled",
-      "transferred",
-      "withdrawn",
-      "completed",
-    ] as const),
-    section: optionalEnum(search.section, [
-      "students",
-      "schools",
-      "rosters",
-      "setup",
-      "results",
-    ] as const),
-    page: optionalPage(search.page),
-  }),
+  validateSearch: schoolSearchSchema,
   component: SchoolRoute,
 });
 
@@ -45,6 +25,15 @@ function SchoolRoute() {
           status: next.status === "all" ? undefined : next.status,
           section: next.section === "students" ? undefined : next.section,
           page: next.page === 1 ? undefined : next.page,
+          rosterQ: next.rosterQ,
+          rosterSchool: next.rosterSchool === "all" ? undefined : next.rosterSchool,
+          resultQ: next.resultQ,
+          resultSession: next.resultSession,
+          resultSchool: next.resultSchool === "all" ? undefined : next.resultSchool,
+          resultClass: next.resultClass === "all" ? undefined : next.resultClass,
+          resultSubject: next.resultSubject === "all" ? undefined : next.resultSubject,
+          resultTerm: next.resultTerm === "all" ? undefined : next.resultTerm,
+          resultPage: next.resultPage === 1 ? undefined : next.resultPage,
         },
       }),
     [navigate],

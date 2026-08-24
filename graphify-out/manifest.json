@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
-    "mtime": 1787569832.1528926,
-    "ast_hash": "7a9cf97a7d605ef03929aa0a78202d99",
+    "mtime": 1787572757.404606,
+    "ast_hash": "0c9172c81d6594e4f14e53e24726836d",
     "semantic_hash": ""
   },
   "apps/web/src/components/ui/avatar.tsx": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787572065.6361513,
-    "ast_hash": "60fce9d0b191da9e6b62e1de81903d2b",
+    "mtime": 1787572605.557645,
+    "ast_hash": "1f05b57e92ed7121035c5ad426af9734",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787571672.5385385,
-    "ast_hash": "237593881365f606bf1aa5b34ba384c4",
+    "mtime": 1787572757.4049976,
+    "ast_hash": "3c2576c8b5527dd55c9fc1cb5ec74b75",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1787557512.3088944,
-    "ast_hash": "c20044dc2bcc367e85828dbeac420201",
+    "mtime": 1787572670.0434413,
+    "ast_hash": "a4a06931b71227dc4d1bb35316583dfa",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/historical-results.tsx": {
-    "mtime": 1787552019.3852499,
-    "ast_hash": "2655c3276bf71abfb735d54c91d83f84",
+    "mtime": 1787572683.5635817,
+    "ast_hash": "52ebb5929519c499cad63165d5d73b47",
     "semantic_hash": ""
   },
   "scripts/historical-results-dry-run.mjs": {
@@ -445,8 +445,8 @@
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
-    "mtime": 1786447200.98451,
-    "ast_hash": "30649f95c44af90d899d522b881a728a",
+    "mtime": 1787572757.4068124,
+    "ast_hash": "3e812c6ab10c35ef5f5f281d95ceb175",
     "semantic_hash": ""
   },
   "apps/web/migrations/0013_enrollment_roll_history.sql": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
-    "mtime": 1787315921.2444103,
-    "ast_hash": "4983ba8e125458e64b7eabaf398bfa30",
+    "mtime": 1787572757.4057214,
+    "ast_hash": "ca0aa18a35bdfa5332f081a6137167ac",
     "semantic_hash": ""
   },
   "apps/web/migrations/0014_family_relationship_editing.sql": {
@@ -1025,13 +1025,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/route-search.test.ts": {
-    "mtime": 1787309935.4192586,
-    "ast_hash": "fdb365d232c5c0dbc81f38fb7bf6aa71",
+    "mtime": 1787572842.4926722,
+    "ast_hash": "80d1dff0c77f3504222ebdcf6e1e0d82",
     "semantic_hash": ""
   },
   "apps/web/src/lib/route-search.ts": {
-    "mtime": 1787309364.6226883,
-    "ast_hash": "02e12f0bf6ca76dd8ff0a1b39af77b00",
+    "mtime": 1787572842.492339,
+    "ast_hash": "6279718009c51566261dc7e6952d959d",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/dashboard-repository.ts": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/health.tsx": {
-    "mtime": 1787309383.0003319,
-    "ast_hash": "c219bdc3778abd7368ee681dfa8d9d3b",
+    "mtime": 1787572587.5295994,
+    "ast_hash": "4860b5999805d7cd1aec49adba308ce1",
     "semantic_hash": ""
   },
   "apps/web/src/routes/invite.$token.tsx": {
@@ -1085,13 +1085,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/people.tsx": {
-    "mtime": 1787309364.623451,
-    "ast_hash": "88de11a7bbb93fa79a6b4f3662595553",
+    "mtime": 1787572587.527975,
+    "ast_hash": "452bd6ce605090b2964140180b51402f",
     "semantic_hash": ""
   },
   "apps/web/src/routes/reports.tsx": {
-    "mtime": 1787309724.76439,
-    "ast_hash": "8b5b617b3548b855da3ebf9f99bad73c",
+    "mtime": 1787572587.530493,
+    "ast_hash": "36fd0c58cc5da837dd2e7fbfb9a37082",
     "semantic_hash": ""
   },
   "apps/web/src/routes/reset-password.tsx": {
@@ -1100,23 +1100,23 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/scholarships.tsx": {
-    "mtime": 1787309364.623819,
-    "ast_hash": "58ca9d4a5ac8f09f0cdc0bf622ab8b51",
+    "mtime": 1787572587.5299037,
+    "ast_hash": "8993ef4ad18bea14ebe2a66a2185f778",
     "semantic_hash": ""
   },
   "apps/web/src/routes/school.tsx": {
-    "mtime": 1787309383.00047,
-    "ast_hash": "9d6f963941c6a53fe36c3ed037a48aa9",
+    "mtime": 1787572587.5289211,
+    "ast_hash": "102b4a03adc45e8ae1a1bb9f74517589",
     "semantic_hash": ""
   },
   "apps/web/src/routes/settings.$tab.tsx": {
-    "mtime": 1787309420.3691072,
-    "ast_hash": "31ed03eab4d8b5ab60738395af32e6d3",
+    "mtime": 1787572683.5638394,
+    "ast_hash": "1c465ae739471bd57db05c923d37e41c",
     "semantic_hash": ""
   },
   "apps/web/src/routes/sponsorships.tsx": {
-    "mtime": 1787309383.0002832,
-    "ast_hash": "7a50a115b17ca021736e203700042440",
+    "mtime": 1787572587.5302033,
+    "ast_hash": "420ef0f91c8860cead2f6ae225bf73ec",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260821_094343_continue_working_on_this.md": {
@@ -1180,8 +1180,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/staff.tsx": {
-    "mtime": 1787315396.368323,
-    "ast_hash": "7d8dc52650f2631c625fb0de758d3f16",
+    "mtime": 1787572587.5292976,
+    "ast_hash": "3c01d26f025652bc0fda0add52a9d883",
     "semantic_hash": ""
   },
   "scripts/import-staff-operations.mjs": {

@@ -20,12 +20,12 @@ import {
   UserRoundSearch,
   Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { AdmissionSheet } from "@/components/admission-sheet";
 import { EnrollmentChangeSheet } from "@/components/enrollment-change-sheet";
-import { HistoricalResults } from "@/components/historical-results";
+import { HistoricalResults, type HistoricalResultsFilters } from "@/components/historical-results";
 import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
 import { SchoolAssignmentsSheet } from "@/components/school-assignments-sheet";
 import { SchoolMasterData } from "@/components/school-master-data";
@@ -143,6 +143,15 @@ export type SchoolFilters = {
   status?: "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed";
   section?: SchoolSection;
   page?: number;
+  rosterQ?: string;
+  rosterSchool?: string;
+  resultQ?: string;
+  resultSession?: string;
+  resultSchool?: string;
+  resultClass?: string;
+  resultSubject?: string;
+  resultTerm?: string;
+  resultPage?: number;
 };
 
 const emptyStudents: StudentsResponse = {
@@ -193,6 +202,15 @@ export function SchoolOperations({
   const [schoolBeingEdited, setSchoolBeingEdited] = useState<EditableSchool | null>(null);
   const [schoolBeingAssigned, setSchoolBeingAssigned] = useState<SchoolRow | null>(null);
   const [studentReport, setStudentReport] = useState<StudentReportRequest | null>(null);
+  const [rosterQuery, setRosterQuery] = useState(filters.rosterQ ?? "");
+  const [rosterSchool, setRosterSchool] = useState(filters.rosterSchool ?? "all");
+  const [resultQuery, setResultQuery] = useState(filters.resultQ ?? "");
+  const [resultSession, setResultSession] = useState(filters.resultSession ?? "");
+  const [resultSchool, setResultSchool] = useState(filters.resultSchool ?? "all");
+  const [resultClass, setResultClass] = useState(filters.resultClass ?? "all");
+  const [resultSubject, setResultSubject] = useState(filters.resultSubject ?? "all");
+  const [resultTerm, setResultTerm] = useState(filters.resultTerm ?? "all");
+  const [resultPage, setResultPage] = useState(filters.resultPage ?? 1);
 
   useEffect(() => {
     setQuery(filters.q ?? "");
@@ -202,6 +220,15 @@ export function SchoolOperations({
     setStatus(filters.status ?? "all");
     setSection(filters.section ?? "students");
     setPage(filters.page ?? 1);
+    setRosterQuery(filters.rosterQ ?? "");
+    setRosterSchool(filters.rosterSchool ?? "all");
+    setResultQuery(filters.resultQ ?? "");
+    setResultSession(filters.resultSession ?? "");
+    setResultSchool(filters.resultSchool ?? "all");
+    setResultClass(filters.resultClass ?? "all");
+    setResultSubject(filters.resultSubject ?? "all");
+    setResultTerm(filters.resultTerm ?? "all");
+    setResultPage(filters.resultPage ?? 1);
   }, [
     filters.class,
     filters.house,
@@ -210,6 +237,15 @@ export function SchoolOperations({
     filters.school,
     filters.section,
     filters.status,
+    filters.rosterQ,
+    filters.rosterSchool,
+    filters.resultQ,
+    filters.resultSession,
+    filters.resultSchool,
+    filters.resultClass,
+    filters.resultSubject,
+    filters.resultTerm,
+    filters.resultPage,
   ]);
 
   useEffect(() => {
@@ -221,8 +257,35 @@ export function SchoolOperations({
       status,
       section,
       page,
+      rosterQ: rosterQuery || undefined,
+      rosterSchool,
+      resultQ: resultQuery || undefined,
+      resultSession: resultSession || undefined,
+      resultSchool,
+      resultClass,
+      resultSubject,
+      resultTerm,
+      resultPage,
     });
-  }, [className, debouncedQuery, house, onFiltersChange, page, school, section, status]);
+  }, [
+    className,
+    debouncedQuery,
+    house,
+    onFiltersChange,
+    page,
+    resultClass,
+    resultPage,
+    resultQuery,
+    resultSchool,
+    resultSession,
+    resultSubject,
+    resultTerm,
+    rosterQuery,
+    rosterSchool,
+    school,
+    section,
+    status,
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -303,6 +366,21 @@ export function SchoolOperations({
     () => sessions.find((session) => session.id === activeSessionId),
     [activeSessionId, sessions],
   );
+
+  const changeRosterFilters = useCallback((next: { q: string; school: string }) => {
+    setRosterQuery(next.q);
+    setRosterSchool(next.school);
+  }, []);
+
+  const changeResultFilters = useCallback((next: HistoricalResultsFilters) => {
+    setResultQuery(next.q);
+    setResultSession(next.session);
+    setResultSchool(next.school);
+    setResultClass(next.class);
+    setResultSubject(next.subject);
+    setResultTerm(next.term);
+    setResultPage(next.page);
+  }, []);
 
   const sectionCopy = {
     students: {
@@ -707,6 +785,7 @@ export function SchoolOperations({
           ) : section === "rosters" ? (
             <RosterDirectory
               loading={loadingDirectories}
+              onFiltersChange={changeRosterFilters}
               onOpenRoster={(schoolId, selectedClassId) => {
                 setSchool(schoolId);
                 setClassName(selectedClassId);
@@ -716,6 +795,8 @@ export function SchoolOperations({
               onPrintRoster={openClassRosterReport}
               rosters={rosters}
               schools={overview?.filters.schools ?? []}
+              query={rosterQuery}
+              school={rosterSchool}
             />
           ) : section === "setup" ? (
             <SchoolMasterData
@@ -728,6 +809,16 @@ export function SchoolOperations({
           ) : (
             <HistoricalResults
               activeSessionId={activeSessionId}
+              filters={{
+                q: resultQuery,
+                session: resultSession,
+                school: resultSchool,
+                class: resultClass,
+                subject: resultSubject,
+                term: resultTerm,
+                page: resultPage,
+              }}
+              onFiltersChange={changeResultFilters}
               onSelectPerson={setSelectedPersonId}
             />
           )}
@@ -911,19 +1002,23 @@ function SchoolsDirectory({
 
 function RosterDirectory({
   loading,
+  onFiltersChange,
   onOpenRoster,
   onPrintRoster,
+  query,
   rosters,
+  school,
   schools,
 }: {
   loading: boolean;
+  onFiltersChange: (filters: { q: string; school: string }) => void;
   onOpenRoster: (schoolId: string, classId: string) => void;
   onPrintRoster: (roster: RosterRow) => void;
+  query: string;
   rosters: RosterRow[];
+  school: string;
   schools: CountOption[];
 }) {
-  const [query, setQuery] = useState("");
-  const [school, setSchool] = useState("all");
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase();
     return rosters.filter(
@@ -945,12 +1040,17 @@ function RosterDirectory({
             <Input
               aria-label="Search classes"
               className="pl-10"
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => onFiltersChange({ q: event.target.value, school })}
               placeholder="Search school or class"
               value={query}
             />
           </div>
-          <FilterSelect label="All schools" onChange={setSchool} options={schools} value={school} />
+          <FilterSelect
+            label="All schools"
+            onChange={(value) => onFiltersChange({ q: query, school: value })}
+            options={schools}
+            value={school}
+          />
         </CardContent>
       </Card>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
