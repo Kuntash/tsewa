@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "apps/marketing/src/App.tsx": {
-    "mtime": 1787607292.569275,
-    "ast_hash": "95e3cf72d8f6413266ab14936c76330f",
+    "mtime": 1787608633.770383,
+    "ast_hash": "60b042e235d577dd330a0dfaf4617b64",
     "semantic_hash": ""
   },
   "apps/marketing/src/main.tsx": {
@@ -1325,8 +1325,8 @@
     "semantic_hash": ""
   },
   "apps/marketing/src/TrustPages.tsx": {
-    "mtime": 1787607292.56979,
-    "ast_hash": "1867855f3e135b52df2f890ec1b0c0ca",
+    "mtime": 1787608633.771232,
+    "ast_hash": "862be8db037c923a2b74731c38bb6c47",
     "semantic_hash": ""
   },
   "apps/marketing/data-processing/index.html": {
@@ -1370,8 +1370,8 @@
     "semantic_hash": ""
   },
   "docs/marketing-billing-growth-plan.md": {
-    "mtime": 1787606973.2456944,
-    "ast_hash": "7dfb3d2ce6e51e79e1bb7480fff22416",
+    "mtime": 1787608813.3674746,
+    "ast_hash": "5141d1711c46737f2a0b3020cfb8aa90",
     "semantic_hash": ""
   },
   "apps/marketing/public/apple-touch-icon.png": {
@@ -1392,6 +1392,11 @@
   "apps/marketing/public/og-tsewa.png": {
     "mtime": 1787606786.2144134,
     "ast_hash": "017e421d22c8df1803c70c2c095bdac2",
+    "semantic_hash": ""
+  },
+  "apps/marketing/src/TsewaMonogram.tsx": {
+    "mtime": 1787608633.7697291,
+    "ast_hash": "2d36685afab2889d25e31c61239d26d5",
     "semantic_hash": ""
   }
 }

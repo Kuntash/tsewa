@@ -130,17 +130,10 @@ svg {
 .brand-mark,
 .demo-logo,
 .ledger-mark {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-family: "Newsreader Variable", serif;
-  font-size: 21px;
-  font-style: italic;
-  line-height: 1;
 }
 
 .brand-name {
@@ -677,8 +670,6 @@ svg {
 .demo-logo {
   width: 32px;
   height: 32px;
-  color: var(--paper-light);
-  font-size: 19px;
 }
 
 .demo-nav-items {
@@ -1281,7 +1272,6 @@ svg {
 .ledger-mark {
   width: 29px;
   height: 29px;
-  font-size: 17px;
 }
 
 .onboarding-ledger > p {

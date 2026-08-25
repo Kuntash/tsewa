@@ -1,6 +1,8 @@
 import { ArrowLeft, ArrowRight, Check, CircleAlert, Mail, ShieldCheck } from "lucide-react";
 import { useEffect } from "react";
 
+import { TsewaMonogram } from "./TsewaMonogram";
+
 type TrustPageKey = "privacy" | "terms" | "security" | "data-processing";
 
 type TrustSection = {
@@ -261,7 +263,7 @@ export function TrustPage({ pageKey }: { pageKey: TrustPageKey }) {
     <div className="trust-shell">
       <header className="trust-nav page-width">
         <a aria-label="Tsewa home" className="brand" href="/">
-          <span className="brand-mark">T</span>
+          <TsewaMonogram className="brand-mark" />
           <span className="brand-name">Tsewa</span>
         </a>
         <nav aria-label="Trust pages">
@@ -347,7 +349,7 @@ export function TrustPage({ pageKey }: { pageKey: TrustPageKey }) {
 
       <footer className="footer page-width trust-footer">
         <div className="footer-brand">
-          <span className="brand-mark">T</span>
+          <TsewaMonogram className="brand-mark" />
           <div>
             <p>Tsewa</p>
             <span>Every person. Every role. One connected record.</span>

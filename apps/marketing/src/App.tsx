@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 
 import { TrustPage, trustPageForPath } from "./TrustPages";
+import { TsewaMonogram } from "./TsewaMonogram";
 
 type DemoView = "overview" | "student" | "resident" | "health" | "sponsorship" | "staff";
 
@@ -362,7 +363,7 @@ function MarketingPage() {
       </a>
       <header className="nav-wrap">
         <a aria-label="Tsewa home" className="brand" href="#top">
-          <span className="brand-mark">T</span>
+          <TsewaMonogram className="brand-mark" />
           <span className="brand-name">Tsewa</span>
         </a>
         <nav aria-label="Main navigation" className="desktop-nav">
@@ -550,7 +551,7 @@ function MarketingPage() {
                 </div>
                 <div className="onboarding-preview">
                   <div className="onboarding-ledger">
-                    <span className="ledger-mark">T</span>
+                    <TsewaMonogram className="ledger-mark" />
                     <p>Organisation setup</p>
                     <ol>
                       <li className="complete">
@@ -754,7 +755,7 @@ function MarketingPage() {
 
       <footer className="footer page-width">
         <div className="footer-brand">
-          <span className="brand-mark">T</span>
+          <TsewaMonogram className="brand-mark" />
           <div>
             <p>Tsewa</p>
             <span>Person-centred management for education and care.</span>
@@ -822,7 +823,7 @@ function ProductDemo() {
       </div>
       <div className="demo-app">
         <aside className="demo-sidebar">
-          <span className="demo-logo">T</span>
+          <TsewaMonogram className="demo-logo" />
           <div className="demo-nav-items">
             <span>
               <LayoutDashboard /> <b>Dashboard</b>

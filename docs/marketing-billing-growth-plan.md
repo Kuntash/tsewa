@@ -202,9 +202,13 @@ and be updated only when the substance changes.
 - Seek listings and partnerships in the actual geographic and sector communities
   Tsewa serves instead of buying generic backlinks.
 
-## First-customer plan
+## First hosted-customer plan
 
-The first customer is more likely to come from founder-led outreach than Google.
+THS is Tsewa's founding pilot and proves the migration and operational model in a
+real organisation. With THS's permission, turn that work into an anonymised case
+study, a testimonial, and peer introductions. The next commercial milestone is
+the first independent organisation paying for hosted SaaS, which is more likely
+to come from founder-led outreach than Google.
 
 ### Ideal first customer
 
@@ -216,9 +220,20 @@ operations—and currently relies on spreadsheets or a fragmented legacy databas
 
 Week 1:
 
-- Build a list of 25 organisations where a warm introduction is possible.
-- Prioritise Tibetan/Himalayan education and care networks and similar
-  multi-service organisations where Tsewa's origin story is credible.
+- Build a longlist of 60 organisations: 20 reachable through THS, board, donor,
+  implementation, or founder relationships; 20 multi-service nonprofits from
+  [NGO Darpan](https://www.ngodarpan.gov.in/) and the
+  [FCRA public dashboard](https://www.fcraonline.gov.in/public-dashboard); and 20
+  residential or multi-campus schools from the
+  [CBSE SARAS directory](https://saras.cbse.gov.in/SARAS/AffiliatedList/ListOfSchdirReport).
+- Score each organisation out of ten: multi-role service model (2), 200–2,000
+  people (2), fragmented or historical records (2), visible change trigger (1),
+  reachable operational leader (1), plausible budget (1), and warm path (1).
+- Keep the 20 accounts scoring at least seven. Aim for eight warm referrals,
+  eight close THS lookalikes, and four adjacent organisations to test the market.
+- For each account, identify one operational owner and one executive sponsor;
+  do not count an account as a lead until both the fit evidence and a contact path
+  are recorded.
 - Ask for a 30-minute **record map**, not a software sales call.
 
 Week 2:
