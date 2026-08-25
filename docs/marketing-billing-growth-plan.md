@@ -159,6 +159,26 @@ The north-star activation signal for the first cohort should be: an organisation
 has completed onboarding, added or imported its first real person, and invited a
 second team member.
 
+### Marketing analytics implementation
+
+The marketing Worker now has an environment-gated PostHog client. It uses the EU
+ingestion host by default, the core no-external-code bundle, cookieless measurement,
+and no person profiles. Autocapture, session replay, heatmaps, surveys, exceptions,
+performance capture, page-leave capture, and persistent browser storage are disabled.
+URL query strings and fragments are removed before events are sent.
+
+To enable it, create a dedicated PostHog EU project and provide the public project
+key to the production build as `VITE_POSTHOG_KEY`. Copy the remaining defaults from
+`apps/marketing/.env.example`. Never use a PostHog personal API key in a Vite
+environment variable. Validate the named events in PostHog's live event debugger
+before treating the integration as production-ready.
+
+After the project has data, connect the official PostHog MCP to Codex with
+`npx @posthog/wizard mcp add`. Grant read-only access first; only expand permissions
+when a specific workflow needs it. Useful initial questions are funnel conversion by
+CTA placement, demo engagement by dimension, and acquisition source by qualified
+signup—not raw visitor profiling.
+
 ## Search and AI discovery plan
 
 Technical discovery files are necessary but do not create ranking by themselves.

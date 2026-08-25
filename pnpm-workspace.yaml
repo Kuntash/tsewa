@@ -8,6 +8,7 @@ catalog:
   "@types/node": ^24.12.3
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
+  posthog-js: ^1.418.10
   react-day-picker: ^10.0.1
   typescript: ^6.0.2
   vite: npm:@voidzero-dev/vite-plus-core@latest
@@ -17,6 +18,7 @@ overrides:
   vite: "catalog:"
 
 allowBuilds:
+  core-js: false
   esbuild: true
   lightningcss: true
   sharp: true

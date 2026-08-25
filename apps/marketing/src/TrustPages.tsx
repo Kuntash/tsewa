@@ -41,7 +41,8 @@ const trustPages: Record<TrustPageKey, TrustPage> = {
       {
         title: "Information we receive",
         bullets: [
-          "Website and enquiry details, such as an email address, message, referral source, and basic device or browser information.",
+          "Website enquiry details, such as an email address and message, only when you choose to contact us.",
+          "When public-site analytics are enabled, cookieless event counts such as page, demo dimension, and call-to-action interactions, plus coarse browser and referral information with URL queries removed.",
           "Account information, including name, work email, authentication records, organisation membership, and account preferences.",
           "Service data entered or imported by a customer organisation, according to its configuration and instructions.",
           "Operational records needed to secure and maintain the service, including access, audit, delivery, and diagnostic events.",
@@ -75,6 +76,7 @@ const trustPages: Record<TrustPageKey, TrustPage> = {
       {
         title: "Your choices",
         paragraphs: [
+          "Public-site analytics use PostHog without cookies or persistent browser storage. Autocapture, session replay, heatmaps, form capture, and person profiles are disabled, and supported Do Not Track signals are respected.",
           `To ask about access, correction, deletion, portability, objection, or another privacy matter, contact ${contactEmail}. Identity and authority may need to be verified before a request is completed.`,
         ],
       },

@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787606973.2469919,
-    "ast_hash": "ab1cda2527d59da17fb78f27412bf9eb",
+    "mtime": 1787636995.7390301,
+    "ast_hash": "3ca5fc0e0a42a6807bee5b686c518c5a",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "pnpm-workspace.yaml": {
-    "mtime": 1787557144.8785293,
-    "ast_hash": "301e214a099772f1517339dad75856fc",
+    "mtime": 1787637020.4904006,
+    "ast_hash": "82d802e3915eaf4749797a17206e220f",
     "semantic_hash": ""
   },
   ".githooks/pre-commit": {
@@ -1290,18 +1290,18 @@
     "semantic_hash": ""
   },
   "apps/marketing/package.json": {
-    "mtime": 1787604557.5690331,
-    "ast_hash": "8ca5cba7c980c91803015a835b6f2f28",
+    "mtime": 1787636833.7262182,
+    "ast_hash": "dee804b3a73a060e650cb91a7eae50c2",
     "semantic_hash": ""
   },
   "apps/marketing/src/App.tsx": {
-    "mtime": 1787608633.770383,
-    "ast_hash": "60b042e235d577dd330a0dfaf4617b64",
+    "mtime": 1787637039.20023,
+    "ast_hash": "67f8a917c98368a757c91b75b63b6382",
     "semantic_hash": ""
   },
   "apps/marketing/src/main.tsx": {
-    "mtime": 1787603872.6424975,
-    "ast_hash": "1e9dba63b0fc7876fb2ddeef9cd52699",
+    "mtime": 1787637075.80443,
+    "ast_hash": "2a8b7bc4a34fb7d7d28fa44ebb6b31fd",
     "semantic_hash": ""
   },
   "apps/marketing/src/vite-env.d.ts": {
@@ -1325,8 +1325,8 @@
     "semantic_hash": ""
   },
   "apps/marketing/src/TrustPages.tsx": {
-    "mtime": 1787608633.771232,
-    "ast_hash": "862be8db037c923a2b74731c38bb6c47",
+    "mtime": 1787636995.7381606,
+    "ast_hash": "04b7f67a68c0d5633ebe86d199b98b43",
     "semantic_hash": ""
   },
   "apps/marketing/data-processing/index.html": {
@@ -1370,8 +1370,8 @@
     "semantic_hash": ""
   },
   "docs/marketing-billing-growth-plan.md": {
-    "mtime": 1787608813.3674746,
-    "ast_hash": "5141d1711c46737f2a0b3020cfb8aa90",
+    "mtime": 1787636995.7385159,
+    "ast_hash": "ff0dbdfac16f0d90485d5320579cb439",
     "semantic_hash": ""
   },
   "apps/marketing/public/apple-touch-icon.png": {
@@ -1397,6 +1397,11 @@
   "apps/marketing/src/TsewaMonogram.tsx": {
     "mtime": 1787608633.7697291,
     "ast_hash": "2d36685afab2889d25e31c61239d26d5",
+    "semantic_hash": ""
+  },
+  "apps/marketing/src/analytics.ts": {
+    "mtime": 1787637098.1039891,
+    "ast_hash": "3dd4a4f254c01fa502d24b24d24a8c34",
     "semantic_hash": ""
   }
 }

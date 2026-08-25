@@ -33,8 +33,12 @@ feature ships or THF confirms that a historical workflow is still needed.
       `llms.txt` discovery files.
 - [ ] Configure Dodo Payments test products and implement organisation-level hosted
       subscriptions after validating the launch pricing hypothesis.
-- [ ] Add privacy-reviewed PostHog events for the marketing-to-activation funnel;
-      keep autocapture and session replay disabled in the hosted application.
+- [x] Add privacy-reviewed, cookieless PostHog events to the public marketing funnel
+      with autocapture, replay, persistent identity, and sensitive URL data disabled.
+- [ ] Create the production PostHog EU project, provide its public project key at
+      marketing build time, validate live events, and connect its MCP read-only.
+- [ ] Add privacy-reviewed PostHog events for hosted activation; keep autocapture and
+      session replay disabled in the hosted application.
 - [x] Persist the user's theme preference across browser sessions.
 - [x] Make every persistent page search URL-first, validate URL parameters, and derive search,
       filter, sort, and page state safely from the URL.

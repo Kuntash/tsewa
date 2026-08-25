@@ -24,6 +24,7 @@ import type { ComponentType, ReactNode } from "react";
 
 import { TrustPage, trustPageForPath } from "./TrustPages";
 import { TsewaMonogram } from "./TsewaMonogram";
+import { captureAnalytics } from "./analytics";
 
 type DemoView = "overview" | "student" | "resident" | "health" | "sponsorship" | "staff";
 
@@ -376,7 +377,11 @@ function MarketingPage() {
           <a className="text-link" href="https://app.gettsewa.com">
             Sign in
           </a>
-          <a className="button button-dark button-small" href="https://app.gettsewa.com">
+          <a
+            className="button button-dark button-small"
+            href="https://app.gettsewa.com"
+            onClick={() => captureAnalytics("signup_cta_clicked", { placement: "desktop_nav" })}
+          >
             Start with Tsewa <ArrowRight aria-hidden="true" />
           </a>
         </div>
@@ -403,7 +408,11 @@ function MarketingPage() {
             <a href="#faq" onClick={() => setMenuOpen(false)}>
               FAQ
             </a>
-            <a className="button button-accent" href="https://app.gettsewa.com">
+            <a
+              className="button button-accent"
+              href="https://app.gettsewa.com"
+              onClick={() => captureAnalytics("signup_cta_clicked", { placement: "mobile_nav" })}
+            >
               Start with Tsewa <ArrowRight />
             </a>
           </nav>
@@ -431,7 +440,11 @@ function MarketingPage() {
                 and support—without fragmenting their history across departments and spreadsheets.
               </p>
               <div className="hero-actions hero-enter hero-enter-four">
-                <a className="button button-accent" href="https://app.gettsewa.com">
+                <a
+                  className="button button-accent"
+                  href="https://app.gettsewa.com"
+                  onClick={() => captureAnalytics("signup_cta_clicked", { placement: "hero" })}
+                >
                   Create your organisation <ArrowRight />
                 </a>
                 <a className="button button-quiet" href="#demo">
@@ -605,7 +618,11 @@ function MarketingPage() {
                   <Check /> Assisted data migration available
                 </li>
               </ul>
-              <a className="button button-dark" href="https://app.gettsewa.com">
+              <a
+                className="button button-dark"
+                href="https://app.gettsewa.com"
+                onClick={() => captureAnalytics("signup_cta_clicked", { placement: "hosted" })}
+              >
                 Start your organisation <ArrowRight />
               </a>
             </div>
@@ -666,7 +683,12 @@ function MarketingPage() {
                 We can help map, reconcile, and migrate existing records into Tsewa’s connected
                 person model—preserving source history and making uncertainty visible.
               </p>
-              <a href="mailto:kunga@gettsewa.com?subject=Tsewa%20data%20migration">
+              <a
+                href="mailto:kunga@gettsewa.com?subject=Tsewa%20data%20migration"
+                onClick={() =>
+                  captureAnalytics("migration_contact_clicked", { placement: "migration" })
+                }
+              >
                 Discuss a migration <ArrowRight />
               </a>
             </div>
@@ -702,7 +724,11 @@ function MarketingPage() {
                   <Check /> Onboarding and migration options
                 </li>
               </ul>
-              <a className="button button-accent" href="https://app.gettsewa.com">
+              <a
+                className="button button-accent"
+                href="https://app.gettsewa.com"
+                onClick={() => captureAnalytics("signup_cta_clicked", { placement: "hosted_plan" })}
+              >
                 Create an account <ArrowRight />
               </a>
             </Reveal>
@@ -715,7 +741,13 @@ function MarketingPage() {
                   options when required.
                 </p>
               </div>
-              <a className="text-arrow" href="mailto:kunga@gettsewa.com?subject=Tsewa%20Enterprise">
+              <a
+                className="text-arrow"
+                href="mailto:kunga@gettsewa.com?subject=Tsewa%20Enterprise"
+                onClick={() =>
+                  captureAnalytics("enterprise_contact_clicked", { placement: "enterprise_plan" })
+                }
+              >
                 Talk to us <ArrowRight />
               </a>
             </Reveal>
@@ -728,8 +760,13 @@ function MarketingPage() {
             <h2>Before you bring everyone together.</h2>
           </Reveal>
           <Reveal className="faq-list" delay={60}>
-            {faq.map((item) => (
-              <FaqItem answer={item.answer} key={item.question} question={item.question} />
+            {faq.map((item, index) => (
+              <FaqItem
+                analyticsId={`faq_${index + 1}`}
+                answer={item.answer}
+                key={item.question}
+                question={item.question}
+              />
             ))}
           </Reveal>
         </section>
@@ -739,12 +776,19 @@ function MarketingPage() {
             <p className="eyebrow eyebrow-light">A clearer record starts here</p>
             <h2>Give every person a history that stays connected.</h2>
             <div>
-              <a className="button button-accent" href="https://app.gettsewa.com">
+              <a
+                className="button button-accent"
+                href="https://app.gettsewa.com"
+                onClick={() => captureAnalytics("signup_cta_clicked", { placement: "final_cta" })}
+              >
                 Start with Tsewa <ArrowRight />
               </a>
               <a
                 className="button button-outline-light"
                 href="mailto:kunga@gettsewa.com?subject=Tsewa%20walkthrough"
+                onClick={() =>
+                  captureAnalytics("walkthrough_contact_clicked", { placement: "final_cta" })
+                }
               >
                 Book a walkthrough
               </a>
@@ -787,6 +831,17 @@ function ProductDemo() {
   function selectPerson(id: string) {
     setPersonId(id);
     setView("overview");
+    const selectedIndex = people.findIndex((item) => item.id === id);
+    const selectedPerson = people[selectedIndex];
+    captureAnalytics("demo_person_selected", {
+      person_position: selectedIndex + 1,
+      dimension_count: (selectedPerson?.roles.length ?? 0) + 1,
+    });
+  }
+
+  function selectView(nextView: DemoView) {
+    setView(nextView);
+    captureAnalytics("demo_dimension_selected", { dimension: nextView });
   }
 
   function moveTabFocus(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -898,7 +953,7 @@ function ProductDemo() {
                     aria-selected={view === item}
                     className={view === item ? "active" : ""}
                     key={item}
-                    onClick={() => setView(item)}
+                    onClick={() => selectView(item)}
                     onKeyDown={moveTabFocus}
                     role="tab"
                     tabIndex={view === item ? 0 : -1}
@@ -1028,11 +1083,30 @@ function WorkArea({
   );
 }
 
-function FaqItem({ question, answer }: { question: string; answer: string }) {
+function FaqItem({
+  analyticsId,
+  question,
+  answer,
+}: {
+  analyticsId: string;
+  question: string;
+  answer: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className={open ? "faq-item open" : "faq-item"}>
-      <button aria-expanded={open} onClick={() => setOpen((value) => !value)} type="button">
+      <button
+        aria-expanded={open}
+        onClick={() => {
+          const nextOpen = !open;
+          setOpen(nextOpen);
+          captureAnalytics("faq_toggled", {
+            faq_id: analyticsId,
+            state: nextOpen ? "open" : "closed",
+          });
+        }}
+        type="button"
+      >
         <span>{question}</span>
         <ChevronDown />
       </button>
