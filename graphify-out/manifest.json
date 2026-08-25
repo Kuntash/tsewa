@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787636995.7390301,
-    "ast_hash": "3ca5fc0e0a42a6807bee5b686c518c5a",
+    "mtime": 1787639057.5657222,
+    "ast_hash": "97777075c66b2a7940863f7e3a206d34",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -1370,8 +1370,8 @@
     "semantic_hash": ""
   },
   "docs/marketing-billing-growth-plan.md": {
-    "mtime": 1787637335.0299497,
-    "ast_hash": "5e784ab54463dd8ff6b2a5b86f6e4cb7",
+    "mtime": 1787639057.5661457,
+    "ast_hash": "6a617aa5da1a71ac65d80fdba2358b62",
     "semantic_hash": ""
   },
   "apps/marketing/public/apple-touch-icon.png": {
@@ -1400,7 +1400,7 @@
     "semantic_hash": ""
   },
   "apps/marketing/src/analytics.ts": {
-    "mtime": 1787637098.1039891,
+    "mtime": 1787638717.9099388,
     "ast_hash": "3dd4a4f254c01fa502d24b24d24a8c34",
     "semantic_hash": ""
   }

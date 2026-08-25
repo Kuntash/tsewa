@@ -35,8 +35,9 @@ feature ships or THF confirms that a historical workflow is still needed.
       subscriptions after validating the launch pricing hypothesis.
 - [x] Add privacy-reviewed, cookieless PostHog events to the public marketing funnel
       with autocapture, replay, persistent identity, and sensitive URL data disabled.
-- [ ] Create the production PostHog EU project, provide its public project key at
-      marketing build time, validate live events, and connect its MCP read-only.
+- [x] Configure the dedicated PostHog EU marketing project, provide its public
+      project key at build time, validate privacy-safe live events, and connect the
+      official MCP through OAuth.
 - [ ] Add privacy-reviewed PostHog events for hosted activation; keep autocapture and
       session replay disabled in the hosted application.
 - [x] Persist the user's theme preference across browser sessions.
