@@ -1,7 +1,7 @@
 # Graph Report - tsewa  (2026-08-25)
 
 ## Corpus Check
-- 291 files · ~340,949 words
+- 291 files · ~341,002 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0d5efd5a`
+- Built from commit: `16cc1f52`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,7 @@
 - staff-repository.ts
 - ServiceWorkerGlobalScope
 - Event
-- health-operations.tsx
+- staff-operations.tsx
 - scripts
 - cn
 - import-academic-history.mjs
@@ -415,7 +415,7 @@
 - enrollment-change-sheet.tsx
 - Route
 - deployment.ts
-- staff-operations.tsx
+- reports-centre.tsx
 - package.json
 - person-files-dry-run.mjs
 - EndTag
@@ -473,9 +473,9 @@ Nodes (16): createDatabase(), Database, person, personImportBatch, staffCategory
 Cohesion: 0.06
 Nodes (6): CloseEvent, CustomEvent, ErrorEvent, Event, MessageEvent, PromiseRejectionEvent
 
-### Community 4 - "health-operations.tsx"
-Cohesion: 0.08
-Nodes (28): emptyHealth, emptyMedicalAdvances, emptyTb, formatCurrency(), formatDate(), formatPeriod(), HealthOperations(), HealthResponse (+20 more)
+### Community 4 - "staff-operations.tsx"
+Cohesion: 0.05
+Nodes (44): emptyHealth, emptyMedicalAdvances, emptyTb, formatCurrency(), formatDate(), formatPeriod(), HealthOperations(), HealthResponse (+36 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.04
@@ -818,8 +818,8 @@ Cohesion: 0.08
 Nodes (13): writeRoute, Route, Route, Route, Route, Route, Route, Route (+5 more)
 
 ### Community 376 - "file-route.ts"
-Cohesion: 0.06
-Nodes (27): handleApiRequest(), readPatchRoute, readRoute, readWriteDeleteRoute, Route, Route, Route, Route (+19 more)
+Cohesion: 0.05
+Nodes (29): handleApiRequest(), readPatchRoute, readPutRoute, readRoute, readWriteDeleteRoute, Route, Route, Route (+21 more)
 
 ### Community 377 - "changeStudentEnrollment"
 Cohesion: 0.60
@@ -870,8 +870,8 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Redefine v0 as full legacy operational parity; include database-backed features, RBAC, and Everlittle-style email invitations, Source Nodes
 
 ### Community 396 - "api.organization.invitations.$invitationId.ts"
-Cohesion: 0.21
-Nodes (5): deleteRoute, readPutRoute, Route, Route, Route
+Cohesion: 0.40
+Nodes (3): deleteRoute, Route, Route
 
 ### Community 399 - "api.people.$personId.files.$fileId.ts"
 Cohesion: 0.40
@@ -887,15 +887,15 @@ Nodes (16): description, BETTER_AUTH_SECRET, DEFAULT_LOCALE, DEFAULT_ORGANIZATIO
 
 ### Community 403 - "enrollment-change-sheet.tsx"
 Cohesion: 0.06
-Nodes (44): Action, actions, Change, changeDescription(), changeLabel(), dateWithinSession(), Enrollment, EnrollmentChangeSheet() (+36 more)
+Nodes (42): Action, actions, Change, changeDescription(), changeLabel(), dateWithinSession(), Enrollment, EnrollmentChangeSheet() (+34 more)
 
 ### Community 405 - "deployment.ts"
 Cohesion: 0.18
 Nodes (13): DEPLOYMENT_MODES, DeploymentConfig, DeploymentEnvironment, DeploymentMode, getDeploymentConfig(), isValidSlug(), normalize(), parseDefaultOrganization() (+5 more)
 
-### Community 407 - "staff-operations.tsx"
-Cohesion: 0.08
-Nodes (24): AcademicSession, csvCell(), printable(), ReportData, ReportDefinition, ReportDomain, reports, ReportsCentre() (+16 more)
+### Community 407 - "reports-centre.tsx"
+Cohesion: 0.23
+Nodes (10): AcademicSession, csvCell(), printable(), ReportData, ReportDefinition, ReportDomain, reports, ReportsCentre() (+2 more)
 
 ### Community 411 - "package.json"
 Cohesion: 0.17
@@ -957,7 +957,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AbortSignal` connect `AbortSignal` to `web/worker-configuration.d.ts`, `scholarship-operations.tsx`, `EventTarget`?**
   _High betweenness centrality (0.085) - this node is a cross-community bridge._
-- **Why does `ScholarshipOperations()` connect `scholarship-operations.tsx` to `index.tsx`, `health-operations.tsx`?**
+- **Why does `ScholarshipOperations()` connect `scholarship-operations.tsx` to `index.tsx`, `staff-operations.tsx`?**
   _High betweenness centrality (0.037) - this node is a cross-community bridge._
 - **Why does `getRuntimeEnv()` connect `getRuntimeEnv` to `staff-repository.ts`, `deployment.ts`, `api-handlers.ts`, `changeStudentEnrollment`, `getSchoolSessionScope`, `createHostedOrganization`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._

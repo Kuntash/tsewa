@@ -161,6 +161,10 @@ second team member.
 
 ### Marketing analytics implementation
 
+Cloudflare Web Analytics is already injected at the edge and supplies aggregate
+traffic and Core Web Vitals without cookies, query strings, or cross-site visitor
+profiles. Keep it enabled for operational performance monitoring.
+
 The marketing Worker now has an environment-gated PostHog client. It uses the EU
 ingestion host by default, the core no-external-code bundle, cookieless measurement,
 and no person profiles. Autocapture, session replay, heatmaps, surveys, exceptions,

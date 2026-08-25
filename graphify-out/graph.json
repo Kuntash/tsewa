@@ -4666,7 +4666,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "health-operations.tsx"
     },
     {
@@ -4679,7 +4679,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthvisit",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthvisit"
     },
     {
@@ -4692,7 +4692,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthresponse",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthresponse"
     },
     {
@@ -4705,7 +4705,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_tbcase",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "tbcase"
     },
     {
@@ -4718,7 +4718,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_tbresponse",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "tbresponse"
     },
     {
@@ -4731,7 +4731,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_medicaladvance",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "medicaladvance"
     },
     {
@@ -4744,7 +4744,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_medicaladvanceresponse",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "medicaladvanceresponse"
     },
     {
@@ -4755,7 +4755,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_emptyhealth",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptyhealth"
     },
     {
@@ -4780,7 +4780,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_healthoperations",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "healthoperations()"
     },
     {
@@ -4791,7 +4791,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_emptytb",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptytb"
     },
     {
@@ -4803,7 +4803,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_tbhistory",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "tbhistory()"
     },
     {
@@ -4814,7 +4814,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_emptymedicaladvances",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptymedicaladvances"
     },
     {
@@ -4826,7 +4826,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_medicaladvances",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "medicaladvances()"
     },
     {
@@ -4838,7 +4838,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_detail",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "detail()"
     },
     {
@@ -4850,7 +4850,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_summarycard",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "summarycard()"
     },
     {
@@ -4862,7 +4862,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_formatdate",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatdate()"
     },
     {
@@ -4874,7 +4874,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_kindlabel",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "kindlabel()"
     },
     {
@@ -4886,7 +4886,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_formatperiod",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatperiod()"
     },
     {
@@ -4898,7 +4898,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_health_operations_formatcurrency",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatcurrency()"
     },
     {
@@ -5431,7 +5431,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "people-registry.tsx"
     },
     {
@@ -5444,7 +5444,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_personkind",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "personkind"
     },
     {
@@ -5457,7 +5457,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_personstatus",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "personstatus"
     },
     {
@@ -5470,7 +5470,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_personrow",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "personrow"
     },
     {
@@ -5483,7 +5483,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_registryresponse",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "registryresponse"
     },
     {
@@ -5494,7 +5494,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_emptyregistry",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "emptyregistry"
     },
     {
@@ -5519,7 +5519,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_peopleregistry",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "peopleregistry()"
     },
     {
@@ -5531,7 +5531,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_registrynavitem",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "registrynavitem()"
     },
     {
@@ -5543,7 +5543,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_peopleresults",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "peopleresults()"
     },
     {
@@ -5555,7 +5555,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_kindbadge",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "kindbadge()"
     },
     {
@@ -5567,7 +5567,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_statusbadge",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "statusbadge()"
     },
     {
@@ -5579,7 +5579,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_people_registry_formatdate",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "formatdate()"
     },
     {
@@ -6132,7 +6132,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "reports-centre.tsx"
     },
     {
@@ -6145,7 +6145,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_academicsession",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "academicsession"
     },
     {
@@ -6158,7 +6158,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_reportdomain",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "reportdomain"
     },
     {
@@ -6184,7 +6184,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_reportdefinition",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "reportdefinition"
     },
     {
@@ -6197,7 +6197,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_reportdata",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "reportdata"
     },
     {
@@ -6208,7 +6208,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_reports",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "reports"
     },
     {
@@ -6220,7 +6220,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_reportscentre",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "reportscentre()"
     },
     {
@@ -6232,7 +6232,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_printable",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "printable()"
     },
     {
@@ -6244,7 +6244,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_reports_centre_csvcell",
       "community": 407,
-      "community_name": "staff-operations.tsx",
+      "community_name": "reports-centre.tsx",
       "norm_label": "csvcell()"
     },
     {
@@ -7993,7 +7993,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "staff-operations.tsx"
     },
@@ -8006,7 +8006,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffstatus",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "staffstatus"
     },
@@ -8019,7 +8019,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_catalogitem",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "catalogitem"
     },
@@ -8032,7 +8032,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_designation",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "designation"
     },
@@ -8045,7 +8045,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffrow",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "staffrow"
     },
@@ -8058,7 +8058,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffresponse",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "staffresponse"
     },
@@ -8069,7 +8069,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_emptystate",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "emptystate"
     },
@@ -8095,7 +8095,7 @@
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffoperations",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "staffoperations()"
     },
     {
@@ -8106,7 +8106,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_summary",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "summary()"
     },
@@ -8118,7 +8118,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffresults",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "staffresults()"
     },
@@ -8130,7 +8130,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_staffeditor",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "staffeditor()"
     },
@@ -8142,7 +8142,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_editorsection",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "editorsection()"
     },
@@ -8154,7 +8154,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_field",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "field()"
     },
@@ -8166,7 +8166,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_textfield",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "textfield()"
     },
@@ -8178,7 +8178,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_catalogselect",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "catalogselect()"
     },
@@ -8190,7 +8190,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_statusbadge",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "statusbadge()"
     },
@@ -8202,7 +8202,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_nullable",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "nullable()"
     },
@@ -8214,7 +8214,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_nullablechoice",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "nullablechoice()"
     },
@@ -8226,7 +8226,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_dateinput",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "dateinput()"
     },
@@ -8238,7 +8238,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_staff_operations_legacylabel",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "legacylabel()"
     },
@@ -8371,7 +8371,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_theme_toggle",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "theme-toggle.tsx"
     },
@@ -8384,7 +8384,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "id": "apps_web_src_components_theme_toggle_theme",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "theme"
     },
@@ -8396,7 +8396,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_theme_toggle_readtheme",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "readtheme()"
     },
@@ -8408,7 +8408,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_theme_toggle_themetoggle",
-      "community": 407,
+      "community": 4,
       "community_name": "staff-operations.tsx",
       "norm_label": "themetoggle()"
     },
@@ -8502,8 +8502,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_badge",
-      "community": 403,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 407,
+      "community_name": "reports-centre.tsx",
       "norm_label": "badge.tsx"
     },
     {
@@ -8513,8 +8513,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "apps_web_src_components_ui_badge_badgevariants",
-      "community": 403,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 407,
+      "community_name": "reports-centre.tsx",
       "norm_label": "badgevariants"
     },
     {
@@ -8525,8 +8525,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_ui_badge_badge",
-      "community": 403,
-      "community_name": "enrollment-change-sheet.tsx",
+      "community": 407,
+      "community_name": "reports-centre.tsx",
       "norm_label": "badge()"
     },
     {
@@ -11130,7 +11130,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_auth_client",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "auth-client.ts"
     },
     {
@@ -11141,7 +11141,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_auth_client_authclient",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "authclient"
     },
     {
@@ -14348,8 +14348,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "apps_web_src_lib_server_file_route_readputroute",
-      "community": 396,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "file-route.ts",
       "norm_label": "readputroute"
     },
     {
@@ -14525,7 +14525,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_use_debounced_value",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "use-debounced-value.ts"
     },
     {
@@ -14537,7 +14537,7 @@
       "_origin": "ast",
       "id": "apps_web_src_lib_use_debounced_value_usedebouncedvalue",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "usedebouncedvalue()"
     },
     {
@@ -17231,8 +17231,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_schoolid_assignments",
-      "community": 396,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "file-route.ts",
       "norm_label": "api.school-operations.schools.$schoolid.assignments.ts"
     },
     {
@@ -17242,8 +17242,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "apps_web_src_routes_api_school_operations_schools_schoolid_assignments_route",
-      "community": 396,
-      "community_name": "api.organization.invitations.$invitationId.ts",
+      "community": 376,
+      "community_name": "file-route.ts",
       "norm_label": "route"
     },
     {
@@ -18020,7 +18020,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_onboarding",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "onboarding.tsx"
     },
     {
@@ -18033,7 +18033,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_onboarding_onboardingplatformstate",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "onboardingplatformstate"
     },
     {
@@ -18056,7 +18056,7 @@
       "_origin": "ast",
       "id": "apps_web_src_routes_onboarding_onboardingpage",
       "community": 4,
-      "community_name": "health-operations.tsx",
+      "community_name": "staff-operations.tsx",
       "norm_label": "onboardingpage()"
     },
     {
@@ -70815,7 +70815,7 @@
       "label": "Search and AI discovery plan",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L182",
+      "source_location": "L186",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_search_and_ai_discovery_plan",
       "community": 60,
@@ -70826,7 +70826,7 @@
       "label": "Immediate operational steps",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L188",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_immediate_operational_steps",
       "community": 60,
@@ -70837,7 +70837,7 @@
       "label": "Content that can earn rankings",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L199",
+      "source_location": "L203",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_content_that_can_earn_rankings",
       "community": 60,
@@ -70848,7 +70848,7 @@
       "label": "Authority and distribution",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L215",
+      "source_location": "L219",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_authority_and_distribution",
       "community": 60,
@@ -70859,7 +70859,7 @@
       "label": "First hosted-customer plan",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L225",
+      "source_location": "L229",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_first_hosted_customer_plan",
       "community": 60,
@@ -70870,7 +70870,7 @@
       "label": "Ideal first customer",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L233",
+      "source_location": "L237",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_ideal_first_customer",
       "community": 60,
@@ -70881,7 +70881,7 @@
       "label": "Four-week motion",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L239",
+      "source_location": "L243",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_four_week_motion",
       "community": 60,
@@ -70892,7 +70892,7 @@
       "label": "Brand and domain recommendation",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L281",
+      "source_location": "L285",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_brand_and_domain_recommendation",
       "community": 60,
@@ -70903,7 +70903,7 @@
       "label": "Primary references",
       "file_type": "document",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L296",
+      "source_location": "L300",
       "_origin": "ast",
       "id": "docs_marketing_billing_growth_plan_primary_references",
       "community": 60,
@@ -168131,7 +168131,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L281",
+      "source_location": "L285",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_tsewa_launch_billing_analytics_and_growth_plan",
@@ -168153,7 +168153,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L225",
+      "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_tsewa_launch_billing_analytics_and_growth_plan",
@@ -168164,7 +168164,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L296",
+      "source_location": "L300",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_tsewa_launch_billing_analytics_and_growth_plan",
@@ -168186,7 +168186,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L182",
+      "source_location": "L186",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_tsewa_launch_billing_analytics_and_growth_plan",
@@ -168296,7 +168296,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L215",
+      "source_location": "L219",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_search_and_ai_discovery_plan",
@@ -168307,7 +168307,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L199",
+      "source_location": "L203",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_search_and_ai_discovery_plan",
@@ -168318,7 +168318,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L188",
+      "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_search_and_ai_discovery_plan",
@@ -168329,7 +168329,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L239",
+      "source_location": "L243",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_first_hosted_customer_plan",
@@ -168340,7 +168340,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/marketing-billing-growth-plan.md",
-      "source_location": "L233",
+      "source_location": "L237",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_marketing_billing_growth_plan_first_hosted_customer_plan",
@@ -169966,5 +169966,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0d5efd5ad24615ce7760885b748330c6b08adc72"
+  "built_at_commit": "16cc1f52de4548a01ab161b3333de380e761653a"
 }
