@@ -26,6 +26,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import { toast } from "sonner";
 
 import { AccountSettings } from "@/components/account-settings";
 import { HealthOperations } from "@/components/health-operations";
@@ -1595,8 +1596,6 @@ function AdministrationPanel({
   const [busy, setBusy] = useState("");
   const [pendingMemberGroups, setPendingMemberGroups] = useState<Set<string>>(() => new Set());
   const [pendingAccessGroups, setPendingAccessGroups] = useState<Set<AccessGroup>>(() => new Set());
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
   async function refresh() {
     const response = await fetch("/api/organization");
@@ -1616,8 +1615,6 @@ function AdministrationPanel({
 
   function startRequest(label: string) {
     setBusy(label);
-    setMessage("");
-    setError("");
   }
 
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
@@ -1629,9 +1626,9 @@ function AdministrationPanel({
       body: JSON.stringify({ name, displayTitle: displayTitle || null, timezone, locale }),
     });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "Settings could not be saved.");
+    if (!response.ok) toast.error(payload.error ?? "Settings could not be saved.");
     else {
-      setMessage("Organization settings saved.");
+      toast.success("Organization settings saved.");
       await refresh();
     }
     setBusy("");
@@ -1643,10 +1640,10 @@ function AdministrationPanel({
     form.set("file", file);
     const response = await fetch("/api/organization/logo", { method: "POST", body: form });
     const payload = (await response.json()) as { error?: string; logoUrl?: string };
-    if (!response.ok) setError(payload.error ?? "The logo could not be uploaded.");
+    if (!response.ok) toast.error(payload.error ?? "The logo could not be uploaded.");
     else {
       setLogoUrl(payload.logoUrl ?? null);
-      setMessage("Organisation logo updated.");
+      toast.success("Organisation logo updated.");
       await refresh();
     }
     setBusy("");
@@ -1656,10 +1653,10 @@ function AdministrationPanel({
     startRequest("logo-remove");
     const response = await fetch("/api/organization/logo", { method: "DELETE" });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "The logo could not be removed.");
+    if (!response.ok) toast.error(payload.error ?? "The logo could not be removed.");
     else {
       setLogoUrl(null);
-      setMessage("Organisation logo removed.");
+      toast.success("Organisation logo removed.");
       await refresh();
     }
     setBusy("");
@@ -1677,13 +1674,13 @@ function AdministrationPanel({
       error?: string;
       delivery?: { status: "sent" | "failed" };
     };
-    if (!response.ok) setError(payload.error ?? "Invitation could not be created.");
+    if (!response.ok) toast.error(payload.error ?? "Invitation could not be created.");
     else {
-      setMessage(
-        payload.delivery?.status === "sent"
-          ? "Invitation created and emailed."
-          : "Invitation created, but email delivery failed. Use Resend to try again.",
-      );
+      if (payload.delivery?.status === "sent") {
+        toast.success("Invitation created and emailed.");
+      } else {
+        toast.warning("Invitation created, but email delivery failed. Use Resend to try again.");
+      }
       setInviteEmail("");
       await refresh();
     }
@@ -1694,8 +1691,6 @@ function AdministrationPanel({
     const previousGroup = state?.members.find((member) => member.id === memberId)?.group;
     if (!previousGroup || previousGroup === group) return;
 
-    setMessage("");
-    setError("");
     setPendingMemberGroups((current) => new Set(current).add(memberId));
     setState((current) =>
       current
@@ -1728,10 +1723,10 @@ function AdministrationPanel({
               }
             : current,
         );
-        setError(payload.error ?? "The access group could not be changed.");
+        toast.error(payload.error ?? "The access group could not be changed.");
         return;
       }
-      setMessage("Member access group updated.");
+      toast.success("Member access group updated.");
     } catch {
       setState((current) =>
         current
@@ -1745,7 +1740,7 @@ function AdministrationPanel({
             }
           : current,
       );
-      setError("The access group could not be changed.");
+      toast.error("The access group could not be changed.");
     } finally {
       setPendingMemberGroups((current) => {
         const next = new Set(current);
@@ -1767,9 +1762,9 @@ function AdministrationPanel({
       body: JSON.stringify({ targetMemberId: memberId }),
     });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "Ownership could not be transferred.");
+    if (!response.ok) toast.error(payload.error ?? "Ownership could not be transferred.");
     else {
-      setMessage(`Ownership transferred to ${memberName}.`);
+      toast.success(`Ownership transferred to ${memberName}.`);
       await refresh();
     }
     setBusy("");
@@ -1781,9 +1776,9 @@ function AdministrationPanel({
       method: "DELETE",
     });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "Invitation could not be revoked.");
+    if (!response.ok) toast.error(payload.error ?? "Invitation could not be revoked.");
     else {
-      setMessage("Invitation revoked.");
+      toast.success("Invitation revoked.");
       await refresh();
     }
     setBusy("");
@@ -1798,13 +1793,13 @@ function AdministrationPanel({
       error?: string;
       delivery?: { status: "sent" | "failed" };
     };
-    if (!response.ok) setError(payload.error ?? "Invitation could not be resent.");
+    if (!response.ok) toast.error(payload.error ?? "Invitation could not be resent.");
     else {
-      setMessage(
-        payload.delivery?.status === "sent"
-          ? "A fresh invitation was emailed. The old link no longer works."
-          : "Email delivery failed. Wait a minute, then use Resend to try again.",
-      );
+      if (payload.delivery?.status === "sent") {
+        toast.success("A fresh invitation was emailed. The old link no longer works.");
+      } else {
+        toast.error("Email delivery failed. Wait a minute, then use Resend to try again.");
+      }
       await refresh();
     }
     setBusy("");
@@ -1814,8 +1809,6 @@ function AdministrationPanel({
     const previousRoleKeys = state?.accessModel.groups.find((item) => item.key === group)?.roleKeys;
     if (!previousRoleKeys) return;
 
-    setMessage("");
-    setError("");
     setPendingAccessGroups((current) => new Set(current).add(group));
     setState((current) =>
       current
@@ -1854,10 +1847,10 @@ function AdministrationPanel({
               }
             : current,
         );
-        setError(payload.error ?? "Group roles could not be saved.");
+        toast.error(payload.error ?? "Group roles could not be saved.");
         return;
       }
-      setMessage(`${groupLabel(group)} access updated.`);
+      toast.success(`${groupLabel(group)} access updated.`);
     } catch {
       setState((current) =>
         current
@@ -1874,7 +1867,7 @@ function AdministrationPanel({
             }
           : current,
       );
-      setError("Group roles could not be saved.");
+      toast.error("Group roles could not be saved.");
     } finally {
       setPendingAccessGroups((current) => {
         const next = new Set(current);
@@ -1941,17 +1934,6 @@ function AdministrationPanel({
           {groupLabel(state.currentMember.group)}
         </Badge>
       </div>
-
-      {message ? (
-        <div className="mt-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm text-primary">
-          <Check className="size-4" /> {message}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
 
       <div className="mt-6 grid gap-5">
         {activeTab === "general" ? (
@@ -2321,8 +2303,6 @@ function AcademicSessionSettings() {
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [busy, setBusy] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
   async function refresh(resetDraft = false) {
     const response = await fetch("/api/organization/sessions");
@@ -2348,17 +2328,15 @@ function AcademicSessionSettings() {
   async function createSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy("create");
-    setMessage("");
-    setError("");
     const response = await fetch("/api/organization/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name, startsOn, endsOn, isActive: true }),
     });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "The academic year could not be created.");
+    if (!response.ok) toast.error(payload.error ?? "The academic year could not be created.");
     else {
-      setMessage(`${name} is ready to use.`);
+      toast.success(`${name} is ready to use.`);
       await refresh(true);
     }
     setBusy("");
@@ -2366,8 +2344,6 @@ function AcademicSessionSettings() {
 
   async function toggleSession(session: AcademicSession & { isActive: boolean }) {
     setBusy(session.id);
-    setMessage("");
-    setError("");
     const response = await fetch(`/api/organization/sessions/${session.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -2379,9 +2355,9 @@ function AcademicSessionSettings() {
       }),
     });
     const payload = (await response.json()) as { error?: string };
-    if (!response.ok) setError(payload.error ?? "The academic year could not be updated.");
+    if (!response.ok) toast.error(payload.error ?? "The academic year could not be updated.");
     else {
-      setMessage(`${session.name} ${session.isActive ? "archived" : "activated"}.`);
+      toast.success(`${session.name} ${session.isActive ? "archived" : "activated"}.`);
       await refresh();
     }
     setBusy("");
@@ -2395,17 +2371,6 @@ function AcademicSessionSettings() {
         Create the next session before enrolment and results work begins. Existing session data is
         never copied or deleted automatically.
       </p>
-
-      {message ? (
-        <div className="mt-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm text-primary">
-          <Check className="size-4" /> {message}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
 
       <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_0.8fr]">
         <Card>

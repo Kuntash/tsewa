@@ -9,6 +9,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import type { PersonFamilyDetails, SiblingRelationship } from "@/components/person-profile-sheet";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,6 @@ export function PersonFamilyEditor({
   );
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
   useEffect(() => setDetails(familyToForm(family)), [family]);
 
@@ -124,7 +124,6 @@ export function PersonFamilyEditor({
     event.preventDefault();
     setBusy("family");
     setError("");
-    setMessage("");
     try {
       const response = await fetch(`/api/people/${personId}/family`, {
         method: "PATCH",
@@ -138,9 +137,11 @@ export function PersonFamilyEditor({
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "The family details could not be saved.");
       await onChanged();
-      setMessage("Family details saved.");
+      toast.success("Family details saved.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The family details could not be saved.");
+      toast.error(
+        reason instanceof Error ? reason.message : "The family details could not be saved.",
+      );
     } finally {
       setBusy("");
     }
@@ -149,15 +150,14 @@ export function PersonFamilyEditor({
   async function linkExisting(option: PersonOption) {
     setBusy(`link-${option.id}`);
     setError("");
-    setMessage("");
     try {
       await writeSibling(personId, { mode: "existing", relatedPersonId: option.id });
       setSearch("");
       setOptions([]);
       await onChanged();
-      setMessage(`${option.displayName} linked as a sibling.`);
+      toast.success(`${option.displayName} linked as a sibling.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The sibling could not be linked.");
+      toast.error(reason instanceof Error ? reason.message : "The sibling could not be linked.");
     } finally {
       setBusy("");
     }
@@ -167,7 +167,6 @@ export function PersonFamilyEditor({
     event.preventDefault();
     setBusy("new-sibling");
     setError("");
-    setMessage("");
     try {
       await writeSibling(personId, {
         mode: "new",
@@ -180,9 +179,9 @@ export function PersonFamilyEditor({
       setNewSiblingGender("unknown");
       setShowNewSibling(false);
       await onChanged();
-      setMessage("The new person was created and linked as a sibling.");
+      toast.success("The new person was created and linked as a sibling.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The sibling could not be created.");
+      toast.error(reason instanceof Error ? reason.message : "The sibling could not be created.");
     } finally {
       setBusy("");
     }
@@ -192,7 +191,6 @@ export function PersonFamilyEditor({
     if (!window.confirm(`Remove the sibling link with ${relationship.displayName}?`)) return;
     setBusy(`remove-${relationship.id}`);
     setError("");
-    setMessage("");
     try {
       const response = await fetch(`/api/people/${personId}/siblings/${relationship.id}`, {
         method: "DELETE",
@@ -200,9 +198,11 @@ export function PersonFamilyEditor({
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "The sibling link could not be removed.");
       await onChanged();
-      setMessage(`Sibling link with ${relationship.displayName} removed.`);
+      toast.success(`Sibling link with ${relationship.displayName} removed.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The sibling link could not be removed.");
+      toast.error(
+        reason instanceof Error ? reason.message : "The sibling link could not be removed.",
+      );
     } finally {
       setBusy("");
     }
@@ -229,12 +229,6 @@ export function PersonFamilyEditor({
               {error}
             </p>
           ) : null}
-          {message ? (
-            <p className="rounded-xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm">
-              {message}
-            </p>
-          ) : null}
-
           <form className="space-y-8" noValidate onSubmit={saveFamily}>
             <EditorSection title="Parents">
               <div className="grid gap-4 sm:grid-cols-2">

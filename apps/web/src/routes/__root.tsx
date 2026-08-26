@@ -1,5 +1,7 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 
+import { Toaster } from "@/components/ui/sonner";
+
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -21,6 +23,11 @@ export const Route = createRootRoute({
       },
     ],
     links: [
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
+      },
       {
         rel: "stylesheet",
         href: appCss,
@@ -44,6 +51,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <Toaster />
 
         <Scripts />
       </body>

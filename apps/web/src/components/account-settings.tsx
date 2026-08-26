@@ -1,6 +1,7 @@
-import { Check, LoaderCircle, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { LoaderCircle, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,21 +28,17 @@ export function AccountSettings({ user }: AccountSettingsProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
   function startRequest(label: string) {
     setBusy(label);
-    setMessage("");
-    setError("");
   }
 
   async function updateName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startRequest("name");
     const result = await authClient.updateUser({ name: name.trim() });
-    if (result.error) setError(result.error.message ?? "Your name could not be updated.");
-    else setMessage("Your display name was updated.");
+    if (result.error) toast.error(result.error.message ?? "Your name could not be updated.");
+    else toast.success("Your display name was updated.");
     setBusy("");
   }
 
@@ -54,7 +51,7 @@ export function AccountSettings({ user }: AccountSettingsProps) {
       password: emailPassword,
     });
     if (verification.error) {
-      setError("Your current password is incorrect.");
+      toast.error("Your current password is incorrect.");
       setBusy("");
       return;
     }
@@ -64,11 +61,11 @@ export function AccountSettings({ user }: AccountSettingsProps) {
       newEmail: nextEmail,
       callbackURL: "/settings/general",
     });
-    if (result.error) setError(result.error.message ?? "Your email could not be updated.");
+    if (result.error) toast.error(result.error.message ?? "Your email could not be updated.");
     else {
       setPendingEmail(nextEmail);
       setEmailPassword("");
-      setMessage(
+      toast.success(
         `Verification sent to ${nextEmail}. Your sign-in email remains ${currentEmail} until you confirm the new address.`,
       );
     }
@@ -82,18 +79,17 @@ export function AccountSettings({ user }: AccountSettingsProps) {
       callbackURL: "/settings/general",
     });
     if (result.error) {
-      setError(result.error.message ?? "The verification email could not be sent.");
+      toast.error(result.error.message ?? "The verification email could not be sent.");
     } else {
-      setMessage(`Verification sent to ${currentEmail}.`);
+      toast.success(`Verification sent to ${currentEmail}.`);
     }
     setBusy("");
   }
 
   async function updatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
     if (newPassword !== confirmPassword) {
-      setError("The new passwords do not match.");
+      toast.error("The new passwords do not match.");
       return;
     }
 
@@ -103,12 +99,12 @@ export function AccountSettings({ user }: AccountSettingsProps) {
       newPassword,
       revokeOtherSessions: true,
     });
-    if (result.error) setError(result.error.message ?? "Your password could not be updated.");
+    if (result.error) toast.error(result.error.message ?? "Your password could not be updated.");
     else {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage("Password updated. Other signed-in sessions were revoked.");
+      toast.success("Password updated. Other signed-in sessions were revoked.");
     }
     setBusy("");
   }
@@ -130,17 +126,6 @@ export function AccountSettings({ user }: AccountSettingsProps) {
           {user.emailVerified ? "Verified email" : "Email not verified"}
         </Badge>
       </div>
-
-      {message ? (
-        <div className="mt-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm text-primary">
-          <Check className="size-4" /> {message}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
 
       {!user.emailVerified ? (
         <div className="mt-5 flex flex-col gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">

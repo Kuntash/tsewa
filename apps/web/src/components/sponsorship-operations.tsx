@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -131,7 +132,6 @@ export function SponsorshipOperations({
   const [setup, setSetup] = useState<Setup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [editor, setEditor] = useState<Row | "new" | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -181,7 +181,7 @@ export function SponsorshipOperations({
   }, [reloadKey, reportsOpen, setupOpen]);
 
   function saved(value: string) {
-    setMessage(value);
+    toast.success(value);
     setEditor(null);
     setReloadKey((current) => current + 1);
   }
@@ -235,7 +235,6 @@ export function SponsorshipOperations({
             value={money(data.summary.receivedAmount)}
           />
         </div>
-        {message ? <Notice>{message}</Notice> : null}
         {error ? <ErrorNotice>{error}</ErrorNotice> : null}
         <Card>
           <CardContent className="space-y-4 p-4">
@@ -1396,13 +1395,6 @@ function SelectField({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-function Notice({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
-      {children}
-    </p>
   );
 }
 function ErrorNotice({ children }: { children: React.ReactNode }) {

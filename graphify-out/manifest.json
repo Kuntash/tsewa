@@ -5,13 +5,13 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1787593931.6522977,
-    "ast_hash": "009f151723397e9582558e4262a2a9ca",
+    "mtime": 1787732165.2705479,
+    "ast_hash": "d600422cd3feeeb33769d5a4f48db1da",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
-    "mtime": 1787571695.3529532,
-    "ast_hash": "9a050f03408922a9c7e0fb0e9888ee45",
+    "mtime": 1787732256.0349681,
+    "ast_hash": "6a3fff1026d001b8bc8e169a918b3a14",
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
@@ -110,13 +110,13 @@
     "semantic_hash": "2c551ba62c324b2cdfaf8131878084a5"
   },
   "apps/web/src/routes/__root.tsx": {
-    "mtime": 1786401404.3493917,
-    "ast_hash": "85e32c6c9f71ec15d990c384d5124bfa",
+    "mtime": 1787732191.5663025,
+    "ast_hash": "b6866705d9d42fc1757dd11e9f7bff6c",
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787731157.5542834,
-    "ast_hash": "5fee7fcccd6971ff2a0abda9e6ab1cd2",
+    "mtime": 1787732235.565092,
+    "ast_hash": "4a6957961a82c69a956b0af1ce9e11d2",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "pnpm-workspace.yaml": {
-    "mtime": 1787637020.4904006,
-    "ast_hash": "82d802e3915eaf4749797a17206e220f",
+    "mtime": 1787732165.270577,
+    "ast_hash": "e5fc1e55f1786c840c52cad6fb75f74f",
     "semantic_hash": ""
   },
   ".githooks/pre-commit": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1787572670.0434413,
-    "ast_hash": "a4a06931b71227dc4d1bb35316583dfa",
+    "mtime": 1787732288.295372,
+    "ast_hash": "60beb1f79cd0835ff0c456a3bbcd4a6a",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-family-editor.tsx": {
-    "mtime": 1786447200.9829903,
-    "ast_hash": "67ca29e704c42e46a6c4e39ee10945b6",
+    "mtime": 1787732274.2672493,
+    "ast_hash": "30d75330afff271abb86919a106f24eb",
     "semantic_hash": ""
   },
   "apps/web/migrations/0015_home_placement_editing.sql": {
@@ -920,13 +920,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/scholarship-operations.tsx": {
-    "mtime": 1787309271.3637688,
-    "ast_hash": "10a90ac2d23bd38679b1bf828d9d9930",
+    "mtime": 1787732318.5377438,
+    "ast_hash": "06188e7aabdbd727bb016e36483dad77",
     "semantic_hash": ""
   },
   "apps/web/src/components/sponsorship-operations.tsx": {
-    "mtime": 1787311048.5854228,
-    "ast_hash": "d40450df6e6b0bf082e589eac218a37d",
+    "mtime": 1787732296.7810316,
+    "ast_hash": "369d8fb540bba6440d5eccfb90881a4e",
     "semantic_hash": ""
   },
   "apps/web/src/lib/sponsorship.test.ts": {
@@ -1402,6 +1402,16 @@
   "apps/marketing/src/analytics.ts": {
     "mtime": 1787638717.9099388,
     "ast_hash": "3dd4a4f254c01fa502d24b24d24a8c34",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/ui/sonner.tsx": {
+    "mtime": 1787732342.1045516,
+    "ast_hash": "c49ba2faa53d0a4e03e16c48585ee311",
+    "semantic_hash": ""
+  },
+  "apps/web/public/favicon.svg": {
+    "mtime": 1787732191.5649023,
+    "ast_hash": "d3c72abd4e220e9932e3fee869774e11",
     "semantic_hash": ""
   }
 }

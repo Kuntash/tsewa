@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -170,7 +171,6 @@ export function ScholarshipOperations({
   const [page, setPage] = useState(filters.page ?? 1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editor, setEditor] = useState<Detail["record"] | "new" | null>(null);
@@ -224,11 +224,11 @@ export function ScholarshipOperations({
     }
   }
   function saved(text: string) {
-    setMessage(text);
+    toast.success(text);
     setRefreshKey((value) => value + 1);
   }
   async function exportAll() {
-    setMessage("Preparing the full scholarship register…");
+    const toastId = toast.loading("Preparing the full scholarship register…");
     try {
       const rows = await loadAllRows();
       const table = [
@@ -258,9 +258,9 @@ export function ScholarshipOperations({
         ]),
       ];
       downloadCsv("scholarship-register", table);
-      setMessage(`${rows.length} scholarship records exported.`);
+      toast.success(`${rows.length} scholarship records exported.`, { id: toastId });
     } catch (reason) {
-      setError(messageOf(reason));
+      toast.error(messageOf(reason), { id: toastId });
     }
   }
   async function loadAllRows() {
@@ -278,7 +278,7 @@ export function ScholarshipOperations({
     return rows;
   }
   async function printAll() {
-    setMessage("Preparing the full scholarship register…");
+    const toastId = toast.loading("Preparing the full scholarship register…");
     try {
       const rows = await loadAllRows();
       const previous = data;
@@ -288,9 +288,10 @@ export function ScholarshipOperations({
         pagination: { ...data.pagination, total: rows.length },
       });
       window.addEventListener("afterprint", () => setData(previous), { once: true });
+      toast.success("Scholarship register ready to print.", { id: toastId });
       window.setTimeout(() => window.print(), 50);
     } catch (reason) {
-      setError(messageOf(reason));
+      toast.error(messageOf(reason), { id: toastId });
     }
   }
 
@@ -341,11 +342,6 @@ export function ScholarshipOperations({
             value={money(data.summary.sanctionedAmount)}
           />
         </div>
-        {message ? (
-          <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
-            {message}
-          </p>
-        ) : null}
         {error ? (
           <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}

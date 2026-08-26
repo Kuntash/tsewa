@@ -21,6 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { AdmissionSheet } from "@/components/admission-sheet";
@@ -196,7 +197,6 @@ export function SchoolOperations({
   const [loadingDirectories, setLoadingDirectories] = useState(true);
   const [admissionOpen, setAdmissionOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [message, setMessage] = useState("");
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
   const [schoolEditorOpen, setSchoolEditorOpen] = useState(false);
   const [schoolBeingEdited, setSchoolBeingEdited] = useState<EditableSchool | null>(null);
@@ -653,12 +653,6 @@ export function SchoolOperations({
             </div>
           ) : null}
 
-          {message ? (
-            <div className="mt-6 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
-              {message}
-            </div>
-          ) : null}
-
           {section === "students" ? (
             <>
               <SummaryCards loading={loadingOverview} overview={overview} />
@@ -801,7 +795,7 @@ export function SchoolOperations({
           ) : section === "setup" ? (
             <SchoolMasterData
               onChanged={(savedMessage) => {
-                setMessage(savedMessage);
+                toast.success(savedMessage);
                 setRefreshKey((value) => value + 1);
               }}
               sessionId={activeSessionId}
@@ -833,7 +827,7 @@ export function SchoolOperations({
       />
       <AdmissionSheet
         onCreated={(personId, displayName) => {
-          setMessage(`${displayName} was admitted successfully.`);
+          toast.success(`${displayName} was admitted successfully.`);
           setRefreshKey((value) => value + 1);
           setSelectedPersonId(personId);
         }}
@@ -847,7 +841,7 @@ export function SchoolOperations({
           if (!open) setSelectedEnrollmentId(null);
         }}
         onSaved={(savedMessage) => {
-          setMessage(savedMessage);
+          toast.success(savedMessage);
           setRefreshKey((value) => value + 1);
         }}
         open={Boolean(selectedEnrollmentId)}
@@ -855,7 +849,7 @@ export function SchoolOperations({
       <SchoolEditorSheet
         onOpenChange={setSchoolEditorOpen}
         onSaved={(savedMessage) => {
-          setMessage(savedMessage);
+          toast.success(savedMessage);
           setSchoolEditorOpen(false);
           setRefreshKey((value) => value + 1);
         }}
@@ -867,7 +861,7 @@ export function SchoolOperations({
           if (!open) setSchoolBeingAssigned(null);
         }}
         onSaved={(savedMessage) => {
-          setMessage(savedMessage);
+          toast.success(savedMessage);
           setRefreshKey((value) => value + 1);
         }}
         open={Boolean(schoolBeingAssigned)}
