@@ -1,6 +1,7 @@
 # Tsewa
 
-Open-source operations software for schools and care communities. This repository contains the first self-hosted installation and is the foundation for the future hosted service.
+Open-source operations software for schools and care communities. This is the canonical product
+repository for the hosted service at `gettsewa.com` and for versioned self-hosted releases.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Kuntash/tsewa/tree/main/apps/web)
 
@@ -51,36 +52,15 @@ The same codebase supports private, organization-owned installations and the fut
 See [`docs/deployment-modes.md`](docs/deployment-modes.md) and
 [`docs/self-hosting.md`](docs/self-hosting.md).
 
-## THF deployment
+## Releases and private installations
 
-The first self-hosted instance is deployed to `https://ths.kunga.dev` as the
-`tsewa-self-hosted` Cloudflare Worker. Its custom domain, D1 database, R2
-bucket, and required `BETTER_AUTH_SECRET` are declared or managed through
-`apps/web/wrangler.ths.jsonc` and Wrangler.
+Canonical releases are Git tags beginning with `v`. Organisation-specific domains, Cloudflare
+resource IDs, operational notes, and tracked deployment overlays belong in private downstream
+repositories, not here. Product fixes land in this repository first and are then consumed by each
+installation from a reviewed release tag.
 
-## Cloudflare resources
-
-The first self-hosted instance uses:
-
-- D1: `tsewa-self-hosted-db`
-- R2: `tsewa-self-hosted-files`
-
-Apply remote migrations only after reviewing them:
-
-```bash
-pnpm db:migrate:ths
-```
-
-`BETTER_AUTH_SECRET` is never committed. Add it locally in `.dev.vars`, and set it for a deployed Worker with `wrangler secret put BETTER_AUTH_SECRET`.
-
-Deploy the current THS overlay explicitly:
-
-```sh
-pnpm deploy:ths
-```
-
-The handover into a THS-owned Cloudflare account is documented in
-[`docs/ths-cloudflare-handover.md`](docs/ths-cloudflare-handover.md).
+See [`docs/releases.md`](docs/releases.md) for the release contract and
+[`docs/self-hosting.md`](docs/self-hosting.md) for the downstream upgrade runbook.
 
 ## License
 

@@ -50,6 +50,24 @@ pnpm --dir apps/web exec wrangler secret put BETTER_AUTH_SECRET \
 
 The installation repository should contain only its Wrangler overlay and private operational
 notes. Generic product changes must land upstream in Tsewa and arrive through reviewed releases.
+Configure its remotes as:
+
+```text
+origin    git@github.com:YOUR_ORG/YOUR_PRIVATE_INSTALLATION.git
+upstream  git@github.com:Kuntash/tsewa.git
+```
+
+Record the full reviewed release commit in `UPSTREAM_VERSION`. Because a downstream repository has
+its own overlay commit, upgrades are merges—not fast-forwards. Keeping installation changes in
+unique files makes those merges small and reviewable:
+
+```sh
+git fetch upstream --tags
+git merge --no-ff vNEXT
+printf '%s\n' "$(git rev-list -n 1 vNEXT)" > UPSTREAM_VERSION
+git add UPSTREAM_VERSION
+git commit --amend --no-edit
+```
 
 ## Backups and upgrades
 
@@ -70,6 +88,7 @@ outside the production account, and rehearse restoring both resources into dispo
 Cloudflare D1 Time Travel is useful for short recovery windows, but it is not a substitute for a
 portable, independently held backup.
 
-Apply releases in this order: backup, validate the configuration, migrate D1, deploy the Worker,
-then smoke-test authentication, files, email, and the main directories. Worker rollback does not
-reverse a database migration.
+Apply releases in this order: review the tagged release, backup, merge it into the private
+downstream, validate the configuration, migrate D1, deploy the Worker, then smoke-test
+authentication, files, email, and the main directories. Worker rollback does not reverse a
+database migration.

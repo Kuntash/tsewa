@@ -5,8 +5,8 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1787732165.2705479,
-    "ast_hash": "d600422cd3feeeb33769d5a4f48db1da",
+    "mtime": 1787742535.143617,
+    "ast_hash": "3b91bd4bc8e135d52e0449c2d86852cc",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787604539.9823704,
-    "ast_hash": "6f55c3c410ac829c452f6accba70d77b",
+    "mtime": 1787742535.1430693,
+    "ast_hash": "7bb39d4853b624ce74d90eb0070a5ea2",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -195,8 +195,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787606973.2461665,
-    "ast_hash": "147dfbd912c567ed71e4d5cbfed6ffd3",
+    "mtime": 1787742535.1419666,
+    "ast_hash": "27626198704eb576c543a018b151d40c",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "apps/web/README.md": {
-    "mtime": 1787590566.0465717,
-    "ast_hash": "f27094ea4cf19cfcfe15738ba9c3089d",
+    "mtime": 1787742535.142407,
+    "ast_hash": "f8c3f5dbda81d61f7c4ce89d29fe1379",
     "semantic_hash": ""
   },
   "docs/family-relationships-migration.md": {
@@ -1265,13 +1265,8 @@
     "semantic_hash": ""
   },
   "docs/self-hosting.md": {
-    "mtime": 1787590879.7677155,
-    "ast_hash": "e0ff7a0076285fa0eb5b0ec58a8ba30c",
-    "semantic_hash": ""
-  },
-  "docs/ths-cloudflare-handover.md": {
-    "mtime": 1787590515.8029296,
-    "ast_hash": "a5fb9041ae3f1c0e926f8a7900d350d3",
+    "mtime": 1787742535.1442509,
+    "ast_hash": "d29e3502cb7e261006353e3aa5b714da",
     "semantic_hash": ""
   },
   "apps/web/src/components/hosted-onboarding.tsx": {
@@ -1412,6 +1407,16 @@
   "apps/web/public/favicon.svg": {
     "mtime": 1787732191.5649023,
     "ast_hash": "d3c72abd4e220e9932e3fee869774e11",
+    "semantic_hash": ""
+  },
+  ".github/workflows/release.yml": {
+    "mtime": 1787742535.1474178,
+    "ast_hash": "fd9a97c9fc967077d85f40a80abab633",
+    "semantic_hash": ""
+  },
+  "docs/releases.md": {
+    "mtime": 1787742535.1464305,
+    "ast_hash": "79ed8b34b11d5407c46a74a22c000830",
     "semantic_hash": ""
   }
 }

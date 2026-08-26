@@ -12,8 +12,9 @@ pnpm db:migrate:local
 pnpm dev
 ```
 
-The default `wrangler.jsonc` is a generic self-hosted template. THS production uses the explicit
-`wrangler.ths.jsonc` overlay so organization-owned configuration does not leak into product code.
+The default `wrangler.jsonc` is a generic self-hosted template. Production installations keep a
+tracked `wrangler.self-hosted.jsonc` overlay in their private downstream repository so
+organisation-owned configuration does not leak into product code.
 
 Build the production app with:
 
