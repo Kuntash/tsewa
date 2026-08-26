@@ -1,16 +1,16 @@
-# Graph Report - tsewa  (2026-08-25)
+# Graph Report - tsewa  (2026-08-26)
 
 ## Corpus Check
-- 291 files · ~341,001 words
+- 291 files · ~341,039 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6014 nodes · 8584 edges · 431 communities (133 shown, 298 thin omitted)
+- 6014 nodes · 8584 edges · 432 communities (134 shown, 298 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 48 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `66af230f`
+- Built from commit: `71c21189`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -425,6 +425,7 @@
 - Q: continue until you are done with all drizzle migration
 - Q: continue to next
 - Q: whats next
+- reports-centre.tsx
 - Cache
 - MediaTransformationResult
 - Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance
@@ -449,17 +450,17 @@
   apps/marketing/src/App.tsx → apps/web/src/routes/index.tsx
 - `SummaryCards()` --indirect_call--> `Home()`  [INFERRED]
   apps/web/src/components/school-operations.tsx → apps/web/src/routes/index.tsx
+- `CardAction()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
+- `CardFooter()` --calls--> `cn()`  [EXTRACTED]
+  apps/web/src/components/ui/card.tsx → apps/web/src/lib/utils.ts
 - `SheetOverlay()` --calls--> `cn()`  [EXTRACTED]
   apps/web/src/components/ui/sheet.tsx → apps/web/src/lib/utils.ts
-- `fetch()` --calls--> `getRuntimeEnv()`  [EXTRACTED]
-  apps/web/src/server.ts → apps/web/src/lib/runtime-env.ts
-- `addRows()` --indirect_call--> `sqlLiteral()`  [INFERRED]
-  scripts/import-staff-operations.mjs → scripts/lib/person-files.mjs
 
 ## Import Cycles
 - None detected.
 
-## Communities (431 total, 298 thin omitted)
+## Communities (432 total, 298 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -483,7 +484,7 @@ Nodes (53): scripts, build, cf-typegen, db:migrate:hosted, db:migrate:local, db:
 
 ### Community 6 - "cn"
 Cohesion: 0.06
-Nodes (49): AccountSettings(), AccountSettingsProps, classPresets, ClassRow, HostedOnboarding(), InvitationRow, localeOptions, slugify() (+41 more)
+Nodes (42): classPresets, ClassRow, HostedOnboarding(), InvitationRow, localeOptions, slugify(), steps, timezoneOptions (+34 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -818,8 +819,8 @@ Cohesion: 0.08
 Nodes (13): writeRoute, Route, Route, Route, Route, Route, Route, Route (+5 more)
 
 ### Community 376 - "file-route.ts"
-Cohesion: 0.05
-Nodes (29): handleApiRequest(), readPatchRoute, readPutRoute, readRoute, readWriteDeleteRoute, Route, Route, Route (+21 more)
+Cohesion: 0.06
+Nodes (27): handleApiRequest(), readPatchRoute, readRoute, readWriteDeleteRoute, Route, Route, Route, Route (+19 more)
 
 ### Community 377 - "changeStudentEnrollment"
 Cohesion: 0.60
@@ -870,8 +871,8 @@ Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Redefine v0 as full legacy operational parity; include database-backed features, RBAC, and Everlittle-style email invitations, Source Nodes
 
 ### Community 396 - "api.organization.invitations.$invitationId.ts"
-Cohesion: 0.40
-Nodes (3): deleteRoute, Route, Route
+Cohesion: 0.21
+Nodes (5): deleteRoute, readPutRoute, Route, Route, Route
 
 ### Community 399 - "api.people.$personId.files.$fileId.ts"
 Cohesion: 0.40
@@ -887,15 +888,15 @@ Nodes (16): description, BETTER_AUTH_SECRET, DEFAULT_LOCALE, DEFAULT_ORGANIZATIO
 
 ### Community 403 - "enrollment-change-sheet.tsx"
 Cohesion: 0.06
-Nodes (44): Action, actions, Change, changeDescription(), changeLabel(), dateWithinSession(), Enrollment, EnrollmentChangeSheet() (+36 more)
+Nodes (42): Action, actions, Change, changeDescription(), changeLabel(), dateWithinSession(), Enrollment, EnrollmentChangeSheet() (+34 more)
 
 ### Community 405 - "deployment.ts"
 Cohesion: 0.18
 Nodes (13): DEPLOYMENT_MODES, DeploymentConfig, DeploymentEnvironment, DeploymentMode, getDeploymentConfig(), isValidSlug(), normalize(), parseDefaultOrganization() (+5 more)
 
 ### Community 407 - "staff-operations.tsx"
-Cohesion: 0.08
-Nodes (24): AcademicSession, csvCell(), printable(), ReportData, ReportDefinition, ReportDomain, reports, ReportsCentre() (+16 more)
+Cohesion: 0.13
+Nodes (13): CatalogItem, dateInput(), Designation, emptyState, legacyLabel(), nullable(), nullableChoice(), StaffEditor() (+5 more)
 
 ### Community 411 - "package.json"
 Cohesion: 0.17
@@ -920,6 +921,10 @@ Nodes (4): Answer, Outcome, Q: continue to next, Source Nodes
 ### Community 419 - "Q: whats next"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: whats next, Source Nodes
+
+### Community 420 - "reports-centre.tsx"
+Cohesion: 0.13
+Nodes (20): AccountSettings(), AccountSettingsProps, AcademicSession, csvCell(), printable(), ReportData, ReportDefinition, ReportDomain (+12 more)
 
 ### Community 424 - "Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance"
 Cohesion: 0.40

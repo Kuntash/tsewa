@@ -2108,7 +2108,20 @@ function AdministrationPanel({
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{member.email}</p>
+                      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+                        <p className="truncate text-xs text-muted-foreground">{member.email}</p>
+                        <Badge
+                          className={
+                            member.emailVerified
+                              ? "gap-1 border-primary/20 bg-primary/10 text-primary"
+                              : "border-border bg-muted text-muted-foreground"
+                          }
+                          variant="outline"
+                        >
+                          {member.emailVerified ? <Check className="size-3" /> : null}
+                          {member.emailVerified ? "Verified" : "Not verified"}
+                        </Badge>
+                      </div>
                     </div>
                     {!isCurrent && canManageMembers && member.group !== "owner" ? (
                       <div className="flex flex-wrap items-center gap-2">

@@ -10985,13 +10985,15 @@ async function getOrganization(request: Request): Promise<Response> {
         .where(eq(organization.id, context.organizationId))
         .limit(1),
       runtime.ORM.select({
-        id: organizationMember.id,
-        group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`,
-        joinedAt: organizationMember.createdAt,
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        emailVerified: user.emailVerified,
+        id: sql<string>`${organizationMember.id}`.as("member_id"),
+        group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`.as(
+          "member_group",
+        ),
+        joinedAt: sql<string>`${organizationMember.createdAt}`.as("member_joined_at"),
+        userId: sql<string>`${user.id}`.as("member_user_id"),
+        name: sql<string>`${user.name}`.as("member_name"),
+        email: sql<string>`${user.email}`.as("member_email"),
+        emailVerified: sql<number>`${user.emailVerified}`.as("member_email_verified"),
       })
         .from(organizationMember)
         .innerJoin(user, eq(user.id, organizationMember.userId))
