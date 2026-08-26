@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787768277.2863362,
-    "ast_hash": "3d504ad9de19ca1387e3342d8136728c",
+    "mtime": 1787768473.0713906,
+    "ast_hash": "01e2da6e50e76c10d49eb1bbf6a53c40",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -1410,8 +1410,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/release.yml": {
-    "mtime": 1787742535.1474178,
-    "ast_hash": "fd9a97c9fc967077d85f40a80abab633",
+    "mtime": 1787768473.0706995,
+    "ast_hash": "27458bce5059e213386f36df45fa0348",
     "semantic_hash": ""
   },
   "docs/releases.md": {
