@@ -5,7 +5,19 @@ import { getDeploymentConfig } from "@/lib/deployment";
 
 type SecretBindings = {
   BETTER_AUTH_SECRET?: string;
+  DODO_PAYMENTS_API_KEY?: string;
+  DODO_PAYMENTS_ENVIRONMENT?: string;
+  DODO_PAYMENTS_WEBHOOK_KEY?: string;
+  DODO_PRODUCT_ID_MONTHLY?: string;
+  DODO_PRODUCT_ID_YEARLY?: string;
 };
+
+export type RuntimeEnv = Env &
+  SecretBindings & {
+    BETTER_AUTH_SECRET: string;
+    deployment: ReturnType<typeof getDeploymentConfig>;
+    ORM: ReturnType<typeof createDatabase>;
+  };
 
 export function getRuntimeEnv() {
   const runtime = env as Env & SecretBindings;
@@ -20,9 +32,5 @@ export function getRuntimeEnv() {
     ...runtime,
     deployment: getDeploymentConfig(runtime),
     ORM: createDatabase(runtime.DB),
-  } as Env & {
-    BETTER_AUTH_SECRET: string;
-    deployment: ReturnType<typeof getDeploymentConfig>;
-    ORM: ReturnType<typeof createDatabase>;
-  };
+  } as RuntimeEnv;
 }

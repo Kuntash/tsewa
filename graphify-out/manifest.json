@@ -5,8 +5,8 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1787742535.143617,
-    "ast_hash": "3b91bd4bc8e135d52e0449c2d86852cc",
+    "mtime": 1787743099.680561,
+    "ast_hash": "4c9b7913c7e33ca05f448f03f8a2a374",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/runtime-env.ts": {
-    "mtime": 1787590293.223203,
-    "ast_hash": "2ff003d81d34c6347ec45171f9c8732f",
+    "mtime": 1787742752.9926257,
+    "ast_hash": "1a189ba2fedaf88c1b10c023fe186a67",
     "semantic_hash": ""
   },
   "apps/web/src/lib/utils.ts": {
@@ -100,8 +100,8 @@
     "semantic_hash": "d9837f38cc05303254571985e3164050"
   },
   "apps/web/src/routeTree.gen.ts": {
-    "mtime": 1787593800.369731,
-    "ast_hash": "709e4399ddb25089f931746e16675434",
+    "mtime": 1787743226.80213,
+    "ast_hash": "c12b42bb6d9ea54acd924669ed2bd434",
     "semantic_hash": ""
   },
   "apps/web/src/router.tsx": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787732235.565092,
-    "ast_hash": "4a6957961a82c69a956b0af1ce9e11d2",
+    "mtime": 1787743099.658338,
+    "ast_hash": "fb67bbb02d9d0589ff0195553c392626",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787742535.1430693,
-    "ast_hash": "7bb39d4853b624ce74d90eb0070a5ea2",
+    "mtime": 1787768277.2863362,
+    "ast_hash": "3d504ad9de19ca1387e3342d8136728c",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -195,8 +195,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787742535.1419666,
-    "ast_hash": "27626198704eb576c543a018b151d40c",
+    "mtime": 1787743089.1293278,
+    "ast_hash": "5e49860f059a0b9d148777d7ad602c08",
     "semantic_hash": ""
   },
   "TODO.md": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "pnpm-workspace.yaml": {
-    "mtime": 1787732165.270577,
-    "ast_hash": "e5fc1e55f1786c840c52cad6fb75f74f",
+    "mtime": 1787742689.6745946,
+    "ast_hash": "a6daaa1fa65e0050c2e8e32168e1bdc7",
     "semantic_hash": ""
   },
   ".githooks/pre-commit": {
@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/db/schema.ts": {
-    "mtime": 1787569938.261917,
-    "ast_hash": "f36e3c2bb9e4b246473507f2490045c5",
+    "mtime": 1787742752.9919813,
+    "ast_hash": "46fe5f64cb961b6d1324d8fe9bd0196b",
     "semantic_hash": ""
   },
   "apps/web/src/lib/access-control.ts": {
@@ -585,13 +585,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1787731170.599749,
-    "ast_hash": "9cea8a02c69e05b9063e8d1bac00ac6d",
+    "mtime": 1787743432.0260062,
+    "ast_hash": "82830cd268addfc5b3b7efcfdc1aed28",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
-    "mtime": 1787307115.8100615,
-    "ast_hash": "a6e99bd9531916bb64812823fbd4b361",
+    "mtime": 1787768252.97944,
+    "ast_hash": "bdf84db5f01c4bc705496431a844037a",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.auth.$.ts": {
@@ -1110,8 +1110,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/settings.$tab.tsx": {
-    "mtime": 1787572683.5638394,
-    "ast_hash": "1c465ae739471bd57db05c923d37e41c",
+    "mtime": 1787742975.747369,
+    "ast_hash": "0fff7c15ac94094ac0bdcd9f754c612d",
     "semantic_hash": ""
   },
   "apps/web/src/routes/sponsorships.tsx": {
@@ -1417,6 +1417,56 @@
   "docs/releases.md": {
     "mtime": 1787742535.1464305,
     "ast_hash": "79ed8b34b11d5407c46a74a22c000830",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0033_hosted_billing.sql": {
+    "mtime": 1787743410.0928965,
+    "ast_hash": "d2ca7e15fce01db27356fee8f59b1323",
+    "semantic_hash": ""
+  },
+  "apps/web/scripts/setup-dodo-test.mjs": {
+    "mtime": 1787743528.4812906,
+    "ast_hash": "3d1057457cde53d1ab22fd89b97b98c2",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/billing-settings.tsx": {
+    "mtime": 1787743179.91534,
+    "ast_hash": "718f991e76a1c93a0d529a0dfa85aa14",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/billing.test.ts": {
+    "mtime": 1787743389.0698586,
+    "ast_hash": "3107b004c7786e28582ba2479c860278",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/billing.ts": {
+    "mtime": 1787743437.9761436,
+    "ast_hash": "204f52650ec44bf6e954aa4a38e2fa38",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/api.billing.checkout.ts": {
+    "mtime": 1787742825.924073,
+    "ast_hash": "5dcb212c750927753775b347c0f51326",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/api.billing.portal.ts": {
+    "mtime": 1787742825.9241898,
+    "ast_hash": "4ac9b16f81417e2a35081b61ba9e8de0",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/api.billing.status.ts": {
+    "mtime": 1787743179.9147034,
+    "ast_hash": "076ab2b0b46631d0a0dc4e881f705ba6",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/api.webhooks.dodo.ts": {
+    "mtime": 1787742825.9242954,
+    "ast_hash": "45eeddb76eee05bc9ad53b49a1026fd0",
+    "semantic_hash": ""
+  },
+  "docs/hosted-billing.md": {
+    "mtime": 1787743494.459897,
+    "ast_hash": "0ebc448c215d5e2062d99f3af56ad833",
     "semantic_hash": ""
   }
 }

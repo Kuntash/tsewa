@@ -49,6 +49,7 @@ import {
   organization,
   organizationInvitation,
   organizationMember,
+  organizationSubscription,
   person,
   personAcademicRecord,
   personFamilyProfile,
@@ -100,6 +101,16 @@ import {
 } from "@/lib/access-control";
 import type { AccessGroupKey, AccessRoleKey, PermissionKey } from "@/lib/access-control";
 import { nextMarkSheetStatus } from "@/lib/academic-results";
+import {
+  BillingConfigurationError,
+  BillingPortalUnavailableError,
+  createBillingCheckout,
+  createBillingPortal,
+  getActivePersonCreationBlock,
+  getOrganizationBilling,
+  handleDodoWebhook,
+} from "@/lib/billing";
+import type { BillingInterval } from "@/lib/billing";
 import { createAuth } from "@/lib/auth";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { sendEmailVerification, sendPasswordResetEmail } from "@/lib/auth-email";
@@ -113,6 +124,10 @@ import { allocationsFitFund, sponsorshipDisplayName } from "@/lib/sponsorship";
 
 const preferenceSchema = z.object({
   academicSessionId: z.string().uuid(),
+});
+
+const billingCheckoutSchema = z.object({
+  interval: z.enum(["monthly", "yearly"]),
 });
 
 const organizationSettingsSchema = z.object({
@@ -959,6 +974,22 @@ export const apiDispatcher = {
       return createHostedOrganization(request);
     }
 
+    if (url.pathname === "/api/billing/status") {
+      return getBilling(request);
+    }
+
+    if (url.pathname === "/api/billing/checkout") {
+      return startBillingCheckout(request);
+    }
+
+    if (url.pathname === "/api/billing/portal") {
+      return openBillingPortal(request);
+    }
+
+    if (url.pathname === "/api/webhooks/dodo") {
+      return handleDodoWebhook(request, getRuntimeEnv());
+    }
+
     if (url.pathname === "/api/installation/logo") {
       return handleInstallationLogo(request);
     }
@@ -1262,6 +1293,123 @@ export async function handleApiRequest({ request }: { request: Request }): Promi
     statusText: response.statusText,
     headers,
   });
+}
+
+async function getBilling(request: Request): Promise<Response> {
+  if (request.method !== "GET") return methodNotAllowed("GET");
+  const runtime = getRuntimeEnv();
+  if (!runtime.deployment.capabilities.requiresBilling) return new Response(null, { status: 404 });
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+
+  try {
+    const billing = await getOrganizationBilling({
+      organizationId: context.organizationId,
+      runtime,
+    });
+    return Response.json({ ...billing, canManage: context.group === "owner" });
+  } catch (error) {
+    console.error("Could not read organisation billing", error);
+    return Response.json({ error: "Billing details could not be loaded." }, { status: 500 });
+  }
+}
+
+async function startBillingCheckout(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const runtime = getRuntimeEnv();
+  if (!runtime.deployment.capabilities.requiresBilling) return new Response(null, { status: 404 });
+  const [context, session] = await Promise.all([
+    getMembershipContext(request),
+    getSession(request),
+  ]);
+  if (!context || !session?.user) return unauthorized();
+  if (context.group !== "owner") return forbidden();
+  const parsed = billingCheckoutSchema.safeParse(await readJson(request));
+  if (!parsed.success) return Response.json({ error: "Choose a valid plan." }, { status: 400 });
+
+  try {
+    const checkout = await createBillingCheckout({
+      organizationId: context.organizationId,
+      interval: parsed.data.interval as BillingInterval,
+      owner: { id: session.user.id, name: session.user.name, email: session.user.email },
+      publicAppUrl: publicAppOrigin(runtime.deployment, request),
+      runtime,
+    });
+    await auditInsert(
+      runtime.ORM,
+      context,
+      "billing.checkout_started",
+      "organization_subscription",
+      context.organizationId,
+      { interval: parsed.data.interval, environment: checkout.environment },
+    );
+    return Response.json(checkout);
+  } catch (error) {
+    if (error instanceof BillingConfigurationError) {
+      return Response.json({ error: "Hosted billing is not configured yet." }, { status: 503 });
+    }
+    console.error("Could not start Dodo checkout", error);
+    return Response.json({ error: "Checkout could not be started." }, { status: 502 });
+  }
+}
+
+async function openBillingPortal(request: Request): Promise<Response> {
+  if (request.method !== "POST") return methodNotAllowed("POST");
+  if (!isSameOrigin(request)) return forbidden();
+  const runtime = getRuntimeEnv();
+  if (!runtime.deployment.capabilities.requiresBilling) return new Response(null, { status: 404 });
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (context.group !== "owner") return forbidden();
+
+  try {
+    const portal = await createBillingPortal({
+      organizationId: context.organizationId,
+      publicAppUrl: publicAppOrigin(runtime.deployment, request),
+      runtime,
+    });
+    await auditInsert(
+      runtime.ORM,
+      context,
+      "billing.portal_opened",
+      "organization_subscription",
+      context.organizationId,
+    );
+    return Response.json(portal);
+  } catch (error) {
+    if (error instanceof BillingConfigurationError) {
+      return Response.json({ error: "Hosted billing is not configured yet." }, { status: 503 });
+    }
+    if (error instanceof BillingPortalUnavailableError) {
+      return Response.json(
+        { error: "Activate a subscription before opening the billing portal." },
+        { status: 409 },
+      );
+    }
+    console.error("Could not open Dodo customer portal", error);
+    return Response.json({ error: "The billing portal could not be opened." }, { status: 502 });
+  }
+}
+
+async function activePersonCreationResponse(
+  runtime: ReturnType<typeof getRuntimeEnv>,
+  organizationId: string,
+): Promise<Response | null> {
+  const reason = await getActivePersonCreationBlock({ organizationId, runtime });
+  if (reason === "limit") {
+    return Response.json(
+      { error: "This organisation has reached its active-person allowance." },
+      { status: 402 },
+    );
+  }
+  if (reason === "subscription") {
+    return Response.json(
+      { error: "Start or restore the hosted subscription before adding active people." },
+      { status: 402 },
+    );
+  }
+  return null;
 }
 
 async function handleAuthRequest(request: Request): Promise<Response> {
@@ -1578,6 +1726,7 @@ async function createHostedOrganization(request: Request): Promise<Response> {
   const sessionId = crypto.randomUUID();
   const schoolId = crypto.randomUUID();
   const memberId = crypto.randomUUID();
+  const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const classRows = parsed.data.classes.map((item) => ({ ...item, id: crypto.randomUUID() }));
   const ownerContext: MembershipContext = {
     memberId,
@@ -1628,6 +1777,13 @@ async function createHostedOrganization(request: Request): Promise<Response> {
         userId: authSession.user.id,
         role: "owner",
         groupId: accessGroupId(organizationId, "owner"),
+      }),
+      runtime.ORM.insert(organizationSubscription).values({
+        organizationId,
+        planKey: "hosted",
+        status: "trialing",
+        trialEndsAt,
+        activePersonLimit: 500,
       }),
       runtime.ORM.insert(userPreference)
         .values({
@@ -1921,6 +2077,8 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   if (!hasPermission(scope, "school.enrollment.manage")) return forbidden();
 
   const runtime = getRuntimeEnv();
+  const billingBlock = await activePersonCreationResponse(runtime, scope.organizationId);
+  if (billingBlock) return billingBlock;
   const { academicClassId, admissionNumber, admittedOn, displayName, houseId, schoolId } =
     parsed.data;
   const [school, offering, house, existingPerson] = await Promise.all([
@@ -10209,6 +10367,8 @@ async function addSiblingRelationship(request: Request, personId: string): Promi
     if (!related) return Response.json({ error: "Sibling not found" }, { status: 404 });
     relatedPersonId = related.id;
   } else {
+    const billingBlock = await activePersonCreationResponse(runtime, context.organizationId);
+    if (billingBlock) return billingBlock;
     const duplicate = await runtime.ORM.select({ id: person.id })
       .from(person)
       .where(
@@ -12194,9 +12354,10 @@ async function updateStaffProfile(request: Request, personId: string): Promise<R
     );
   }
 
-  const database = getRuntimeEnv().ORM;
+  const runtime = getRuntimeEnv();
+  const database = runtime.ORM;
   const existing = await database
-    .select({ id: staffProfile.id })
+    .select({ id: staffProfile.id, status: person.status })
     .from(staffProfile)
     .innerJoin(person, eq(person.id, staffProfile.personId))
     .where(
@@ -12210,6 +12371,10 @@ async function updateStaffProfile(request: Request, personId: string): Promise<R
     .limit(1)
     .then((rows) => rows[0] ?? null);
   if (!existing) return Response.json({ error: "Staff profile not found." }, { status: 404 });
+  if (existing.status !== "active" && parsed.data.status === "active") {
+    const billingBlock = await activePersonCreationResponse(runtime, context.organizationId);
+    if (billingBlock) return billingBlock;
+  }
 
   const [departments, designations, categories] = await database.batch([
     database

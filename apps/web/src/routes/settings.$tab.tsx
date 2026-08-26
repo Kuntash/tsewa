@@ -4,7 +4,15 @@ import { AuthenticatedApp } from "@/routes/index";
 import type { SettingsTab } from "@/routes/index";
 import { settingsSearchSchema } from "@/lib/route-search";
 
-const tabs = new Set<SettingsTab>(["general", "sessions", "members", "roles", "security", "audit"]);
+const tabs = new Set<SettingsTab>([
+  "general",
+  "sessions",
+  "members",
+  "roles",
+  "billing",
+  "security",
+  "audit",
+]);
 
 export const Route = createFileRoute("/settings/$tab")({
   validateSearch: settingsSearchSchema,

@@ -62,6 +62,9 @@ installation from a reviewed release tag.
 See [`docs/releases.md`](docs/releases.md) for the release contract and
 [`docs/self-hosting.md`](docs/self-hosting.md) for the downstream upgrade runbook.
 
+Hosted organisation subscriptions and the Dodo test/live boundary are documented in
+[`docs/hosted-billing.md`](docs/hosted-billing.md).
+
 ## License
 
 Tsewa is open-source software licensed under the [MIT License](./LICENSE).

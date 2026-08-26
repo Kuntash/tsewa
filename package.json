@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "ready": "vp check && vp run @tsewa/web#build",
+    "ready": "vp check && vp run @tsewa/web#test && vp run @tsewa/web#build",
     "dev": "vp run @tsewa/web#dev",
     "build": "vp run @tsewa/web#build",
     "deploy": "vp run @tsewa/web#deploy",

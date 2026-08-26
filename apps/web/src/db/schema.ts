@@ -126,6 +126,56 @@ export const organization = sqliteTable("organization", {
     .notNull(),
 });
 
+export const organizationSubscription = sqliteTable(
+  "organization_subscription",
+  {
+    organizationId: text("organization_id")
+      .primaryKey()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    planKey: text("plan_key").default("hosted").notNull(),
+    status: text().default("complimentary").notNull(),
+    trialEndsAt: text("trial_ends_at"),
+    currentPeriodEndsAt: text("current_period_ends_at"),
+    providerCustomerId: text("provider_customer_id"),
+    providerSubscriptionId: text("provider_subscription_id"),
+    providerEventAt: text("provider_event_at"),
+    billingInterval: text("billing_interval"),
+    cancelAtPeriodEnd: integer("cancel_at_period_end").default(0).notNull(),
+    activePersonLimit: integer("active_person_limit").default(500).notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("organization_subscription_provider_customer_idx")
+      .on(table.providerCustomerId)
+      .where(sql`${table.providerCustomerId} IS NOT NULL`),
+    uniqueIndex("organization_subscription_provider_subscription_idx")
+      .on(table.providerSubscriptionId)
+      .where(sql`${table.providerSubscriptionId} IS NOT NULL`),
+  ],
+);
+
+export const billingWebhookEvent = sqliteTable(
+  "billing_webhook_event",
+  {
+    id: text().primaryKey().notNull(),
+    eventType: text("event_type").notNull(),
+    providerSubscriptionId: text("provider_subscription_id"),
+    eventTimestamp: text("event_timestamp").notNull(),
+    receivedAt: text("received_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    processedAt: text("processed_at"),
+    failureReason: text("failure_reason"),
+  },
+  (table) => [index("billing_webhook_subscription_idx").on(table.providerSubscriptionId)],
+);
+
 export const organizationMember = sqliteTable(
   "organization_member",
   {

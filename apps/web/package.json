@@ -23,7 +23,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:migrate:hosted": "wrangler d1 migrations apply DB --remote --config wrangler.hosted.jsonc",
     "db:migrate:self-hosted": "wrangler d1 migrations apply DB --remote --config wrangler.self-hosted.jsonc",
-    "self-host:check": "node scripts/check-self-host-config.mjs && TSEWA_WRANGLER_CONFIG=wrangler.self-hosted.jsonc vp build && wrangler deploy --dry-run --config dist/server/wrangler.json"
+    "self-host:check": "node scripts/check-self-host-config.mjs && TSEWA_WRANGLER_CONFIG=wrangler.self-hosted.jsonc vp build && wrangler deploy --dry-run --config dist/server/wrangler.json",
+    "billing:setup:test": "node scripts/setup-dodo-test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "5.3.0",
@@ -36,6 +37,7 @@
     "better-auth": "1.6.25",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "dodopayments": "catalog:",
     "drizzle-orm": "0.45.2",
     "lucide-react": "1.28.0",
     "radix-ui": "1.6.7",

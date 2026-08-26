@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   Check,
+  CreditCard,
   Crown,
   FileText,
   GraduationCap,
@@ -29,6 +30,7 @@ import type { FormEvent, ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AccountSettings } from "@/components/account-settings";
+import { BillingSettings } from "@/components/billing-settings";
 import { HealthOperations } from "@/components/health-operations";
 import type { HealthFilters } from "@/components/health-operations";
 import { PeopleRegistry } from "@/components/people-registry";
@@ -186,7 +188,14 @@ export type AppView =
   | "staff"
   | "reports"
   | "settings";
-export type SettingsTab = "general" | "sessions" | "members" | "roles" | "security" | "audit";
+export type SettingsTab =
+  | "general"
+  | "sessions"
+  | "members"
+  | "roles"
+  | "billing"
+  | "security"
+  | "audit";
 export type RoutedAppSearch = {
   q?: string;
   page?: number;
@@ -1283,6 +1292,7 @@ function Launchpad({
       {view === "settings" ? (
         <SettingsWorkspace
           activeTab={settingsTab}
+          billingEnabled={platform.deployment.capabilities.requiresBilling}
           onTabChange={(tab) => openView("settings", tab)}
           search={search}
           user={user}
@@ -1508,11 +1518,13 @@ function Dashboard({
 
 function SettingsWorkspace({
   activeTab,
+  billingEnabled,
   onTabChange,
   search,
   user,
 }: {
   activeTab: SettingsTab;
+  billingEnabled: boolean;
   onTabChange: (tab: SettingsTab) => void;
   search: RoutedAppSearch;
   user: { name: string; email: string; emailVerified: boolean };
@@ -1527,9 +1539,15 @@ function SettingsWorkspace({
     },
     { key: "members", label: "Members", description: "People and invitations", Icon: Users },
     { key: "roles", label: "Roles", description: "Access control", Icon: ShieldCheck },
+    ...(billingEnabled
+      ? ([
+          { key: "billing", label: "Billing", description: "Plan and invoices", Icon: CreditCard },
+        ] as const)
+      : []),
     { key: "security", label: "Security", description: "Account and password", Icon: LockKeyhole },
     { key: "audit", label: "Audit", description: "Activity and policy", Icon: History },
   ];
+  const selectedTab = activeTab === "billing" && !billingEnabled ? "general" : activeTab;
 
   return (
     <div className="mx-auto grid max-w-7xl gap-8 px-5 py-9 md:px-8 md:py-12 lg:grid-cols-[240px_1fr]">
@@ -1542,9 +1560,9 @@ function SettingsWorkspace({
         <nav aria-label="Settings" className="mt-6 space-y-1">
           {tabs.map(({ key, label, description, Icon }) => (
             <button
-              aria-current={activeTab === key ? "page" : undefined}
+              aria-current={selectedTab === key ? "page" : undefined}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                activeTab === key ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                selectedTab === key ? "bg-primary text-primary-foreground" : "hover:bg-muted"
               }`}
               key={key}
               onClick={() => onTabChange(key)}
@@ -1555,7 +1573,7 @@ function SettingsWorkspace({
                 <span className="block text-sm font-semibold">{label}</span>
                 <span
                   className={`block truncate text-xs ${
-                    activeTab === key ? "text-primary-foreground/70" : "text-muted-foreground"
+                    selectedTab === key ? "text-primary-foreground/70" : "text-muted-foreground"
                   }`}
                 >
                   {description}
@@ -1566,12 +1584,14 @@ function SettingsWorkspace({
         </nav>
       </aside>
       <div className="min-w-0">
-        {activeTab === "security" ? (
+        {selectedTab === "billing" ? (
+          <BillingSettings />
+        ) : selectedTab === "security" ? (
           <AccountSettings user={user} />
-        ) : activeTab === "sessions" ? (
+        ) : selectedTab === "sessions" ? (
           <AcademicSessionSettings />
         ) : (
-          <AdministrationPanel activeTab={activeTab} search={search} />
+          <AdministrationPanel activeTab={selectedTab} search={search} />
         )}
       </div>
     </div>
@@ -1582,7 +1602,7 @@ function AdministrationPanel({
   activeTab,
   search,
 }: {
-  activeTab: Exclude<SettingsTab, "security" | "sessions">;
+  activeTab: Exclude<SettingsTab, "billing" | "security" | "sessions">;
   search: RoutedAppSearch;
 }) {
   const [state, setState] = useState<OrganizationState | null>(null);

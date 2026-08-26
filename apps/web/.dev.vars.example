@@ -1,2 +1,9 @@
 # Generate with: openssl rand -base64 32
 BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+
+# Hosted billing only. Keep test mode explicit until the complete lifecycle is verified.
+DODO_PAYMENTS_ENVIRONMENT=test_mode
+DODO_PAYMENTS_API_KEY=replace-with-dodo-test-api-key
+DODO_PAYMENTS_WEBHOOK_KEY=replace-with-dodo-test-webhook-key
+DODO_PRODUCT_ID_MONTHLY=replace-with-monthly-test-product-id
+DODO_PRODUCT_ID_YEARLY=replace-with-yearly-test-product-id

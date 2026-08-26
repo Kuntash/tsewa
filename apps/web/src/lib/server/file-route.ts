@@ -1,3 +1,5 @@
+import type {} from "@tanstack/react-start";
+
 import { handleApiRequest } from "@/lib/server/api-handlers";
 
 export const readRoute = { GET: handleApiRequest };

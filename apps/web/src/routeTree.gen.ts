@@ -31,6 +31,9 @@ import { Route as ApiStaffRouteImport } from './routes/api.staff'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as SettingsTabRouteImport } from './routes/settings.$tab'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as ApiBillingCheckoutRouteImport } from './routes/api.billing.checkout'
+import { Route as ApiBillingPortalRouteImport } from './routes/api.billing.portal'
+import { Route as ApiBillingStatusRouteImport } from './routes/api.billing.status'
 import { Route as ApiFilesFileIdRouteImport } from './routes/api.files.$fileId'
 import { Route as ApiHealthAdvancesRouteImport } from './routes/api.health.advances'
 import { Route as ApiHealthHistoryRouteImport } from './routes/api.health.history'
@@ -62,6 +65,7 @@ import { Route as ApiSchoolOperationsStudentsRouteImport } from './routes/api.sc
 import { Route as ApiSponsorshipReportsRouteImport } from './routes/api.sponsorship.reports'
 import { Route as ApiSponsorshipSetupRouteImport } from './routes/api.sponsorship.setup'
 import { Route as ApiStaffPersonIdRouteImport } from './routes/api.staff.$personId'
+import { Route as ApiWebhooksDodoRouteImport } from './routes/api.webhooks.dodo'
 import { Route as ApiOrganizationGroupsGroupKeyRouteImport } from './routes/api.organization.groups.$groupKey'
 import { Route as ApiOrganizationInvitationsInvitationIdRouteImport } from './routes/api.organization.invitations.$invitationId'
 import { Route as ApiOrganizationMembersMemberIdRouteImport } from './routes/api.organization.members.$memberId'
@@ -195,6 +199,21 @@ const SettingsTabRoute = SettingsTabRouteImport.update({
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
+  id: '/api/billing/checkout',
+  path: '/api/billing/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingPortalRoute = ApiBillingPortalRouteImport.update({
+  id: '/api/billing/portal',
+  path: '/api/billing/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingStatusRoute = ApiBillingStatusRouteImport.update({
+  id: '/api/billing/status',
+  path: '/api/billing/status',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFilesFileIdRoute = ApiFilesFileIdRouteImport.update({
@@ -366,6 +385,11 @@ const ApiStaffPersonIdRoute = ApiStaffPersonIdRouteImport.update({
   path: '/$personId',
   getParentRoute: () => ApiStaffRoute,
 } as any)
+const ApiWebhooksDodoRoute = ApiWebhooksDodoRouteImport.update({
+  id: '/api/webhooks/dodo',
+  path: '/api/webhooks/dodo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOrganizationGroupsGroupKeyRoute =
   ApiOrganizationGroupsGroupKeyRouteImport.update({
     id: '/groups/$groupKey',
@@ -532,6 +556,9 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/settings/$tab': typeof SettingsTabRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/files/$fileId': typeof ApiFilesFileIdRoute
   '/api/health/advances': typeof ApiHealthAdvancesRoute
   '/api/health/history': typeof ApiHealthHistoryRoute
@@ -563,6 +590,7 @@ export interface FileRoutesByFullPath {
   '/api/sponsorship/reports': typeof ApiSponsorshipReportsRoute
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
   '/api/staff/$personId': typeof ApiStaffPersonIdRoute
+  '/api/webhooks/dodo': typeof ApiWebhooksDodoRoute
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
@@ -611,6 +639,9 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/settings/$tab': typeof SettingsTabRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/files/$fileId': typeof ApiFilesFileIdRoute
   '/api/health/advances': typeof ApiHealthAdvancesRoute
   '/api/health/history': typeof ApiHealthHistoryRoute
@@ -642,6 +673,7 @@ export interface FileRoutesByTo {
   '/api/sponsorship/reports': typeof ApiSponsorshipReportsRoute
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
   '/api/staff/$personId': typeof ApiStaffPersonIdRoute
+  '/api/webhooks/dodo': typeof ApiWebhooksDodoRoute
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
@@ -691,6 +723,9 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/settings/$tab': typeof SettingsTabRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/status': typeof ApiBillingStatusRoute
   '/api/files/$fileId': typeof ApiFilesFileIdRoute
   '/api/health/advances': typeof ApiHealthAdvancesRoute
   '/api/health/history': typeof ApiHealthHistoryRoute
@@ -722,6 +757,7 @@ export interface FileRoutesById {
   '/api/sponsorship/reports': typeof ApiSponsorshipReportsRoute
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
   '/api/staff/$personId': typeof ApiStaffPersonIdRoute
+  '/api/webhooks/dodo': typeof ApiWebhooksDodoRoute
   '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
@@ -772,6 +808,9 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/settings/$tab'
     | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/status'
     | '/api/files/$fileId'
     | '/api/health/advances'
     | '/api/health/history'
@@ -803,6 +842,7 @@ export interface FileRouteTypes {
     | '/api/sponsorship/reports'
     | '/api/sponsorship/setup'
     | '/api/staff/$personId'
+    | '/api/webhooks/dodo'
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
@@ -851,6 +891,9 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/settings/$tab'
     | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/status'
     | '/api/files/$fileId'
     | '/api/health/advances'
     | '/api/health/history'
@@ -882,6 +925,7 @@ export interface FileRouteTypes {
     | '/api/sponsorship/reports'
     | '/api/sponsorship/setup'
     | '/api/staff/$personId'
+    | '/api/webhooks/dodo'
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
@@ -930,6 +974,9 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/settings/$tab'
     | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/status'
     | '/api/files/$fileId'
     | '/api/health/advances'
     | '/api/health/history'
@@ -961,6 +1008,7 @@ export interface FileRouteTypes {
     | '/api/sponsorship/reports'
     | '/api/sponsorship/setup'
     | '/api/staff/$personId'
+    | '/api/webhooks/dodo'
     | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
@@ -1010,6 +1058,9 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   SettingsTabRoute: typeof SettingsTabRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
+  ApiBillingPortalRoute: typeof ApiBillingPortalRoute
+  ApiBillingStatusRoute: typeof ApiBillingStatusRoute
   ApiFilesFileIdRoute: typeof ApiFilesFileIdRoute
   ApiHealthAdvancesRoute: typeof ApiHealthAdvancesRoute
   ApiHealthHistoryRoute: typeof ApiHealthHistoryRoute
@@ -1029,6 +1080,7 @@ export interface RootRouteChildren {
   ApiSchoolOperationsSetupRoute: typeof ApiSchoolOperationsSetupRoute
   ApiSchoolOperationsStudentReportRoute: typeof ApiSchoolOperationsStudentReportRoute
   ApiSchoolOperationsStudentsRoute: typeof ApiSchoolOperationsStudentsRoute
+  ApiWebhooksDodoRoute: typeof ApiWebhooksDodoRoute
   ApiSchoolOperationsEnrollmentsEnrollmentIdRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren
 }
 
@@ -1186,6 +1238,27 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/checkout': {
+      id: '/api/billing/checkout'
+      path: '/api/billing/checkout'
+      fullPath: '/api/billing/checkout'
+      preLoaderRoute: typeof ApiBillingCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/portal': {
+      id: '/api/billing/portal'
+      path: '/api/billing/portal'
+      fullPath: '/api/billing/portal'
+      preLoaderRoute: typeof ApiBillingPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/status': {
+      id: '/api/billing/status'
+      path: '/api/billing/status'
+      fullPath: '/api/billing/status'
+      preLoaderRoute: typeof ApiBillingStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/files/$fileId': {
@@ -1404,6 +1477,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/staff/$personId'
       preLoaderRoute: typeof ApiStaffPersonIdRouteImport
       parentRoute: typeof ApiStaffRoute
+    }
+    '/api/webhooks/dodo': {
+      id: '/api/webhooks/dodo'
+      path: '/api/webhooks/dodo'
+      fullPath: '/api/webhooks/dodo'
+      preLoaderRoute: typeof ApiWebhooksDodoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/organization/groups/$groupKey': {
       id: '/api/organization/groups/$groupKey'
@@ -1886,6 +1966,9 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   SettingsTabRoute: SettingsTabRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
+  ApiBillingPortalRoute: ApiBillingPortalRoute,
+  ApiBillingStatusRoute: ApiBillingStatusRoute,
   ApiFilesFileIdRoute: ApiFilesFileIdRoute,
   ApiHealthAdvancesRoute: ApiHealthAdvancesRoute,
   ApiHealthHistoryRoute: ApiHealthHistoryRoute,
@@ -1906,6 +1989,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSchoolOperationsSetupRoute: ApiSchoolOperationsSetupRoute,
   ApiSchoolOperationsStudentReportRoute: ApiSchoolOperationsStudentReportRoute,
   ApiSchoolOperationsStudentsRoute: ApiSchoolOperationsStudentsRoute,
+  ApiWebhooksDodoRoute: ApiWebhooksDodoRoute,
   ApiSchoolOperationsEnrollmentsEnrollmentIdRoute:
     ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren,
 }

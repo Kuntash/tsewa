@@ -8,6 +8,7 @@ catalog:
   "@types/node": ^24.12.3
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
+  dodopayments: 2.48.0
   posthog-js: ^1.418.10
   react-day-picker: ^10.0.1
   sonner: ^2.0.8
