@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787743099.658338,
-    "ast_hash": "fb67bbb02d9d0589ff0195553c392626",
+    "mtime": 1787847400.378175,
+    "ast_hash": "8c4a6749e6f5fe2a23f9b8de2143513a",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -1240,8 +1240,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/deployment.test.ts": {
-    "mtime": 1787593352.7190533,
-    "ast_hash": "8528db8a14a1013e40a27b437db68dc9",
+    "mtime": 1787847400.3773017,
+    "ast_hash": "31b079e323b8845602aa07a7b70d06ed",
     "semantic_hash": ""
   },
   "apps/web/src/lib/deployment.ts": {
@@ -1260,8 +1260,8 @@
     "semantic_hash": ""
   },
   "docs/deployment-modes.md": {
-    "mtime": 1787595197.7449162,
-    "ast_hash": "3fa793aaf67310b3a86611c5b5eafaba",
+    "mtime": 1787847415.22414,
+    "ast_hash": "260e289da96e8e6c57ee8eb227898e0f",
     "semantic_hash": ""
   },
   "docs/self-hosting.md": {
@@ -1435,13 +1435,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/billing.test.ts": {
-    "mtime": 1787743389.0698586,
-    "ast_hash": "3107b004c7786e28582ba2479c860278",
+    "mtime": 1787847400.3765817,
+    "ast_hash": "2425c6adff167079357ded926b907c57",
     "semantic_hash": ""
   },
   "apps/web/src/lib/billing.ts": {
-    "mtime": 1787743437.9761436,
-    "ast_hash": "204f52650ec44bf6e954aa4a38e2fa38",
+    "mtime": 1787847400.3758075,
+    "ast_hash": "8dfd78b374f082f26b759584e45a2f04",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.billing.checkout.ts": {
@@ -1465,8 +1465,8 @@
     "semantic_hash": ""
   },
   "docs/hosted-billing.md": {
-    "mtime": 1787743494.459897,
-    "ast_hash": "0ebc448c215d5e2062d99f3af56ad833",
+    "mtime": 1787847415.2245464,
+    "ast_hash": "396837c3550033c86737361347651e2c",
     "semantic_hash": ""
   }
 }

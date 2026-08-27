@@ -9,6 +9,9 @@ runtime configuration and organization records, never in product branches or con
 organization. It uses a dedicated Worker, D1 database, R2 bucket, authentication secret, email
 sender, and domain. The first account may bootstrap the configured organization; after that,
 additional accounts join only through invitations. Billing and public signup are disabled.
+The billing settings entry is omitted, direct billing settings links redirect to General, billing
+API and webhook routes return `404`, and billing entitlements are not evaluated. These behaviors
+are derived from deployment policy; installation repositories do not remove or fork the feature.
 
 The installation is private and sends `noindex` and private-cache response headers. Its anonymous
 sign-in screen reads the configured organization name and title, then uses the organization logo

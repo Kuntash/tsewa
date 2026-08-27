@@ -194,6 +194,10 @@ export async function createBillingPortal(input: {
 }
 
 export async function handleDodoWebhook(request: Request, runtime: RuntimeEnv) {
+  if (!runtime.deployment.capabilities.requiresBilling) {
+    return new Response(null, { status: 404 });
+  }
+
   const config = getBillingConfig(runtime);
   if (!config.webhookConfigured) {
     return Response.json({ error: "Dodo webhooks are not configured." }, { status: 503 });

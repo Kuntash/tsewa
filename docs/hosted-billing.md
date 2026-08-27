@@ -2,8 +2,9 @@
 
 Hosted Tsewa is billed per organisation, not per user. The launch plan includes up to 500 active
 person records and reasonable team access for **US$79 monthly / US$790 yearly**, with fixed India
-pricing of **₹4,900 monthly / ₹49,000 yearly**. Self-hosted installations do not load billing routes
-or require Dodo credentials.
+pricing of **₹4,900 monthly / ₹49,000 yearly**. In self-hosted mode the interface omits billing,
+direct billing links redirect to General, billing and webhook APIs return `404`, entitlements are
+not evaluated, and Dodo credentials are unnecessary.
 
 ## Entitlement boundary
 

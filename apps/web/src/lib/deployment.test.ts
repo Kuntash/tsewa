@@ -46,6 +46,7 @@ describe("deployment policy", () => {
 
     expect(deployment.capabilities.allowsInitialOwnerBootstrap).toBe(false);
     expect(deployment.capabilities.allowsPublicSignup).toBe(true);
+    expect(deployment.capabilities.requiresBilling).toBe(true);
     expect(deployment.capabilities.requiresEmailVerification).toBe(true);
     expect(deployment.capabilities.supportsMultipleOrganizations).toBe(true);
   });

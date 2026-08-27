@@ -499,6 +499,13 @@ export function AuthenticatedApp({
   if (platform.deployment.mode === "hosted" && !platform.activeOrganizationId) {
     return <Navigate replace to="/onboarding" />;
   }
+  if (
+    view === "settings" &&
+    settingsTab === "billing" &&
+    !platform.deployment.capabilities.requiresBilling
+  ) {
+    return <Navigate params={{ tab: "general" }} replace to="/settings/$tab" />;
+  }
 
   return (
     <Launchpad

@@ -4,6 +4,7 @@ import {
   billingStatusForDodoEvent,
   canCreateOrganizationContent,
   getBillingConfig,
+  handleDodoWebhook,
   hasManageableSubscription,
 } from "./billing";
 import type { RuntimeEnv } from "./runtime-env";
@@ -44,6 +45,17 @@ describe("Dodo organisation billing", () => {
     expect(hasManageableSubscription(true, null)).toBe(false);
     expect(hasManageableSubscription(true, "sub_test")).toBe(true);
     expect(hasManageableSubscription(false, "sub_test")).toBe(false);
+  });
+
+  it("does not expose the webhook in self-hosted mode", async () => {
+    const response = await handleDodoWebhook(
+      new Request("https://school.example.com/api/webhooks/dodo", { method: "POST" }),
+      {
+        deployment: { capabilities: { requiresBilling: false } },
+      } as RuntimeEnv,
+    );
+
+    expect(response.status).toBe(404);
   });
 
   it("allows paid, complimentary, and unexpired trial creation", () => {
