@@ -1405,13 +1405,13 @@
     "semantic_hash": ""
   },
   ".github/workflows/release.yml": {
-    "mtime": 1788119667.2937427,
-    "ast_hash": "b749567596b915580da8b65a18292bf8",
+    "mtime": 1788123541.2829785,
+    "ast_hash": "af47b20b158d76b5921f3ae6dd17746a",
     "semantic_hash": ""
   },
   "docs/releases.md": {
-    "mtime": 1788122035.5695045,
-    "ast_hash": "06de6b2c9639fea94c360217b329ff38",
+    "mtime": 1788123541.2840123,
+    "ast_hash": "a1daaff3ce13a1cc77613e71676bce09",
     "semantic_hash": ""
   },
   "apps/web/migrations/0033_hosted_billing.sql": {
