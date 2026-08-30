@@ -1,7 +1,7 @@
 # Graph Report - tsewa  (2026-08-31)
 
 ## Corpus Check
-- 282 files · ~341,755 words
+- 282 files · ~341,896 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f623aae5`
+- Built from commit: `69cc8021`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -441,7 +441,7 @@
 - Search and AI discovery plan
 - Dodo Payments billing architecture
 - Recommended commercial model
-- drizzle-orm
+- better-auth
 - react
 - api.people.$personId.files.$fileId.ts
 - staff-operations.tsx
@@ -531,7 +531,7 @@ Nodes (35): Allocation, AssignmentFields(), CorrespondenceFields(), csvCell(), d
 
 ### Community 14 - "dependencies"
 Cohesion: 0.05
-Nodes (39): dependencies, better-auth, class-variance-authority, clsx, dodopayments, @fontsource-variable/dm-sans, @fontsource-variable/inter, @fontsource-variable/newsreader (+31 more)
+Nodes (39): dependencies, class-variance-authority, clsx, dodopayments, drizzle-orm, @fontsource-variable/dm-sans, @fontsource-variable/inter, @fontsource-variable/newsreader (+31 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.10
@@ -587,7 +587,7 @@ Nodes (29): AcademicClass, classStage(), Editor, House, MasterData, SchoolMaster
 
 ### Community 60 - "README.md"
 Cohesion: 0.29
-Nodes (3): Downstream installations, Release contract, Tsewa releases
+Nodes (3): Automated release contract, Downstream installations, Tsewa releases
 
 ### Community 90 - "Q: lets do 1, and 3 first, then 2 and 5."
 Cohesion: 0.40

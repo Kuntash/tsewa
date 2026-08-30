@@ -1410,8 +1410,8 @@
     "semantic_hash": ""
   },
   "docs/releases.md": {
-    "mtime": 1787742535.1464305,
-    "ast_hash": "79ed8b34b11d5407c46a74a22c000830",
+    "mtime": 1788122035.5695045,
+    "ast_hash": "06de6b2c9639fea94c360217b329ff38",
     "semantic_hash": ""
   },
   "apps/web/migrations/0033_hosted_billing.sql": {

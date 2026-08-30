@@ -3219,8 +3219,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "apps_web_package_dependencies_better_auth",
-      "community": 14,
-      "community_name": "dependencies",
+      "community": 441,
+      "community_name": "better-auth",
       "norm_label": "better-auth"
     },
     {
@@ -3230,8 +3230,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "better_auth",
-      "community": 14,
-      "community_name": "dependencies",
+      "community": 441,
+      "community_name": "better-auth",
       "norm_label": "better-auth"
     },
     {
@@ -3307,8 +3307,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "apps_web_package_dependencies_drizzle_orm",
-      "community": 441,
-      "community_name": "drizzle-orm",
+      "community": 14,
+      "community_name": "dependencies",
       "norm_label": "drizzle-orm"
     },
     {
@@ -3318,8 +3318,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "drizzle_orm",
-      "community": 441,
-      "community_name": "drizzle-orm",
+      "community": 14,
+      "community_name": "dependencies",
       "norm_label": "drizzle-orm"
     },
     {
@@ -72133,21 +72133,21 @@
       "norm_label": "tsewa releases"
     },
     {
-      "label": "Release contract",
+      "label": "Automated release contract",
       "file_type": "document",
       "source_file": "docs/releases.md",
       "source_location": "L7",
       "_origin": "ast",
-      "id": "docs_releases_release_contract",
+      "id": "docs_releases_automated_release_contract",
       "community": 60,
       "community_name": "README.md",
-      "norm_label": "release contract"
+      "norm_label": "automated release contract"
     },
     {
       "label": "Downstream installations",
       "file_type": "document",
       "source_file": "docs/releases.md",
-      "source_location": "L26",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "docs_releases_downstream_installations",
       "community": 60,
@@ -171484,22 +171484,22 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/releases.md",
-      "source_location": "L26",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_releases_tsewa_releases",
-      "target": "docs_releases_downstream_installations",
+      "target": "docs_releases_automated_release_contract",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/releases.md",
-      "source_location": "L7",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_releases_tsewa_releases",
-      "target": "docs_releases_release_contract",
+      "target": "docs_releases_downstream_installations",
       "confidence_score": 1.0
     },
     {
@@ -172802,5 +172802,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "f623aae52a13623fd68f27b0423ccdc780a2ed23"
+  "built_at_commit": "69cc80219bc1f81b548139675913684428f61d1c"
 }
