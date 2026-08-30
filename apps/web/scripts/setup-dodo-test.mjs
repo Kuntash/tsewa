@@ -30,6 +30,7 @@ if (!apiKey) {
 }
 
 const client = new DodoPayments({ bearerToken: apiKey, environment: "test_mode" });
+const brand = await ensureBrand();
 const products = [];
 for await (const product of client.products.list({ recurring: true })) products.push(product);
 
@@ -110,9 +111,29 @@ if (upload.status !== 0) {
 }
 
 console.log("Stored the Dodo test configuration in the hosted Worker.");
+console.log(`Brand: ${brand.brand_id}`);
 console.log(`Monthly product: ${monthly.product_id}`);
 console.log(`Yearly product: ${yearly.product_id}`);
 console.log(`Webhook: ${webhook.id}`);
+
+async function ensureBrand() {
+  const response = await client.brands.list();
+  const existing = response.items.find(
+    (candidate) => candidate.name?.trim().toLowerCase() === "tsewa" && !candidate.archived_at,
+  );
+  if (existing) {
+    console.log("Reused the existing Tsewa brand.");
+    return existing;
+  }
+  const created = await client.brands.create({
+    description: "Tsewa school and care management subscriptions.",
+    name: "Tsewa",
+    statement_descriptor: "TSEWA",
+    url: "https://gettsewa.com",
+  });
+  console.log("Created the Tsewa brand.");
+  return created;
+}
 
 async function ensureProduct({ amount, indiaAmount, interval, marker, name }) {
   const marked = products.find((product) => product.metadata?.tsewa_plan === marker);
@@ -120,12 +141,17 @@ async function ensureProduct({ amount, indiaAmount, interval, marker, name }) {
   let product = marked ?? named;
   if (product) {
     assertProductConfiguration(product, { amount, interval, name });
+    if (product.brand_id !== brand.brand_id) {
+      product = await client.products.update(product.product_id, { brand_id: brand.brand_id });
+      console.log(`Moved ${name} to the Tsewa brand.`);
+    }
     console.log(`Reused ${name}.`);
   } else {
     product = await client.products.create(
       {
         description:
           "One connected operational record for education, care, and community organisations, including up to 500 active people.",
+        brand_id: brand.brand_id,
         metadata: { tsewa_plan: marker },
         name,
         price: {

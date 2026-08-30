@@ -66,7 +66,6 @@ import { Route as ApiSponsorshipReportsRouteImport } from './routes/api.sponsors
 import { Route as ApiSponsorshipSetupRouteImport } from './routes/api.sponsorship.setup'
 import { Route as ApiStaffPersonIdRouteImport } from './routes/api.staff.$personId'
 import { Route as ApiWebhooksDodoRouteImport } from './routes/api.webhooks.dodo'
-import { Route as ApiOrganizationGroupsGroupKeyRouteImport } from './routes/api.organization.groups.$groupKey'
 import { Route as ApiOrganizationInvitationsInvitationIdRouteImport } from './routes/api.organization.invitations.$invitationId'
 import { Route as ApiOrganizationMembersMemberIdRouteImport } from './routes/api.organization.members.$memberId'
 import { Route as ApiOrganizationSessionsSessionIdRouteImport } from './routes/api.organization.sessions.$sessionId'
@@ -390,12 +389,6 @@ const ApiWebhooksDodoRoute = ApiWebhooksDodoRouteImport.update({
   path: '/api/webhooks/dodo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOrganizationGroupsGroupKeyRoute =
-  ApiOrganizationGroupsGroupKeyRouteImport.update({
-    id: '/groups/$groupKey',
-    path: '/groups/$groupKey',
-    getParentRoute: () => ApiOrganizationRoute,
-  } as any)
 const ApiOrganizationInvitationsInvitationIdRoute =
   ApiOrganizationInvitationsInvitationIdRouteImport.update({
     id: '/$invitationId',
@@ -591,7 +584,6 @@ export interface FileRoutesByFullPath {
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
   '/api/staff/$personId': typeof ApiStaffPersonIdRoute
   '/api/webhooks/dodo': typeof ApiWebhooksDodoRoute
-  '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
   '/api/organization/sessions/$sessionId': typeof ApiOrganizationSessionsSessionIdRoute
@@ -674,7 +666,6 @@ export interface FileRoutesByTo {
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
   '/api/staff/$personId': typeof ApiStaffPersonIdRoute
   '/api/webhooks/dodo': typeof ApiWebhooksDodoRoute
-  '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
   '/api/organization/sessions/$sessionId': typeof ApiOrganizationSessionsSessionIdRoute
@@ -758,7 +749,6 @@ export interface FileRoutesById {
   '/api/sponsorship/setup': typeof ApiSponsorshipSetupRoute
   '/api/staff/$personId': typeof ApiStaffPersonIdRoute
   '/api/webhooks/dodo': typeof ApiWebhooksDodoRoute
-  '/api/organization/groups/$groupKey': typeof ApiOrganizationGroupsGroupKeyRoute
   '/api/organization/invitations/$invitationId': typeof ApiOrganizationInvitationsInvitationIdRouteWithChildren
   '/api/organization/members/$memberId': typeof ApiOrganizationMembersMemberIdRoute
   '/api/organization/sessions/$sessionId': typeof ApiOrganizationSessionsSessionIdRoute
@@ -843,7 +833,6 @@ export interface FileRouteTypes {
     | '/api/sponsorship/setup'
     | '/api/staff/$personId'
     | '/api/webhooks/dodo'
-    | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
     | '/api/organization/sessions/$sessionId'
@@ -926,7 +915,6 @@ export interface FileRouteTypes {
     | '/api/sponsorship/setup'
     | '/api/staff/$personId'
     | '/api/webhooks/dodo'
-    | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
     | '/api/organization/sessions/$sessionId'
@@ -1009,7 +997,6 @@ export interface FileRouteTypes {
     | '/api/sponsorship/setup'
     | '/api/staff/$personId'
     | '/api/webhooks/dodo'
-    | '/api/organization/groups/$groupKey'
     | '/api/organization/invitations/$invitationId'
     | '/api/organization/members/$memberId'
     | '/api/organization/sessions/$sessionId'
@@ -1485,13 +1472,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksDodoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/organization/groups/$groupKey': {
-      id: '/api/organization/groups/$groupKey'
-      path: '/groups/$groupKey'
-      fullPath: '/api/organization/groups/$groupKey'
-      preLoaderRoute: typeof ApiOrganizationGroupsGroupKeyRouteImport
-      parentRoute: typeof ApiOrganizationRoute
-    }
     '/api/organization/invitations/$invitationId': {
       id: '/api/organization/invitations/$invitationId'
       path: '/$invitationId'
@@ -1707,7 +1687,6 @@ interface ApiOrganizationRouteChildren {
   ApiOrganizationLogoRoute: typeof ApiOrganizationLogoRoute
   ApiOrganizationSessionsRoute: typeof ApiOrganizationSessionsRouteWithChildren
   ApiOrganizationTransferRoute: typeof ApiOrganizationTransferRoute
-  ApiOrganizationGroupsGroupKeyRoute: typeof ApiOrganizationGroupsGroupKeyRoute
   ApiOrganizationMembersMemberIdRoute: typeof ApiOrganizationMembersMemberIdRoute
 }
 
@@ -1717,7 +1696,6 @@ const ApiOrganizationRouteChildren: ApiOrganizationRouteChildren = {
   ApiOrganizationLogoRoute: ApiOrganizationLogoRoute,
   ApiOrganizationSessionsRoute: ApiOrganizationSessionsRouteWithChildren,
   ApiOrganizationTransferRoute: ApiOrganizationTransferRoute,
-  ApiOrganizationGroupsGroupKeyRoute: ApiOrganizationGroupsGroupKeyRoute,
   ApiOrganizationMembersMemberIdRoute: ApiOrganizationMembersMemberIdRoute,
 }
 

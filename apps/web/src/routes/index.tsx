@@ -59,6 +59,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
+import { formatInstant } from "@/lib/date-time";
 import { homeSearchSchema } from "@/lib/route-search";
 
 type AcademicSession = {
@@ -106,21 +107,10 @@ type InvitationPreview = {
   organizationName: string;
   email: string;
   group: "admin" | "staff" | "viewer";
-  roleNames: string[];
-  expiresAt: string;
+  expiresAt: number;
 };
 
 type AccessGroup = "owner" | "admin" | "staff" | "viewer";
-type AccessRole =
-  | "organization_administrator"
-  | "registration"
-  | "school"
-  | "sponsorship"
-  | "reports"
-  | "scholarship"
-  | "dispensary"
-  | "staff_operations"
-  | "auditor";
 
 type OrganizationState = {
   organization: {
@@ -142,7 +132,7 @@ type OrganizationState = {
   members: Array<{
     id: string;
     group: AccessGroup;
-    joinedAt: string;
+    joinedAt: number;
     userId: string;
     name: string;
     email: string;
@@ -152,28 +142,18 @@ type OrganizationState = {
     id: string;
     email: string;
     group: "admin" | "staff" | "viewer";
-    expiresAt: string;
-    createdAt: string;
+    expiresAt: number;
+    createdAt: number;
     emailStatus: "not_sent" | "sent" | "failed";
-    emailSentAt: string | null;
-    emailLastAttemptAt: string | null;
+    emailSentAt: number | null;
+    emailLastAttemptAt: number | null;
     emailAttemptCount: number;
   }>;
   accessModel: {
-    permissions: Array<{ key: string; name: string; category: string }>;
-    roles: Array<{
-      id: string;
-      key: AccessRole;
-      name: string;
-      description: string;
-      permissionKeys: string[];
-    }>;
     groups: Array<{
-      id: string;
       key: AccessGroup;
       name: string;
       description: string;
-      roleKeys: AccessRole[];
     }>;
   };
 };
@@ -247,9 +227,10 @@ type DashboardState = {
     action: string;
     entityType: string;
     entityId: string | null;
-    occurredAt: string;
+    occurredAt: number;
     actorName: string | null;
   }>;
+  temporal: { locale: string; timeZone: string };
 };
 
 export const Route = createFileRoute("/")({
@@ -414,7 +395,7 @@ export function InvitationPage({ token }: { token: string }) {
         description={
           wrongAccount
             ? `This invitation is for ${invitation.email}, but you are signed in as ${session.data.user.email}.`
-            : `Join ${invitation.organizationName} as ${invitation.group}. Your assigned roles are ${invitation.roleNames.join(", ") || "set by the organization"}.`
+            : `Join ${invitation.organizationName} as ${groupLabel(invitation.group)}.`
         }
         error={error}
         title={wrongAccount ? "Use the invited account" : `Join ${invitation.organizationName}`}
@@ -1505,7 +1486,8 @@ function Dashboard({
                         {formatAuditAction(event.action)}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {event.actorName ?? "System"} · {formatDateTime(event.occurredAt)}
+                        {event.actorName ?? "System"} ·{" "}
+                        {formatDateTime(event.occurredAt, state.temporal)}
                       </p>
                     </div>
                   </div>
@@ -1622,7 +1604,6 @@ function AdministrationPanel({
   const [inviteGroup, setInviteGroup] = useState<"admin" | "staff" | "viewer">("admin");
   const [busy, setBusy] = useState("");
   const [pendingMemberGroups, setPendingMemberGroups] = useState<Set<string>>(() => new Set());
-  const [pendingAccessGroups, setPendingAccessGroups] = useState<Set<AccessGroup>>(() => new Set());
 
   async function refresh() {
     const response = await fetch("/api/organization");
@@ -1832,78 +1813,6 @@ function AdministrationPanel({
     setBusy("");
   }
 
-  async function saveGroupRoles(group: Exclude<AccessGroup, "owner">, roleKeys: AccessRole[]) {
-    const previousRoleKeys = state?.accessModel.groups.find((item) => item.key === group)?.roleKeys;
-    if (!previousRoleKeys) return;
-
-    setPendingAccessGroups((current) => new Set(current).add(group));
-    setState((current) =>
-      current
-        ? {
-            ...current,
-            accessModel: {
-              ...current.accessModel,
-              groups: current.accessModel.groups.map((item) =>
-                item.key === group ? { ...item, roleKeys } : item,
-              ),
-            },
-          }
-        : current,
-    );
-
-    try {
-      const response = await fetch(`/api/organization/groups/${group}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ roleKeys }),
-      });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setState((current) =>
-          current
-            ? {
-                ...current,
-                accessModel: {
-                  ...current.accessModel,
-                  groups: current.accessModel.groups.map((item) =>
-                    item.key === group && sameRoleKeys(item.roleKeys, roleKeys)
-                      ? { ...item, roleKeys: previousRoleKeys }
-                      : item,
-                  ),
-                },
-              }
-            : current,
-        );
-        toast.error(payload.error ?? "Group roles could not be saved.");
-        return;
-      }
-      toast.success(`${groupLabel(group)} access updated.`);
-    } catch {
-      setState((current) =>
-        current
-          ? {
-              ...current,
-              accessModel: {
-                ...current.accessModel,
-                groups: current.accessModel.groups.map((item) =>
-                  item.key === group && sameRoleKeys(item.roleKeys, roleKeys)
-                    ? { ...item, roleKeys: previousRoleKeys }
-                    : item,
-                ),
-              },
-            }
-          : current,
-      );
-      toast.error("Group roles could not be saved.");
-    } finally {
-      setPendingAccessGroups((current) => {
-        const next = new Set(current);
-        next.delete(group);
-        return next;
-      });
-    }
-  }
-
   if (!state) {
     return (
       <Card className="mt-10">
@@ -1918,7 +1827,6 @@ function AdministrationPanel({
     "organization.settings.manage",
   );
   const canManageMembers = state.currentMember.permissions.includes("organization.members.manage");
-  const canManageRoles = state.currentMember.permissions.includes("organization.roles.manage");
   const isOwner = state.currentMember.group === "owner";
 
   if (activeTab === "audit") {
@@ -1944,7 +1852,7 @@ function AdministrationPanel({
     roles: {
       eyebrow: "Roles",
       title: "Access control",
-      description: "Define the functional roles granted to each organisation access group.",
+      description: "Review the three fixed roles and the access each one provides.",
     },
   }[activeTab];
 
@@ -2081,8 +1989,8 @@ function AdministrationPanel({
         ) : null}
 
         {activeTab === "members" ? (
-          <Card>
-            <CardHeader>
+          <div>
+            <div className="mb-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <CardTitle>Members</CardTitle>
@@ -2095,8 +2003,8 @@ function AdministrationPanel({
                   <Users className="size-5" />
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
+            </div>
+            <div className="space-y-3">
               {state.members.map((member) => {
                 const isCurrent = member.id === state.currentMember.id;
                 return (
@@ -2222,7 +2130,11 @@ function AdministrationPanel({
                             : invitation.emailStatus === "failed"
                               ? "email failed"
                               : "not emailed"}{" "}
-                          · expires {formatShortDate(invitation.expiresAt)}
+                          · expires{" "}
+                          {formatInstantDate(invitation.expiresAt, {
+                            locale: state.organization.locale,
+                            timeZone: state.organization.timezone,
+                          })}
                         </p>
                       </div>
                       {canManageMembers ? (
@@ -2250,70 +2162,20 @@ function AdministrationPanel({
                   ))}
                 </div>
               ) : null}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : null}
       </div>
 
       {activeTab === "roles" ? (
-        <Card className="mt-5">
-          <CardHeader>
-            <CardTitle>Access groups and functional roles</CardTitle>
-            <CardDescription>
-              Every member belongs to one access group. A group receives explicit permissions
-              through its functional roles; owner always retains every role.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-3">
-            {state.accessModel.groups
-              .filter((group) => group.key !== "owner")
-              .map((group) => (
-                <div className="rounded-2xl border bg-muted/20 p-4" key={group.id}>
-                  <div>
-                    <p className="font-semibold">{group.name}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {group.description}
-                    </p>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {state.accessModel.roles.map((role) => {
-                      const selected = group.roleKeys.includes(role.key);
-                      const nextRoles = selected
-                        ? group.roleKeys.filter((roleKey) => roleKey !== role.key)
-                        : [...group.roleKeys, role.key];
-                      return (
-                        <button
-                          aria-pressed={selected}
-                          className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                            selected
-                              ? "border-primary/30 bg-primary/8"
-                              : "border-border bg-background hover:bg-muted"
-                          }`}
-                          disabled={!canManageRoles || pendingAccessGroups.has(group.key)}
-                          key={role.id}
-                          onClick={() =>
-                            void saveGroupRoles(
-                              group.key as Exclude<AccessGroup, "owner">,
-                              nextRoles,
-                            )
-                          }
-                          type="button"
-                        >
-                          <span className="flex items-center justify-between gap-3 text-sm font-medium">
-                            {role.name}
-                            {selected ? <Check className="size-4 text-primary" /> : null}
-                          </span>
-                          <span className="mt-1 block text-xs leading-4 text-muted-foreground">
-                            {role.permissionKeys.length} explicit permissions
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-          </CardContent>
-        </Card>
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {state.accessModel.groups.map((group) => (
+            <div className="rounded-2xl border bg-card p-5" key={group.key}>
+              <p className="font-semibold">{group.name}</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{group.description}</p>
+            </div>
+          ))}
+        </div>
       ) : null}
     </section>
   );
@@ -2512,11 +2374,12 @@ type AuditState = {
     entityType: string;
     entityId: string | null;
     metadataJson: string | null;
-    occurredAt: string;
+    occurredAt: number;
     actorName: string | null;
     actorEmail: string | null;
   }>;
   actions: string[];
+  temporal: { locale: string; timeZone: string };
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 };
 
@@ -2662,8 +2525,11 @@ function AuditSettings({ canRead, search }: { canRead: boolean; search: RoutedAp
                     </p>
                   ) : null}
                 </div>
-                <time className="text-xs text-muted-foreground" dateTime={event.occurredAt}>
-                  {formatDateTime(event.occurredAt)}
+                <time
+                  className="text-xs text-muted-foreground"
+                  dateTime={new Date(event.occurredAt).toISOString()}
+                >
+                  {formatDateTime(event.occurredAt, state.temporal)}
                 </time>
               </div>
             ))
@@ -2708,10 +2574,6 @@ function groupLabel(group: AccessGroup): string {
   return group === "admin" ? "Administrator" : group.charAt(0).toUpperCase() + group.slice(1);
 }
 
-function sameRoleKeys(left: AccessRole[], right: AccessRole[]): boolean {
-  return left.length === right.length && left.every((roleKey) => right.includes(roleKey));
-}
-
 function initials(name: string): string {
   return name
     .split(/\s+/)
@@ -2721,19 +2583,23 @@ function initials(name: string): string {
 }
 
 function formatShortDate(value: string): string {
-  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" }).format(
-    new Date(value),
-  );
-}
-
-function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function formatDateTime(value: number, temporal: { locale: string; timeZone: string }): string {
+  return formatInstant(value, temporal.locale, temporal.timeZone);
+}
+
+function formatInstantDate(value: number, temporal: { locale: string; timeZone: string }): string {
+  return formatInstant(value, temporal.locale, temporal.timeZone, {
+    year: undefined,
+    hour: undefined,
+    minute: undefined,
+  });
 }
 
 function formatAuditAction(value: string): string {

@@ -32,10 +32,6 @@ import {
   academicSubjectType,
   academicTerm,
   accessGroup,
-  accessGroupRole,
-  accessPermission,
-  accessRole,
-  accessRolePermission,
   auditEvent,
   healthDiagnosis,
   healthMedicalAdvance,
@@ -92,14 +88,8 @@ import {
   userPreference,
 } from "@/db/schema";
 
-import {
-  groupCatalog,
-  groupRoleDefaults,
-  permissionCatalog,
-  roleCatalog,
-  rolePermissionDefaults,
-} from "@/lib/access-control";
-import type { AccessGroupKey, AccessRoleKey, PermissionKey } from "@/lib/access-control";
+import { groupCatalog, permissionsForGroup, visibleAccessGroups } from "@/lib/access-control";
+import type { AccessGroupKey, PermissionKey } from "@/lib/access-control";
 import { nextMarkSheetStatus } from "@/lib/academic-results";
 import {
   BillingConfigurationError,
@@ -112,6 +102,7 @@ import {
 } from "@/lib/billing";
 import type { BillingInterval } from "@/lib/billing";
 import { createAuth } from "@/lib/auth";
+import { toEpochMilliseconds } from "@/lib/date-time";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { sendEmailVerification, sendPasswordResetEmail } from "@/lib/auth-email";
 import { publicAppOrigin } from "@/lib/deployment";
@@ -235,23 +226,6 @@ const hostedOnboardingSchema = z.object({
     )
     .min(1)
     .max(40),
-});
-
-const groupRolesSchema = z.object({
-  roleKeys: z
-    .array(
-      z.enum([
-        "organization_administrator",
-        "registration",
-        "school",
-        "sponsorship",
-        "scholarship",
-        "dispensary",
-        "staff_operations",
-        "auditor",
-      ]),
-    )
-    .max(roleCatalog.length),
 });
 
 const invitationTokenSchema = z.object({
@@ -954,7 +928,6 @@ type Invitation = {
   organizationName: string;
   email: string;
   group: Exclude<AccessGroupKey, "owner">;
-  roleNames: string[];
   expiresAt: string;
 };
 
@@ -1247,11 +1220,6 @@ export const apiDispatcher = {
       return resendOrganizationInvitation(request, invitationResendMatch[1]);
     }
 
-    const accessGroupMatch = url.pathname.match(/^\/api\/organization\/groups\/([^/]+)$/);
-    if (accessGroupMatch) {
-      return updateAccessGroup(request, accessGroupMatch[1]);
-    }
-
     if (url.pathname === "/api/organization/transfer") {
       return transferOrganizationOwnership(request);
     }
@@ -1307,7 +1275,23 @@ async function getBilling(request: Request): Promise<Response> {
       organizationId: context.organizationId,
       runtime,
     });
-    return Response.json({ ...billing, canManage: context.group === "owner" });
+    const temporal = await runtime.ORM.select({
+      locale: organization.locale,
+      timeZone: organization.timezone,
+    })
+      .from(organization)
+      .where(eq(organization.id, context.organizationId))
+      .limit(1)
+      .then((rows) => rows[0] ?? { locale: "en-IN", timeZone: "Asia/Kolkata" });
+    return Response.json({
+      ...billing,
+      trialEndsAt: billing.trialEndsAt ? toEpochMilliseconds(billing.trialEndsAt) : null,
+      currentPeriodEndsAt: billing.currentPeriodEndsAt
+        ? toEpochMilliseconds(billing.currentPeriodEndsAt)
+        : null,
+      temporal,
+      canManage: context.group === "owner",
+    });
   } catch (error) {
     console.error("Could not read organisation billing", error);
     return Response.json({ error: "Billing details could not be loaded." }, { status: 500 });
@@ -1526,10 +1510,6 @@ async function auditAccountAction(
   });
 }
 
-function accessRoleId(organizationId: string, role: AccessRoleKey): string {
-  return `${organizationId}:role:${role}`;
-}
-
 function accessGroupId(organizationId: string, group: AccessGroupKey): string {
   return `${organizationId}:group:${group}`;
 }
@@ -1539,36 +1519,6 @@ async function ensureAccessControlSeeded(
   organizationId: string,
 ): Promise<void> {
   const writes: BatchItem<"sqlite">[] = [];
-  for (const [key, name, category] of permissionCatalog) {
-    writes.push(
-      database.insert(accessPermission).values({ key, name, category }).onConflictDoNothing(),
-    );
-  }
-
-  for (const role of roleCatalog) {
-    const roleId = accessRoleId(organizationId, role.key);
-    writes.push(
-      database
-        .insert(accessRole)
-        .values({
-          id: roleId,
-          organizationId,
-          key: role.key,
-          name: role.name,
-          description: role.description,
-        })
-        .onConflictDoNothing(),
-    );
-    for (const permission of rolePermissionDefaults[role.key]) {
-      writes.push(
-        database
-          .insert(accessRolePermission)
-          .values({ roleId, permissionKey: permission })
-          .onConflictDoNothing(),
-      );
-    }
-  }
-
   for (const group of groupCatalog) {
     const groupId = accessGroupId(organizationId, group.key);
     writes.push(
@@ -1583,14 +1533,6 @@ async function ensureAccessControlSeeded(
         })
         .onConflictDoNothing(),
     );
-    for (const roleKey of groupRoleDefaults[group.key]) {
-      writes.push(
-        database
-          .insert(accessGroupRole)
-          .values({ groupId, roleId: accessRoleId(organizationId, roleKey) })
-          .onConflictDoNothing(),
-      );
-    }
   }
 
   await database.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -1732,7 +1674,7 @@ async function createHostedOrganization(request: Request): Promise<Response> {
     memberId,
     organizationId,
     group: "owner",
-    permissions: permissionCatalog.map(([key]) => key),
+    permissions: permissionsForGroup("owner"),
     activeSessionId: sessionId,
     userId: authSession.user.id,
   };
@@ -9869,6 +9811,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   if (!personRecord) return Response.json({ error: "Person not found" }, { status: 404 });
 
   const canEdit = hasPermission(context, "people.update");
+  const canManageFiles = hasPermission(context, "people.files.manage");
   const uniqueRelationships = [
     ...new Map(relationships.map((item) => [item.personId, item])).values(),
   ]
@@ -9904,6 +9847,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       sourceId: personRecord.sourceId,
       importedAt: personRecord.importedAt,
       canEdit,
+      canManageFiles,
       editRestriction: canEdit ? null : "permission",
       reviewFlags,
       placements: placements.map((placement) => ({
@@ -11129,116 +11073,69 @@ async function getOrganization(request: Request): Promise<Response> {
   if (!hasPermission(context, "organization.settings.read")) return forbidden();
 
   const runtime = getRuntimeEnv();
-  const [organizationRows, members, invitations, groups, roles, rolePermissions, groupRoles] =
-    await runtime.ORM.batch([
-      runtime.ORM.select({
-        id: organization.id,
-        name: organization.name,
-        slug: organization.slug,
-        displayTitle: organization.displayTitle,
-        logoAssetKey: organization.logoAssetKey,
-        timezone: organization.timezone,
-        locale: organization.locale,
-        updatedAt: organization.updatedAt,
-      })
-        .from(organization)
-        .where(eq(organization.id, context.organizationId))
-        .limit(1),
-      runtime.ORM.select({
-        id: sql<string>`${organizationMember.id}`.as("member_id"),
-        group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`.as(
-          "member_group",
-        ),
-        joinedAt: sql<string>`${organizationMember.createdAt}`.as("member_joined_at"),
-        userId: sql<string>`${user.id}`.as("member_user_id"),
-        name: sql<string>`${user.name}`.as("member_name"),
-        email: sql<string>`${user.email}`.as("member_email"),
-        emailVerified: sql<number>`${user.emailVerified}`.as("member_email_verified"),
-      })
-        .from(organizationMember)
-        .innerJoin(user, eq(user.id, organizationMember.userId))
-        .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
-        .where(eq(organizationMember.organizationId, context.organizationId))
-        .orderBy(
-          asc(sql`CASE coalesce(${accessGroup.key}, ${organizationMember.role})
+  const [organizationRows, members, invitations] = await runtime.ORM.batch([
+    runtime.ORM.select({
+      id: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+      displayTitle: organization.displayTitle,
+      logoAssetKey: organization.logoAssetKey,
+      timezone: organization.timezone,
+      locale: organization.locale,
+      updatedAt: organization.updatedAt,
+    })
+      .from(organization)
+      .where(eq(organization.id, context.organizationId))
+      .limit(1),
+    runtime.ORM.select({
+      id: sql<string>`${organizationMember.id}`.as("member_id"),
+      group: sql<AccessGroupKey>`coalesce(${accessGroup.key}, ${organizationMember.role})`.as(
+        "member_group",
+      ),
+      joinedAt: sql<string>`${organizationMember.createdAt}`.as("member_joined_at"),
+      userId: sql<string>`${user.id}`.as("member_user_id"),
+      name: sql<string>`${user.name}`.as("member_name"),
+      email: sql<string>`${user.email}`.as("member_email"),
+      emailVerified: sql<number>`${user.emailVerified}`.as("member_email_verified"),
+    })
+      .from(organizationMember)
+      .innerJoin(user, eq(user.id, organizationMember.userId))
+      .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
+      .where(eq(organizationMember.organizationId, context.organizationId))
+      .orderBy(
+        asc(sql`CASE coalesce(${accessGroup.key}, ${organizationMember.role})
             WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'staff' THEN 2 ELSE 3 END`),
-          asc(sql`lower(${user.name})`),
+        asc(sql`lower(${user.name})`),
+      ),
+    runtime.ORM.select({
+      id: organizationInvitation.id,
+      email: organizationInvitation.email,
+      group: sql<
+        Exclude<AccessGroupKey, "owner">
+      >`coalesce(${accessGroup.key}, ${organizationInvitation.role})`,
+      expiresAt: organizationInvitation.expiresAt,
+      createdAt: organizationInvitation.createdAt,
+      emailStatus: organizationInvitation.emailStatus,
+      emailSentAt: organizationInvitation.emailSentAt,
+      emailLastAttemptAt: organizationInvitation.emailLastAttemptAt,
+      emailAttemptCount: organizationInvitation.emailAttemptCount,
+    })
+      .from(organizationInvitation)
+      .leftJoin(accessGroup, eq(accessGroup.id, organizationInvitation.groupId))
+      .where(
+        and(
+          eq(organizationInvitation.organizationId, context.organizationId),
+          isNull(organizationInvitation.acceptedAt),
+          isNull(organizationInvitation.revokedAt),
+          gt(organizationInvitation.expiresAt, new Date().toISOString()),
         ),
-      runtime.ORM.select({
-        id: organizationInvitation.id,
-        email: organizationInvitation.email,
-        group: sql<
-          Exclude<AccessGroupKey, "owner">
-        >`coalesce(${accessGroup.key}, ${organizationInvitation.role})`,
-        expiresAt: organizationInvitation.expiresAt,
-        createdAt: organizationInvitation.createdAt,
-        emailStatus: organizationInvitation.emailStatus,
-        emailSentAt: organizationInvitation.emailSentAt,
-        emailLastAttemptAt: organizationInvitation.emailLastAttemptAt,
-        emailAttemptCount: organizationInvitation.emailAttemptCount,
-      })
-        .from(organizationInvitation)
-        .leftJoin(accessGroup, eq(accessGroup.id, organizationInvitation.groupId))
-        .where(
-          and(
-            eq(organizationInvitation.organizationId, context.organizationId),
-            isNull(organizationInvitation.acceptedAt),
-            isNull(organizationInvitation.revokedAt),
-            gt(organizationInvitation.expiresAt, new Date().toISOString()),
-          ),
-        )
-        .orderBy(desc(organizationInvitation.createdAt)),
-      runtime.ORM.select({
-        id: accessGroup.id,
-        key: accessGroup.key,
-        name: accessGroup.name,
-        description: accessGroup.description,
-      })
-        .from(accessGroup)
-        .where(eq(accessGroup.organizationId, context.organizationId))
-        .orderBy(
-          asc(sql`CASE ${accessGroup.key}
-            WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'staff' THEN 2 ELSE 3 END`),
-        ),
-      runtime.ORM.select({
-        id: accessRole.id,
-        key: accessRole.key,
-        name: accessRole.name,
-        description: accessRole.description,
-      })
-        .from(accessRole)
-        .where(eq(accessRole.organizationId, context.organizationId))
-        .orderBy(asc(sql`lower(${accessRole.name})`)),
-      runtime.ORM.select({
-        roleKey: accessRole.key,
-        permissionKey: accessRolePermission.permissionKey,
-      })
-        .from(accessRolePermission)
-        .innerJoin(accessRole, eq(accessRole.id, accessRolePermission.roleId))
-        .where(eq(accessRole.organizationId, context.organizationId)),
-      runtime.ORM.select({ groupKey: accessGroup.key, roleKey: accessRole.key })
-        .from(accessGroupRole)
-        .innerJoin(accessGroup, eq(accessGroup.id, accessGroupRole.groupId))
-        .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
-        .where(eq(accessGroup.organizationId, context.organizationId)),
-    ]);
+      )
+      .orderBy(desc(organizationInvitation.createdAt)),
+  ]);
   const organizationState = organizationRows[0] ?? null;
 
   if (!organizationState)
     return Response.json({ error: "Organization not found" }, { status: 404 });
-
-  const permissionKeysByRole = new Map<string, PermissionKey[]>();
-  for (const mapping of rolePermissions) {
-    const permissionKeys = permissionKeysByRole.get(mapping.roleKey) ?? [];
-    permissionKeys.push(mapping.permissionKey as PermissionKey);
-    permissionKeysByRole.set(mapping.roleKey, permissionKeys);
-  }
-  const roleKeysByGroup = new Map<string, AccessRoleKey[]>();
-  for (const mapping of groupRoles) {
-    const roleKeys = roleKeysByGroup.get(mapping.groupKey) ?? [];
-    roleKeys.push(mapping.roleKey as AccessRoleKey);
-    roleKeysByGroup.set(mapping.groupKey, roleKeys);
-  }
 
   return Response.json({
     organization: {
@@ -11255,18 +11152,19 @@ async function getOrganization(request: Request): Promise<Response> {
     members: members.map((member) => ({
       ...member,
       emailVerified: Boolean(member.emailVerified),
+      joinedAt: toEpochMilliseconds(member.joinedAt),
     })),
-    invitations,
+    invitations: invitations.map((invitation) => ({
+      ...invitation,
+      expiresAt: toEpochMilliseconds(invitation.expiresAt),
+      createdAt: toEpochMilliseconds(invitation.createdAt),
+      emailSentAt: invitation.emailSentAt ? toEpochMilliseconds(invitation.emailSentAt) : null,
+      emailLastAttemptAt: invitation.emailLastAttemptAt
+        ? toEpochMilliseconds(invitation.emailLastAttemptAt)
+        : null,
+    })),
     accessModel: {
-      permissions: permissionCatalog.map(([key, name, category]) => ({ key, name, category })),
-      roles: roles.map((role) => ({
-        ...role,
-        permissionKeys: permissionKeysByRole.get(role.key) ?? [],
-      })),
-      groups: groups.map((group) => ({
-        ...group,
-        roleKeys: roleKeysByGroup.get(group.key) ?? [],
-      })),
+      groups: visibleAccessGroups(),
     },
   });
 }
@@ -11458,7 +11356,7 @@ async function getOrganizationAudit(request: Request): Promise<Response> {
     );
   }
   const where = and(...conditions);
-  const [countRows, events, actions] = await runtime.ORM.batch([
+  const [countRows, events, actions, temporalRows] = await runtime.ORM.batch([
     runtime.ORM.select({ total: count() })
       .from(auditEvent)
       .leftJoin(user, eq(user.id, auditEvent.actorUserId))
@@ -11483,12 +11381,20 @@ async function getOrganizationAudit(request: Request): Promise<Response> {
       .from(auditEvent)
       .where(eq(auditEvent.organizationId, context.organizationId))
       .orderBy(asc(auditEvent.action)),
+    runtime.ORM.select({ locale: organization.locale, timeZone: organization.timezone })
+      .from(organization)
+      .where(eq(organization.id, context.organizationId))
+      .limit(1),
   ]);
   const countRow = countRows[0];
   const total = Number(countRow?.total ?? 0);
   return Response.json({
-    events,
+    events: events.map((event) => ({
+      ...event,
+      occurredAt: toEpochMilliseconds(event.occurredAt),
+    })),
     actions: actions.map((item) => item.action),
+    temporal: temporalRows[0] ?? { locale: "en-IN", timeZone: "Asia/Kolkata" },
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   });
 }
@@ -11749,8 +11655,7 @@ async function previewInvitation(request: Request): Promise<Response> {
     organizationName: invitation.organizationName,
     email: invitation.email,
     group: invitation.group,
-    roleNames: invitation.roleNames,
-    expiresAt: invitation.expiresAt,
+    expiresAt: toEpochMilliseconds(invitation.expiresAt),
   });
 }
 
@@ -11898,59 +11803,6 @@ async function transferOrganizationOwnership(request: Request): Promise<Response
   return Response.json({ ok: true });
 }
 
-async function updateAccessGroup(request: Request, groupKey: string): Promise<Response> {
-  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
-  if (!isSameOrigin(request)) return forbidden();
-  const context = await getMembershipContext(request);
-  if (!context) return unauthorized();
-  if (!hasPermission(context, "organization.roles.manage")) return forbidden();
-  if (!(["admin", "staff", "viewer"] as const).includes(groupKey as never)) {
-    return Response.json({ error: "That access group cannot be changed." }, { status: 400 });
-  }
-
-  const parsed = groupRolesSchema.safeParse(await readJson(request));
-  if (!parsed.success) {
-    return Response.json({ error: "Choose valid functional roles." }, { status: 400 });
-  }
-
-  const roleKeys = [...new Set(parsed.data.roleKeys)];
-  const group = groupKey as Exclude<AccessGroupKey, "owner">;
-  const runtime = getRuntimeEnv();
-  const groupId = accessGroupId(context.organizationId, group);
-  const deleteRoles = runtime.ORM.delete(accessGroupRole).where(
-    eq(accessGroupRole.groupId, groupId),
-  );
-  const touchGroup = runtime.ORM.update(accessGroup)
-    .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
-    .where(
-      and(eq(accessGroup.id, groupId), eq(accessGroup.organizationId, context.organizationId)),
-    );
-  const audit = auditInsert(
-    runtime.ORM,
-    context,
-    "access_group.roles_changed",
-    "access_group",
-    groupId,
-    { group, roleKeys: roleKeys.join(",") },
-  );
-  if (roleKeys.length) {
-    await runtime.ORM.batch([
-      deleteRoles,
-      runtime.ORM.insert(accessGroupRole).values(
-        roleKeys.map((roleKey) => ({
-          groupId,
-          roleId: accessRoleId(context.organizationId, roleKey),
-        })),
-      ),
-      touchGroup,
-      audit,
-    ]);
-  } else {
-    await runtime.ORM.batch([deleteRoles, touchGroup, audit]);
-  }
-  return Response.json({ ok: true, group, roleKeys });
-}
-
 async function resendOrganizationInvitation(
   request: Request,
   invitationId: string,
@@ -12037,8 +11889,12 @@ async function deliverOrganizationInvitation(
   invitationUrl: string,
   expiresAt: string,
 ): Promise<{ status: "sent" | "failed"; messageId?: string }> {
-  const [organizationState, inviter, roles] = await Promise.all([
-    runtime.ORM.select({ name: organization.name })
+  const [organizationState, inviter] = await Promise.all([
+    runtime.ORM.select({
+      name: organization.name,
+      locale: organization.locale,
+      timezone: organization.timezone,
+    })
       .from(organization)
       .where(eq(organization.id, context.organizationId))
       .limit(1)
@@ -12048,14 +11904,6 @@ async function deliverOrganizationInvitation(
       .where(eq(user.id, context.userId))
       .limit(1)
       .then((rows) => rows[0] ?? null),
-    runtime.ORM.select({ name: accessRole.name })
-      .from(accessGroupRole)
-      .innerJoin(accessGroup, eq(accessGroup.id, accessGroupRole.groupId))
-      .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
-      .where(
-        and(eq(accessGroup.organizationId, context.organizationId), eq(accessGroup.key, group)),
-      )
-      .orderBy(asc(sql`lower(${accessRole.name})`)),
   ]);
   if (!organizationState || !inviter) throw new Error("Invitation sender context is missing.");
 
@@ -12068,7 +11916,8 @@ async function deliverOrganizationInvitation(
       inviterName: inviter.name,
       recipient,
       group,
-      roleNames: roles.map((role) => role.name),
+      locale: organizationState.locale,
+      timezone: organizationState.timezone,
     });
     await runtime.ORM.update(organizationInvitation)
       .set({
@@ -12152,15 +12001,10 @@ async function getMembershipContext(request: Request): Promise<MembershipContext
       THEN ${userPreference.activeAcademicSessionId}
       ELSE NULL
     END`,
-    permissionKeys: sql<
-      string | null
-    >`group_concat(distinct ${accessRolePermission.permissionKey})`,
   })
     .from(organizationMember)
     .leftJoin(accessGroup, eq(accessGroup.id, organizationMember.groupId))
     .leftJoin(userPreference, eq(userPreference.userId, organizationMember.userId))
-    .leftJoin(accessGroupRole, eq(accessGroupRole.groupId, organizationMember.groupId))
-    .leftJoin(accessRolePermission, eq(accessRolePermission.roleId, accessGroupRole.roleId))
     .where(eq(organizationMember.userId, session.user.id))
     .groupBy(
       organizationMember.id,
@@ -12182,17 +12026,12 @@ async function getMembershipContext(request: Request): Promise<MembershipContext
     .then((rows) => rows[0] ?? null);
 
   if (!membership) return null;
-  const permissions =
-    membership.group === "owner"
-      ? permissionCatalog.map(([key]) => key)
-      : ((membership.permissionKeys?.split(",").filter(Boolean) ?? []) as PermissionKey[]);
-
   return {
     memberId: membership.memberId,
     organizationId: membership.organizationId,
     group: membership.group,
     activeSessionId: membership.activeSessionId,
-    permissions,
+    permissions: permissionsForGroup(membership.group),
     userId: session.user.id,
   };
 }
@@ -12214,7 +12053,6 @@ async function findInvitation(
         Exclude<AccessGroupKey, "owner">
       >`coalesce(${accessGroup.key}, ${organizationInvitation.role})`,
       expiresAt: organizationInvitation.expiresAt,
-      groupId: organizationInvitation.groupId,
     })
     .from(organizationInvitation)
     .innerJoin(organization, eq(organization.id, organizationInvitation.organizationId))
@@ -12232,14 +12070,6 @@ async function findInvitation(
 
   if (!invitation) return null;
   if (expectedEmail && invitation.email !== expectedEmail.trim().toLowerCase()) return null;
-  const roles = invitation.groupId
-    ? await database
-        .select({ name: accessRole.name })
-        .from(accessGroupRole)
-        .innerJoin(accessRole, eq(accessRole.id, accessGroupRole.roleId))
-        .where(eq(accessGroupRole.groupId, invitation.groupId))
-        .orderBy(asc(sql`lower(${accessRole.name})`))
-    : [];
   return {
     id: invitation.id,
     organizationId: invitation.organizationId,
@@ -12247,7 +12077,6 @@ async function findInvitation(
     email: invitation.email,
     group: invitation.group,
     expiresAt: invitation.expiresAt,
-    roleNames: roles.map((role) => role.name),
   };
 }
 

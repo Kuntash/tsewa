@@ -304,6 +304,7 @@ export function PeopleRegistry({
               ) : data.people.length ? (
                 <PeopleResults
                   data={data}
+                  kind={kind}
                   onNext={() => {
                     setPage((current) => current + 1);
                     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -380,11 +381,13 @@ function RegistryNavItem({
 
 function PeopleResults({
   data,
+  kind,
   onNext,
   onPrevious,
   onSelectPerson,
 }: {
   data: RegistryResponse;
+  kind: PeopleFilters["kind"];
   onNext: () => void;
   onPrevious: () => void;
   onSelectPerson: (personId: string) => void;
@@ -395,7 +398,7 @@ function PeopleResults({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground">
-              <th className="px-5 py-3 font-medium">Identifier</th>
+              <th className="px-5 py-3 font-medium">{identifierLabel(kind)}</th>
               <th className="px-5 py-3 font-medium">Name</th>
               <th className="px-5 py-3 font-medium">Type</th>
               <th className="px-5 py-3 font-medium">Gender</th>
@@ -507,6 +510,12 @@ function PeopleResults({
       </div>
     </>
   );
+}
+
+function identifierLabel(kind: PeopleFilters["kind"]): string {
+  if (kind === "staff") return "Staff number";
+  if (kind === "child" || kind === "elderly") return "Admission number";
+  return "Admission / staff number";
 }
 
 function KindBadge({ kind }: { kind: PersonKind }) {

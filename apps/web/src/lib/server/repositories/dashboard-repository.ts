@@ -6,6 +6,7 @@ import {
   academicSession,
   auditEvent,
   healthVisit,
+  organization,
   person,
   scholarshipRecord,
   sponsorshipAssignment,
@@ -13,6 +14,7 @@ import {
   user,
 } from "@/db/schema";
 import type { PermissionKey } from "@/lib/access-control";
+import { toEpochMilliseconds } from "@/lib/date-time";
 
 export async function findDashboard(
   database: Database,
@@ -39,6 +41,12 @@ export async function findDashboard(
     .limit(1)
     .then((rows) => rows[0] ?? null);
   if (!session) return null;
+  const temporal = await database
+    .select({ locale: organization.locale, timeZone: organization.timezone })
+    .from(organization)
+    .where(eq(organization.id, organizationId))
+    .limit(1)
+    .then((rows) => rows[0] ?? { locale: "en-IN", timeZone: "Asia/Kolkata" });
 
   const queries: BatchItem<"sqlite">[] = [];
   const add = (query: BatchItem<"sqlite">) => {
@@ -171,6 +179,10 @@ export async function findDashboard(
         ? { value: Number(health.recent ?? 0), total: Number(health.total ?? 0) }
         : null,
     },
-    activity,
+    activity: activity.map((event) => ({
+      ...event,
+      occurredAt: toEpochMilliseconds(event.occurredAt),
+    })),
+    temporal,
   };
 }

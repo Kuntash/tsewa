@@ -12,12 +12,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatInstant } from "@/lib/date-time";
 
 type BillingState = {
   planKey: string;
   status: "active" | "canceled" | "complimentary" | "past_due" | "trialing";
-  trialEndsAt: string | null;
-  currentPeriodEndsAt: string | null;
+  trialEndsAt: number | null;
+  currentPeriodEndsAt: number | null;
   billingInterval: "monthly" | "yearly" | null;
   cancelAtPeriodEnd: boolean;
   activePersonLimit: number;
@@ -26,6 +27,7 @@ type BillingState = {
   hasCustomer: boolean;
   manageable: boolean;
   canManage: boolean;
+  temporal: { locale: string; timeZone: string };
 };
 
 const statusCopy: Record<BillingState["status"], { label: string; description: string }> = {
@@ -136,7 +138,7 @@ export function BillingSettings() {
 
   const copy = statusCopy[state.status];
   const trialDays = remainingDays(state.trialEndsAt);
-  const periodDate = formatDate(state.currentPeriodEndsAt);
+  const periodDate = formatDate(state.currentPeriodEndsAt, state.temporal);
 
   return (
     <section aria-labelledby="billing-title" className="space-y-6">
@@ -324,20 +326,17 @@ function BillingFact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function remainingDays(value: string | null) {
+function remainingDays(value: number | null) {
   if (!value) return null;
-  return Math.max(0, Math.ceil((Date.parse(value) - Date.now()) / (24 * 60 * 60 * 1000)));
+  return Math.max(0, Math.ceil((value - Date.now()) / (24 * 60 * 60 * 1000)));
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: number | null, temporal: { locale: string; timeZone: string }) {
   if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
+  return formatInstant(value, temporal.locale, temporal.timeZone, {
+    hour: undefined,
+    minute: undefined,
+  });
 }
 
 function capitalize(value: string) {

@@ -94,6 +94,7 @@ type Profile = {
   sourceId: string;
   importedAt: string | null;
   canEdit: boolean;
+  canManageFiles: boolean;
   editRestriction: "permission" | null;
   reviewFlags: string[];
   placements: Array<{
@@ -458,12 +459,12 @@ function ProfileContent({
             action={
               profile.canEdit && profile.kind !== "staff" ? (
                 <Button onClick={onEditPlacement} size="sm" variant="outline">
-                  <Pencil /> {currentPlacement ? "Change placement" : "Add placement"}
+                  <Pencil /> {currentPlacement ? "Change home" : "Add home"}
                 </Button>
               ) : null
             }
             icon={MapPin}
-            label="Placement"
+            label="Home"
           >
             {currentPlacement ? (
               <div className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
@@ -498,12 +499,12 @@ function ProfileContent({
               <div className="rounded-2xl border bg-card p-4">
                 <ProfileField label="Campus / work location" value={profile.campusOrLocation} />
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  Placement history is not used for staff.
+                  Home history is not used for staff.
                 </p>
               </div>
             ) : (
               <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-4 text-xs leading-5 text-muted-foreground">
-                No placement history is available.
+                No home history is available.
               </p>
             )}
 
@@ -512,7 +513,7 @@ function ProfileContent({
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <History className="size-4 text-muted-foreground" />
-                    <h4 className="text-sm font-semibold">Placement history</h4>
+                    <h4 className="text-sm font-semibold">Home history</h4>
                   </div>
                   <Badge className="rounded-full tabular-nums" variant="outline">
                     {profile.placements.length}
@@ -916,10 +917,10 @@ function PersonPlacementEditor({
         }),
       });
       const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "The placement could not be saved.");
+      if (!response.ok) throw new Error(payload.error ?? "The home could not be saved.");
       await onSaved();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The placement could not be saved.");
+      setError(reason instanceof Error ? reason.message : "The home could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -929,14 +930,14 @@ function PersonPlacementEditor({
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={savePlacement}>
       <header className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-          Home placement
+          Home history
         </p>
         <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
-          {current ? "Change home placement" : "Add home placement"}
+          {current ? "Change home" : "Add home"}
         </h2>
         <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
           {current
-            ? `The current ${current.homeName} record will stay in the placement history.`
+            ? `The current ${current.homeName} record will stay in the home history.`
             : `Record where ${profile.displayName} currently lives.`}
         </p>
       </header>
@@ -967,7 +968,7 @@ function PersonPlacementEditor({
                 value={locationName}
               />
             </FormField>
-            <FormField htmlFor="placement-type" label="Placement type">
+            <FormField htmlFor="placement-type" label="Home type">
               <Input
                 id="placement-type"
                 maxLength={100}
@@ -1002,7 +1003,7 @@ function PersonPlacementEditor({
             </FormField>
           </div>
           <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
-            Saving creates a new current placement. It does not delete or replace earlier records.
+            Saving creates a new current home. It does not delete or replace earlier records.
           </p>
         </div>
       </div>
@@ -1013,7 +1014,7 @@ function PersonPlacementEditor({
         </Button>
         <Button disabled={saving} type="submit">
           {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
-          {saving ? "Saving…" : "Save placement"}
+          {saving ? "Saving…" : "Save home"}
         </Button>
       </footer>
     </form>
@@ -1284,7 +1285,7 @@ function PersonFilesSection({ onEdit, profile }: { onEdit: () => void; profile: 
   return (
     <ProfileSection
       action={
-        profile.canEdit ? (
+        profile.canManageFiles ? (
           <Button onClick={onEdit} size="sm" variant="outline">
             <Pencil /> Manage files
           </Button>

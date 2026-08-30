@@ -15,13 +15,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1787309271.3621297,
-    "ast_hash": "94e65ae1ff9424ae233723c7aa63e4b2",
+    "mtime": 1788120138.375165,
+    "ast_hash": "ac98b745b80b45aff8d095c3bf14ce10",
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1787557178.9076457,
-    "ast_hash": "68abd692e2fd3b030db42567383786d0",
+    "mtime": 1788120168.9435499,
+    "ast_hash": "822092d5ba9af433eebc4dec03637679",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -100,8 +100,8 @@
     "semantic_hash": "d9837f38cc05303254571985e3164050"
   },
   "apps/web/src/routeTree.gen.ts": {
-    "mtime": 1787743226.80213,
-    "ast_hash": "c12b42bb6d9ea54acd924669ed2bd434",
+    "mtime": 1788120187.4743798,
+    "ast_hash": "d6a0b977a32f69279c108913d21d56a3",
     "semantic_hash": ""
   },
   "apps/web/src/router.tsx": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1787847400.378175,
-    "ast_hash": "8c4a6749e6f5fe2a23f9b8de2143513a",
+    "mtime": 1788120303.2294283,
+    "ast_hash": "c4796d031e721ef6a3b2c38ae8eb228b",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -575,18 +575,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/access-control.ts": {
-    "mtime": 1786649221.979402,
-    "ast_hash": "189686ebf631cde604d4d85f7f13de89",
+    "mtime": 1788119873.9875488,
+    "ast_hash": "d70d2ad92270d579ec6f29c50abb5ed8",
     "semantic_hash": ""
   },
   "apps/web/src/lib/invitation-email.ts": {
-    "mtime": 1787307946.0888755,
-    "ast_hash": "19d7d18cacc97ac288827721a9b44209",
+    "mtime": 1788119873.9887307,
+    "ast_hash": "69d94f5792b447a04c96ec7cac70257e",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1787743432.0260062,
-    "ast_hash": "82830cd268addfc5b3b7efcfdc1aed28",
+    "mtime": 1788120372.4341354,
+    "ast_hash": "efd41c2042b346fe70dcf1824f8b2786",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -612,11 +612,6 @@
   "apps/web/src/routes/api.invitations.preview.ts": {
     "mtime": 1786650237.5006201,
     "ast_hash": "ccd5e39694588488f4a5d259d92e32b2",
-    "semantic_hash": ""
-  },
-  "apps/web/src/routes/api.organization.groups.$groupKey.ts": {
-    "mtime": 1786650237.500188,
-    "ast_hash": "73b378b377a49f5ade355c4573fba3ad",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.organization.invitations.$invitationId.resend.ts": {
@@ -1035,8 +1030,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/dashboard-repository.ts": {
-    "mtime": 1787311679.181473,
-    "ast_hash": "80bb426edd2b0060da2902da37560a4c",
+    "mtime": 1788120033.96455,
+    "ast_hash": "547ff0aed78f82c9b30ce4763e929845",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/people-repository.ts": {
@@ -1410,8 +1405,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/release.yml": {
-    "mtime": 1787768473.0706995,
-    "ast_hash": "27458bce5059e213386f36df45fa0348",
+    "mtime": 1788119667.2937427,
+    "ast_hash": "b749567596b915580da8b65a18292bf8",
     "semantic_hash": ""
   },
   "docs/releases.md": {
@@ -1425,13 +1420,13 @@
     "semantic_hash": ""
   },
   "apps/web/scripts/setup-dodo-test.mjs": {
-    "mtime": 1787743528.4812906,
-    "ast_hash": "3d1057457cde53d1ab22fd89b97b98c2",
+    "mtime": 1788120395.710414,
+    "ast_hash": "05ea477159bf52248a9cc4092c0f7600",
     "semantic_hash": ""
   },
   "apps/web/src/components/billing-settings.tsx": {
-    "mtime": 1787743179.91534,
-    "ast_hash": "718f991e76a1c93a0d529a0dfa85aa14",
+    "mtime": 1788120423.1711926,
+    "ast_hash": "0784ea5d02653c7d7bc907031d48c67e",
     "semantic_hash": ""
   },
   "apps/web/src/lib/billing.test.ts": {
@@ -1467,6 +1462,21 @@
   "docs/hosted-billing.md": {
     "mtime": 1787847415.2245464,
     "ast_hash": "396837c3550033c86737361347651e2c",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/access-control.test.ts": {
+    "mtime": 1788120318.5908,
+    "ast_hash": "24c6be4acef8ff845668915ce8039f5b",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/date-time.test.ts": {
+    "mtime": 1788120318.591163,
+    "ast_hash": "62c317de3059068f49064ccad618fde7",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/date-time.ts": {
+    "mtime": 1788120013.24341,
+    "ast_hash": "05b6a7ff6880900a61e3251576922248",
     "semantic_hash": ""
   }
 }
