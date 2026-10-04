@@ -986,7 +986,7 @@ function EnrollmentEndDetailsForm({
             />
           </FormField>
           <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
-            This corrects the date and reason shown in school history. The enrollment and audit
+            This corrects the date and reason shown in school history. The enrolment and audit
             record stay in place.
           </p>
         </div>
@@ -1168,7 +1168,7 @@ function EnrollmentDetailsForm({
               </FormField>
               <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
                 This corrects what is recorded for {enrollment.academicSession}. To record a move
-                that happened on a date, use Change enrollment on the School page instead.
+                that happened on a date, use Change enrolment on the School page instead.
               </p>
             </>
           ) : !error ? (

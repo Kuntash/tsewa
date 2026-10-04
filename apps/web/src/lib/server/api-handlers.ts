@@ -2244,7 +2244,7 @@ async function createStudentAdmission(request: Request): Promise<Response> {
 async function handleStudentEnrollment(request: Request, enrollmentId: string): Promise<Response> {
   const parsedId = enrollmentIdSchema.safeParse(enrollmentId);
   if (!parsedId.success) {
-    return Response.json({ error: "Invalid enrollment." }, { status: 400 });
+    return Response.json({ error: "Invalid enrolment." }, { status: 400 });
   }
   if (request.method === "GET") return getStudentEnrollment(request, parsedId.data);
   if (request.method === "PATCH") return changeStudentEnrollment(request, parsedId.data);
@@ -2256,7 +2256,7 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
   if (!context) return unauthorized();
   const runtime = getRuntimeEnv();
   const enrollment = await readStudentEnrollment(runtime.ORM, context.organizationId, enrollmentId);
-  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+  if (!enrollment) return Response.json({ error: "Enrolment not found." }, { status: 404 });
 
   const fromSchool = alias(schoolMaster, "from_school");
   const toSchool = alias(schoolMaster, "to_school");
@@ -2408,14 +2408,14 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
 
   const parsed = enrollmentChangeSchema.safeParse(await readJson(request));
   if (!parsed.success) {
-    return Response.json({ error: "Check the enrollment change and try again." }, { status: 400 });
+    return Response.json({ error: "Check the enrolment change and try again." }, { status: 400 });
   }
 
   const runtime = getRuntimeEnv();
   const enrollment = await readStudentEnrollment(runtime.ORM, context.organizationId, enrollmentId);
-  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+  if (!enrollment) return Response.json({ error: "Enrolment not found." }, { status: 404 });
   if (!isOpenEnrollment(enrollment.status)) {
-    return Response.json({ error: "This enrollment has already ended." }, { status: 409 });
+    return Response.json({ error: "This enrolment has already ended." }, { status: 409 });
   }
   if (
     parsed.data.effectiveOn < enrollment.sessionStartsOn ||
@@ -2610,7 +2610,7 @@ async function correctEnrollmentEndDetails(
 
   const parsedId = enrollmentIdSchema.safeParse(enrollmentId);
   if (!parsedId.success) {
-    return Response.json({ error: "Invalid enrollment ID." }, { status: 400 });
+    return Response.json({ error: "Invalid enrolment ID." }, { status: 400 });
   }
   const parsed = enrollmentEndDetailsSchema.safeParse(await readJson(request));
   if (!parsed.success) {
@@ -2623,10 +2623,10 @@ async function correctEnrollmentEndDetails(
     context.organizationId,
     parsedId.data,
   );
-  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+  if (!enrollment) return Response.json({ error: "Enrolment not found." }, { status: 404 });
   if (isOpenEnrollment(enrollment.status)) {
     return Response.json(
-      { error: "Only an ended enrollment can be corrected here." },
+      { error: "Only an ended enrolment can be corrected here." },
       { status: 409 },
     );
   }
@@ -2745,7 +2745,7 @@ async function correctEnrollmentDetails(request: Request, enrollmentId: string):
 
   const parsedId = enrollmentIdSchema.safeParse(enrollmentId);
   if (!parsedId.success) {
-    return Response.json({ error: "Invalid enrollment ID." }, { status: 400 });
+    return Response.json({ error: "Invalid enrolment ID." }, { status: 400 });
   }
   const parsed = enrollmentDetailsSchema.safeParse(await readJson(request));
   if (!parsed.success) {
@@ -2758,7 +2758,7 @@ async function correctEnrollmentDetails(request: Request, enrollmentId: string):
     context.organizationId,
     parsedId.data,
   );
-  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+  if (!enrollment) return Response.json({ error: "Enrolment not found." }, { status: 404 });
 
   const next = { ...parsed.data, rollNumber: parsed.data.rollNumber || null };
   const [school, offering, house, linkedRecord] = await Promise.all([
@@ -2857,7 +2857,7 @@ async function correctEnrollmentDetails(request: Request, enrollmentId: string):
           eq(studentEnrollment.organizationId, context.organizationId),
         ),
       ),
-    // The imported class record this enrollment came from must keep describing the
+    // The imported class record this enrolment came from must keep describing the
     // same placement, or the old class reappears beside it in school history.
     runtime.ORM.update(personAcademicRecord)
       .set({

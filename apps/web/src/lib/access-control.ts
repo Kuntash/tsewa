@@ -15,7 +15,7 @@ export const permissionCatalog = [
   ["people.files.manage", "Upload, replace, and remove files", "People"],
   ["school.read", "View school operations", "School"],
   ["school.setup.manage", "Manage schools, classes, houses, and assignments", "School"],
-  ["school.enrollment.manage", "Manage admissions and enrollments", "School"],
+  ["school.enrollment.manage", "Manage admissions and enrolments", "School"],
   ["school.results.read", "View academic results", "School"],
   ["school.results.manage", "Manage academic results", "School"],
   ["school.reports.export", "Print and export school reports", "School"],

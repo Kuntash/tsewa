@@ -146,7 +146,7 @@ export function EnrollmentChangeSheet({
     })
       .then(async (response) => {
         const payload = (await response.json()) as EnrollmentResponse & { error?: string };
-        if (!response.ok) throw new Error(payload.error ?? "Enrollment could not be loaded.");
+        if (!response.ok) throw new Error(payload.error ?? "Enrolment could not be loaded.");
         return payload;
       })
       .then((payload) => {
@@ -161,7 +161,7 @@ export function EnrollmentChangeSheet({
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted)
-          setError(reason instanceof Error ? reason.message : "Enrollment could not be loaded.");
+          setError(reason instanceof Error ? reason.message : "Enrolment could not be loaded.");
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -192,7 +192,7 @@ export function EnrollmentChangeSheet({
       const schoolName = data.options.schools.find((item) => item.id === schoolId)?.name;
       return `${data.enrollment.displayName} will move to ${schoolName ?? "the selected school"} and remain enrolled.`;
     }
-    return `${data.enrollment.displayName}'s enrollment will end on ${effectiveOn || "the selected date"}. Their records will remain available.`;
+    return `${data.enrollment.displayName}'s enrolment will end on ${effectiveOn || "the selected date"}. Their records will remain available.`;
   }, [academicClassId, action, data, effectiveOn, houseId, schoolId]);
 
   function chooseAction(value: Action) {
@@ -237,7 +237,7 @@ export function EnrollmentChangeSheet({
     const payload = (await response.json()) as { error?: string };
     setSubmitting(false);
     if (!response.ok) {
-      setError(payload.error ?? "The enrollment could not be changed.");
+      setError(payload.error ?? "The enrolment could not be changed.");
       return;
     }
     onSaved(
@@ -252,7 +252,7 @@ export function EnrollmentChangeSheet({
         <div className="border-b px-5 py-6 pr-16 sm:px-7">
           <div className="mb-4 flex items-center gap-2">
             <Badge className="rounded-full" variant="secondary">
-              {data?.enrollment.sessionName ?? "Enrollment"}
+              {data?.enrollment.sessionName ?? "Enrolment"}
             </Badge>
             {data?.enrollment.canEdit ? (
               <Badge className="rounded-full" variant="outline">
@@ -260,7 +260,7 @@ export function EnrollmentChangeSheet({
               </Badge>
             ) : null}
           </div>
-          <SheetTitle>{data?.enrollment.displayName ?? "Change enrollment"}</SheetTitle>
+          <SheetTitle>{data?.enrollment.displayName ?? "Change enrolment"}</SheetTitle>
           <SheetDescription className="mt-2 leading-6">
             {data
               ? `${data.enrollment.admissionNumber} · ${data.enrollment.schoolName ?? "School not set"} · ${data.enrollment.className}`
@@ -272,7 +272,7 @@ export function EnrollmentChangeSheet({
           <div className="grid min-h-72 place-items-center text-sm text-muted-foreground">
             <div className="text-center">
               <LoaderCircle className="mx-auto mb-3 size-5 animate-spin text-primary" />
-              Loading enrollment…
+              Loading enrolment…
             </div>
           </div>
         ) : data ? (
@@ -419,7 +419,7 @@ export function EnrollmentChangeSheet({
             ) : (
               <div className="p-5 sm:p-7">
                 <p className="rounded-2xl border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
-                  This enrollment has ended and cannot be changed.
+                  This enrolment has ended and cannot be changed.
                 </p>
               </div>
             )}
@@ -454,7 +454,7 @@ function EnrollmentHistory({ changes }: { changes: Change[] }) {
     <section className="p-5 sm:p-7">
       <div className="flex items-center gap-2">
         <History className="size-4 text-primary" />
-        <h2 className="font-semibold">Enrollment history</h2>
+        <h2 className="font-semibold">Enrolment history</h2>
       </div>
       <div className="mt-4 space-y-3">
         {changes.map((change) => (
@@ -539,8 +539,8 @@ function changeDescription(change: Change): string {
   if (change.changeType === "transferred" && change.fromSchoolName !== change.toSchoolName)
     return `${change.fromSchoolName ?? "Previous school"} → ${change.toSchoolName ?? "another school"}.`;
   if (change.changeType === "transferred") return "Transferred out of the organization.";
-  if (change.changeType === "withdrawn") return "Enrollment ended as withdrawn.";
-  return "Enrollment ended after completing school.";
+  if (change.changeType === "withdrawn") return "Enrolment ended as withdrawn.";
+  return "Enrolment ended after completing school.";
 }
 
 function formatDate(value: string): string {

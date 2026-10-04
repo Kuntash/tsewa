@@ -697,13 +697,13 @@ export function SchoolOperations({
                         value={status}
                       >
                         <SelectTrigger
-                          aria-label="Enrollment status"
+                          aria-label="Enrolment status"
                           className="w-full rounded-full"
                         >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All enrollments</SelectItem>
+                          <SelectItem value="all">All enrolments</SelectItem>
                           <SelectItem value="recorded">Imported record</SelectItem>
                           <SelectItem value="enrolled">Enrolled</SelectItem>
                           <SelectItem value="transferred">Transferred</SelectItem>
@@ -1225,7 +1225,7 @@ function StudentResults({
                 size="sm"
                 variant="outline"
               >
-                {student.canEdit ? "Change enrollment" : "View enrollment"}
+                {student.canEdit ? "Change enrolment" : "View enrolment"}
               </Button>
             </div>
           </div>
@@ -1266,7 +1266,7 @@ function StudentResults({
                       size="sm"
                       variant="outline"
                     >
-                      {student.canEdit ? "Change enrollment" : "View enrollment"}
+                      {student.canEdit ? "Change enrolment" : "View enrolment"}
                     </Button>
                     <Button onClick={() => onSelect(student.personId)} size="sm" variant="ghost">
                       Open profile

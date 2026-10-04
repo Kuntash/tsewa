@@ -109,7 +109,7 @@ export function StudentReportSheet({
       "Class",
       "House",
       "Roll number",
-      "Enrollment status",
+      "Enrolment status",
     ];
     const rows = data.students.map((student, index) => [
       String(index + 1),
