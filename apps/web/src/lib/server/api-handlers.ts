@@ -1912,7 +1912,8 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       .where(enrollmentScope)
       .groupBy(schoolMaster.id, schoolMaster.name)
       .orderBy(desc(count()), sql`coalesce(${schoolMaster.name}, 'School not set') collate nocase`),
-    runtime.ORM.select({ id: className, name: className, count: count() })
+    // D1 keys batch results by column name, so the class name may only be selected once.
+    runtime.ORM.select({ name: className.as("class_display_name"), count: count() })
       .from(studentEnrollment)
       .innerJoin(
         academicClassMaster,
@@ -1960,7 +1961,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
     },
     filters: {
       schools,
-      classes,
+      classes: classes.map((item) => ({ id: item.name, ...item })),
       houses,
     },
   });

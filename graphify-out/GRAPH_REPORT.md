@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-10-04)
 
 ## Corpus Check
-- 287 files · ~345,824 words
+- 287 files · ~345,846 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6127 nodes · 8840 edges · 449 communities (150 shown, 299 thin omitted)
+- 6127 nodes · 8840 edges · 448 communities (149 shown, 299 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 48 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `07c2d5f6`
+- Built from commit: `73a63db4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -408,7 +408,7 @@
 - import-student-identity.mjs
 - Immediate
 - PerformanceObserverEntryList
-- people-registry.tsx
+- health-operations.tsx
 - sqlLiteral
 - bindings
 - check-self-host-config.mjs
@@ -432,7 +432,7 @@
 - Q: lets do some performance optimization now, find all the lagging apis and fix those and improve their performance
 - Q: what is next?
 - AiSearchJobs
-- health-operations.tsx
+- drizzle-orm
 - enrollment-change-sheet.tsx
 - Tsewa deployment modes
 - Hosted Tsewa billing
@@ -441,7 +441,6 @@
 - Search and AI discovery plan
 - Dodo Payments billing architecture
 - Recommended commercial model
-- better-auth
 - react
 - api.people.$personId.files.$fileId.ts
 - staff-operations.tsx
@@ -476,7 +475,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (449 total, 299 thin omitted)
+## Communities (448 total, 299 thin omitted)
 
 ### Community 0 - "web/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -532,7 +531,7 @@ Nodes (35): Allocation, AssignmentFields(), CorrespondenceFields(), csvCell(), d
 
 ### Community 14 - "dependencies"
 Cohesion: 0.05
-Nodes (39): dependencies, class-variance-authority, clsx, dodopayments, drizzle-orm, @fontsource-variable/dm-sans, @fontsource-variable/inter, @fontsource-variable/newsreader (+31 more)
+Nodes (39): dependencies, better-auth, class-variance-authority, clsx, dodopayments, @fontsource-variable/dm-sans, @fontsource-variable/inter, @fontsource-variable/newsreader (+31 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
 Cohesion: 0.06
@@ -890,9 +889,9 @@ Nodes (4): Answer, Outcome, Q: Redefine v0 as full legacy operational parity; in
 Cohesion: 0.15
 Nodes (16): confirmedDatabaseId, database, optionalText(), options, organizationSlug, PLACEHOLDERS, readData(), recordedDate() (+8 more)
 
-### Community 399 - "people-registry.tsx"
-Cohesion: 0.10
-Nodes (21): emptyRegistry, formatDate(), identifierLabel(), PeopleResults(), PersonKind, PersonRow, PersonStatus, RegistryResponse (+13 more)
+### Community 399 - "health-operations.tsx"
+Cohesion: 0.06
+Nodes (40): emptyHealth, emptyMedicalAdvances, emptyTb, formatCurrency(), formatDate(), formatPeriod(), HealthOperations(), HealthResponse (+32 more)
 
 ### Community 400 - "sqlLiteral"
 Cohesion: 0.13
@@ -957,10 +956,6 @@ Nodes (4): Answer, Outcome, Q: lets do some performance optimization now, find a
 ### Community 426 - "Q: what is next?"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: what is next?, Source Nodes
-
-### Community 432 - "health-operations.tsx"
-Cohesion: 0.14
-Nodes (19): emptyHealth, emptyMedicalAdvances, emptyTb, formatCurrency(), formatDate(), formatPeriod(), HealthOperations(), HealthResponse (+11 more)
 
 ### Community 433 - "enrollment-change-sheet.tsx"
 Cohesion: 0.17
@@ -1038,7 +1033,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AbortSignal` connect `AbortSignal` to `web/worker-configuration.d.ts`, `scholarship-operations.tsx`, `EventTarget`?**
   _High betweenness centrality (0.082) - this node is a cross-community bridge._
-- **Why does `ScholarshipOperations()` connect `scholarship-operations.tsx` to `health-operations.tsx`, `index.tsx`?**
+- **Why does `ScholarshipOperations()` connect `scholarship-operations.tsx` to `index.tsx`, `health-operations.tsx`?**
   _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **Why does `getRuntimeEnv()` connect `getRuntimeEnv` to `billing.ts`, `createHostedOrganization`, `api-handlers.ts`, `createAcademicClassMaster`, `getSchoolSessionScope`, `deployment.ts`?**
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
