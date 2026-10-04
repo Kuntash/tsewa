@@ -154,7 +154,7 @@ export function HostedOnboarding({ ownerName }: { ownerName: string }) {
   function addInvitation() {
     setInvitations((current) => [
       ...current,
-      { id: crypto.randomUUID(), email: "", group: "admin" },
+      { id: crypto.randomUUID(), email: "", group: "staff" },
     ]);
   }
 

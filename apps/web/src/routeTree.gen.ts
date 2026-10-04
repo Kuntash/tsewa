@@ -89,6 +89,7 @@ import { Route as ApiPeoplePersonIdFilesFileIdRouteImport } from './routes/api.p
 import { Route as ApiPeoplePersonIdSiblingsRelatedPersonIdRouteImport } from './routes/api.people.$personId.siblings.$relatedPersonId'
 import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId.details'
 import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId.end-details'
+import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId.reopen'
 import { Route as ApiSchoolOperationsResultsMarkSheetIdStatusRouteImport } from './routes/api.school-operations.results.$markSheetId.status'
 import { Route as ApiSchoolOperationsSchoolsSchoolIdAssignmentsRouteImport } from './routes/api.school-operations.schools.$schoolId.assignments'
 
@@ -527,6 +528,12 @@ const ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute =
     path: '/end-details',
     getParentRoute: () => ApiSchoolOperationsEnrollmentsEnrollmentIdRoute,
   } as any)
+const ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute =
+  ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRouteImport.update({
+    id: '/reopen',
+    path: '/reopen',
+    getParentRoute: () => ApiSchoolOperationsEnrollmentsEnrollmentIdRoute,
+  } as any)
 const ApiSchoolOperationsResultsMarkSheetIdStatusRoute =
   ApiSchoolOperationsResultsMarkSheetIdStatusRouteImport.update({
     id: '/status',
@@ -621,6 +628,7 @@ export interface FileRoutesByFullPath {
   '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
   '/api/school-operations/enrollments/$enrollmentId/details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  '/api/school-operations/enrollments/$enrollmentId/reopen': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute
   '/api/school-operations/results/$markSheetId/status': typeof ApiSchoolOperationsResultsMarkSheetIdStatusRoute
   '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
 }
@@ -705,6 +713,7 @@ export interface FileRoutesByTo {
   '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
   '/api/school-operations/enrollments/$enrollmentId/details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  '/api/school-operations/enrollments/$enrollmentId/reopen': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute
   '/api/school-operations/results/$markSheetId/status': typeof ApiSchoolOperationsResultsMarkSheetIdStatusRoute
   '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
 }
@@ -790,6 +799,7 @@ export interface FileRoutesById {
   '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
   '/api/school-operations/enrollments/$enrollmentId/details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  '/api/school-operations/enrollments/$enrollmentId/reopen': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute
   '/api/school-operations/results/$markSheetId/status': typeof ApiSchoolOperationsResultsMarkSheetIdStatusRoute
   '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
 }
@@ -876,6 +886,7 @@ export interface FileRouteTypes {
     | '/api/people/$personId/siblings/$relatedPersonId'
     | '/api/school-operations/enrollments/$enrollmentId/details'
     | '/api/school-operations/enrollments/$enrollmentId/end-details'
+    | '/api/school-operations/enrollments/$enrollmentId/reopen'
     | '/api/school-operations/results/$markSheetId/status'
     | '/api/school-operations/schools/$schoolId/assignments'
   fileRoutesByTo: FileRoutesByTo
@@ -960,6 +971,7 @@ export interface FileRouteTypes {
     | '/api/people/$personId/siblings/$relatedPersonId'
     | '/api/school-operations/enrollments/$enrollmentId/details'
     | '/api/school-operations/enrollments/$enrollmentId/end-details'
+    | '/api/school-operations/enrollments/$enrollmentId/reopen'
     | '/api/school-operations/results/$markSheetId/status'
     | '/api/school-operations/schools/$schoolId/assignments'
   id:
@@ -1044,6 +1056,7 @@ export interface FileRouteTypes {
     | '/api/people/$personId/siblings/$relatedPersonId'
     | '/api/school-operations/enrollments/$enrollmentId/details'
     | '/api/school-operations/enrollments/$enrollmentId/end-details'
+    | '/api/school-operations/enrollments/$enrollmentId/reopen'
     | '/api/school-operations/results/$markSheetId/status'
     | '/api/school-operations/schools/$schoolId/assignments'
   fileRoutesById: FileRoutesById
@@ -1659,6 +1672,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport
       parentRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRoute
     }
+    '/api/school-operations/enrollments/$enrollmentId/reopen': {
+      id: '/api/school-operations/enrollments/$enrollmentId/reopen'
+      path: '/reopen'
+      fullPath: '/api/school-operations/enrollments/$enrollmentId/reopen'
+      preLoaderRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRouteImport
+      parentRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRoute
+    }
     '/api/school-operations/results/$markSheetId/status': {
       id: '/api/school-operations/results/$markSheetId/status'
       path: '/status'
@@ -1952,6 +1972,7 @@ const ApiSchoolOperationsSchoolsRouteWithChildren =
 interface ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren {
   ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
+  ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute
 }
 
 const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren: ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren =
@@ -1960,6 +1981,8 @@ const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren: ApiSchoolOperatio
       ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute,
     ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute:
       ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute,
+    ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute:
+      ApiSchoolOperationsEnrollmentsEnrollmentIdReopenRoute,
   }
 
 const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteWithChildren =

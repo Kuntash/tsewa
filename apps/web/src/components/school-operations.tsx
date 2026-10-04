@@ -404,9 +404,9 @@ export function SchoolOperations({
       description: "Manage the names used for admissions, student changes, and school records.",
     },
     results: {
-      eyebrow: "Old school records",
+      eyebrow: "Examinations",
       title: "Marks and results",
-      description: "Find the marks saved in the old system.",
+      description: "Enter marks for this session and look up earlier results.",
     },
   }[section];
 

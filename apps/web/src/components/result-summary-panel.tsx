@@ -313,7 +313,7 @@ function ReportCardSheet({
               {error}
             </p>
           ) : data && summary ? (
-            <article className="student-report-print mx-auto min-h-[210mm] w-full max-w-[1000px] bg-white px-8 py-10 text-[#17251e] shadow-[0_18px_60px_rgba(24,47,36,0.16)] sm:px-14">
+            <article className="student-report-print report-card-print mx-auto min-h-[210mm] w-full max-w-[1000px] bg-white px-8 py-10 text-[#17251e] shadow-[0_18px_60px_rgba(24,47,36,0.16)] sm:px-14">
               <header className="border-b-2 border-[#24664d] pb-6">
                 <div className="flex items-start justify-between gap-6">
                   <div>

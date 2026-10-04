@@ -5,7 +5,7 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1787743099.680561,
+    "mtime": 1791143569.4533005,
     "ast_hash": "4c9b7913c7e33ca05f448f03f8a2a374",
     "semantic_hash": ""
   },
@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1791137052.676196,
-    "ast_hash": "38d831a8bb395b21752cb6eec429474c",
+    "mtime": 1791144184.2563202,
+    "ast_hash": "0803eebe560e8cbe55e6ea0d3b3cf207",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -100,8 +100,8 @@
     "semantic_hash": "d9837f38cc05303254571985e3164050"
   },
   "apps/web/src/routeTree.gen.ts": {
-    "mtime": 1791136237.260819,
-    "ast_hash": "a847c03197424d4815773bb0277dd7ee",
+    "mtime": 1791144239.9246461,
+    "ast_hash": "6a8d66b6ca0484c8b8594d2baae3905c",
     "semantic_hash": ""
   },
   "apps/web/src/router.tsx": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/index.tsx": {
-    "mtime": 1791137052.705774,
-    "ast_hash": "c4796d031e721ef6a3b2c38ae8eb228b",
+    "mtime": 1791144038.6606696,
+    "ast_hash": "1d1a84270b8a0ca3bb35d124efc15af6",
     "semantic_hash": ""
   },
   "apps/web/src/server.ts": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1791137052.6960042,
-    "ast_hash": "3e85a97efb439707cb9c1a6ff46a7bab",
+    "mtime": 1791143887.7124205,
+    "ast_hash": "23b76f47c8f23da59eae2b939ff55f6d",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/historical-results.tsx": {
-    "mtime": 1791137052.677262,
-    "ast_hash": "52ebb5929519c499cad63165d5d73b47",
+    "mtime": 1791143888.040783,
+    "ast_hash": "1fcfa2f3a039a8fba3459fa0fb234c72",
     "semantic_hash": ""
   },
   "scripts/historical-results-dry-run.mjs": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1791137052.6683939,
-    "ast_hash": "c92b2959d04d7a266766c8134f9d9955",
+    "mtime": 1791144187.0501888,
+    "ast_hash": "52ce893243a8d8dcbf37b931a50ed148",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791138021.1254032,
-    "ast_hash": "3bb3b9482b3887708ad56fdba2d57152",
+    "mtime": 1791144143.6331878,
+    "ast_hash": "c9929907687eebe8239acfc4e1d6fa0c",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -630,8 +630,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.organization.members.$memberId.ts": {
-    "mtime": 1786650237.5003252,
-    "ast_hash": "30777bc1129b4c9da8f85a57492f653f",
+    "mtime": 1791143990.8967288,
+    "ast_hash": "2951015c6bca84b5faaf01403cda9f88",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.organization.transfer.ts": {
@@ -845,13 +845,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/mark-entry-sheet.tsx": {
-    "mtime": 1791137052.6864307,
-    "ast_hash": "48113d96bba09d2d39b933ec394960b2",
+    "mtime": 1791143887.7130992,
+    "ast_hash": "8c04d5ea22eae57077967d769d9c8f00",
     "semantic_hash": ""
   },
   "apps/web/src/components/result-summary-panel.tsx": {
-    "mtime": 1791137052.6665802,
-    "ast_hash": "f6eb0975d62b16482190c850f99bee15",
+    "mtime": 1791144219.7247086,
+    "ast_hash": "95921e52efb436f749ac80284391233d",
     "semantic_hash": ""
   },
   "apps/web/src/lib/academic-results.test.ts": {
@@ -915,13 +915,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/scholarship-operations.tsx": {
-    "mtime": 1791137052.6928146,
-    "ast_hash": "06188e7aabdbd727bb016e36483dad77",
+    "mtime": 1791143910.8983347,
+    "ast_hash": "04dd8761da15e8a0a30d1f3dfa7cab76",
     "semantic_hash": ""
   },
   "apps/web/src/components/sponsorship-operations.tsx": {
-    "mtime": 1791137052.679721,
-    "ast_hash": "369d8fb540bba6440d5eccfb90881a4e",
+    "mtime": 1791143910.897923,
+    "ast_hash": "f965720dbd2fea6376ee6c14c0e4045a",
     "semantic_hash": ""
   },
   "apps/web/src/lib/sponsorship.test.ts": {
@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/hosted-onboarding.tsx": {
-    "mtime": 1791137052.6825485,
-    "ast_hash": "ecf1bb8bc790a1b82ef6587cd8902069",
+    "mtime": 1791144030.6814084,
+    "ast_hash": "557a84e99a5bbedfb4fe92587c2c37db",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.onboarding.ts": {
@@ -1502,6 +1502,21 @@
   "apps/web/src/routes/api.school-operations.enrollments.$enrollmentId.details.ts": {
     "mtime": 1791136081.2573533,
     "ast_hash": "8da0c3d1d41d560ca077b71a21d8157b",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/confirm-dialog.tsx": {
+    "mtime": 1791143887.6743264,
+    "ast_hash": "f96f0032777505d0759086c9de72c3da",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/ui/alert-dialog.tsx": {
+    "mtime": 1791143590.1930602,
+    "ast_hash": "7d3ed5b4741edfaaf3be4a0ecdc7fd19",
+    "semantic_hash": ""
+  },
+  "apps/web/src/routes/api.school-operations.enrollments.$enrollmentId.reopen.ts": {
+    "mtime": 1791144142.840879,
+    "ast_hash": "163fad1bbc910dd15b6f440a24ac1b5e",
     "semantic_hash": ""
   }
 }

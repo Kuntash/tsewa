@@ -6,11 +6,13 @@ import {
   LogOut,
   MoveRight,
   PencilLine,
+  RotateCcw,
   School,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,7 @@ type Enrollment = {
   rollNumber: string | null;
   status: string;
   canEdit: boolean;
+  canReopen?: boolean;
 };
 
 type Change = {
@@ -135,8 +138,12 @@ export function EnrollmentChangeSheet({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState<"end" | "reopen" | null>(null);
 
   useEffect(() => {
+    // Never leave the previous student's form on screen for the next one.
+    setData(null);
+    setConfirming(null);
     if (!open || !enrollmentId) return;
     const controller = new AbortController();
     setLoading(true);
@@ -192,7 +199,7 @@ export function EnrollmentChangeSheet({
       const schoolName = data.options.schools.find((item) => item.id === schoolId)?.name;
       return `${data.enrollment.displayName} will move to ${schoolName ?? "the selected school"} and remain enrolled.`;
     }
-    return `${data.enrollment.displayName}'s enrolment will end on ${effectiveOn || "the selected date"}. Their records will remain available.`;
+    return `${data.enrollment.displayName}'s enrolment will end on ${effectiveOn ? formatDate(effectiveOn) : "the selected date"} and they will be marked inactive. Their records will remain available.`;
   }, [academicClassId, action, data, effectiveOn, houseId, schoolId]);
 
   function chooseAction(value: Action) {
@@ -216,38 +223,94 @@ export function EnrollmentChangeSheet({
     setHouseId("none");
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Ending an enrolment marks the student inactive, so it is confirmed first.
+    if (keepsStudentEnrolled) void save();
+    else setConfirming("end");
+  }
+
+  async function save() {
     if (!enrollmentId) return;
     setSubmitting(true);
     setError("");
-    const response = await fetch(`/api/school-operations/enrollments/${enrollmentId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        action,
-        effectiveOn,
-        schoolId: keepsStudentEnrolled ? schoolId : undefined,
-        academicClassId: keepsStudentEnrolled ? academicClassId : undefined,
-        houseId: keepsStudentEnrolled ? (houseId === "none" ? null : houseId) : undefined,
-        rollNumber: keepsStudentEnrolled ? rollNumber || null : undefined,
-        note: note.trim() || undefined,
-      }),
-    });
-    const payload = (await response.json()) as { error?: string };
-    setSubmitting(false);
-    if (!response.ok) {
-      setError(payload.error ?? "The enrolment could not be changed.");
-      return;
+    try {
+      const response = await fetch(`/api/school-operations/enrollments/${enrollmentId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action,
+          effectiveOn,
+          schoolId: keepsStudentEnrolled ? schoolId : undefined,
+          academicClassId: keepsStudentEnrolled ? academicClassId : undefined,
+          houseId: keepsStudentEnrolled ? (houseId === "none" ? null : houseId) : undefined,
+          rollNumber: keepsStudentEnrolled ? rollNumber || null : undefined,
+          note: note.trim() || undefined,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setError(payload?.error ?? "The enrolment could not be changed.");
+        return;
+      }
+      onSaved(
+        `${data?.enrollment.displayName ?? "The student"}: ${selectedAction.label.toLowerCase()} saved.`,
+      );
+      onOpenChange(false);
+    } catch {
+      setError("The enrolment could not be changed. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
-    onSaved(
-      `${data?.enrollment.displayName ?? "The student"}: ${selectedAction.label.toLowerCase()} saved.`,
-    );
-    onOpenChange(false);
+  }
+
+  async function reopen() {
+    if (!enrollmentId) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/school-operations/enrollments/${enrollmentId}/reopen`, {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setError(payload?.error ?? "The enrolment could not be reopened.");
+        return;
+      }
+      onSaved(`${data?.enrollment.displayName ?? "The student"}: enrolment reopened.`);
+      onOpenChange(false);
+    } catch {
+      setError("The enrolment could not be reopened. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
+      <ConfirmDialog
+        confirmLabel={confirming === "reopen" ? "Reopen enrolment" : endActionLabel(action)}
+        description={
+          confirming === "reopen"
+            ? `${data?.enrollment.displayName ?? "The student"} will be enrolled again in ${data?.enrollment.className ?? "the same class"} and marked active. The recorded end date and reason are removed from school history.`
+            : confirmation
+        }
+        destructive={confirming === "end"}
+        onConfirm={() => {
+          const run = confirming === "reopen" ? reopen : save;
+          setConfirming(null);
+          void run();
+        }}
+        onOpenChange={(next) => {
+          if (!next) setConfirming(null);
+        }}
+        open={Boolean(confirming)}
+        title={
+          confirming === "reopen"
+            ? "Reopen this enrolment?"
+            : `${endActionLabel(action)}: ${data?.enrollment.displayName ?? "this student"}?`
+        }
+      />
       <SheetContent className="overflow-y-auto sm:max-w-[720px]">
         <div className="border-b px-5 py-6 pr-16 sm:px-7">
           <div className="mb-4 flex items-center gap-2">
@@ -278,7 +341,7 @@ export function EnrollmentChangeSheet({
         ) : data ? (
           <div className="divide-y">
             {data.enrollment.canEdit ? (
-              <form className="space-y-6 p-5 sm:p-7" onSubmit={(event) => void submit(event)}>
+              <form className="space-y-6 p-5 sm:p-7" onSubmit={(event) => submit(event)}>
                 <div>
                   <Label>What changed?</Label>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -412,15 +475,33 @@ export function EnrollmentChangeSheet({
                     variant={keepsStudentEnrolled ? "default" : "destructive"}
                   >
                     {submitting ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />}
-                    Save change
+                    {keepsStudentEnrolled ? "Save change" : endActionLabel(action)}
                   </Button>
                 </div>
               </form>
             ) : (
-              <div className="p-5 sm:p-7">
+              <div className="space-y-4 p-5 sm:p-7">
                 <p className="rounded-2xl border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
-                  This enrolment has ended and cannot be changed.
+                  {data.enrollment.canReopen
+                    ? "This enrolment has ended. If it was ended by mistake, you can reopen it."
+                    : "This enrolment has ended and cannot be changed."}
                 </p>
+                {error ? (
+                  <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {error}
+                  </p>
+                ) : null}
+                {data.enrollment.canReopen ? (
+                  <Button
+                    disabled={submitting}
+                    onClick={() => setConfirming("reopen")}
+                    type="button"
+                    variant="outline"
+                  >
+                    {submitting ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}
+                    Reopen enrolment
+                  </Button>
+                ) : null}
               </div>
             )}
 
@@ -514,8 +595,17 @@ function OptionField({
   );
 }
 
+function endActionLabel(action: Action): string {
+  if (action === "withdrawn") return "Withdraw student";
+  if (action === "completed") return "Complete school";
+  return "Transfer student out";
+}
+
 function dateWithinSession(enrollment: Enrollment): string {
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 10);
   if (today < enrollment.sessionStartsOn) return enrollment.sessionStartsOn;
   if (today > enrollment.sessionEndsOn) return enrollment.sessionEndsOn;
   return today;

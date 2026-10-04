@@ -179,6 +179,11 @@
   margin: 12mm;
 }
 
+@page report-card {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
   /* The profile prints from its side panel, so the page behind it is dropped and
      the panel flows as an ordinary document in the light theme. */
@@ -206,10 +211,20 @@
     background: white !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  /* Paper is always light, whichever theme is on screen. */
+  .person-profile-print,
+  .student-report-print,
+  .scholarship-report-print,
+  .scholarship-legacy-report,
+  .reports-print-area {
     --background: #ffffff;
     --foreground: #17251e;
     --card: #ffffff;
     --card-foreground: #17251e;
+    --popover: #ffffff;
+    --popover-foreground: #17251e;
     --primary: #1f6b4f;
     --primary-foreground: #ffffff;
     --secondary: #e9f0ec;
@@ -219,6 +234,11 @@
     --accent: #e2efe8;
     --accent-foreground: #214a39;
     --border: #d5dedb;
+    --input: #d5dedb;
+  }
+
+  .report-card-print {
+    page: report-card;
   }
 
   .person-profile-print,
@@ -240,9 +260,16 @@
     overflow: visible !important;
   }
 
-  .person-profile-print section,
-  .person-profile-print li {
+  /* Keep a card or a history entry together, but let long sections flow across pages. */
+  .person-profile-print li,
+  .person-profile-print .rounded-2xl,
+  .person-profile-print .rounded-xl {
     break-inside: avoid;
+  }
+
+  .person-profile-print h3,
+  .person-profile-print h4 {
+    break-after: avoid;
   }
 
   .reports-no-print {
@@ -268,7 +295,18 @@
     background: white;
   }
 
-  body * {
+  /* Only pages that have a print layout hide everything else; any other page
+     prints as it appears. :where() keeps this weaker than the rule below. */
+  body:where(
+      :has(
+        .student-report-print,
+        .scholarship-report-print,
+        .scholarship-legacy-report,
+        .reports-print-area,
+        .person-profile-print
+      )
+    )
+    * {
     visibility: hidden;
   }
 
@@ -277,8 +315,17 @@
   .scholarship-report-print,
   .scholarship-report-print *,
   .scholarship-legacy-report,
-  .scholarship-legacy-report * {
+  .scholarship-legacy-report *,
+  .reports-print-area,
+  .reports-print-area * {
     visibility: visible;
+  }
+
+  /* These reports open in a panel beside the page; dropping the page behind them
+     avoids trailing blank sheets. */
+  body:has(.student-report-print) > main,
+  body:has(.scholarship-legacy-report) > main {
+    display: none !important;
   }
 
   body:has(.scholarship-legacy-report) .scholarship-report-print {

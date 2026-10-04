@@ -1305,7 +1305,8 @@ function ScholarshipSetup({
     event.preventDefault();
     setBusy(true);
     setError("");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     let body: Record<string, unknown> = { kind };
     if (kind === "courseCategory" || kind === "head") body = { ...body, name: form.get("name") };
     else if (kind === "course")
@@ -1331,7 +1332,7 @@ function ScholarshipSetup({
         body: JSON.stringify(body),
       }).then(parse);
       onSaved("Scholarship setup updated.");
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (reason) {
       setError(messageOf(reason));
     } finally {

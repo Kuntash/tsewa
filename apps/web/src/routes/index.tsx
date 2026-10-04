@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   UserCog,
+  UserMinus,
   Users,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import type { FormEvent, ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AccountSettings } from "@/components/account-settings";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BillingSettings } from "@/components/billing-settings";
 import { HealthOperations } from "@/components/health-operations";
 import type { HealthFilters } from "@/components/health-operations";
@@ -1601,13 +1603,19 @@ function AdministrationPanel({
   const [timezone, setTimezone] = useState("");
   const [locale, setLocale] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteGroup, setInviteGroup] = useState<"admin" | "staff" | "viewer">("admin");
+  const [inviteGroup, setInviteGroup] = useState<"admin" | "staff" | "viewer">("staff");
   const [busy, setBusy] = useState("");
   const [pendingMemberGroups, setPendingMemberGroups] = useState<Set<string>>(() => new Set());
+  const [loadFailure, setLoadFailure] = useState<"" | "forbidden" | "error">("");
+  const [confirmation, setConfirmation] = useState<SettingsConfirmation | null>(null);
 
   async function refresh() {
-    const response = await fetch("/api/organization");
-    if (!response.ok) return;
+    const response = await fetch("/api/organization").catch(() => null);
+    if (!response?.ok) {
+      setLoadFailure(response?.status === 403 ? "forbidden" : "error");
+      return;
+    }
+    setLoadFailure("");
     const next = (await response.json()) as OrganizationState;
     setState(next);
     setName(next.organization.name);
@@ -1758,11 +1766,19 @@ function AdministrationPanel({
     }
   }
 
+  async function removeMember(memberId: string, memberName: string) {
+    startRequest(`remove-${memberId}`);
+    const response = await fetch(`/api/organization/members/${memberId}`, { method: "DELETE" });
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    if (!response.ok) toast.error(payload?.error ?? "The member could not be removed.");
+    else {
+      toast.success(`${memberName} no longer has access.`);
+      await refresh();
+    }
+    setBusy("");
+  }
+
   async function transferOwnership(memberId: string, memberName: string) {
-    const confirmed = window.confirm(
-      `Transfer ownership to ${memberName}? Your role will change to administrator.`,
-    );
-    if (!confirmed) return;
     startRequest(`transfer-${memberId}`);
     const response = await fetch("/api/organization/transfer", {
       method: "POST",
@@ -1814,7 +1830,9 @@ function AdministrationPanel({
   }
 
   if (!state) {
-    return (
+    return loadFailure ? (
+      <SettingsUnavailable forbidden={loadFailure === "forbidden"} onRetry={() => void refresh()} />
+    ) : (
       <Card className="mt-10">
         <CardContent className="grid min-h-36 place-items-center">
           <LoaderCircle className="size-5 animate-spin text-primary" />
@@ -1858,6 +1876,7 @@ function AdministrationPanel({
 
   return (
     <section id="administration">
+      <SettingsConfirmDialog confirmation={confirmation} onClose={() => setConfirmation(null)} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-primary">{sectionCopy.eyebrow}</p>
@@ -2058,13 +2077,40 @@ function AdministrationPanel({
                             <SelectItem value="viewer">Viewer</SelectItem>
                           </SelectContent>
                         </Select>
+                        {isOwner ? (
+                          <Button
+                            disabled={busy === `transfer-${member.id}`}
+                            onClick={() =>
+                              setConfirmation({
+                                title: `Transfer ownership to ${member.name}?`,
+                                description:
+                                  "They become the owner of this organisation and your role changes to administrator.",
+                                confirmLabel: "Transfer ownership",
+                                run: () => void transferOwnership(member.id, member.name),
+                              })
+                            }
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Crown /> Transfer
+                          </Button>
+                        ) : null}
                         <Button
-                          disabled={busy === `transfer-${member.id}`}
-                          onClick={() => void transferOwnership(member.id, member.name)}
+                          disabled={busy === `remove-${member.id}`}
+                          onClick={() =>
+                            setConfirmation({
+                              title: `Remove ${member.name}?`,
+                              description:
+                                "They are signed out and can no longer open this organisation's records. Their past activity stays in the audit history. You can invite them again later.",
+                              confirmLabel: "Remove member",
+                              destructive: true,
+                              run: () => void removeMember(member.id, member.name),
+                            })
+                          }
                           size="sm"
-                          variant="outline"
+                          variant="destructive"
                         >
-                          <Crown /> Transfer
+                          <UserMinus /> Remove
                         </Button>
                       </div>
                     ) : member.group !== "owner" ? (
@@ -2150,7 +2196,15 @@ function AdministrationPanel({
                           <Button
                             aria-label={`Revoke invitation for ${invitation.email}`}
                             disabled={busy === invitation.id}
-                            onClick={() => void revokeInvitation(invitation.id)}
+                            onClick={() =>
+                              setConfirmation({
+                                title: "Revoke this invitation?",
+                                description: `The link sent to ${invitation.email} will stop working.`,
+                                confirmLabel: "Revoke invitation",
+                                destructive: true,
+                                run: () => void revokeInvitation(invitation.id),
+                              })
+                            }
                             size="icon-sm"
                             variant="ghost"
                           >
@@ -2186,16 +2240,79 @@ type SessionSettingsState = {
   capabilities: { manage: boolean };
 };
 
+type SettingsConfirmation = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  run: () => void;
+};
+
+function SettingsConfirmDialog({
+  confirmation,
+  onClose,
+}: {
+  confirmation: SettingsConfirmation | null;
+  onClose: () => void;
+}) {
+  return (
+    <ConfirmDialog
+      confirmLabel={confirmation?.confirmLabel ?? "Confirm"}
+      description={confirmation?.description ?? ""}
+      destructive={confirmation?.destructive}
+      onConfirm={() => {
+        confirmation?.run();
+        onClose();
+      }}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      open={Boolean(confirmation)}
+      title={confirmation?.title ?? ""}
+    />
+  );
+}
+
+function SettingsUnavailable({ forbidden, onRetry }: { forbidden: boolean; onRetry: () => void }) {
+  return (
+    <Card className="mt-10">
+      <CardContent className="grid min-h-36 place-items-center gap-3 py-8 text-center">
+        <div>
+          <p className="text-sm font-semibold">
+            {forbidden ? "Not available for your role" : "These settings could not be loaded"}
+          </p>
+          <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-muted-foreground">
+            {forbidden
+              ? "Only the owner and administrators can open organisation settings. Your own account and password are under Security."
+              : "Check your connection and try again."}
+          </p>
+        </div>
+        {forbidden ? null : (
+          <Button onClick={onRetry} variant="outline">
+            Try again
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function AcademicSessionSettings() {
   const [state, setState] = useState<SessionSettingsState | null>(null);
+  const [loadFailure, setLoadFailure] = useState<"" | "forbidden" | "error">("");
+  const [confirmation, setConfirmation] = useState<SettingsConfirmation | null>(null);
   const [name, setName] = useState("");
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [busy, setBusy] = useState("");
 
   async function refresh(resetDraft = false) {
-    const response = await fetch("/api/organization/sessions");
-    if (!response.ok) return;
+    const response = await fetch("/api/organization/sessions").catch(() => null);
+    if (!response?.ok) {
+      setLoadFailure(response?.status === 403 ? "forbidden" : "error");
+      return;
+    }
+    setLoadFailure("");
     const next = (await response.json()) as SessionSettingsState;
     setState(next);
     if (resetDraft || !name) {
@@ -2252,8 +2369,15 @@ function AcademicSessionSettings() {
     setBusy("");
   }
 
+  if (!state && loadFailure) {
+    return (
+      <SettingsUnavailable forbidden={loadFailure === "forbidden"} onRetry={() => void refresh()} />
+    );
+  }
+
   return (
     <section>
+      <SettingsConfirmDialog confirmation={confirmation} onClose={() => setConfirmation(null)} />
       <p className="text-sm font-medium text-primary">Academic years</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em]">Sessions and dates</h2>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -2292,7 +2416,17 @@ function AcademicSessionSettings() {
                 {state.capabilities.manage ? (
                   <Button
                     disabled={busy === session.id}
-                    onClick={() => void toggleSession(session)}
+                    onClick={() =>
+                      session.isActive
+                        ? setConfirmation({
+                            title: `Archive ${session.name}?`,
+                            description:
+                              "It is removed from the session picker. Its students, marks and records are kept, and you can activate it again.",
+                            confirmLabel: "Archive year",
+                            run: () => void toggleSession(session),
+                          })
+                        : void toggleSession(session)
+                    }
                     size="sm"
                     variant="outline"
                   >

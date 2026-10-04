@@ -23,6 +23,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,6 +194,16 @@ export function PersonProfileSheet({
     null,
   );
 
+  // The save has already succeeded when this runs, so a failed refresh must not be
+  // reported as a failed save.
+  async function reloadProfile(id: string) {
+    try {
+      setProfile(await readPersonProfile(id));
+    } catch {
+      toast.error("Saved, but the profile could not be refreshed. Reload the page to see it.");
+    }
+  }
+
   useEffect(() => {
     if (!personId) {
       setProfile(null);
@@ -244,8 +255,7 @@ export function PersonProfileSheet({
           <PersonCoreDetailsForm
             onCancel={() => setEditing(null)}
             onSaved={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               setEditing(null);
               onPersonUpdated?.();
             }}
@@ -255,8 +265,7 @@ export function PersonProfileSheet({
           <PersonFamilyEditor
             family={profile.family}
             onChanged={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               onPersonUpdated?.();
             }}
             onDone={() => setEditing(null)}
@@ -268,8 +277,7 @@ export function PersonProfileSheet({
           <PersonPlacementEditor
             onCancel={() => setEditing(null)}
             onSaved={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               setEditing(null);
               onPersonUpdated?.();
             }}
@@ -278,8 +286,7 @@ export function PersonProfileSheet({
         ) : profile && editing === "files" ? (
           <PersonFilesEditor
             onChanged={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               onPersonUpdated?.();
             }}
             onDone={() => setEditing(null)}
@@ -290,8 +297,7 @@ export function PersonProfileSheet({
             enrollment={endingEnrollment}
             onCancel={() => setEndingEnrollment(null)}
             onSaved={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               setEndingEnrollment(null);
               onPersonUpdated?.();
             }}
@@ -302,8 +308,7 @@ export function PersonProfileSheet({
             enrollment={editingEnrollment}
             onCancel={() => setEditingEnrollment(null)}
             onSaved={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               setEditingEnrollment(null);
               onPersonUpdated?.();
             }}
@@ -313,8 +318,7 @@ export function PersonProfileSheet({
           <AcademicRecordForm
             onCancel={() => setEditingRecord(null)}
             onSaved={async () => {
-              const updated = await readPersonProfile(profile.id);
-              setProfile(updated);
+              await reloadProfile(profile.id);
               setEditingRecord(null);
               onPersonUpdated?.();
             }}
@@ -971,17 +975,19 @@ function EnrollmentEndDetailsForm({
             htmlFor="enrollment-end-reason"
             label={
               enrollment.status === "transferred"
-                ? "Destination school or reason"
+                ? "Destination school (optional)"
                 : `${capitalize(actionLabel)} reason`
             }
-            required
+            required={enrollment.status !== "transferred"}
           >
             <Input
               id="enrollment-end-reason"
               maxLength={500}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="Enter the reason"
-              required
+              placeholder={
+                enrollment.status === "transferred" ? "Example: ABC School" : "Enter the reason"
+              }
+              required={enrollment.status !== "transferred"}
               value={reason}
             />
           </FormField>
@@ -1924,6 +1930,7 @@ function PersonFilesEditor({
   async function addFile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return setError("Choose a file to upload.");
+    const fileInput = event.currentTarget.elements.namedItem("file") as HTMLInputElement;
     setSaving(true);
     setError("");
     setSavedMessage("");
@@ -1935,7 +1942,7 @@ function PersonFilesEditor({
       await sendFileRequest(`/api/people/${profile.id}/files`, "POST", form);
       setName("");
       setFile(null);
-      (event.currentTarget.elements.namedItem("file") as HTMLInputElement).value = "";
+      fileInput.value = "";
       await onChanged();
       setSavedMessage("The file was uploaded and saved.");
     } catch (reason) {

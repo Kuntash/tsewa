@@ -55,6 +55,18 @@ type ResultRow = {
 };
 type Results = {
   results: ResultRow[];
+  markSheets?: Array<
+    Pick<
+      ResultRow,
+      | "markSheetId"
+      | "schoolName"
+      | "className"
+      | "subjectName"
+      | "termName"
+      | "recordedOn"
+      | "sheetStatus"
+    >
+  >;
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
   capabilities?: { manage: boolean };
 };
@@ -205,19 +217,14 @@ export function HistoricalResults({
     }
   }
   const overviewFilters = overview?.filters;
-  const manageableSheets = Array.from(
-    new Map(
-      data.results
-        .filter((row) => row.sourceSystem?.toLowerCase() === "tsewa")
-        .map((row) => [row.markSheetId, row]),
-    ).values(),
-  );
+  const manageableSheets = data.markSheets ?? [];
   return (
     <div className="mt-7 space-y-4">
       <div className="flex flex-col gap-4 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Imported 2011–2012 results remain preserved as read-only history. New results are entered
-          against the active academic session as drafts, then verified and finalized.
+          Enter marks for the session shown at the top of the page. A mark sheet starts as a draft,
+          is then verified, and finally finalised. Results from the old system are kept here to view
+          only.
         </p>
         <div className="flex shrink-0 gap-2">
           <Button onClick={() => setConfigurationOpen(true)} variant="outline">
@@ -497,6 +504,8 @@ export function HistoricalResults({
         }}
         onSaved={(message) => {
           setSavedMessage(message);
+          // Marks are entered for the session in the header, so show that year.
+          if (sessionId !== activeSessionId) changeSession(activeSessionId);
           setRefreshKey((value) => value + 1);
         }}
         open={entryOpen}

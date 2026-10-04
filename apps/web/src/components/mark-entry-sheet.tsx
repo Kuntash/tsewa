@@ -1,6 +1,8 @@
 import { BookOpenCheck, LoaderCircle, Plus, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
+
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,15 +92,18 @@ export function MarkEntrySheet({
   const [termId, setTermId] = useState("");
   const [marks, setMarks] = useState<Record<string, string>>({});
   const [maximums, setMaximums] = useState<Record<string, string>>({});
-  const [recordedOn, setRecordedOn] = useState(new Date().toISOString().slice(0, 10));
+  const [recordedOn, setRecordedOn] = useState(localDateInput);
+  const [dirty, setDirty] = useState(false);
+  const [confirmingClose, setConfirmingClose] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (!editId) {
       setMarks({});
       setMaximums({});
-      setRecordedOn(new Date().toISOString().slice(0, 10));
+      setRecordedOn(localDateInput());
     }
+    setDirty(false);
     void loadSetup();
   }, [editId, open, sessionId]);
 
@@ -123,7 +128,7 @@ export function MarkEntrySheet({
         setClassId(editable.sheet.academicClassId);
         setSubjectId(editable.sheet.subjectId);
         setTermId(editable.sheet.termId);
-        setRecordedOn(editable.sheet.recordedOn ?? new Date().toISOString().slice(0, 10));
+        setRecordedOn(editable.sheet.recordedOn ?? localDateInput());
         setMarks(
           Object.fromEntries(
             editable.marks.map((mark) => [
@@ -290,6 +295,7 @@ export function MarkEntrySheet({
           ? `Draft mark sheet updated for ${studentOptions.length} students.`
           : `Draft mark sheet saved for ${studentOptions.length} students.`,
       );
+      setDirty(false);
       onOpenChange(false);
       setMarks({});
     } catch (reason) {
@@ -299,11 +305,33 @@ export function MarkEntrySheet({
     }
   }
 
+  function requestOpenChange(next: boolean) {
+    if (!next && dirty && !submitting) {
+      setConfirmingClose(true);
+      return;
+    }
+    onOpenChange(next);
+  }
+
   const ready = Boolean(
     schoolId && classId && subjectId && termId && studentOptions.length && assessmentOptions.length,
   );
   return (
-    <Sheet onOpenChange={onOpenChange} open={open}>
+    <Sheet onOpenChange={requestOpenChange} open={open}>
+      <ConfirmDialog
+        cancelLabel="Keep editing"
+        confirmLabel="Discard marks"
+        description="The marks you typed have not been saved. Closing now will lose them."
+        destructive
+        onConfirm={() => {
+          setConfirmingClose(false);
+          setDirty(false);
+          onOpenChange(false);
+        }}
+        onOpenChange={setConfirmingClose}
+        open={confirmingClose}
+        title="Discard unsaved marks?"
+      />
       <SheetContent className="w-full overflow-y-auto sm:max-w-5xl">
         <div className="sticky top-0 z-10 border-b bg-background/95 px-5 py-5 pr-16 backdrop-blur sm:px-7">
           <div className="flex items-start gap-4">
@@ -444,12 +472,14 @@ export function MarkEntrySheet({
                                       item.maximumMarks !== null,
                                   )}
                                   min="1"
-                                  onChange={(event) =>
+                                  onChange={(event) => {
+                                    setDirty(true);
                                     setMaximums((value) => ({
                                       ...value,
                                       [assessment.id]: event.target.value,
-                                    }))
-                                  }
+                                    }));
+                                  }}
+                                  onKeyDown={moveDownOnEnter}
                                   type="number"
                                   value={maximums[assessment.id] ?? "100"}
                                 />
@@ -474,12 +504,15 @@ export function MarkEntrySheet({
                                   className="h-9 tabular-nums"
                                   max={maximums[assessment.id] ?? "100"}
                                   min="0"
-                                  onChange={(event) =>
+                                  data-mark-column={assessment.id}
+                                  onChange={(event) => {
+                                    setDirty(true);
                                     setMarks((value) => ({
                                       ...value,
                                       [entryKey(student.id, assessment.id)]: event.target.value,
-                                    }))
-                                  }
+                                    }));
+                                  }}
+                                  onKeyDown={moveDownOnEnter}
                                   placeholder="—"
                                   step="0.01"
                                   type="number"
@@ -635,4 +668,22 @@ function EmptySetup({
 
 function entryKey(personId: string, assessmentId: string) {
   return `${personId}:${assessmentId}`;
+}
+
+function localDateInput(): string {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
+// Enter moves to the same column in the next row, as in a ledger, rather than
+// submitting the whole sheet.
+function moveDownOnEnter(event: KeyboardEvent<HTMLInputElement>) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  const column = event.currentTarget.dataset.markColumn;
+  if (!column) return;
+  const cells = Array.from(
+    document.querySelectorAll<HTMLInputElement>(`input[data-mark-column="${column}"]`),
+  );
+  cells[cells.indexOf(event.currentTarget) + 1]?.focus();
 }

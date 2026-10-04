@@ -1054,7 +1054,8 @@ function SponsorshipSetup({
   ];
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const value =
       kind === "organization"
         ? {
@@ -1074,7 +1075,7 @@ function SponsorshipSetup({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(value),
       }).then(parse);
-      event.currentTarget.reset();
+      formElement.reset();
       setSelected(null);
       onSaved("Sponsorship setup updated.");
     } catch (reason) {
