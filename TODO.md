@@ -68,6 +68,11 @@ feature ships or THF confirms that a historical workflow is still needed.
 - [x] Add inputs for education number, registration certificate number (RC), and
       identity certificate number (IC) to each applicable person record.
 
+- [x] Add Green Book number, previous school, transfer certificate number, and an
+      organization-defined child category to the student identity section.
+- [ ] Let an organization manage its own child categories from Settings; today the
+      list is populated only by the legacy import.
+
 ## Documents and media migration
 
 - [x] Reconcile all legacy document and photo metadata without generic-image filtering.

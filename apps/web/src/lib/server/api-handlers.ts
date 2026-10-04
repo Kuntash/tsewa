@@ -33,6 +33,7 @@ import {
   academicTerm,
   accessGroup,
   auditEvent,
+  childCategory,
   healthDiagnosis,
   healthMedicalAdvance,
   healthMedicalAdvanceDetail,
@@ -849,6 +850,10 @@ const personCoreDetailsSchema = z.object({
   educationNumber: nullablePersonText(100),
   registrationCertificateNumber: nullablePersonText(100),
   identityCertificateNumber: nullablePersonText(100),
+  greenBookNumber: nullablePersonText(100),
+  previousSchoolName: nullablePersonText(160),
+  transferCertificateNumber: nullablePersonText(100),
+  childCategoryId: nullablePersonText(100),
 });
 
 const personFamilyDetailsSchema = z.object({
@@ -9590,6 +9595,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
     familyProfileRows,
     relationships,
     files,
+    childCategories,
   ] = await Promise.all([
     runtime.ORM.select({
       id: person.id,
@@ -9606,6 +9612,10 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       educationNumber: person.educationNumber,
       registrationCertificateNumber: person.registrationCertificateNumber,
       identityCertificateNumber: person.identityCertificateNumber,
+      greenBookNumber: person.greenBookNumber,
+      previousSchoolName: person.previousSchoolName,
+      transferCertificateNumber: person.transferCertificateNumber,
+      childCategoryId: person.childCategoryId,
       photoReferencePresent: sql<number>`case when ${person.photoAssetKey} is null then 0 else 1 end`,
       sourceSystem: person.sourceSystem,
       sourceTable: person.sourceTable,
@@ -9804,6 +9814,14 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
         asc(sql`lower(${personFile.label})`),
         asc(personFile.sourceId),
       ),
+    runtime.ORM.select({
+      id: childCategory.id,
+      name: childCategory.name,
+      isActive: childCategory.isActive,
+    })
+      .from(childCategory)
+      .where(eq(childCategory.organizationId, context.organizationId))
+      .orderBy(asc(sql`lower(${childCategory.name})`)),
   ]);
   const personRecord = personRows[0] ?? null;
   const familyProfile = familyProfileRows[0] ?? null;
@@ -9841,6 +9859,14 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       educationNumber: personRecord.educationNumber,
       registrationCertificateNumber: personRecord.registrationCertificateNumber,
       identityCertificateNumber: personRecord.identityCertificateNumber,
+      greenBookNumber: personRecord.greenBookNumber,
+      previousSchoolName: personRecord.previousSchoolName,
+      transferCertificateNumber: personRecord.transferCertificateNumber,
+      childCategoryId: personRecord.childCategoryId,
+      // A retired category stays selectable only on the person who already has it.
+      childCategories: childCategories
+        .filter((category) => category.isActive || category.id === personRecord.childCategoryId)
+        .map(({ id, name }) => ({ id, name })),
       photoReferencePresent: Boolean(personRecord.photoReferencePresent),
       sourceSystem: personRecord.sourceSystem,
       sourceTable: personRecord.sourceTable,
@@ -9915,6 +9941,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   const runtime = getRuntimeEnv();
   const current = await runtime.ORM.select({
     id: person.id,
+    kind: person.kind,
     identifierKind: person.identifierKind,
     primaryIdentifier: person.primaryIdentifier,
     displayName: person.displayName,
@@ -9926,6 +9953,10 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     educationNumber: person.educationNumber,
     registrationCertificateNumber: person.registrationCertificateNumber,
     identityCertificateNumber: person.identityCertificateNumber,
+    greenBookNumber: person.greenBookNumber,
+    previousSchoolName: person.previousSchoolName,
+    transferCertificateNumber: person.transferCertificateNumber,
+    childCategoryId: person.childCategoryId,
     sourceSystem: person.sourceSystem,
   })
     .from(person)
@@ -9951,7 +9982,35 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     return Response.json({ error: `That ${label} is already in use.` }, { status: 409 });
   }
 
-  const next = parsed.data;
+  // Student-only details keep their stored values on other kinds of record; staff
+  // keep their Green Book number on the staff profile.
+  const next = {
+    ...parsed.data,
+    ...(current.kind === "staff" ? { greenBookNumber: current.greenBookNumber } : {}),
+    ...(current.kind === "child"
+      ? {}
+      : {
+          previousSchoolName: current.previousSchoolName,
+          transferCertificateNumber: current.transferCertificateNumber,
+          childCategoryId: current.childCategoryId,
+        }),
+  };
+  if (next.childCategoryId && next.childCategoryId !== current.childCategoryId) {
+    const category = await runtime.ORM.select({ id: childCategory.id })
+      .from(childCategory)
+      .where(
+        and(
+          eq(childCategory.organizationId, context.organizationId),
+          eq(childCategory.id, next.childCategoryId),
+          eq(childCategory.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
+    if (!category) {
+      return Response.json({ error: "Choose a valid child category." }, { status: 400 });
+    }
+  }
   const changedFields = (
     [
       ["primaryIdentifier", current.primaryIdentifier, next.primaryIdentifier],
@@ -9972,6 +10031,14 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
         current.identityCertificateNumber,
         next.identityCertificateNumber,
       ],
+      ["greenBookNumber", current.greenBookNumber, next.greenBookNumber],
+      ["previousSchoolName", current.previousSchoolName, next.previousSchoolName],
+      [
+        "transferCertificateNumber",
+        current.transferCertificateNumber,
+        next.transferCertificateNumber,
+      ],
+      ["childCategoryId", current.childCategoryId, next.childCategoryId],
     ] as const
   )
     .filter(([, before, after]) => before !== after)
@@ -9995,6 +10062,10 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
           educationNumber: next.educationNumber,
           registrationCertificateNumber: next.registrationCertificateNumber,
           identityCertificateNumber: next.identityCertificateNumber,
+          greenBookNumber: next.greenBookNumber,
+          previousSchoolName: next.previousSchoolName,
+          transferCertificateNumber: next.transferCertificateNumber,
+          childCategoryId: next.childCategoryId,
           updatedByUserId: context.userId,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })

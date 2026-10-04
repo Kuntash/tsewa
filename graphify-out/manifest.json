@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1788120168.9435499,
-    "ast_hash": "822092d5ba9af433eebc4dec03637679",
+    "mtime": 1791135065.4841762,
+    "ast_hash": "0a35a2e8e378b4ad6425c11f0c54e970",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787768473.0713906,
-    "ast_hash": "01e2da6e50e76c10d49eb1bbf6a53c40",
+    "mtime": 1791135099.1704543,
+    "ast_hash": "bb444bc0555fce3b23615aa9313d2954",
     "semantic_hash": ""
   },
   "scripts/academic-history-dry-run.mjs": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "TODO.md": {
-    "mtime": 1787639057.5657222,
-    "ast_hash": "97777075c66b2a7940863f7e3a206d34",
+    "mtime": 1791135099.171169,
+    "ast_hash": "9b42acddb8484becec1cbc29ee3555cc",
     "semantic_hash": ""
   },
   "apps/web/README.md": {
@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/db/schema.ts": {
-    "mtime": 1787742752.9919813,
-    "ast_hash": "46fe5f64cb961b6d1324d8fe9bd0196b",
+    "mtime": 1791135008.9998372,
+    "ast_hash": "c9bc85eb4fc52040be159e3392a02192",
     "semantic_hash": ""
   },
   "apps/web/src/lib/access-control.ts": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1788120372.4341354,
-    "ast_hash": "efd41c2042b346fe70dcf1824f8b2786",
+    "mtime": 1791135054.930494,
+    "ast_hash": "e6811430af1b53d785896a6e53ba9382",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1477,6 +1477,16 @@
   "apps/web/src/lib/date-time.ts": {
     "mtime": 1788120013.24341,
     "ast_hash": "05b6a7ff6880900a61e3251576922248",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0034_student_identity_details.sql": {
+    "mtime": 1791135008.9660988,
+    "ast_hash": "ac82b89181e799d2c5b553c059eff4af",
+    "semantic_hash": ""
+  },
+  "scripts/import-student-identity.mjs": {
+    "mtime": 1791135158.7862718,
+    "ast_hash": "601806a1b5db4242ce426efd72e3e81b",
     "semantic_hash": ""
   }
 }

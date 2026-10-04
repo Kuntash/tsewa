@@ -333,6 +333,39 @@ export const personImportBatch = sqliteTable(
   (table) => [index("person_import_batch_org_idx").on(table.organizationId, table.createdAt)],
 );
 
+export const childCategory = sqliteTable(
+  "child_category",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    sourceSystem: text("source_system").notNull(),
+    sourceTable: text("source_table").notNull(),
+    sourceId: text("source_id").notNull(),
+    importedAt: text("imported_at"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("child_category_source_idx").on(
+      table.organizationId,
+      table.sourceSystem,
+      table.sourceTable,
+      table.sourceId,
+    ),
+    index("child_category_name_idx").on(table.organizationId, table.isActive, table.name),
+  ],
+);
+
 export const person = sqliteTable(
   "person",
   {
@@ -353,6 +386,12 @@ export const person = sqliteTable(
     educationNumber: text("education_number"),
     registrationCertificateNumber: text("registration_certificate_number"),
     identityCertificateNumber: text("identity_certificate_number"),
+    greenBookNumber: text("green_book_number"),
+    previousSchoolName: text("previous_school_name"),
+    transferCertificateNumber: text("transfer_certificate_number"),
+    childCategoryId: text("child_category_id").references(() => childCategory.id, {
+      onDelete: "set null",
+    }),
     photoAssetKey: text("photo_asset_key"),
     sourceSystem: text("source_system").notNull(),
     sourceTable: text("source_table").notNull(),

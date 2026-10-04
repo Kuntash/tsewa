@@ -88,6 +88,11 @@ type Profile = {
   educationNumber: string | null;
   registrationCertificateNumber: string | null;
   identityCertificateNumber: string | null;
+  greenBookNumber: string | null;
+  previousSchoolName: string | null;
+  transferCertificateNumber: string | null;
+  childCategoryId: string | null;
+  childCategories: Array<{ id: string; name: string }>;
   photoReferencePresent: boolean;
   sourceSystem: string;
   sourceTable: string;
@@ -433,6 +438,27 @@ function ProfileContent({
                 mono
                 value={profile.identityCertificateNumber}
               />
+              {profile.kind !== "staff" ? (
+                <ProfileField label="Green Book number" mono value={profile.greenBookNumber} />
+              ) : null}
+              {profile.kind === "child" ? (
+                <>
+                  <ProfileField
+                    label="Child category"
+                    value={
+                      profile.childCategories.find(
+                        (category) => category.id === profile.childCategoryId,
+                      )?.name ?? null
+                    }
+                  />
+                  <ProfileField label="Previous school" value={profile.previousSchoolName} />
+                  <ProfileField
+                    label="Transfer certificate number (TC)"
+                    mono
+                    value={profile.transferCertificateNumber}
+                  />
+                </>
+              ) : null}
             </div>
           </ProfileSection>
 
@@ -1046,6 +1072,12 @@ function PersonCoreDetailsForm({
   const [identityCertificateNumber, setIdentityCertificateNumber] = useState(
     profile.identityCertificateNumber ?? "",
   );
+  const [greenBookNumber, setGreenBookNumber] = useState(profile.greenBookNumber ?? "");
+  const [previousSchoolName, setPreviousSchoolName] = useState(profile.previousSchoolName ?? "");
+  const [transferCertificateNumber, setTransferCertificateNumber] = useState(
+    profile.transferCertificateNumber ?? "",
+  );
+  const [childCategoryId, setChildCategoryId] = useState(profile.childCategoryId ?? "none");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
@@ -1070,6 +1102,10 @@ function PersonCoreDetailsForm({
           educationNumber: educationNumber || null,
           registrationCertificateNumber: registrationCertificateNumber || null,
           identityCertificateNumber: identityCertificateNumber || null,
+          greenBookNumber: greenBookNumber || null,
+          previousSchoolName: previousSchoolName || null,
+          transferCertificateNumber: transferCertificateNumber || null,
+          childCategoryId: childCategoryId === "none" ? null : childCategoryId,
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -1187,6 +1223,62 @@ function PersonCoreDetailsForm({
                   value={identityCertificateNumber}
                 />
               </FormField>
+              {profile.kind !== "staff" ? (
+                <FormField htmlFor="person-green-book-number" label="Green Book number">
+                  <Input
+                    className="font-mono"
+                    id="person-green-book-number"
+                    maxLength={100}
+                    onChange={(event) => setGreenBookNumber(event.target.value)}
+                    value={greenBookNumber}
+                  />
+                </FormField>
+              ) : null}
+              {profile.kind === "child" ? (
+                <>
+                  <FormField htmlFor="person-child-category" label="Child category">
+                    <Select
+                      disabled={!profile.childCategories.length}
+                      onValueChange={setChildCategoryId}
+                      value={childCategoryId}
+                    >
+                      <SelectTrigger className="w-full" id="person-child-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          {profile.childCategories.length ? "Not recorded" : "No categories set up"}
+                        </SelectItem>
+                        {profile.childCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField htmlFor="person-previous-school" label="Previous school">
+                    <Input
+                      id="person-previous-school"
+                      maxLength={160}
+                      onChange={(event) => setPreviousSchoolName(event.target.value)}
+                      value={previousSchoolName}
+                    />
+                  </FormField>
+                  <FormField
+                    htmlFor="person-transfer-certificate-number"
+                    label="Transfer certificate number (TC)"
+                  >
+                    <Input
+                      className="font-mono"
+                      id="person-transfer-certificate-number"
+                      maxLength={100}
+                      onChange={(event) => setTransferCertificateNumber(event.target.value)}
+                      value={transferCertificateNumber}
+                    />
+                  </FormField>
+                </>
+              ) : null}
             </div>
           </fieldset>
 
