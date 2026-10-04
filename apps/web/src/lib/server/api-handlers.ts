@@ -3005,8 +3005,17 @@ async function reopenStudentEnrollment(request: Request, enrollmentId: string): 
   );
   if (!enrollment) return Response.json({ error: "Enrolment not found." }, { status: 404 });
   if (!canReopenEnrollment(enrollment)) {
-    return Response.json({ error: "This enrolment has not been ended." }, { status: 409 });
+    return Response.json(
+      {
+        error:
+          enrollment.personStatus === "inactive"
+            ? "Reopen this student from their most recent enrolment."
+            : "This enrolment has not been ended.",
+      },
+      { status: 409 },
+    );
   }
+  const wasEnded = !isOpenEnrollment(enrollment.status);
 
   const endChange = await runtime.ORM.select({
     id: studentEnrollmentChange.id,
@@ -3025,7 +3034,11 @@ async function reopenStudentEnrollment(request: Request, enrollmentId: string): 
     .orderBy(desc(studentEnrollmentChange.createdAt))
     .limit(1)
     .then((rows) => rows[0] ?? null);
-  const restoredStatus = endChange?.fromStatus === "recorded" ? "recorded" : "enrolled";
+  const restoredStatus = !wasEnded
+    ? enrollment.status
+    : endChange?.fromStatus === "recorded" || enrollment.statusSource === "legacy_allocation"
+      ? "recorded"
+      : "enrolled";
   const isLatestEnrollment = enrollment.academicSessionId === enrollment.latestSessionId;
 
   await runtime.ORM.batch([
@@ -3041,7 +3054,7 @@ async function reopenStudentEnrollment(request: Request, enrollmentId: string): 
     // keeps what was recorded and who reversed it.
     runtime.ORM.delete(studentEnrollmentChange).where(
       and(
-        eq(studentEnrollmentChange.id, endChange?.id ?? "__no_change__"),
+        eq(studentEnrollmentChange.id, (wasEnded && endChange?.id) || "__no_change__"),
         eq(studentEnrollmentChange.organizationId, context.organizationId),
       ),
     ),
@@ -3069,8 +3082,10 @@ async function reopenStudentEnrollment(request: Request, enrollmentId: string): 
       {
         personId: enrollment.personId,
         previousStatus: enrollment.status,
-        previousEndedOn: endChange?.effectiveOn ?? enrollment.endedOn ?? "",
-        previousReason: endChange?.note ?? "",
+        previousEndedOn:
+          endChange?.effectiveOn ?? enrollment.endedOn ?? enrollment.withdrawnOn ?? "",
+        previousReason: endChange?.note ?? enrollment.withdrawalReason ?? "",
+        previousPersonStatus: enrollment.personStatus,
         restoredStatus,
       },
     ),
@@ -3079,9 +3094,15 @@ async function reopenStudentEnrollment(request: Request, enrollmentId: string): 
   return Response.json({ ok: true, status: restoredStatus });
 }
 
-// Only an ending recorded in Tsewa can be undone; imported history is left alone.
+// An ended enrolment can be reopened. So can a student who was withdrawn in the
+// imported records: there the enrolment row was never ended, only the person was
+// marked inactive, so reopening their latest enrolment reactivates the person.
 function canReopenEnrollment(enrollment: StudentEnrollmentRecord): boolean {
-  return !isOpenEnrollment(enrollment.status) && enrollment.statusSource === "explicit";
+  if (!isOpenEnrollment(enrollment.status)) return true;
+  return (
+    enrollment.personStatus === "inactive" &&
+    enrollment.academicSessionId === enrollment.latestSessionId
+  );
 }
 
 function enrollmentEndReason(status: StudentEnrollmentRecord["status"]): string {
@@ -3117,6 +3138,9 @@ type StudentEnrollmentRecord = {
   startedOn: string | null;
   endedOn: string | null;
   sourceAcademicRecordId: string | null;
+  personStatus: "active" | "inactive";
+  withdrawnOn: string | null;
+  withdrawalReason: string | null;
 };
 
 async function readStudentEnrollment(
@@ -3147,6 +3171,9 @@ async function readStudentEnrollment(
           LIMIT 1
         )`,
       sourceAcademicRecordId: studentEnrollment.sourceAcademicRecordId,
+      personStatus: person.status,
+      withdrawnOn: person.withdrawnOn,
+      withdrawalReason: person.withdrawalReason,
       schoolId: studentEnrollment.schoolId,
       schoolName: schoolMaster.name,
       academicClassId: studentEnrollment.academicClassId,
@@ -3216,6 +3243,7 @@ async function readStudentEnrollment(
     latestSessionId: enrollment.latestSessionId ?? enrollment.academicSessionId,
     status: enrollment.status as StudentEnrollmentRecord["status"],
     statusSource: enrollment.statusSource as StudentEnrollmentRecord["statusSource"],
+    personStatus: enrollment.personStatus as StudentEnrollmentRecord["personStatus"],
   };
 }
 

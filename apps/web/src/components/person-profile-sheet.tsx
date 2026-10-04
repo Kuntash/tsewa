@@ -16,6 +16,7 @@ import {
   Phone,
   Printer,
   RefreshCw,
+  RotateCcw,
   Save,
   Trash2,
   Upload,
@@ -25,6 +26,7 @@ import {
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -335,6 +337,10 @@ export function PersonProfileSheet({
             onCorrectEndDetails={setEndingEnrollment}
             onEditEnrollment={setEditingEnrollment}
             onEditRecord={setEditingRecord}
+            onReopened={async () => {
+              await reloadProfile(profile.id);
+              onPersonUpdated?.();
+            }}
             profile={profile}
           />
         ) : null}
@@ -351,6 +357,7 @@ function ProfileContent({
   onCorrectEndDetails,
   onEditEnrollment,
   onEditRecord,
+  onReopened,
   profile,
 }: {
   onEdit: () => void;
@@ -360,8 +367,11 @@ function ProfileContent({
   onCorrectEndDetails: (enrollment: Profile["schoolEnrollments"][number]) => void;
   onEditEnrollment: (enrollment: Profile["schoolEnrollments"][number]) => void;
   onEditRecord: (record: Profile["academicRecords"][number]) => void;
+  onReopened: () => Promise<void>;
   profile: Profile;
 }) {
+  const [confirmingReopen, setConfirmingReopen] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const reviewItems = useMemo(
     () => profile.reviewFlags.map((flag) => reviewLabel(flag, profile.kind)),
     [profile.kind, profile.reviewFlags],
@@ -377,6 +387,32 @@ function ProfileContent({
       ),
   );
   const schoolHistoryCount = profile.schoolEnrollments.length + legacyAcademicRecords.length;
+  // A withdrawn student is brought back through their most recent enrolment.
+  const canReopen =
+    profile.kind === "child" &&
+    profile.status === "inactive" &&
+    Boolean(latestSchoolEnrollment?.canEditDetails);
+
+  async function reopenEnrollment() {
+    if (!latestSchoolEnrollment) return;
+    setReopening(true);
+    try {
+      const response = await fetch(
+        `/api/school-operations/enrollments/${latestSchoolEnrollment.id}/reopen`,
+        { method: "POST" },
+      );
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "The enrolment could not be reopened.");
+      toast.success(`${profile.displayName} is an active student again.`);
+      await onReopened();
+    } catch (reason) {
+      toast.error(
+        reason instanceof Error ? reason.message : "The enrolment could not be reopened.",
+      );
+    } finally {
+      setReopening(false);
+    }
+  }
   const profilePhoto = profile.files.find((file) => file.category === "profile_photo");
 
   return (
@@ -515,7 +551,34 @@ function ProfileContent({
 
           <Separator />
 
-          <ProfileSection icon={CalendarDays} label="Dates">
+          <ConfirmDialog
+            confirmLabel="Reopen enrolment"
+            description={`${profile.displayName} will be marked active and enrolled again in ${latestSchoolEnrollment?.className ?? "their last class"} (${latestSchoolEnrollment?.academicSession ?? "last session"}). The withdrawn date and reason are removed.`}
+            onConfirm={() => {
+              setConfirmingReopen(false);
+              void reopenEnrollment();
+            }}
+            onOpenChange={setConfirmingReopen}
+            open={confirmingReopen}
+            title="Reopen this enrolment?"
+          />
+          <ProfileSection
+            action={
+              canReopen ? (
+                <Button
+                  disabled={reopening}
+                  onClick={() => setConfirmingReopen(true)}
+                  size="sm"
+                  variant="outline"
+                >
+                  {reopening ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}
+                  Reopen enrolment
+                </Button>
+              ) : null
+            }
+            icon={CalendarDays}
+            label="Dates"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <SourceDate label="Date of birth" value={profile.dateOfBirth} />
               <SourceDate label={eventLabel} value={profile.admittedOrJoinedOn} />

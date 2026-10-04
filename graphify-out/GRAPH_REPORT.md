@@ -1,16 +1,16 @@
 # Graph Report - tsewa  (2026-10-05)
 
 ## Corpus Check
-- 290 files · ~348,092 words
+- 290 files · ~348,485 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6156 nodes · 8948 edges · 446 communities (147 shown, 299 thin omitted)
+- 6156 nodes · 8951 edges · 446 communities (147 shown, 299 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 49 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9afb7638`
+- Built from commit: `28f88c1a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -488,8 +488,8 @@ Cohesion: 0.06
 Nodes (6): CloseEvent, CustomEvent, ErrorEvent, Event, MessageEvent, PromiseRejectionEvent
 
 ### Community 4 - "hosted-onboarding.tsx"
-Cohesion: 0.11
-Nodes (21): classPresets, ClassRow, HostedOnboarding(), InvitationRow, localeOptions, slugify(), steps, timezoneOptions (+13 more)
+Cohesion: 0.09
+Nodes (25): AdmissionSheet(), Option, optionsForSchool(), Setup, classPresets, ClassRow, HostedOnboarding(), InvitationRow (+17 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.04
@@ -497,7 +497,7 @@ Nodes (52): scripts, build, cf-typegen, db:migrate:hosted, db:migrate:local, db:
 
 ### Community 6 - "cn"
 Cohesion: 0.08
-Nodes (33): AlertDialog(), AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay() (+25 more)
+Nodes (34): AlertDialog(), AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay() (+26 more)
 
 ### Community 7 - "import-academic-history.mjs"
 Cohesion: 0.10
@@ -532,8 +532,8 @@ Cohesion: 0.05
 Nodes (39): dependencies, class-variance-authority, clsx, dodopayments, drizzle-orm, @fontsource-variable/dm-sans, @fontsource-variable/inter, @fontsource-variable/newsreader (+31 more)
 
 ### Community 15 - "person-profile-sheet.tsx"
-Cohesion: 0.06
-Nodes (38): emptyFamily, FamilyForm, familyToForm(), PersonFamilyEditor(), PersonOption, writeSibling(), academicRecordMatchesEnrollment(), capitalize() (+30 more)
+Cohesion: 0.07
+Nodes (37): emptyFamily, FamilyForm, familyToForm(), PersonFamilyEditor(), PersonOption, writeSibling(), academicRecordMatchesEnrollment(), capitalize() (+29 more)
 
 ### Community 16 - "components.json"
 Cohesion: 0.09
@@ -580,8 +580,8 @@ Cohesion: 0.22
 Nodes (3): ByteLengthQueuingStrategy, CountQueuingStrategy, QueuingStrategy
 
 ### Community 54 - "school-operations.tsx"
-Cohesion: 0.05
-Nodes (43): AdmissionSheet(), Option, optionsForSchool(), Setup, AssignmentData, AssignmentOption, filterOptions(), SchoolAssignmentsSheet() (+35 more)
+Cohesion: 0.04
+Nodes (47): AssignmentData, AssignmentOption, filterOptions(), SchoolAssignmentsSheet(), EditableSchool, SchoolEditorSheet(), AcademicClass, classStage() (+39 more)
 
 ### Community 60 - "README.md"
 Cohesion: 0.29
@@ -888,8 +888,8 @@ Cohesion: 0.15
 Nodes (16): confirmedDatabaseId, database, optionalText(), options, organizationSlug, PLACEHOLDERS, readData(), recordedDate() (+8 more)
 
 ### Community 399 - "people-registry.tsx"
-Cohesion: 0.06
-Nodes (44): AccountSettingsProps, BillingSettings(), BillingState, capitalize(), formatDate(), remainingDays(), statusCopy, emptyRegistry (+36 more)
+Cohesion: 0.08
+Nodes (36): AccountSettingsProps, BillingSettings(), BillingState, capitalize(), formatDate(), remainingDays(), statusCopy, emptyRegistry (+28 more)
 
 ### Community 400 - "sqlLiteral"
 Cohesion: 0.13

@@ -52,6 +52,9 @@ type Enrollment = {
   status: string;
   canEdit: boolean;
   canReopen?: boolean;
+  personStatus?: "active" | "inactive";
+  withdrawnOn?: string | null;
+  withdrawalReason?: string | null;
 };
 
 type Change = {
@@ -292,7 +295,7 @@ export function EnrollmentChangeSheet({
         confirmLabel={confirming === "reopen" ? "Reopen enrolment" : endActionLabel(action)}
         description={
           confirming === "reopen"
-            ? `${data?.enrollment.displayName ?? "The student"} will be enrolled again in ${data?.enrollment.className ?? "the same class"} and marked active. The recorded end date and reason are removed from school history.`
+            ? `${data?.enrollment.displayName ?? "The student"} will be enrolled again in ${data?.enrollment.className ?? "the same class"} (${data?.enrollment.sessionName ?? "this session"}) and marked active. The recorded withdrawal date and reason are removed.`
             : confirmation
         }
         destructive={confirming === "end"}
@@ -340,7 +343,32 @@ export function EnrollmentChangeSheet({
           </div>
         ) : data ? (
           <div className="divide-y">
-            {data.enrollment.canEdit ? (
+            {data.enrollment.canEdit && data.enrollment.canReopen ? (
+              <div className="space-y-4 p-5 sm:p-7">
+                <p className="rounded-2xl border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
+                  {data.enrollment.displayName} is marked as withdrawn
+                  {data.enrollment.withdrawnOn
+                    ? ` on ${formatDate(data.enrollment.withdrawnOn.slice(0, 10))}`
+                    : ""}
+                  {data.enrollment.withdrawalReason ? ` (${data.enrollment.withdrawalReason})` : ""}
+                  . Reopen the enrolment to make them an active student again.
+                </p>
+                {error ? (
+                  <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {error}
+                  </p>
+                ) : null}
+                <Button
+                  disabled={submitting}
+                  onClick={() => setConfirming("reopen")}
+                  type="button"
+                  variant="outline"
+                >
+                  {submitting ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}
+                  Reopen enrolment
+                </Button>
+              </div>
+            ) : data.enrollment.canEdit ? (
               <form className="space-y-6 p-5 sm:p-7" onSubmit={(event) => submit(event)}>
                 <div>
                   <Label>What changed?</Label>
