@@ -14,6 +14,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  Printer,
   RefreshCw,
   Save,
   Trash2,
@@ -93,6 +94,9 @@ type Profile = {
   transferCertificateNumber: string | null;
   childCategoryId: string | null;
   childCategories: Array<{ id: string; name: string }>;
+  withdrawnOn: string | null;
+  withdrawalReason: string | null;
+  withdrawalRemarks: string | null;
   photoReferencePresent: boolean;
   sourceSystem: string;
   sourceTable: string;
@@ -144,6 +148,7 @@ type Profile = {
     startedOn: string | null;
     endedOn: string | null;
     endReason: string | null;
+    canEditDetails: boolean;
     canCorrectEndDetails: boolean;
   }>;
   family: PersonFamilyDetails | null;
@@ -181,6 +186,12 @@ export function PersonProfileSheet({
   const [endingEnrollment, setEndingEnrollment] = useState<
     Profile["schoolEnrollments"][number] | null
   >(null);
+  const [editingEnrollment, setEditingEnrollment] = useState<
+    Profile["schoolEnrollments"][number] | null
+  >(null);
+  const [editingRecord, setEditingRecord] = useState<Profile["academicRecords"][number] | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!personId) {
@@ -188,6 +199,8 @@ export function PersonProfileSheet({
       setError("");
       setEditing(null);
       setEndingEnrollment(null);
+      setEditingEnrollment(null);
+      setEditingRecord(null);
       return;
     }
 
@@ -209,7 +222,7 @@ export function PersonProfileSheet({
 
   return (
     <Sheet open={Boolean(personId)} onOpenChange={onOpenChange}>
-      <SheetContent>
+      <SheetContent className="person-profile-portal">
         <SheetTitle className="sr-only">Person profile</SheetTitle>
         <SheetDescription className="sr-only">Personal details and history.</SheetDescription>
 
@@ -284,6 +297,31 @@ export function PersonProfileSheet({
             }}
             personName={profile.displayName}
           />
+        ) : profile && editingEnrollment ? (
+          <EnrollmentDetailsForm
+            enrollment={editingEnrollment}
+            onCancel={() => setEditingEnrollment(null)}
+            onSaved={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              setEditingEnrollment(null);
+              onPersonUpdated?.();
+            }}
+            personName={profile.displayName}
+          />
+        ) : profile && editingRecord ? (
+          <AcademicRecordForm
+            onCancel={() => setEditingRecord(null)}
+            onSaved={async () => {
+              const updated = await readPersonProfile(profile.id);
+              setProfile(updated);
+              setEditingRecord(null);
+              onPersonUpdated?.();
+            }}
+            personId={profile.id}
+            personName={profile.displayName}
+            record={editingRecord}
+          />
         ) : profile ? (
           <ProfileContent
             onEdit={() => setEditing("core")}
@@ -291,6 +329,8 @@ export function PersonProfileSheet({
             onEditFiles={() => setEditing("files")}
             onEditPlacement={() => setEditing("placement")}
             onCorrectEndDetails={setEndingEnrollment}
+            onEditEnrollment={setEditingEnrollment}
+            onEditRecord={setEditingRecord}
             profile={profile}
           />
         ) : null}
@@ -305,6 +345,8 @@ function ProfileContent({
   onEditFiles,
   onEditPlacement,
   onCorrectEndDetails,
+  onEditEnrollment,
+  onEditRecord,
   profile,
 }: {
   onEdit: () => void;
@@ -312,6 +354,8 @@ function ProfileContent({
   onEditFiles: () => void;
   onEditPlacement: () => void;
   onCorrectEndDetails: (enrollment: Profile["schoolEnrollments"][number]) => void;
+  onEditEnrollment: (enrollment: Profile["schoolEnrollments"][number]) => void;
+  onEditRecord: (record: Profile["academicRecords"][number]) => void;
   profile: Profile;
 }) {
   const reviewItems = useMemo(
@@ -332,12 +376,15 @@ function ProfileContent({
   const profilePhoto = profile.files.find((file) => file.category === "profile_photo");
 
   return (
-    <>
+    <div className="person-profile-print flex min-h-0 flex-1 flex-col">
       <div className="relative overflow-hidden border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_60%)] px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
-        <div className="pr-11">
+        <div className="flex items-center justify-between gap-3 pr-11">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
             Profile
           </p>
+          <Button onClick={() => window.print()} size="sm" variant="outline">
+            <Printer /> Print
+          </Button>
         </div>
         <div className="mt-8 flex items-start gap-4 sm:gap-5">
           {profilePhoto ? (
@@ -377,7 +424,7 @@ function ProfileContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="person-profile-scroll flex-1 overflow-y-auto">
         <div className="space-y-8 px-5 py-7 sm:px-8 sm:py-8">
           {reviewItems.length ? (
             <section className="rounded-2xl border border-amber-500/25 bg-amber-500/8 p-4 dark:bg-amber-400/10">
@@ -468,6 +515,22 @@ function ProfileContent({
             <div className="grid gap-4 sm:grid-cols-2">
               <SourceDate label="Date of birth" value={profile.dateOfBirth} />
               <SourceDate label={eventLabel} value={profile.admittedOrJoinedOn} />
+              {profile.kind !== "staff" ? (
+                <>
+                  <SourceDate label="Withdrawn date" value={profile.withdrawnOn} />
+                  <div className="rounded-2xl border bg-card p-4">
+                    <p className="text-xs text-muted-foreground">Withdrawal reason</p>
+                    <p className="mt-2 text-base font-semibold">
+                      {profile.withdrawalReason || "Not recorded"}
+                    </p>
+                    {profile.withdrawalRemarks ? (
+                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                        {profile.withdrawalRemarks}
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
             </div>
           </ProfileSection>
 
@@ -710,10 +773,26 @@ function ProfileContent({
                           .filter(Boolean)
                           .join(" · ") || "School and house not recorded"}
                       </p>
+                      {enrollment.rollNumber ? (
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Roll · {enrollment.rollNumber}
+                        </p>
+                      ) : null}
                       {enrollment.startedOn ? (
                         <p className="mt-1 text-[10px] text-muted-foreground">
                           Started {formatDate(enrollment.startedOn)}
                         </p>
+                      ) : null}
+                      {enrollment.canEditDetails ? (
+                        <Button
+                          className="mt-2.5"
+                          onClick={() => onEditEnrollment(enrollment)}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <Pencil /> Edit class, section or school
+                        </Button>
                       ) : null}
                       {enrollment.endedOn ? (
                         <div className="mt-3 rounded-xl border bg-muted/40 p-3">
@@ -781,6 +860,17 @@ function ProfileContent({
                           ) : null}
                         </div>
                       ) : null}
+                      {profile.canEdit ? (
+                        <Button
+                          className="mt-2.5"
+                          onClick={() => onEditRecord(record)}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <Pencil /> Edit class record
+                        </Button>
+                      ) : null}
                     </li>
                   ))}
                 </ol>
@@ -789,7 +879,7 @@ function ProfileContent({
           </ProfileSection>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -808,7 +898,12 @@ function EnrollmentEndDetailsForm({
   const [reason, setReason] = useState(enrollment.endReason ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const actionLabel = enrollment.status === "withdrawn" ? "withdrawal" : "completion";
+  const actionLabel =
+    enrollment.status === "withdrawn"
+      ? "withdrawal"
+      : enrollment.status === "transferred"
+        ? "transfer"
+        : "completion";
 
   async function saveEndDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -874,7 +969,11 @@ function EnrollmentEndDetailsForm({
           </FormField>
           <FormField
             htmlFor="enrollment-end-reason"
-            label={`${capitalize(actionLabel)} reason`}
+            label={
+              enrollment.status === "transferred"
+                ? "Destination school or reason"
+                : `${capitalize(actionLabel)} reason`
+            }
             required
           >
             <Input
@@ -900,6 +999,309 @@ function EnrollmentEndDetailsForm({
         <Button disabled={saving} type="submit">
           {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
           {saving ? "Saving…" : "Save correction"}
+        </Button>
+      </footer>
+    </form>
+  );
+}
+
+type EnrollmentOption = { id: string; name: string; schoolId?: string };
+
+function EnrollmentDetailsForm({
+  enrollment,
+  onCancel,
+  onSaved,
+  personName,
+}: {
+  enrollment: Profile["schoolEnrollments"][number];
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+  personName: string;
+}) {
+  const [options, setOptions] = useState<{
+    schools: EnrollmentOption[];
+    classes: EnrollmentOption[];
+    houses: EnrollmentOption[];
+  } | null>(null);
+  const [schoolId, setSchoolId] = useState("");
+  const [academicClassId, setAcademicClassId] = useState("");
+  const [houseId, setHouseId] = useState("none");
+  const [rollNumber, setRollNumber] = useState(enrollment.rollNumber ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`/api/school-operations/enrollments/${enrollment.id}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          error?: string;
+          enrollment: { schoolId: string | null; academicClassId: string; houseId: string | null };
+          options: NonNullable<typeof options>;
+        };
+        if (!response.ok)
+          throw new Error(payload.error ?? "The class choices could not be loaded.");
+        setOptions(payload.options);
+        setSchoolId(payload.enrollment.schoolId ?? "");
+        setAcademicClassId(payload.enrollment.academicClassId);
+        setHouseId(payload.enrollment.houseId ?? "none");
+      })
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(
+          reason instanceof Error ? reason.message : "The class choices could not be loaded.",
+        );
+      });
+    return () => controller.abort();
+  }, [enrollment.id]);
+
+  const classOptions = (options?.classes ?? []).filter((item) => item.schoolId === schoolId);
+  const houseOptions = (options?.houses ?? []).filter((item) => item.schoolId === schoolId);
+
+  async function saveDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/school-operations/enrollments/${enrollment.id}/details`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          schoolId,
+          academicClassId,
+          houseId: houseId === "none" ? null : houseId,
+          rollNumber: rollNumber || null,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "The class details could not be saved.");
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The class details could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveDetails}>
+      <header className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          School history
+        </p>
+        <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+          Edit class, section or school
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          {personName} · {enrollment.academicSession} · {enrollment.className}
+        </p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+        <div className="space-y-6">
+          {error ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          {options ? (
+            <>
+              <FormField htmlFor="enrollment-school" label="School" required>
+                <Select
+                  onValueChange={(value) => {
+                    setSchoolId(value);
+                    setAcademicClassId("");
+                    setHouseId("none");
+                  }}
+                  value={schoolId}
+                >
+                  <SelectTrigger className="w-full" id="enrollment-school">
+                    <SelectValue placeholder="Choose school" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.schools.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField htmlFor="enrollment-class" label="Class and section" required>
+                <Select onValueChange={setAcademicClassId} value={academicClassId}>
+                  <SelectTrigger className="w-full" id="enrollment-class">
+                    <SelectValue placeholder="Choose class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classOptions.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField htmlFor="enrollment-house" label="House">
+                <Select onValueChange={setHouseId} value={houseId}>
+                  <SelectTrigger className="w-full" id="enrollment-house">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No house</SelectItem>
+                    {houseOptions.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField htmlFor="enrollment-roll-number" label="Roll number">
+                <Input
+                  id="enrollment-roll-number"
+                  maxLength={50}
+                  onChange={(event) => setRollNumber(event.target.value)}
+                  value={rollNumber}
+                />
+              </FormField>
+              <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
+                This corrects what is recorded for {enrollment.academicSession}. To record a move
+                that happened on a date, use Change enrollment on the School page instead.
+              </p>
+            </>
+          ) : !error ? (
+            <div className="grid min-h-40 place-items-center">
+              <LoaderCircle className="size-5 animate-spin text-primary" />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <footer className="flex flex-col-reverse gap-2 border-t bg-background/95 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+        <Button disabled={saving} onClick={onCancel} type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button disabled={saving || !options || !schoolId || !academicClassId} type="submit">
+          {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
+          {saving ? "Saving…" : "Save correction"}
+        </Button>
+      </footer>
+    </form>
+  );
+}
+
+function AcademicRecordForm({
+  onCancel,
+  onSaved,
+  personId,
+  personName,
+  record,
+}: {
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+  personId: string;
+  personName: string;
+  record: Profile["academicRecords"][number];
+}) {
+  const [values, setValues] = useState({
+    academicSession: record.academicSession,
+    className: record.className,
+    classSection: record.classSection ?? "",
+    schoolName: record.schoolName ?? "",
+    houseName: record.houseName ?? "",
+    rollNumber: record.rollNumber ?? "",
+    result: record.result ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const fields: Array<{ name: keyof typeof values; label: string; required?: boolean }> = [
+    { name: "academicSession", label: "Session", required: true },
+    { name: "className", label: "Class", required: true },
+    { name: "classSection", label: "Section" },
+    { name: "schoolName", label: "School" },
+    { name: "houseName", label: "House" },
+    { name: "rollNumber", label: "Roll number" },
+    { name: "result", label: "Result" },
+  ];
+
+  async function saveRecord(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/people/${personId}/academic-records/${record.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...values,
+          classSection: values.classSection || null,
+          schoolName: values.schoolName || null,
+          houseName: values.houseName || null,
+          rollNumber: values.rollNumber || null,
+          result: values.result || null,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "The class record could not be saved.");
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The class record could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveRecord}>
+      <header className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          School history
+        </p>
+        <h2 className="mt-5 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+          Edit class record
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          {personName} · {record.academicSession} · {record.className}
+        </p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+        <div className="grid gap-5 sm:grid-cols-2">
+          {error ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:col-span-2">
+              {error}
+            </p>
+          ) : null}
+          {fields.map(({ label, name, required }) => (
+            <FormField
+              htmlFor={`academic-record-${name}`}
+              key={name}
+              label={label}
+              required={required}
+            >
+              <Input
+                id={`academic-record-${name}`}
+                maxLength={name === "result" ? 500 : name === "className" ? 100 : 160}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [name]: event.target.value }))
+                }
+                required={required}
+                value={values[name]}
+              />
+            </FormField>
+          ))}
+        </div>
+      </div>
+
+      <footer className="flex flex-col-reverse gap-2 border-t bg-background/95 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+        <Button disabled={saving} onClick={onCancel} type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button disabled={saving} type="submit">
+          {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
+          {saving ? "Saving…" : "Save record"}
         </Button>
       </footer>
     </form>
@@ -1078,6 +1480,9 @@ function PersonCoreDetailsForm({
     profile.transferCertificateNumber ?? "",
   );
   const [childCategoryId, setChildCategoryId] = useState(profile.childCategoryId ?? "none");
+  const [withdrawnOn, setWithdrawnOn] = useState(toDateInput(profile.withdrawnOn));
+  const [withdrawalReason, setWithdrawalReason] = useState(profile.withdrawalReason ?? "");
+  const [withdrawalRemarks, setWithdrawalRemarks] = useState(profile.withdrawalRemarks ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
@@ -1106,6 +1511,9 @@ function PersonCoreDetailsForm({
           previousSchoolName: previousSchoolName || null,
           transferCertificateNumber: transferCertificateNumber || null,
           childCategoryId: childCategoryId === "none" ? null : childCategoryId,
+          withdrawnOn: withdrawnOn || null,
+          withdrawalReason: withdrawalReason || null,
+          withdrawalRemarks: withdrawalRemarks || null,
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -1321,6 +1729,38 @@ function PersonCoreDetailsForm({
                   value={nationality}
                 />
               </FormField>
+              {profile.kind !== "staff" ? (
+                <>
+                  <FormField htmlFor="person-withdrawn-on" label="Withdrawn date">
+                    <Input
+                      id="person-withdrawn-on"
+                      onChange={(event) => setWithdrawnOn(event.target.value)}
+                      type="date"
+                      value={withdrawnOn}
+                    />
+                  </FormField>
+                  <FormField htmlFor="person-withdrawal-reason" label="Withdrawal reason">
+                    <Input
+                      id="person-withdrawal-reason"
+                      maxLength={200}
+                      onChange={(event) => setWithdrawalReason(event.target.value)}
+                      value={withdrawalReason}
+                    />
+                  </FormField>
+                  <FormField
+                    className="sm:col-span-2"
+                    htmlFor="person-withdrawal-remarks"
+                    label="Withdrawal remarks"
+                  >
+                    <Input
+                      id="person-withdrawal-remarks"
+                      maxLength={1000}
+                      onChange={(event) => setWithdrawalRemarks(event.target.value)}
+                      value={withdrawalRemarks}
+                    />
+                  </FormField>
+                </>
+              ) : null}
             </div>
           </fieldset>
 

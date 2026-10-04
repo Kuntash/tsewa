@@ -174,7 +174,77 @@
   margin: 12mm;
 }
 
+@page person-profile {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
+  /* The profile prints from its side panel, so the page behind it is dropped and
+     the panel flows as an ordinary document in the light theme. */
+  body:has(.person-profile-print) > main {
+    display: none !important;
+  }
+
+  .person-profile-portal:has(.person-profile-print) {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .person-profile-print {
+    display: block !important;
+    page: person-profile;
+    color: #17251e !important;
+    background: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    --background: #ffffff;
+    --foreground: #17251e;
+    --card: #ffffff;
+    --card-foreground: #17251e;
+    --primary: #1f6b4f;
+    --primary-foreground: #ffffff;
+    --secondary: #e9f0ec;
+    --secondary-foreground: #24372e;
+    --muted: #f1f5f3;
+    --muted-foreground: #5b6a63;
+    --accent: #e2efe8;
+    --accent-foreground: #214a39;
+    --border: #d5dedb;
+  }
+
+  .person-profile-print,
+  .person-profile-print * {
+    visibility: visible;
+  }
+
+  .person-profile-print > div:first-child {
+    background: none !important;
+  }
+
+  .person-profile-print button,
+  .person-profile-print a[download] {
+    display: none !important;
+  }
+
+  .person-profile-scroll {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .person-profile-print section,
+  .person-profile-print li {
+    break-inside: avoid;
+  }
+
   .reports-no-print {
     display: none !important;
   }

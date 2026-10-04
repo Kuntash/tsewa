@@ -70,6 +70,11 @@ feature ships or THF confirms that a historical workflow is still needed.
 
 - [x] Add Green Book number, previous school, transfer certificate number, and an
       organization-defined child category to the student identity section.
+- [x] Show withdrawn date, reason, and remarks on the person profile and backfill
+      them from the legacy beneficiary table.
+- [x] Add a Print button to the person profile panel.
+- [x] Allow correcting a school-history row (school, class and section, house, roll
+      number), an imported class record, and a recorded transfer out.
 - [ ] Let an organization manage its own child categories from Settings; today the
       list is populated only by the legacy import.
 

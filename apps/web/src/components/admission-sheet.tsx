@@ -23,6 +23,7 @@ type Setup = {
   schools: Option[];
   classes: Option[];
   houses: Option[];
+  childCategories: Option[];
 };
 
 export function AdmissionSheet({
@@ -44,6 +45,7 @@ export function AdmissionSheet({
   const [academicClassId, setAcademicClassId] = useState("");
   const [houseId, setHouseId] = useState("none");
   const [gender, setGender] = useState("unknown");
+  const [childCategoryId, setChildCategoryId] = useState("none");
   const [admittedOn, setAdmittedOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [dateOfBirth, setDateOfBirth] = useState("");
 
@@ -67,6 +69,7 @@ export function AdmissionSheet({
         setSchoolId(firstSchoolId);
         setAcademicClassId(optionsForSchool(payload.classes, firstSchoolId)[0]?.id ?? "");
         setHouseId("none");
+        setChildCategoryId("none");
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted)
@@ -99,6 +102,10 @@ export function AdmissionSheet({
         educationNumber: data.get("educationNumber") || undefined,
         registrationCertificateNumber: data.get("registrationCertificateNumber") || undefined,
         identityCertificateNumber: data.get("identityCertificateNumber") || undefined,
+        greenBookNumber: data.get("greenBookNumber") || undefined,
+        previousSchoolName: data.get("previousSchoolName") || undefined,
+        transferCertificateNumber: data.get("transferCertificateNumber") || undefined,
+        childCategoryId: childCategoryId === "none" ? undefined : childCategoryId,
         schoolId,
         academicClassId,
         houseId: houseId === "none" ? undefined : houseId,
@@ -192,6 +199,43 @@ export function AdmissionSheet({
                 name="identityCertificateNumber"
                 placeholder="IC number"
               />
+              <Field
+                label="Green Book number (optional)"
+                name="greenBookNumber"
+                placeholder="Green Book number"
+              />
+              <Field
+                label="Previous school (optional)"
+                name="previousSchoolName"
+                placeholder="Previous school"
+              />
+              <Field
+                label="TC number (optional)"
+                name="transferCertificateNumber"
+                placeholder="Transfer certificate number"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Child category (optional)</Label>
+              <Select
+                disabled={!setup?.childCategories.length}
+                onValueChange={setChildCategoryId}
+                value={childCategoryId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    {setup?.childCategories.length ? "Not recorded" : "No categories set up"}
+                  </SelectItem>
+                  {setup?.childCategories.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Gender</Label>

@@ -300,7 +300,15 @@ export function EnrollmentChangeSheet({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="effective-on">Effective date</Label>
+                  <Label htmlFor="effective-on">
+                    {action === "withdrawn"
+                      ? "Withdrawn date"
+                      : action === "completed"
+                        ? "Completion date"
+                        : action === "placement_changed"
+                          ? "Date of change"
+                          : "Transfer date"}
+                  </Label>
                   <Input
                     id="effective-on"
                     max={data.enrollment.sessionEndsOn}
@@ -358,7 +366,7 @@ export function EnrollmentChangeSheet({
                 <div className="space-y-2">
                   <Label htmlFor="change-note">
                     {action === "transferred_out"
-                      ? "Destination or note (optional)"
+                      ? "Destination school (optional)"
                       : action === "withdrawn"
                         ? "Withdrawal reason"
                         : action === "completed"

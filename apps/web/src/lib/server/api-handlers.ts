@@ -368,6 +368,10 @@ const admissionSchema = z.object({
   educationNumber: z.string().trim().max(100).optional(),
   registrationCertificateNumber: z.string().trim().max(100).optional(),
   identityCertificateNumber: z.string().trim().max(100).optional(),
+  greenBookNumber: z.string().trim().max(100).optional(),
+  previousSchoolName: z.string().trim().max(160).optional(),
+  transferCertificateNumber: z.string().trim().max(100).optional(),
+  childCategoryId: z.string().trim().max(100).optional(),
   admittedOn: isoDateSchema,
   schoolId: z.uuid(),
   academicClassId: z.uuid(),
@@ -406,6 +410,13 @@ const enrollmentChangeSchema = z
 const enrollmentEndDetailsSchema = z.object({
   effectiveOn: isoDateSchema,
   reason: z.string().trim().min(1).max(500),
+});
+
+const enrollmentDetailsSchema = z.object({
+  schoolId: z.uuid(),
+  academicClassId: z.uuid(),
+  houseId: z.uuid().nullable(),
+  rollNumber: z.string().trim().max(50).nullable(),
 });
 
 const historicalResultsOverviewQuerySchema = z.object({
@@ -854,6 +865,19 @@ const personCoreDetailsSchema = z.object({
   previousSchoolName: nullablePersonText(160),
   transferCertificateNumber: nullablePersonText(100),
   childCategoryId: nullablePersonText(100),
+  withdrawnOn: nullablePersonDate,
+  withdrawalReason: nullablePersonText(200),
+  withdrawalRemarks: nullablePersonText(1000),
+});
+
+const academicRecordSchema = z.object({
+  academicSession: z.string().trim().min(1).max(50),
+  className: z.string().trim().min(1).max(100),
+  classSection: nullablePersonText(50),
+  schoolName: nullablePersonText(160),
+  houseName: nullablePersonText(160),
+  rollNumber: nullablePersonText(50),
+  result: nullablePersonText(500),
 });
 
 const personFamilyDetailsSchema = z.object({
@@ -1055,6 +1079,13 @@ export const apiDispatcher = {
       return correctEnrollmentEndDetails(request, enrollmentEndDetailsMatch[1]);
     }
 
+    const enrollmentDetailsMatch = url.pathname.match(
+      /^\/api\/school-operations\/enrollments\/([^/]+)\/details$/,
+    );
+    if (enrollmentDetailsMatch) {
+      return correctEnrollmentDetails(request, enrollmentDetailsMatch[1]);
+    }
+
     const enrollmentMatch = url.pathname.match(/^\/api\/school-operations\/enrollments\/([^/]+)$/);
     if (enrollmentMatch) {
       return handleStudentEnrollment(request, enrollmentMatch[1]);
@@ -1153,6 +1184,13 @@ export const apiDispatcher = {
     const siblingOptionsMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/sibling-options$/);
     if (siblingOptionsMatch) {
       return getSiblingOptions(request, siblingOptionsMatch[1]);
+    }
+
+    const academicRecordMatch = url.pathname.match(
+      /^\/api\/people\/([^/]+)\/academic-records\/([^/]+)$/,
+    );
+    if (academicRecordMatch) {
+      return updateAcademicRecord(request, academicRecordMatch[1], academicRecordMatch[2]);
     }
 
     const familyMatch = url.pathname.match(/^\/api\/people\/([^/]+)\/family$/);
@@ -2001,12 +2039,23 @@ async function getSchoolOperationsSetup(request: Request): Promise<Response> {
       .orderBy(asc(schoolHouseMaster.schoolId), asc(sql`lower(${houseMaster.name})`)),
   ]);
 
+  const childCategories = await runtime.ORM.select({
+    id: childCategory.id,
+    name: childCategory.name,
+  })
+    .from(childCategory)
+    .where(
+      and(eq(childCategory.organizationId, scope.organizationId), eq(childCategory.isActive, 1)),
+    )
+    .orderBy(asc(sql`lower(${childCategory.name})`));
+
   return Response.json({
     canEdit: hasPermission(scope, "school.enrollment.manage"),
     session: scope.session,
     schools,
     classes,
     houses,
+    childCategories,
   });
 }
 
@@ -2103,6 +2152,22 @@ async function createStudentAdmission(request: Request): Promise<Response> {
   if (existingPerson) {
     return Response.json({ error: "That admission number is already in use." }, { status: 409 });
   }
+  if (parsed.data.childCategoryId) {
+    const category = await runtime.ORM.select({ id: childCategory.id })
+      .from(childCategory)
+      .where(
+        and(
+          eq(childCategory.organizationId, scope.organizationId),
+          eq(childCategory.id, parsed.data.childCategoryId),
+          eq(childCategory.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
+    if (!category) {
+      return Response.json({ error: "Choose a valid child category." }, { status: 400 });
+    }
+  }
 
   const personId = crypto.randomUUID();
   const enrollmentId = crypto.randomUUID();
@@ -2121,6 +2186,10 @@ async function createStudentAdmission(request: Request): Promise<Response> {
       educationNumber: parsed.data.educationNumber || null,
       registrationCertificateNumber: parsed.data.registrationCertificateNumber || null,
       identityCertificateNumber: parsed.data.identityCertificateNumber || null,
+      greenBookNumber: parsed.data.greenBookNumber || null,
+      previousSchoolName: parsed.data.previousSchoolName || null,
+      transferCertificateNumber: parsed.data.transferCertificateNumber || null,
+      childCategoryId: parsed.data.childCategoryId || null,
       admittedOrJoinedOn: admittedOn,
       campusOrLocation: school.name,
       sourceSystem: "tsewa",
@@ -2510,6 +2579,8 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
     runtime.ORM.update(person)
       .set({
         status: "inactive",
+        withdrawnOn: parsed.data.effectiveOn,
+        withdrawalReason: parsed.data.note || enrollmentEndReason(nextStatus),
         updatedByUserId: context.userId,
         updatedAt: sql`CURRENT_TIMESTAMP`,
       })
@@ -2553,13 +2624,9 @@ async function correctEnrollmentEndDetails(
     parsedId.data,
   );
   if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
-  if (
-    enrollment.status !== "withdrawn" &&
-    enrollment.status !== "completed" &&
-    enrollment.status !== "graduated"
-  ) {
+  if (isOpenEnrollment(enrollment.status)) {
     return Response.json(
-      { error: "Only a withdrawal or completion record can be corrected here." },
+      { error: "Only an ended enrollment can be corrected here." },
       { status: 409 },
     );
   }
@@ -2573,7 +2640,12 @@ async function correctEnrollmentEndDetails(
     );
   }
 
-  const changeType = enrollment.status === "withdrawn" ? "withdrawn" : "completed";
+  const changeType =
+    enrollment.status === "withdrawn"
+      ? "withdrawn"
+      : enrollment.status === "transferred"
+        ? "transferred"
+        : "completed";
   const existingChange = await runtime.ORM.select({
     id: studentEnrollmentChange.id,
     effectiveOn: studentEnrollmentChange.effectiveOn,
@@ -2599,6 +2671,18 @@ async function correctEnrollmentEndDetails(
         eq(studentEnrollment.organizationId, context.organizationId),
       ),
     );
+  if (enrollment.academicSessionId === enrollment.latestSessionId) {
+    await runtime.ORM.update(person)
+      .set({
+        withdrawnOn: parsed.data.effectiveOn,
+        withdrawalReason: parsed.data.reason,
+        updatedByUserId: context.userId,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(eq(person.id, enrollment.personId), eq(person.organizationId, context.organizationId)),
+      );
+  }
 
   if (existingChange) {
     await runtime.ORM.update(studentEnrollmentChange)
@@ -2650,6 +2734,172 @@ async function correctEnrollmentEndDetails(
   );
 
   return Response.json({ ok: true });
+}
+
+async function correctEnrollmentDetails(request: Request, enrollmentId: string): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "school.enrollment.manage")) return forbidden();
+
+  const parsedId = enrollmentIdSchema.safeParse(enrollmentId);
+  if (!parsedId.success) {
+    return Response.json({ error: "Invalid enrollment ID." }, { status: 400 });
+  }
+  const parsed = enrollmentDetailsSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Choose a school and class." }, { status: 400 });
+  }
+
+  const runtime = getRuntimeEnv();
+  const enrollment = await readStudentEnrollment(
+    runtime.ORM,
+    context.organizationId,
+    parsedId.data,
+  );
+  if (!enrollment) return Response.json({ error: "Enrollment not found." }, { status: 404 });
+
+  const next = { ...parsed.data, rollNumber: parsed.data.rollNumber || null };
+  const [school, offering, house, linkedRecord] = await Promise.all([
+    runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+      .from(schoolMaster)
+      .where(
+        and(
+          eq(schoolMaster.id, next.schoolId),
+          eq(schoolMaster.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    runtime.ORM.select({
+      id: schoolClassOffering.id,
+      name: academicClassMaster.name,
+      level: academicClassMaster.level,
+      section: academicClassMaster.section,
+      title: academicClassMaster.title,
+    })
+      .from(schoolClassOffering)
+      .innerJoin(
+        academicClassMaster,
+        and(
+          eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+          eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(schoolClassOffering.organizationId, context.organizationId),
+          eq(schoolClassOffering.academicSessionId, enrollment.academicSessionId),
+          eq(schoolClassOffering.schoolId, next.schoolId),
+          eq(schoolClassOffering.academicClassId, next.academicClassId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    next.houseId
+      ? runtime.ORM.select({ id: houseMaster.id, name: houseMaster.name })
+          .from(houseMaster)
+          .where(
+            and(
+              eq(houseMaster.id, next.houseId),
+              eq(houseMaster.organizationId, context.organizationId),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    runtime.ORM.select({ id: studentEnrollment.sourceAcademicRecordId })
+      .from(studentEnrollment)
+      .where(
+        and(
+          eq(studentEnrollment.id, parsedId.data),
+          eq(studentEnrollment.organizationId, context.organizationId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0]?.id ?? null),
+  ]);
+  if (!school) return Response.json({ error: "Choose a school." }, { status: 400 });
+  if (!offering) {
+    return Response.json(
+      { error: `Choose a class this school offered in ${enrollment.sessionName}.` },
+      { status: 400 },
+    );
+  }
+  if (next.houseId && !house) return Response.json({ error: "Choose a house." }, { status: 400 });
+
+  const changedFields = (
+    [
+      ["schoolId", enrollment.schoolId, next.schoolId],
+      ["academicClassId", enrollment.academicClassId, next.academicClassId],
+      ["houseId", enrollment.houseId, next.houseId],
+      ["rollNumber", enrollment.rollNumber, next.rollNumber],
+    ] as const
+  )
+    .filter(([, before, after]) => before !== after)
+    .map(([field]) => field);
+  if (!changedFields.length) return Response.json({ ok: true, changedFields });
+
+  await runtime.ORM.batch([
+    runtime.ORM.update(studentEnrollment)
+      .set({
+        schoolId: next.schoolId,
+        academicClassId: next.academicClassId,
+        houseId: next.houseId,
+        schoolClassOfferingId: offering.id,
+        rollNumber: next.rollNumber,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(studentEnrollment.id, parsedId.data),
+          eq(studentEnrollment.organizationId, context.organizationId),
+        ),
+      ),
+    // The imported class record this enrollment came from must keep describing the
+    // same placement, or the old class reappears beside it in school history.
+    runtime.ORM.update(personAcademicRecord)
+      .set({
+        className: offering.name,
+        classLevel: offering.level,
+        classSection: offering.section,
+        classTitle: offering.title,
+        schoolName: school.name,
+        houseName: house?.name ?? null,
+        rollNumber: next.rollNumber,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(
+        and(
+          eq(personAcademicRecord.id, linkedRecord ?? "__no_record__"),
+          eq(personAcademicRecord.organizationId, context.organizationId),
+        ),
+      ),
+    auditInsert(
+      runtime.ORM,
+      context,
+      "student.enrollment_corrected",
+      "student_enrollment",
+      parsedId.data,
+      {
+        personId: enrollment.personId,
+        changedFields: changedFields.join(","),
+        previousSchoolId: enrollment.schoolId ?? "",
+        previousAcademicClassId: enrollment.academicClassId,
+        previousHouseId: enrollment.houseId ?? "",
+        previousRollNumber: enrollment.rollNumber ?? "",
+      },
+    ),
+  ]);
+
+  return Response.json({ ok: true, changedFields });
+}
+
+function enrollmentEndReason(status: StudentEnrollmentRecord["status"]): string {
+  if (status === "transferred") return "Transferred out";
+  if (status === "completed") return "Completed school";
+  return "Withdrawn";
 }
 
 function isOpenEnrollment(status: StudentEnrollmentRecord["status"]): boolean {
@@ -9616,6 +9866,9 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       previousSchoolName: person.previousSchoolName,
       transferCertificateNumber: person.transferCertificateNumber,
       childCategoryId: person.childCategoryId,
+      withdrawnOn: person.withdrawnOn,
+      withdrawalReason: person.withdrawalReason,
+      withdrawalRemarks: person.withdrawalRemarks,
       photoReferencePresent: sql<number>`case when ${person.photoAssetKey} is null then 0 else 1 end`,
       sourceSystem: person.sourceSystem,
       sourceTable: person.sourceTable,
@@ -9830,6 +10083,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
 
   const canEdit = hasPermission(context, "people.update");
   const canManageFiles = hasPermission(context, "people.files.manage");
+  const canManageEnrollments = hasPermission(context, "school.enrollment.manage");
   const uniqueRelationships = [
     ...new Map(relationships.map((item) => [item.personId, item])).values(),
   ]
@@ -9867,6 +10121,9 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       childCategories: childCategories
         .filter((category) => category.isActive || category.id === personRecord.childCategoryId)
         .map(({ id, name }) => ({ id, name })),
+      withdrawnOn: personRecord.withdrawnOn,
+      withdrawalReason: personRecord.withdrawalReason,
+      withdrawalRemarks: personRecord.withdrawalRemarks,
       photoReferencePresent: Boolean(personRecord.photoReferencePresent),
       sourceSystem: personRecord.sourceSystem,
       sourceTable: personRecord.sourceTable,
@@ -9907,8 +10164,10 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       })),
       schoolEnrollments: schoolEnrollments.map((enrollment) => ({
         ...enrollment,
+        canEditDetails: canManageEnrollments,
         canCorrectEndDetails:
-          canEdit && ["withdrawn", "completed", "graduated"].includes(enrollment.status),
+          canManageEnrollments &&
+          ["withdrawn", "completed", "graduated", "transferred"].includes(enrollment.status),
       })),
       family: familyProfile ?? null,
       relationships: uniqueRelationships,
@@ -9957,6 +10216,9 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     previousSchoolName: person.previousSchoolName,
     transferCertificateNumber: person.transferCertificateNumber,
     childCategoryId: person.childCategoryId,
+    withdrawnOn: person.withdrawnOn,
+    withdrawalReason: person.withdrawalReason,
+    withdrawalRemarks: person.withdrawalRemarks,
     sourceSystem: person.sourceSystem,
   })
     .from(person)
@@ -9986,7 +10248,14 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   // keep their Green Book number on the staff profile.
   const next = {
     ...parsed.data,
-    ...(current.kind === "staff" ? { greenBookNumber: current.greenBookNumber } : {}),
+    ...(current.kind === "staff"
+      ? {
+          greenBookNumber: current.greenBookNumber,
+          withdrawnOn: current.withdrawnOn,
+          withdrawalReason: current.withdrawalReason,
+          withdrawalRemarks: current.withdrawalRemarks,
+        }
+      : {}),
     ...(current.kind === "child"
       ? {}
       : {
@@ -10039,6 +10308,9 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
         next.transferCertificateNumber,
       ],
       ["childCategoryId", current.childCategoryId, next.childCategoryId],
+      ["withdrawnOn", current.withdrawnOn, next.withdrawnOn],
+      ["withdrawalReason", current.withdrawalReason, next.withdrawalReason],
+      ["withdrawalRemarks", current.withdrawalRemarks, next.withdrawalRemarks],
     ] as const
   )
     .filter(([, before, after]) => before !== after)
@@ -10066,6 +10338,9 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
           previousSchoolName: next.previousSchoolName,
           transferCertificateNumber: next.transferCertificateNumber,
           childCategoryId: next.childCategoryId,
+          withdrawnOn: next.withdrawnOn,
+          withdrawalReason: next.withdrawalReason,
+          withdrawalRemarks: next.withdrawalRemarks,
           updatedByUserId: context.userId,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
@@ -10085,6 +10360,77 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   }
 
   return Response.json({ personId: parsedId.data, changedFields });
+}
+
+async function updateAcademicRecord(
+  request: Request,
+  personId: string,
+  recordId: string,
+): Promise<Response> {
+  if (request.method !== "PATCH") return methodNotAllowed("PATCH");
+  if (!isSameOrigin(request)) return forbidden();
+
+  const parsedId = personIdSchema.safeParse(personId);
+  const parsedRecordId = personIdSchema.safeParse(recordId);
+  if (!parsedId.success || !parsedRecordId.success) {
+    return Response.json({ error: "Invalid class record." }, { status: 400 });
+  }
+  const parsed = academicRecordSchema.safeParse(await readJson(request));
+  if (!parsed.success) {
+    return Response.json({ error: "Check the class record and try again." }, { status: 400 });
+  }
+
+  const context = await getMembershipContext(request);
+  if (!context) return unauthorized();
+  if (!hasPermission(context, "people.update")) return forbidden();
+
+  const runtime = getRuntimeEnv();
+  const recordFilter = and(
+    eq(personAcademicRecord.id, parsedRecordId.data),
+    eq(personAcademicRecord.personId, parsedId.data),
+    eq(personAcademicRecord.organizationId, context.organizationId),
+  );
+  const current = await runtime.ORM.select({
+    academicSession: personAcademicRecord.academicSession,
+    className: personAcademicRecord.className,
+    classSection: personAcademicRecord.classSection,
+    schoolName: personAcademicRecord.schoolName,
+    houseName: personAcademicRecord.houseName,
+    rollNumber: personAcademicRecord.rollNumber,
+    result: personAcademicRecord.result,
+  })
+    .from(personAcademicRecord)
+    .where(recordFilter)
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!current) return Response.json({ error: "Class record not found." }, { status: 404 });
+
+  const next = parsed.data;
+  const changedFields = (Object.keys(next) as Array<keyof typeof next>).filter(
+    (field) => current[field] !== next[field],
+  );
+  if (!changedFields.length) return Response.json({ ok: true, changedFields });
+
+  await runtime.ORM.batch([
+    runtime.ORM.update(personAcademicRecord)
+      .set({
+        ...next,
+        // The stored title repeats the class name, so it follows a rename.
+        ...(current.className === next.className ? {} : { classTitle: null }),
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(recordFilter),
+    auditInsert(
+      runtime.ORM,
+      context,
+      "person.academic_record_updated",
+      "person_academic_record",
+      parsedRecordId.data,
+      { personId: parsedId.data, changedFields: changedFields.join(",") },
+    ),
+  ]);
+
+  return Response.json({ ok: true, changedFields });
 }
 
 async function addHomePlacement(request: Request, personId: string): Promise<Response> {

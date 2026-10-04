@@ -84,8 +84,10 @@ import { Route as ApiSchoolOperationsResultsSetupRouteImport } from './routes/ap
 import { Route as ApiSchoolOperationsResultsSummariesRouteImport } from './routes/api.school-operations.results.summaries'
 import { Route as ApiSchoolOperationsSchoolsSchoolIdRouteImport } from './routes/api.school-operations.schools.$schoolId'
 import { Route as ApiOrganizationInvitationsInvitationIdResendRouteImport } from './routes/api.organization.invitations.$invitationId.resend'
+import { Route as ApiPeoplePersonIdAcademicRecordsRecordIdRouteImport } from './routes/api.people.$personId.academic-records.$recordId'
 import { Route as ApiPeoplePersonIdFilesFileIdRouteImport } from './routes/api.people.$personId.files.$fileId'
 import { Route as ApiPeoplePersonIdSiblingsRelatedPersonIdRouteImport } from './routes/api.people.$personId.siblings.$relatedPersonId'
+import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId.details'
 import { Route as ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport } from './routes/api.school-operations.enrollments.$enrollmentId.end-details'
 import { Route as ApiSchoolOperationsResultsMarkSheetIdStatusRouteImport } from './routes/api.school-operations.results.$markSheetId.status'
 import { Route as ApiSchoolOperationsSchoolsSchoolIdAssignmentsRouteImport } from './routes/api.school-operations.schools.$schoolId.assignments'
@@ -495,6 +497,12 @@ const ApiOrganizationInvitationsInvitationIdResendRoute =
     path: '/resend',
     getParentRoute: () => ApiOrganizationInvitationsInvitationIdRoute,
   } as any)
+const ApiPeoplePersonIdAcademicRecordsRecordIdRoute =
+  ApiPeoplePersonIdAcademicRecordsRecordIdRouteImport.update({
+    id: '/academic-records/$recordId',
+    path: '/academic-records/$recordId',
+    getParentRoute: () => ApiPeoplePersonIdRoute,
+  } as any)
 const ApiPeoplePersonIdFilesFileIdRoute =
   ApiPeoplePersonIdFilesFileIdRouteImport.update({
     id: '/$fileId',
@@ -506,6 +514,12 @@ const ApiPeoplePersonIdSiblingsRelatedPersonIdRoute =
     id: '/$relatedPersonId',
     path: '/$relatedPersonId',
     getParentRoute: () => ApiPeoplePersonIdSiblingsRoute,
+  } as any)
+const ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute =
+  ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRouteImport.update({
+    id: '/details',
+    path: '/details',
+    getParentRoute: () => ApiSchoolOperationsEnrollmentsEnrollmentIdRoute,
   } as any)
 const ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute =
   ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRouteImport.update({
@@ -602,8 +616,10 @@ export interface FileRoutesByFullPath {
   '/api/school-operations/results/summaries': typeof ApiSchoolOperationsResultsSummariesRoute
   '/api/school-operations/schools/$schoolId': typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
   '/api/organization/invitations/$invitationId/resend': typeof ApiOrganizationInvitationsInvitationIdResendRoute
+  '/api/people/$personId/academic-records/$recordId': typeof ApiPeoplePersonIdAcademicRecordsRecordIdRoute
   '/api/people/$personId/files/$fileId': typeof ApiPeoplePersonIdFilesFileIdRoute
   '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+  '/api/school-operations/enrollments/$enrollmentId/details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
   '/api/school-operations/results/$markSheetId/status': typeof ApiSchoolOperationsResultsMarkSheetIdStatusRoute
   '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
@@ -684,8 +700,10 @@ export interface FileRoutesByTo {
   '/api/school-operations/results/summaries': typeof ApiSchoolOperationsResultsSummariesRoute
   '/api/school-operations/schools/$schoolId': typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
   '/api/organization/invitations/$invitationId/resend': typeof ApiOrganizationInvitationsInvitationIdResendRoute
+  '/api/people/$personId/academic-records/$recordId': typeof ApiPeoplePersonIdAcademicRecordsRecordIdRoute
   '/api/people/$personId/files/$fileId': typeof ApiPeoplePersonIdFilesFileIdRoute
   '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+  '/api/school-operations/enrollments/$enrollmentId/details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
   '/api/school-operations/results/$markSheetId/status': typeof ApiSchoolOperationsResultsMarkSheetIdStatusRoute
   '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
@@ -767,8 +785,10 @@ export interface FileRoutesById {
   '/api/school-operations/results/summaries': typeof ApiSchoolOperationsResultsSummariesRoute
   '/api/school-operations/schools/$schoolId': typeof ApiSchoolOperationsSchoolsSchoolIdRouteWithChildren
   '/api/organization/invitations/$invitationId/resend': typeof ApiOrganizationInvitationsInvitationIdResendRoute
+  '/api/people/$personId/academic-records/$recordId': typeof ApiPeoplePersonIdAcademicRecordsRecordIdRoute
   '/api/people/$personId/files/$fileId': typeof ApiPeoplePersonIdFilesFileIdRoute
   '/api/people/$personId/siblings/$relatedPersonId': typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRoute
+  '/api/school-operations/enrollments/$enrollmentId/details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   '/api/school-operations/enrollments/$enrollmentId/end-details': typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
   '/api/school-operations/results/$markSheetId/status': typeof ApiSchoolOperationsResultsMarkSheetIdStatusRoute
   '/api/school-operations/schools/$schoolId/assignments': typeof ApiSchoolOperationsSchoolsSchoolIdAssignmentsRoute
@@ -851,8 +871,10 @@ export interface FileRouteTypes {
     | '/api/school-operations/results/summaries'
     | '/api/school-operations/schools/$schoolId'
     | '/api/organization/invitations/$invitationId/resend'
+    | '/api/people/$personId/academic-records/$recordId'
     | '/api/people/$personId/files/$fileId'
     | '/api/people/$personId/siblings/$relatedPersonId'
+    | '/api/school-operations/enrollments/$enrollmentId/details'
     | '/api/school-operations/enrollments/$enrollmentId/end-details'
     | '/api/school-operations/results/$markSheetId/status'
     | '/api/school-operations/schools/$schoolId/assignments'
@@ -933,8 +955,10 @@ export interface FileRouteTypes {
     | '/api/school-operations/results/summaries'
     | '/api/school-operations/schools/$schoolId'
     | '/api/organization/invitations/$invitationId/resend'
+    | '/api/people/$personId/academic-records/$recordId'
     | '/api/people/$personId/files/$fileId'
     | '/api/people/$personId/siblings/$relatedPersonId'
+    | '/api/school-operations/enrollments/$enrollmentId/details'
     | '/api/school-operations/enrollments/$enrollmentId/end-details'
     | '/api/school-operations/results/$markSheetId/status'
     | '/api/school-operations/schools/$schoolId/assignments'
@@ -1015,8 +1039,10 @@ export interface FileRouteTypes {
     | '/api/school-operations/results/summaries'
     | '/api/school-operations/schools/$schoolId'
     | '/api/organization/invitations/$invitationId/resend'
+    | '/api/people/$personId/academic-records/$recordId'
     | '/api/people/$personId/files/$fileId'
     | '/api/people/$personId/siblings/$relatedPersonId'
+    | '/api/school-operations/enrollments/$enrollmentId/details'
     | '/api/school-operations/enrollments/$enrollmentId/end-details'
     | '/api/school-operations/results/$markSheetId/status'
     | '/api/school-operations/schools/$schoolId/assignments'
@@ -1598,6 +1624,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrganizationInvitationsInvitationIdResendRouteImport
       parentRoute: typeof ApiOrganizationInvitationsInvitationIdRoute
     }
+    '/api/people/$personId/academic-records/$recordId': {
+      id: '/api/people/$personId/academic-records/$recordId'
+      path: '/academic-records/$recordId'
+      fullPath: '/api/people/$personId/academic-records/$recordId'
+      preLoaderRoute: typeof ApiPeoplePersonIdAcademicRecordsRecordIdRouteImport
+      parentRoute: typeof ApiPeoplePersonIdRoute
+    }
     '/api/people/$personId/files/$fileId': {
       id: '/api/people/$personId/files/$fileId'
       path: '/$fileId'
@@ -1611,6 +1644,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/people/$personId/siblings/$relatedPersonId'
       preLoaderRoute: typeof ApiPeoplePersonIdSiblingsRelatedPersonIdRouteImport
       parentRoute: typeof ApiPeoplePersonIdSiblingsRoute
+    }
+    '/api/school-operations/enrollments/$enrollmentId/details': {
+      id: '/api/school-operations/enrollments/$enrollmentId/details'
+      path: '/details'
+      fullPath: '/api/school-operations/enrollments/$enrollmentId/details'
+      preLoaderRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRouteImport
+      parentRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdRoute
     }
     '/api/school-operations/enrollments/$enrollmentId/end-details': {
       id: '/api/school-operations/enrollments/$enrollmentId/end-details'
@@ -1738,6 +1778,7 @@ interface ApiPeoplePersonIdRouteChildren {
   ApiPeoplePersonIdPlacementsRoute: typeof ApiPeoplePersonIdPlacementsRoute
   ApiPeoplePersonIdSiblingOptionsRoute: typeof ApiPeoplePersonIdSiblingOptionsRoute
   ApiPeoplePersonIdSiblingsRoute: typeof ApiPeoplePersonIdSiblingsRouteWithChildren
+  ApiPeoplePersonIdAcademicRecordsRecordIdRoute: typeof ApiPeoplePersonIdAcademicRecordsRecordIdRoute
 }
 
 const ApiPeoplePersonIdRouteChildren: ApiPeoplePersonIdRouteChildren = {
@@ -1746,6 +1787,8 @@ const ApiPeoplePersonIdRouteChildren: ApiPeoplePersonIdRouteChildren = {
   ApiPeoplePersonIdPlacementsRoute: ApiPeoplePersonIdPlacementsRoute,
   ApiPeoplePersonIdSiblingOptionsRoute: ApiPeoplePersonIdSiblingOptionsRoute,
   ApiPeoplePersonIdSiblingsRoute: ApiPeoplePersonIdSiblingsRouteWithChildren,
+  ApiPeoplePersonIdAcademicRecordsRecordIdRoute:
+    ApiPeoplePersonIdAcademicRecordsRecordIdRoute,
 }
 
 const ApiPeoplePersonIdRouteWithChildren =
@@ -1907,11 +1950,14 @@ const ApiSchoolOperationsSchoolsRouteWithChildren =
   )
 
 interface ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren {
+  ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute
   ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute: typeof ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute
 }
 
 const ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren: ApiSchoolOperationsEnrollmentsEnrollmentIdRouteChildren =
   {
+    ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute:
+      ApiSchoolOperationsEnrollmentsEnrollmentIdDetailsRoute,
     ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute:
       ApiSchoolOperationsEnrollmentsEnrollmentIdEndDetailsRoute,
   }

@@ -392,6 +392,9 @@ export const person = sqliteTable(
     childCategoryId: text("child_category_id").references(() => childCategory.id, {
       onDelete: "set null",
     }),
+    withdrawnOn: text("withdrawn_on"),
+    withdrawalReason: text("withdrawal_reason"),
+    withdrawalRemarks: text("withdrawal_remarks"),
     photoAssetKey: text("photo_asset_key"),
     sourceSystem: text("source_system").notNull(),
     sourceTable: text("source_table").notNull(),

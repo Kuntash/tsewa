@@ -15,11 +15,12 @@ import {
   stableUuid,
 } from "./lib/person-files.mjs";
 
-// Backfills the student identity details added by migration 0034 from the legacy
-// beneficiary table. Only empty target values are filled, so details already
-// corrected in Tsewa are never overwritten and the script is safe to re-run.
+// Backfills the student identity details added by migration 0034 and the
+// withdrawal details added by migration 0035 from the legacy beneficiary table.
+// Only empty target values are filled, so details already corrected in Tsewa are
+// never overwritten and the script is safe to re-run.
 
-const PLACEHOLDERS = new Set(["0", "-", "nil", "na", "n/a", "none"]);
+const PLACEHOLDERS = new Set(["0", "-", "nil", "na", "n/a", "none", "--none--"]);
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const webRoot = resolve(repositoryRoot, "apps/web");
 // apps/web is its own pnpm workspace for one-click deploys, so `pnpm exec` there
@@ -63,6 +64,8 @@ try {
       previousSchools: data.people.filter((item) => item.previousSchoolName).length,
       transferCertificateNumbers: data.people.filter((item) => item.transferCertificateNumber)
         .length,
+      withdrawnDates: data.people.filter((item) => item.withdrawnOn).length,
+      withdrawalReasons: data.people.filter((item) => item.withdrawalReason).length,
       temporaryPersonalDataRemoved: true,
     }),
   );
@@ -82,9 +85,16 @@ function readData(connection) {
     }));
   const categoryIds = new Map(categories.map((item) => [item.sourceId, item.id]));
   let unknownCategoryCount = 0;
+  const withdrawalReasons = new Map(
+    connection
+      .prepare("SELECT id,name FROM withdrawal_reason")
+      .all()
+      .map((row) => [String(row.id), recordedText(row.name)]),
+  );
   const people = connection
     .prepare(
-      `SELECT id,type,green_book_no,previous_school_name,prvs_school_tc_no,child_category_id
+      `SELECT id,type,status,green_book_no,previous_school_name,prvs_school_tc_no,
+              child_category_id,withdrawal_date,withdrawal_reason_id,withdrawal_remarks
        FROM beneficiary ORDER BY id`,
     )
     .all()
@@ -99,6 +109,14 @@ function readData(connection) {
         previousSchoolName: isChild ? recordedText(row.previous_school_name) : null,
         transferCertificateNumber: isChild ? recordedText(row.prvs_school_tc_no) : null,
         childCategoryId,
+        // Active people carry stale withdrawal values in the legacy source.
+        ...(row.status === 1
+          ? { withdrawnOn: null, withdrawalReason: null, withdrawalRemarks: null }
+          : {
+              withdrawnOn: recordedDate(row.withdrawal_date),
+              withdrawalReason: withdrawalReasons.get(String(row.withdrawal_reason_id)) ?? null,
+              withdrawalRemarks: recordedText(row.withdrawal_remarks),
+            }),
       };
     });
   return { categories, people, unknownCategoryCount };
@@ -150,14 +168,24 @@ function buildSql(data, importedAt) {
   }
 
   for (const item of data.people) {
-    if (!item.greenBookNumber && !item.previousSchoolName && !item.transferCertificateNumber) {
+    if (
+      !item.greenBookNumber &&
+      !item.previousSchoolName &&
+      !item.transferCertificateNumber &&
+      !item.withdrawnOn &&
+      !item.withdrawalReason &&
+      !item.withdrawalRemarks
+    ) {
       continue;
     }
     statements.push(
       `UPDATE person
        SET green_book_number=COALESCE(green_book_number,${sqlLiteral(item.greenBookNumber)}),
            previous_school_name=COALESCE(previous_school_name,${sqlLiteral(item.previousSchoolName)}),
-           transfer_certificate_number=COALESCE(transfer_certificate_number,${sqlLiteral(item.transferCertificateNumber)})
+           transfer_certificate_number=COALESCE(transfer_certificate_number,${sqlLiteral(item.transferCertificateNumber)}),
+           withdrawn_on=COALESCE(withdrawn_on,${sqlLiteral(item.withdrawnOn)}),
+           withdrawal_reason=COALESCE(withdrawal_reason,${sqlLiteral(item.withdrawalReason)}),
+           withdrawal_remarks=COALESCE(withdrawal_remarks,${sqlLiteral(item.withdrawalRemarks)})
        WHERE organization_id=${organizationId.sql} AND id=${sqlLiteral(item.id)}`,
     );
   }
@@ -189,6 +217,12 @@ function safeError(result) {
   return String(result.stderr || result.stdout || "unknown error")
     .replaceAll(/[\w.+-]+@[\w.-]+/g, "[email]")
     .slice(0, 1_000);
+}
+
+function recordedDate(value) {
+  const date = optionalText(value)?.slice(0, 10) ?? "";
+  // The legacy system stored an empty date as 30 December 1899.
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= "1900-01-01" ? date : null;
 }
 
 function recordedText(value) {
