@@ -333,6 +333,29 @@ export const personImportBatch = sqliteTable(
   (table) => [index("person_import_batch_org_idx").on(table.organizationId, table.createdAt)],
 );
 
+export const withdrawalReasonOption = sqliteTable(
+  "withdrawal_reason",
+  {
+    id: text().primaryKey().notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    isActive: integer("is_active").default(1).notNull(),
+    createdAt: text("created_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: text("updated_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("withdrawal_reason_name_idx").on(table.organizationId, table.name),
+    index("withdrawal_reason_order_idx").on(table.organizationId, table.isActive, table.sortOrder),
+  ],
+);
+
 export const childCategory = sqliteTable(
   "child_category",
   {
@@ -387,6 +410,7 @@ export const person = sqliteTable(
     registrationCertificateNumber: text("registration_certificate_number"),
     identityCertificateNumber: text("identity_certificate_number"),
     greenBookNumber: text("green_book_number"),
+    aadhaarNumber: text("aadhaar_number"),
     previousSchoolName: text("previous_school_name"),
     transferCertificateNumber: text("transfer_certificate_number"),
     childCategoryId: text("child_category_id").references(() => childCategory.id, {

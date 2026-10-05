@@ -77,7 +77,12 @@ type Change = {
 
 type EnrollmentResponse = {
   enrollment: Enrollment;
-  options: { schools: Option[]; classes: Option[]; houses: Option[] };
+  options: {
+    schools: Option[];
+    classes: Option[];
+    houses: Option[];
+    withdrawalReasons: string[];
+  };
   changes: Change[];
 };
 
@@ -208,6 +213,8 @@ export function EnrollmentChangeSheet({
   function chooseAction(value: Action) {
     setAction(value);
     setError("");
+    // A withdrawal reason may be picked from a list, so typed text never carries over.
+    if (value === "withdrawn" || action === "withdrawn") setNote("");
     if (value === "internal_transfer" && data) {
       chooseSchool(
         data.options.schools.find((school) => school.id !== data.enrollment.schoolId)?.id ?? "",
@@ -228,6 +235,10 @@ export function EnrollmentChangeSheet({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (action === "withdrawn" && !note.trim()) {
+      setError("Choose a withdrawal reason.");
+      return;
+    }
     // Ending an enrolment marks the student inactive, so it is confirmed first.
     if (keepsStudentEnrolled) void save();
     else setConfirming("end");
@@ -464,20 +475,35 @@ export function EnrollmentChangeSheet({
                           ? "Completion reason"
                           : "Note (optional)"}
                   </Label>
-                  <Input
-                    id="change-note"
-                    maxLength={500}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder={
-                      action === "transferred_out"
-                        ? "Example: Transferred to ABC School"
-                        : action === "withdrawn" || action === "completed"
-                          ? "Enter the reason"
-                          : "Add a short note"
-                    }
-                    required={action === "withdrawn" || action === "completed"}
-                    value={note}
-                  />
+                  {action === "withdrawn" && data.options.withdrawalReasons.length ? (
+                    <Select onValueChange={setNote} required value={note}>
+                      <SelectTrigger className="w-full" id="change-note">
+                        <SelectValue placeholder="Choose a reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data.options.withdrawalReasons.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="change-note"
+                      maxLength={500}
+                      onChange={(event) => setNote(event.target.value)}
+                      placeholder={
+                        action === "transferred_out"
+                          ? "Example: Transferred to ABC School"
+                          : action === "withdrawn" || action === "completed"
+                            ? "Enter the reason"
+                            : "Add a short note"
+                      }
+                      required={action === "withdrawn" || action === "completed"}
+                      value={note}
+                    />
+                  )}
                 </div>
 
                 {error ? (

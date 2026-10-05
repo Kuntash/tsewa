@@ -176,7 +176,19 @@
 
 @page person-profile {
   size: A4 portrait;
-  margin: 12mm;
+  margin: 12mm 13mm 14mm;
+
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: "Inter Variable", sans-serif;
+    font-size: 7.5pt;
+    color: #7b8982;
+  }
+}
+
+/* The paper layout of a profile only exists on paper. */
+.person-profile-paper {
+  display: none;
 }
 
 @page report-card {
@@ -202,6 +214,12 @@
     box-shadow: none !important;
     transform: none !important;
     animation: none !important;
+  }
+
+  /* Naming the page on the body as well keeps a blank default page from being
+     printed ahead of the profile. */
+  body:has(.person-profile-print) {
+    page: person-profile;
   }
 
   .person-profile-print {
@@ -246,30 +264,249 @@
     visibility: visible;
   }
 
-  .person-profile-print > div:first-child {
-    background: none !important;
-  }
-
-  .person-profile-print button,
-  .person-profile-print a[download] {
+  /* The side panel's own layout is for the screen; paper gets the compact sheet. */
+  .person-profile-screen,
+  .person-profile-portal:has(.person-profile-print) > :not(.person-profile-print) {
     display: none !important;
   }
 
-  .person-profile-scroll {
-    display: block !important;
-    overflow: visible !important;
+  .person-profile-paper {
+    display: block;
+    font-family: "Inter Variable", sans-serif;
+    font-size: 8.5pt;
+    line-height: 1.4;
+    color: #17251e;
   }
 
-  /* Keep a card or a history entry together, but let long sections flow across pages. */
-  .person-profile-print li,
-  .person-profile-print .rounded-2xl,
-  .person-profile-print .rounded-xl {
+  .ppp-masthead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8mm;
+    padding-bottom: 3mm;
+    border-bottom: 1.5pt solid #1f6b4f;
+  }
+
+  .ppp-eyebrow {
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #1f6b4f;
+  }
+
+  .ppp-organization {
+    margin-top: 0.8mm;
+    font-size: 13pt;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .ppp-printed {
+    font-size: 7.5pt;
+    color: #5b6a63;
+    white-space: nowrap;
+  }
+
+  .ppp-hero {
+    display: flex;
+    gap: 6mm;
+    margin-top: 5mm;
+  }
+
+  .ppp-photo {
+    width: 27mm;
+    height: 34mm;
+    flex-shrink: 0;
+    object-fit: cover;
+    border: 0.5pt solid #d5dedb;
+    border-radius: 2mm;
+  }
+
+  .ppp-photo-empty {
+    display: grid;
+    place-items: center;
+    font-size: 7pt;
+    color: #8a9790;
+    background: #f1f5f3;
+  }
+
+  .ppp-hero-body {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .ppp-name-row {
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    margin-bottom: 3.5mm;
+  }
+
+  .ppp-name {
+    font-size: 19pt;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+  }
+
+  .ppp-status {
+    padding: 0.6mm 2.4mm;
+    font-size: 7pt;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5b6a63;
+    border: 0.5pt solid #c3cfca;
+    border-radius: 99mm;
+  }
+
+  .ppp-status-active {
+    color: #1f6b4f;
+    background: #e2efe8;
+    border-color: #b9d6c8;
+  }
+
+  .ppp-grid {
+    display: grid;
+    gap: 2.6mm 5mm;
+  }
+
+  .ppp-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ppp-span-2 {
+    grid-column: span 2;
+  }
+
+  .ppp-label {
+    font-size: 6.5pt;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #6f7d76;
+  }
+
+  .ppp-value {
+    margin-top: 0.4mm;
+    font-size: 9pt;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .ppp-mono {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 8.5pt;
+  }
+
+  .ppp-empty {
+    font-weight: 400;
+    color: #a6b1ac;
+  }
+
+  .ppp-detail {
+    margin-top: 0.4mm;
+    font-size: 8pt;
+    color: #4d5b54;
+    overflow-wrap: anywhere;
+  }
+
+  .ppp-section {
+    margin-top: 5.5mm;
+  }
+
+  .ppp-section-title {
+    margin-bottom: 2.8mm;
+    padding-bottom: 1.2mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #1f6b4f;
+    border-bottom: 0.5pt solid #d5dedb;
+    break-after: avoid;
+  }
+
+  .ppp-guardians {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm;
+    margin-top: 3.5mm;
+  }
+
+  .ppp-guardian {
+    padding: 2.4mm 3mm;
+    background: #f5f8f6;
+    border-radius: 1.5mm;
     break-inside: avoid;
   }
 
-  .person-profile-print h3,
-  .person-profile-print h4 {
-    break-after: avoid;
+  .ppp-inline-list {
+    display: flex;
+    align-items: baseline;
+    gap: 4mm;
+    margin-top: 3.5mm;
+    font-size: 8.5pt;
+  }
+
+  .ppp-inline-list .ppp-label {
+    flex-shrink: 0;
+  }
+
+  .ppp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+
+  .ppp-table thead {
+    display: table-header-group;
+  }
+
+  .ppp-table th {
+    padding: 1.3mm 2mm;
+    font-size: 6.5pt;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-align: left;
+    text-transform: uppercase;
+    color: #55645c;
+    background: #eef3f0;
+  }
+
+  .ppp-table td {
+    padding: 1.3mm 2mm;
+    vertical-align: top;
+    border-bottom: 0.5pt solid #e3e9e6;
+  }
+
+  .ppp-table tr {
+    break-inside: avoid;
+  }
+
+  .ppp-cell-detail {
+    display: block;
+    margin-top: 0.2mm;
+    font-size: 7pt;
+    color: #6f7d76;
+    white-space: normal;
+  }
+
+  .ppp-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 6mm;
+    align-items: start;
+  }
+
+  .ppp-nowrap {
+    white-space: nowrap;
+  }
+
+  .ppp-documents {
+    font-size: 8pt;
+    color: #3c4a43;
   }
 
   .reports-no-print {

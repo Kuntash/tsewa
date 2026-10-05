@@ -103,6 +103,7 @@ export function AdmissionSheet({
         registrationCertificateNumber: data.get("registrationCertificateNumber") || undefined,
         identityCertificateNumber: data.get("identityCertificateNumber") || undefined,
         greenBookNumber: data.get("greenBookNumber") || undefined,
+        aadhaarNumber: data.get("aadhaarNumber") || undefined,
         previousSchoolName: data.get("previousSchoolName") || undefined,
         transferCertificateNumber: data.get("transferCertificateNumber") || undefined,
         childCategoryId: childCategoryId === "none" ? undefined : childCategoryId,
@@ -203,6 +204,11 @@ export function AdmissionSheet({
                 label="Green Book number (optional)"
                 name="greenBookNumber"
                 placeholder="Green Book number"
+              />
+              <Field
+                label="Aadhaar card number (optional)"
+                name="aadhaarNumber"
+                placeholder="Aadhaar card number"
               />
               <Field
                 label="Previous school (optional)"

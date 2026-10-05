@@ -88,6 +88,7 @@ import {
   studentMark,
   user,
   userPreference,
+  withdrawalReasonOption,
 } from "@/db/schema";
 
 import { groupCatalog, permissionsForGroup, visibleAccessGroups } from "@/lib/access-control";
@@ -370,6 +371,7 @@ const admissionSchema = z.object({
   registrationCertificateNumber: z.string().trim().max(100).optional(),
   identityCertificateNumber: z.string().trim().max(100).optional(),
   greenBookNumber: z.string().trim().max(100).optional(),
+  aadhaarNumber: z.string().trim().max(100).optional(),
   previousSchoolName: z.string().trim().max(160).optional(),
   transferCertificateNumber: z.string().trim().max(100).optional(),
   childCategoryId: z.string().trim().max(100).optional(),
@@ -863,6 +865,7 @@ const personCoreDetailsSchema = z.object({
   registrationCertificateNumber: nullablePersonText(100),
   identityCertificateNumber: nullablePersonText(100),
   greenBookNumber: nullablePersonText(100),
+  aadhaarNumber: nullablePersonText(100),
   previousSchoolName: nullablePersonText(160),
   transferCertificateNumber: nullablePersonText(100),
   childCategoryId: nullablePersonText(100),
@@ -2227,6 +2230,7 @@ async function createStudentAdmission(request: Request): Promise<Response> {
       registrationCertificateNumber: parsed.data.registrationCertificateNumber || null,
       identityCertificateNumber: parsed.data.identityCertificateNumber || null,
       greenBookNumber: parsed.data.greenBookNumber || null,
+      aadhaarNumber: parsed.data.aadhaarNumber || null,
       previousSchoolName: parsed.data.previousSchoolName || null,
       transferCertificateNumber: parsed.data.transferCertificateNumber || null,
       childCategoryId: parsed.data.childCategoryId || null,
@@ -2305,7 +2309,7 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
   const fromHouse = alias(houseMaster, "from_house");
   const toHouse = alias(houseMaster, "to_house");
   const actor = alias(user, "actor");
-  const [schools, classes, houses, changes] = await Promise.all([
+  const [schools, classes, houses, changes, withdrawalReasons] = await Promise.all([
     runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
       .from(schoolMaster)
       .where(
@@ -2402,6 +2406,7 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
         ),
       )
       .orderBy(desc(studentEnrollmentChange.effectiveOn), desc(studentEnrollmentChange.createdAt)),
+    readWithdrawalReasons(runtime.ORM, context.organizationId),
   ]);
 
   const classOptions = [...classes];
@@ -2437,6 +2442,7 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
       schools,
       classes: classOptions,
       houses: houseOptions,
+      withdrawalReasons,
     },
     changes,
   });
@@ -3103,6 +3109,28 @@ function canReopenEnrollment(enrollment: StudentEnrollmentRecord): boolean {
     enrollment.personStatus === "inactive" &&
     enrollment.academicSessionId === enrollment.latestSessionId
   );
+}
+
+// The organization's own reasons, in the order it keeps them. Empty when it has
+// not set up a list.
+async function readWithdrawalReasons(
+  database: Database,
+  organizationId: string,
+): Promise<string[]> {
+  const rows = await database
+    .select({ name: withdrawalReasonOption.name })
+    .from(withdrawalReasonOption)
+    .where(
+      and(
+        eq(withdrawalReasonOption.organizationId, organizationId),
+        eq(withdrawalReasonOption.isActive, 1),
+      ),
+    )
+    .orderBy(
+      asc(withdrawalReasonOption.sortOrder),
+      asc(sql`lower(${withdrawalReasonOption.name})`),
+    );
+  return rows.map((row) => row.name);
 }
 
 function enrollmentEndReason(status: StudentEnrollmentRecord["status"]): string {
@@ -10127,6 +10155,8 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
     relationships,
     files,
     childCategories,
+    organizationRows,
+    withdrawalReasons,
   ] = await Promise.all([
     runtime.ORM.select({
       id: person.id,
@@ -10144,6 +10174,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       registrationCertificateNumber: person.registrationCertificateNumber,
       identityCertificateNumber: person.identityCertificateNumber,
       greenBookNumber: person.greenBookNumber,
+      aadhaarNumber: person.aadhaarNumber,
       previousSchoolName: person.previousSchoolName,
       transferCertificateNumber: person.transferCertificateNumber,
       childCategoryId: person.childCategoryId,
@@ -10356,6 +10387,11 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       .from(childCategory)
       .where(eq(childCategory.organizationId, context.organizationId))
       .orderBy(asc(sql`lower(${childCategory.name})`)),
+    runtime.ORM.select({ name: organization.name })
+      .from(organization)
+      .where(eq(organization.id, context.organizationId))
+      .limit(1),
+    readWithdrawalReasons(runtime.ORM, context.organizationId),
   ]);
   const personRecord = personRows[0] ?? null;
   const familyProfile = familyProfileRows[0] ?? null;
@@ -10381,6 +10417,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
   return Response.json({
     person: {
       id: personRecord.id,
+      organizationName: organizationRows[0]?.name ?? "School",
       kind: personRecord.kind,
       status: personRecord.status,
       identifierKind: personRecord.identifierKind,
@@ -10395,6 +10432,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       registrationCertificateNumber: personRecord.registrationCertificateNumber,
       identityCertificateNumber: personRecord.identityCertificateNumber,
       greenBookNumber: personRecord.greenBookNumber,
+      aadhaarNumber: personRecord.aadhaarNumber,
       previousSchoolName: personRecord.previousSchoolName,
       transferCertificateNumber: personRecord.transferCertificateNumber,
       childCategoryId: personRecord.childCategoryId,
@@ -10405,6 +10443,7 @@ async function getPersonProfile(request: Request, personId: string): Promise<Res
       withdrawnOn: personRecord.withdrawnOn,
       withdrawalReason: personRecord.withdrawalReason,
       withdrawalRemarks: personRecord.withdrawalRemarks,
+      withdrawalReasons,
       photoReferencePresent: Boolean(personRecord.photoReferencePresent),
       sourceSystem: personRecord.sourceSystem,
       sourceTable: personRecord.sourceTable,
@@ -10494,6 +10533,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     registrationCertificateNumber: person.registrationCertificateNumber,
     identityCertificateNumber: person.identityCertificateNumber,
     greenBookNumber: person.greenBookNumber,
+    aadhaarNumber: person.aadhaarNumber,
     previousSchoolName: person.previousSchoolName,
     transferCertificateNumber: person.transferCertificateNumber,
     childCategoryId: person.childCategoryId,
@@ -10532,6 +10572,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     ...(current.kind === "staff"
       ? {
           greenBookNumber: current.greenBookNumber,
+          aadhaarNumber: current.aadhaarNumber,
           withdrawnOn: current.withdrawnOn,
           withdrawalReason: current.withdrawalReason,
           withdrawalRemarks: current.withdrawalRemarks,
@@ -10582,6 +10623,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
         next.identityCertificateNumber,
       ],
       ["greenBookNumber", current.greenBookNumber, next.greenBookNumber],
+      ["aadhaarNumber", current.aadhaarNumber, next.aadhaarNumber],
       ["previousSchoolName", current.previousSchoolName, next.previousSchoolName],
       [
         "transferCertificateNumber",
@@ -10616,6 +10658,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
           registrationCertificateNumber: next.registrationCertificateNumber,
           identityCertificateNumber: next.identityCertificateNumber,
           greenBookNumber: next.greenBookNumber,
+          aadhaarNumber: next.aadhaarNumber,
           previousSchoolName: next.previousSchoolName,
           transferCertificateNumber: next.transferCertificateNumber,
           childCategoryId: next.childCategoryId,

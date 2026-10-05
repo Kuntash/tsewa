@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1791146621.8918815,
-    "ast_hash": "9b8c07de1c78839aff5c1c93a81458cf",
+    "mtime": 1791183156.470284,
+    "ast_hash": "702835d0c3b0048db65286c6584db3fe",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/admission-sheet.tsx": {
-    "mtime": 1791137052.6831355,
-    "ast_hash": "7d22f578837fcc6ae6865dece250b6a4",
+    "mtime": 1791182888.5249505,
+    "ast_hash": "2491925c4090e0ab5b7a15e2f5fd9f7b",
     "semantic_hash": ""
   },
   "docs/practice-school.md": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1791146477.7773058,
-    "ast_hash": "f140e1d041fe615a29c11b902bf07a3c",
+    "mtime": 1791183148.7396317,
+    "ast_hash": "be3c727be6ff168201dfb121b74093c2",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/db/schema.ts": {
-    "mtime": 1791136081.2926795,
-    "ast_hash": "69bb4bf9b77ed7f4bb8f80e932ed7471",
+    "mtime": 1791183117.3841221,
+    "ast_hash": "01b3e6928eaa2f352ba73f7e2636379a",
     "semantic_hash": ""
   },
   "apps/web/src/lib/access-control.ts": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791146489.2184355,
-    "ast_hash": "3dbb2b8a7839f22be2541972ad1be60a",
+    "mtime": 1791183149.4046903,
+    "ast_hash": "dfef5e43be9cee08d4429c172e27e0b1",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1517,6 +1517,26 @@
   "apps/web/src/routes/api.school-operations.enrollments.$enrollmentId.reopen.ts": {
     "mtime": 1791144142.840879,
     "ast_hash": "163fad1bbc910dd15b6f440a24ac1b5e",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0036_aadhaar_number.sql": {
+    "mtime": 1791182865.203347,
+    "ast_hash": "4ae49d3f031cfcef40fc789c13e1f7a7",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0037_withdrawal_reasons.sql": {
+    "mtime": 1791183117.3616168,
+    "ast_hash": "88c82211707cec36e00947cc3f5e2019",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/person-profile-print.tsx": {
+    "mtime": 1791182888.52583,
+    "ast_hash": "11ff77394743dab322ddb58dcca8025e",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/withdrawal-reasons.ts": {
+    "mtime": 1791183117.363463,
+    "ast_hash": "e6048a65016911cdc46f5e755668dc77",
     "semantic_hash": ""
   }
 }

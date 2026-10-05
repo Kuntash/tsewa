@@ -41,6 +41,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { PersonFamilyEditor } from "@/components/person-family-editor";
+import { PersonProfilePrint } from "@/components/person-profile-print";
+import { withdrawalReasonOptions } from "@/lib/withdrawal-reasons";
 
 export type PersonFamilyDetails = {
   parentageStatus: string | null;
@@ -77,8 +79,9 @@ export type SiblingRelationship = {
   status: "active" | "inactive";
 };
 
-type Profile = {
+export type Profile = {
   id: string;
+  organizationName: string;
   kind: "child" | "elderly" | "staff";
   status: "active" | "inactive";
   identifierKind: "admission" | "staff";
@@ -93,6 +96,7 @@ type Profile = {
   registrationCertificateNumber: string | null;
   identityCertificateNumber: string | null;
   greenBookNumber: string | null;
+  aadhaarNumber: string | null;
   previousSchoolName: string | null;
   transferCertificateNumber: string | null;
   childCategoryId: string | null;
@@ -100,6 +104,7 @@ type Profile = {
   withdrawnOn: string | null;
   withdrawalReason: string | null;
   withdrawalRemarks: string | null;
+  withdrawalReasons: string[];
   photoReferencePresent: boolean;
   sourceSystem: string;
   sourceTable: string;
@@ -304,6 +309,7 @@ export function PersonProfileSheet({
               onPersonUpdated?.();
             }}
             personName={profile.displayName}
+            withdrawalReasons={profile.withdrawalReasons}
           />
         ) : profile && editingEnrollment ? (
           <EnrollmentDetailsForm
@@ -415,14 +421,27 @@ function ProfileContent({
   }
   const profilePhoto = profile.files.find((file) => file.category === "profile_photo");
 
+  // The browser offers the page title as the PDF file name.
+  function printProfile() {
+    const title = document.title;
+    document.title = `${profile.displayName} - ${profile.primaryIdentifier}`;
+    window.addEventListener("afterprint", () => (document.title = title), { once: true });
+    window.print();
+  }
+
   return (
     <div className="person-profile-print flex min-h-0 flex-1 flex-col">
-      <div className="relative overflow-hidden border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_60%)] px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
+      <PersonProfilePrint
+        legacyAcademicRecords={legacyAcademicRecords}
+        photoUrl={profilePhoto?.url ?? null}
+        profile={profile}
+      />
+      <div className="person-profile-screen relative overflow-hidden border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_60%)] px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
         <div className="flex items-center justify-between gap-3 pr-11">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
             Profile
           </p>
-          <Button onClick={() => window.print()} size="sm" variant="outline">
+          <Button onClick={printProfile} size="sm" variant="outline">
             <Printer /> Print
           </Button>
         </div>
@@ -464,7 +483,7 @@ function ProfileContent({
         </div>
       </div>
 
-      <div className="person-profile-scroll flex-1 overflow-y-auto">
+      <div className="person-profile-screen person-profile-scroll flex-1 overflow-y-auto">
         <div className="space-y-8 px-5 py-7 sm:px-8 sm:py-8">
           {reviewItems.length ? (
             <section className="rounded-2xl border border-amber-500/25 bg-amber-500/8 p-4 dark:bg-amber-400/10">
@@ -528,6 +547,7 @@ function ProfileContent({
               {profile.kind !== "staff" ? (
                 <ProfileField label="Green Book number" mono value={profile.greenBookNumber} />
               ) : null}
+              <ProfileField label="Aadhaar card number" mono value={profile.aadhaarNumber} />
               {profile.kind === "child" ? (
                 <>
                   <ProfileField
@@ -955,11 +975,13 @@ function EnrollmentEndDetailsForm({
   onCancel,
   onSaved,
   personName,
+  withdrawalReasons,
 }: {
   enrollment: Profile["schoolEnrollments"][number];
   onCancel: () => void;
   onSaved: () => Promise<void>;
   personName: string;
+  withdrawalReasons: string[];
 }) {
   const [effectiveOn, setEffectiveOn] = useState(toDateInput(enrollment.endedOn));
   const [reason, setReason] = useState(enrollment.endReason ?? "");
@@ -1043,16 +1065,33 @@ function EnrollmentEndDetailsForm({
             }
             required={enrollment.status !== "transferred"}
           >
-            <Input
-              id="enrollment-end-reason"
-              maxLength={500}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder={
-                enrollment.status === "transferred" ? "Example: ABC School" : "Enter the reason"
-              }
-              required={enrollment.status !== "transferred"}
-              value={reason}
-            />
+            {enrollment.status === "withdrawn" && withdrawalReasons.length ? (
+              <Select onValueChange={setReason} required value={reason}>
+                <SelectTrigger className="w-full" id="enrollment-end-reason">
+                  <SelectValue placeholder="Choose a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {withdrawalReasonOptions(withdrawalReasons, enrollment.endReason).map(
+                    (option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="enrollment-end-reason"
+                maxLength={500}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={
+                  enrollment.status === "transferred" ? "Example: ABC School" : "Enter the reason"
+                }
+                required={enrollment.status !== "transferred"}
+                value={reason}
+              />
+            )}
           </FormField>
           <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
             This corrects the date and reason shown in school history. The enrolment and audit
@@ -1544,6 +1583,7 @@ function PersonCoreDetailsForm({
     profile.identityCertificateNumber ?? "",
   );
   const [greenBookNumber, setGreenBookNumber] = useState(profile.greenBookNumber ?? "");
+  const [aadhaarNumber, setAadhaarNumber] = useState(profile.aadhaarNumber ?? "");
   const [previousSchoolName, setPreviousSchoolName] = useState(profile.previousSchoolName ?? "");
   const [transferCertificateNumber, setTransferCertificateNumber] = useState(
     profile.transferCertificateNumber ?? "",
@@ -1577,6 +1617,7 @@ function PersonCoreDetailsForm({
           registrationCertificateNumber: registrationCertificateNumber || null,
           identityCertificateNumber: identityCertificateNumber || null,
           greenBookNumber: greenBookNumber || null,
+          aadhaarNumber: aadhaarNumber || null,
           previousSchoolName: previousSchoolName || null,
           transferCertificateNumber: transferCertificateNumber || null,
           childCategoryId: childCategoryId === "none" ? null : childCategoryId,
@@ -1711,6 +1752,16 @@ function PersonCoreDetailsForm({
                   />
                 </FormField>
               ) : null}
+              <FormField htmlFor="person-aadhaar-number" label="Aadhaar card number">
+                <Input
+                  className="font-mono"
+                  id="person-aadhaar-number"
+                  inputMode="numeric"
+                  maxLength={100}
+                  onChange={(event) => setAadhaarNumber(event.target.value)}
+                  value={aadhaarNumber}
+                />
+              </FormField>
               {profile.kind === "child" ? (
                 <>
                   <FormField htmlFor="person-child-category" label="Child category">
@@ -1809,12 +1860,36 @@ function PersonCoreDetailsForm({
                     />
                   </FormField>
                   <FormField htmlFor="person-withdrawal-reason" label="Withdrawal reason">
-                    <Input
-                      id="person-withdrawal-reason"
-                      maxLength={200}
-                      onChange={(event) => setWithdrawalReason(event.target.value)}
-                      value={withdrawalReason}
-                    />
+                    {profile.withdrawalReasons.length ? (
+                      <Select
+                        onValueChange={(value) =>
+                          setWithdrawalReason(value === "none" ? "" : value)
+                        }
+                        value={withdrawalReason || "none"}
+                      >
+                        <SelectTrigger className="w-full" id="person-withdrawal-reason">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Not recorded</SelectItem>
+                          {withdrawalReasonOptions(
+                            profile.withdrawalReasons,
+                            profile.withdrawalReason,
+                          ).map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="person-withdrawal-reason"
+                        maxLength={200}
+                        onChange={(event) => setWithdrawalReason(event.target.value)}
+                        value={withdrawalReason}
+                      />
+                    )}
                   </FormField>
                   <FormField
                     className="sm:col-span-2"
