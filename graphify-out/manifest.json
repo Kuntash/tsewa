@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
-    "mtime": 1791261846.325179,
-    "ast_hash": "6d5402d44f42b65b78200cf10470d180",
+    "mtime": 1791261905.7610626,
+    "ast_hash": "3d63adb0a57a64fbece38c59b5bcb196",
     "semantic_hash": ""
   },
   "apps/web/src/components/theme-toggle.tsx": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/school-operations.tsx": {
-    "mtime": 1791143887.7124205,
-    "ast_hash": "23b76f47c8f23da59eae2b939ff55f6d",
+    "mtime": 1791262290.7200508,
+    "ast_hash": "7b5388c04b758b8a4fe2d14304c2946c",
     "semantic_hash": ""
   },
   "scripts/import-school-operations.mjs": {
@@ -530,8 +530,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/student-report-sheet.tsx": {
-    "mtime": 1791137052.680937,
-    "ast_hash": "7523f9339672ce2e2b431bdb80abe9af",
+    "mtime": 1791262176.0277786,
+    "ast_hash": "d0817f5c208a50d03cf3187f31ffe991",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260811_130039_continue__make_sure_the_printable_design_aligns_an.md": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791261854.5592372,
-    "ast_hash": "e3992b4e5cc557b15ee0473773b84c37",
+    "mtime": 1791262293.1170316,
+    "ast_hash": "266e55da6f0162d84623b6602d489eab",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1025,8 +1025,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/route-search.ts": {
-    "mtime": 1791137052.7109041,
-    "ast_hash": "6279718009c51566261dc7e6952d959d",
+    "mtime": 1791262176.0274289,
+    "ast_hash": "793ac704a46cfa0cc6f8430d98356b9d",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/dashboard-repository.ts": {
@@ -1530,13 +1530,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-print.tsx": {
-    "mtime": 1791182888.52583,
-    "ast_hash": "11ff77394743dab322ddb58dcca8025e",
+    "mtime": 1791261905.7612846,
+    "ast_hash": "be9a4bae54a385ab950891ec53c831d0",
     "semantic_hash": ""
   },
   "apps/web/src/lib/withdrawal-reasons.ts": {
     "mtime": 1791183117.363463,
     "ast_hash": "e6048a65016911cdc46f5e755668dc77",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/student-detail-filters.tsx": {
+    "mtime": 1791262152.8737352,
+    "ast_hash": "121c5e7de458e02ff89fd657a880cea1",
     "semantic_hash": ""
   }
 }

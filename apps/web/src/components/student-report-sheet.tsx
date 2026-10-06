@@ -9,6 +9,12 @@ type ReportStudent = {
   displayName: string;
   primaryIdentifier: string;
   gender: "female" | "male" | "other" | "unknown" | null;
+  status: "active" | "inactive";
+  dateOfBirth: string | null;
+  admittedOn: string | null;
+  nationality: string | null;
+  childCategoryName: string | null;
+  currentPlacement: string | null;
   schoolName: string | null;
   className: string;
   classTitle: string | null;
@@ -44,6 +50,7 @@ export type StudentReportRequest = {
     className: string;
     house: string;
     status: string;
+    detail?: Record<string, string>;
   };
 };
 
@@ -72,6 +79,7 @@ export function StudentReportSheet({
       class: request.parameters.className,
       house: request.parameters.house,
       status: request.parameters.status,
+      ...request.parameters.detail,
     });
     setLoading(true);
     setError("");
@@ -110,6 +118,12 @@ export function StudentReportSheet({
       "House",
       "Roll number",
       "Enrolment status",
+      "Child category",
+      "Home",
+      "Date of birth",
+      "Admission date",
+      "Nationality",
+      "Active or inactive",
     ];
     const rows = data.students.map((student, index) => [
       String(index + 1),
@@ -121,6 +135,12 @@ export function StudentReportSheet({
       student.houseName ?? "",
       student.rollNumber ?? "",
       enrollmentStatusLabel(student.enrollmentStatus),
+      student.childCategoryName ?? "",
+      student.currentPlacement ?? "",
+      student.dateOfBirth?.slice(0, 10) ?? "",
+      student.admittedOn?.slice(0, 10) ?? "",
+      student.nationality ?? "",
+      student.status === "active" ? "Active" : "Inactive",
     ]);
     const csv = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
     const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
@@ -246,6 +266,7 @@ export function StudentReportSheet({
                       ) : null}
                       {!request.hideSchoolAndClass ? <th>Class</th> : null}
                       <th className="report-optional">House</th>
+                      <th className="report-optional">Category</th>
                       <th>Roll no.</th>
                       <th className="report-optional">Status</th>
                     </tr>
@@ -264,6 +285,7 @@ export function StudentReportSheet({
                           <td>{student.classTitle ?? student.className}</td>
                         ) : null}
                         <td className="report-optional">{student.houseName ?? "—"}</td>
+                        <td className="report-optional">{student.childCategoryName ?? "—"}</td>
                         <td className="tabular-nums">{student.rollNumber ?? "—"}</td>
                         <td className="report-optional">
                           {enrollmentStatusLabel(student.enrollmentStatus)}

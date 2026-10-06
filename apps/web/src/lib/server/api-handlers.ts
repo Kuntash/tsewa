@@ -13,6 +13,7 @@ import {
   notExists,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { alias } from "drizzle-orm/sqlite-core";
@@ -305,6 +306,16 @@ const schoolStudentFiltersSchema = z.object({
   status: z
     .enum(["all", "recorded", "enrolled", "transferred", "withdrawn", "completed"])
     .default("all"),
+  category: z.string().trim().max(100).default("all"),
+  gender: z.enum(["all", "female", "male", "other", "unknown"]).default("all"),
+  personStatus: z.enum(["all", "active", "inactive"]).default("all"),
+  home: z.string().trim().max(160).default("all"),
+  nationality: z.string().trim().max(100).default("all"),
+  parentage: z.string().trim().max(100).default("all"),
+  ageMin: z.coerce.number().int().min(0).max(120).optional(),
+  ageMax: z.coerce.number().int().min(0).max(120).optional(),
+  admittedFrom: z.iso.date().optional(),
+  admittedTo: z.iso.date().optional(),
 });
 
 const schoolStudentsQuerySchema = schoolStudentFiltersSchema.extend({
@@ -1912,15 +1923,12 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
     eq(studentEnrollment.organizationId, scope.organizationId),
     eq(studentEnrollment.academicSessionId, scope.session.id),
   );
-  const [summaryRows, schools, classes, houses] = await runtime.ORM.batch([
+  // Values a student detail takes in this session, with how many students have each.
+  const detailOptions = (value: SQL<string | null>, emptyLabel: string) =>
     runtime.ORM.select({
-      students: count(),
-      activeStudents: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
-      inactiveStudents: sql<number>`sum(case when ${person.status} = 'inactive' then 1 else 0 end)`,
-      schools: sql<number>`count(distinct ${studentEnrollment.schoolId})`,
-      classes: sql<number>`count(distinct coalesce(${studentEnrollment.schoolId}, 'unmapped') || '|' || ${className})`,
-      houses: sql<number>`count(distinct ${studentEnrollment.houseId})`,
-      unmappedSchools: sql<number>`sum(case when ${studentEnrollment.schoolId} is null then 1 else 0 end)`,
+      id: sql<string>`coalesce(${value}, 'none')`.as("id"),
+      name: sql<string>`coalesce(${value}, ${emptyLabel})`.as("name"),
+      count: count(),
     })
       .from(studentEnrollment)
       .innerJoin(
@@ -1930,63 +1938,117 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
           eq(person.organizationId, studentEnrollment.organizationId),
         ),
       )
-      .innerJoin(
-        academicClassMaster,
-        and(
-          eq(academicClassMaster.id, studentEnrollment.academicClassId),
-          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
-        ),
-      )
-      .where(enrollmentScope),
-    runtime.ORM.select({
-      id: sql<string>`coalesce(${schoolMaster.id}, 'unmapped')`,
-      name: sql<string>`coalesce(${schoolMaster.name}, 'School not set')`,
-      count: count(),
-    })
-      .from(studentEnrollment)
-      .leftJoin(
-        schoolMaster,
-        and(
-          eq(schoolMaster.id, studentEnrollment.schoolId),
-          eq(schoolMaster.organizationId, studentEnrollment.organizationId),
-        ),
-      )
       .where(enrollmentScope)
-      .groupBy(schoolMaster.id, schoolMaster.name)
-      .orderBy(desc(count()), sql`coalesce(${schoolMaster.name}, 'School not set') collate nocase`),
-    // D1 keys batch results by column name, so the class name may only be selected once.
-    runtime.ORM.select({ name: className.as("class_display_name"), count: count() })
-      .from(studentEnrollment)
-      .innerJoin(
-        academicClassMaster,
-        and(
-          eq(academicClassMaster.id, studentEnrollment.academicClassId),
-          eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+      .groupBy(sql`1`)
+      .orderBy(sql`${value} is null`, sql`name collate nocase`);
+  const [summaryRows, schools, classes, houses, categories, homes, nationalities, parentage] =
+    await runtime.ORM.batch([
+      runtime.ORM.select({
+        students: count(),
+        activeStudents: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
+        inactiveStudents: sql<number>`sum(case when ${person.status} = 'inactive' then 1 else 0 end)`,
+        schools: sql<number>`count(distinct ${studentEnrollment.schoolId})`,
+        classes: sql<number>`count(distinct coalesce(${studentEnrollment.schoolId}, 'unmapped') || '|' || ${className})`,
+        houses: sql<number>`count(distinct ${studentEnrollment.houseId})`,
+        unmappedSchools: sql<number>`sum(case when ${studentEnrollment.schoolId} is null then 1 else 0 end)`,
+      })
+        .from(studentEnrollment)
+        .innerJoin(
+          person,
+          and(
+            eq(person.id, studentEnrollment.personId),
+            eq(person.organizationId, studentEnrollment.organizationId),
+          ),
+        )
+        .innerJoin(
+          academicClassMaster,
+          and(
+            eq(academicClassMaster.id, studentEnrollment.academicClassId),
+            eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+          ),
+        )
+        .where(enrollmentScope),
+      runtime.ORM.select({
+        id: sql<string>`coalesce(${schoolMaster.id}, 'unmapped')`,
+        name: sql<string>`coalesce(${schoolMaster.name}, 'School not set')`,
+        count: count(),
+      })
+        .from(studentEnrollment)
+        .leftJoin(
+          schoolMaster,
+          and(
+            eq(schoolMaster.id, studentEnrollment.schoolId),
+            eq(schoolMaster.organizationId, studentEnrollment.organizationId),
+          ),
+        )
+        .where(enrollmentScope)
+        .groupBy(schoolMaster.id, schoolMaster.name)
+        .orderBy(
+          desc(count()),
+          sql`coalesce(${schoolMaster.name}, 'School not set') collate nocase`,
         ),
-      )
-      .where(enrollmentScope)
-      .groupBy(className)
-      .orderBy(
-        sql`coalesce(max(${academicClassMaster.level}), 999)`,
-        sql`${className} collate nocase`,
-      ),
-    runtime.ORM.select({
-      id: sql<string>`coalesce(${houseMaster.id}, 'none')`,
-      name: sql<string>`coalesce(${houseMaster.name}, 'No house')`,
-      count: count(),
-    })
-      .from(studentEnrollment)
-      .leftJoin(
-        houseMaster,
-        and(
-          eq(houseMaster.id, studentEnrollment.houseId),
-          eq(houseMaster.organizationId, studentEnrollment.organizationId),
+      // D1 keys batch results by column name, so the class name may only be selected once.
+      runtime.ORM.select({ name: className.as("class_display_name"), count: count() })
+        .from(studentEnrollment)
+        .innerJoin(
+          academicClassMaster,
+          and(
+            eq(academicClassMaster.id, studentEnrollment.academicClassId),
+            eq(academicClassMaster.organizationId, studentEnrollment.organizationId),
+          ),
+        )
+        .where(enrollmentScope)
+        .groupBy(className)
+        .orderBy(
+          sql`coalesce(max(${academicClassMaster.level}), 999)`,
+          sql`${className} collate nocase`,
         ),
-      )
-      .where(enrollmentScope)
-      .groupBy(houseMaster.id, houseMaster.name)
-      .orderBy(desc(count()), sql`coalesce(${houseMaster.name}, 'No house') collate nocase`),
-  ]);
+      runtime.ORM.select({
+        id: sql<string>`coalesce(${houseMaster.id}, 'none')`,
+        name: sql<string>`coalesce(${houseMaster.name}, 'No house')`,
+        count: count(),
+      })
+        .from(studentEnrollment)
+        .leftJoin(
+          houseMaster,
+          and(
+            eq(houseMaster.id, studentEnrollment.houseId),
+            eq(houseMaster.organizationId, studentEnrollment.organizationId),
+          ),
+        )
+        .where(enrollmentScope)
+        .groupBy(houseMaster.id, houseMaster.name)
+        .orderBy(desc(count()), sql`coalesce(${houseMaster.name}, 'No house') collate nocase`),
+      runtime.ORM.select({
+        id: sql<string>`coalesce(${childCategory.id}, 'none')`,
+        name: sql<string>`coalesce(${childCategory.name}, 'No category')`,
+        count: count(),
+      })
+        .from(studentEnrollment)
+        .innerJoin(
+          person,
+          and(
+            eq(person.id, studentEnrollment.personId),
+            eq(person.organizationId, studentEnrollment.organizationId),
+          ),
+        )
+        .leftJoin(
+          childCategory,
+          and(
+            eq(childCategory.id, person.childCategoryId),
+            eq(childCategory.organizationId, person.organizationId),
+          ),
+        )
+        .where(enrollmentScope)
+        .groupBy(childCategory.id, childCategory.name)
+        .orderBy(
+          sql`${childCategory.id} is null`,
+          sql`coalesce(${childCategory.name}, 'No category') collate nocase`,
+        ),
+      detailOptions(currentHomeName(), "No home"),
+      detailOptions(nationalityValue(), "No nationality"),
+      detailOptions(parentageStatusValue(), "Not recorded"),
+    ]);
   const summary = summaryRows[0];
 
   return Response.json({
@@ -2005,6 +2067,10 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
       schools,
       classes: classes.map((item) => ({ id: item.name, ...item })),
       houses,
+      categories,
+      homes,
+      nationalities,
+      parentage,
     },
   });
 }
@@ -3291,6 +3357,54 @@ async function readStudentEnrollment(
 
 type SchoolStudentFilters = z.infer<typeof schoolStudentFiltersSchema>;
 
+function schoolStudentFilterParams(url: URL) {
+  const optional = (name: string) => url.searchParams.get(name) || undefined;
+  return {
+    sessionId: url.searchParams.get("sessionId"),
+    q: url.searchParams.get("q") ?? "",
+    school: url.searchParams.get("school") ?? "all",
+    className: url.searchParams.get("class") ?? "all",
+    house: url.searchParams.get("house") ?? "all",
+    status: url.searchParams.get("status") ?? "all",
+    category: optional("category"),
+    gender: optional("gender"),
+    personStatus: optional("personStatus"),
+    home: optional("home"),
+    nationality: optional("nationality"),
+    parentage: optional("parentage"),
+    ageMin: optional("ageMin"),
+    ageMax: optional("ageMax"),
+    admittedFrom: optional("admittedFrom"),
+    admittedTo: optional("admittedTo"),
+  };
+}
+
+// The home a student lives in now, falling back to the location on their record.
+function currentHomeName() {
+  return sql<string | null>`coalesce(
+    (select coalesce(pp.home_name, pp.location_name)
+      from person_placement pp
+      where pp.person_id = ${person.id}
+        and pp.organization_id = ${person.organizationId}
+        and pp.is_current = 1
+      order by date(pp.started_on) desc, pp.created_at desc
+      limit 1),
+    ${person.campusOrLocation}
+  )`;
+}
+
+function parentageStatusValue() {
+  return sql<string | null>`(select nullif(trim(pf.parentage_status), '')
+    from person_family_profile pf
+    where pf.person_id = ${person.id}
+      and pf.organization_id = ${person.organizationId}
+    limit 1)`;
+}
+
+function nationalityValue() {
+  return sql<string | null>`nullif(trim(${person.nationality}), '')`;
+}
+
 function buildSchoolStudentFilters(
   scope: { organizationId: string; session: { id: string } },
   filters: SchoolStudentFilters,
@@ -3334,6 +3448,57 @@ function buildSchoolStudentFilters(
       conditions.push(eq(studentEnrollment.status, filters.status));
     }
   }
+  if (filters.category !== "all") {
+    conditions.push(
+      filters.category === "none"
+        ? isNull(person.childCategoryId)
+        : eq(person.childCategoryId, filters.category),
+    );
+  }
+  if (filters.gender !== "all") {
+    conditions.push(
+      filters.gender === "unknown"
+        ? sql`coalesce(${person.gender}, 'unknown') = 'unknown'`
+        : eq(person.gender, filters.gender),
+    );
+  }
+  if (filters.personStatus !== "all") conditions.push(eq(person.status, filters.personStatus));
+  if (filters.home !== "all") {
+    conditions.push(
+      filters.home === "none"
+        ? sql`${currentHomeName()} is null`
+        : sql`${currentHomeName()} = ${filters.home}`,
+    );
+  }
+  if (filters.nationality !== "all") {
+    conditions.push(
+      filters.nationality === "none"
+        ? sql`${nationalityValue()} is null`
+        : sql`${nationalityValue()} = ${filters.nationality}`,
+    );
+  }
+  if (filters.parentage !== "all") {
+    conditions.push(
+      filters.parentage === "none"
+        ? sql`${parentageStatusValue()} is null`
+        : sql`${parentageStatusValue()} = ${filters.parentage}`,
+    );
+  }
+  // Age in completed years today; a student without a date of birth never matches.
+  if (filters.ageMin !== undefined) {
+    conditions.push(sql`date(${person.dateOfBirth}) <= date('now', ${`-${filters.ageMin} years`})`);
+  }
+  if (filters.ageMax !== undefined) {
+    conditions.push(
+      sql`date(${person.dateOfBirth}) > date('now', ${`-${filters.ageMax + 1} years`})`,
+    );
+  }
+  if (filters.admittedFrom) {
+    conditions.push(sql`date(${person.admittedOrJoinedOn}) >= ${filters.admittedFrom}`);
+  }
+  if (filters.admittedTo) {
+    conditions.push(sql`date(${person.admittedOrJoinedOn}) <= ${filters.admittedTo}`);
+  }
   return and(...conditions)!;
 }
 
@@ -3347,16 +3512,13 @@ function schoolStudentQuery(database: Database) {
       status: person.status,
       gender: person.gender,
       dateOfBirth: person.dateOfBirth,
-      currentPlacement: sql<string | null>`coalesce(
-        (select coalesce(pp.home_name, pp.location_name)
-          from person_placement pp
-          where pp.person_id = ${person.id}
-            and pp.organization_id = ${person.organizationId}
-            and pp.is_current = 1
-          order by date(pp.started_on) desc, pp.created_at desc
-          limit 1),
-        ${person.campusOrLocation}
-      )`,
+      admittedOn: person.admittedOrJoinedOn,
+      nationality: person.nationality,
+      childCategoryName: sql<string | null>`(select cc.name
+        from child_category cc
+        where cc.id = ${person.childCategoryId}
+          and cc.organization_id = ${person.organizationId})`,
+      currentPlacement: currentHomeName(),
       schoolName: schoolMaster.name,
       className: academicClassMaster.name,
       classSection: academicClassMaster.section,
@@ -3439,12 +3601,7 @@ async function getSchoolOperationsStudents(request: Request): Promise<Response> 
   if (request.method !== "GET") return methodNotAllowed("GET");
   const url = new URL(request.url);
   const parsed = schoolStudentsQuerySchema.safeParse({
-    sessionId: url.searchParams.get("sessionId"),
-    q: url.searchParams.get("q") ?? "",
-    school: url.searchParams.get("school") ?? "all",
-    className: url.searchParams.get("class") ?? "all",
-    house: url.searchParams.get("house") ?? "all",
-    status: url.searchParams.get("status") ?? "all",
+    ...schoolStudentFilterParams(url),
     page: url.searchParams.get("page") ?? "1",
     pageSize: url.searchParams.get("pageSize") ?? "25",
   });
@@ -3484,14 +3641,7 @@ const MAX_STUDENT_REPORT_ROWS = 5_000;
 async function getSchoolOperationsStudentReport(request: Request): Promise<Response> {
   if (request.method !== "GET") return methodNotAllowed("GET");
   const url = new URL(request.url);
-  const parsed = schoolStudentReportQuerySchema.safeParse({
-    sessionId: url.searchParams.get("sessionId"),
-    q: url.searchParams.get("q") ?? "",
-    school: url.searchParams.get("school") ?? "all",
-    className: url.searchParams.get("class") ?? "all",
-    house: url.searchParams.get("house") ?? "all",
-    status: url.searchParams.get("status") ?? "all",
-  });
+  const parsed = schoolStudentReportQuerySchema.safeParse(schoolStudentFilterParams(url));
   if (!parsed.success) {
     return Response.json({ error: "Check the report filters and try again." }, { status: 400 });
   }

@@ -158,14 +158,10 @@ export function PersonProfilePrint({
         <Section title="Family">
           {family ? (
             <dl className="ppp-grid ppp-grid-4">
-              <Field
-                label="Mother"
-                value={withDetail(family.motherName, family.motherOccupation)}
-              />
-              <Field
-                label="Father"
-                value={withDetail(family.fatherName, family.fatherOccupation)}
-              />
+              <Field label="Mother" value={family.motherName} />
+              <Field label="Mother's occupation" value={family.motherOccupation} />
+              <Field label="Father" value={family.fatherName} />
+              <Field label="Father's occupation" value={family.fatherOccupation} />
               <Field label="Parents' status" value={family.parentageStatus} />
               <Field label="Family phone" value={family.parentsPhone} />
               <Field

@@ -30,6 +30,13 @@ import { HistoricalResults, type HistoricalResultsFilters } from "@/components/h
 import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
 import { SchoolAssignmentsSheet } from "@/components/school-assignments-sheet";
 import { SchoolMasterData } from "@/components/school-master-data";
+import {
+  pickStudentDetailFilters,
+  StudentDetailFilterBar,
+  type StudentDetailFilters,
+  type StudentDetailOptions,
+  studentDetailFilterSummary,
+} from "@/components/student-detail-filters";
 import { StudentReportSheet, type StudentReportRequest } from "@/components/student-report-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -71,7 +78,7 @@ type OverviewResponse = {
     schools: CountOption[];
     classes: CountOption[];
     houses: CountOption[];
-  };
+  } & StudentDetailOptions;
 };
 
 type StudentRow = {
@@ -83,6 +90,7 @@ type StudentRow = {
   gender: "female" | "male" | "other" | "unknown" | null;
   dateOfBirth: string | null;
   currentPlacement: string | null;
+  childCategoryName: string | null;
   schoolName: string | null;
   className: string;
   classSection: string | null;
@@ -136,7 +144,7 @@ type RosterRow = {
 
 type SchoolSection = "students" | "schools" | "rosters" | "setup" | "results";
 
-export type SchoolFilters = {
+export type SchoolFilters = StudentDetailFilters & {
   q?: string;
   school?: string;
   class?: string;
@@ -153,6 +161,13 @@ export type SchoolFilters = {
   resultSubject?: string;
   resultTerm?: string;
   resultPage?: number;
+};
+
+const emptyDetailOptions: StudentDetailOptions = {
+  categories: [],
+  homes: [],
+  nationalities: [],
+  parentage: [],
 };
 
 const emptyStudents: StudentsResponse = {
@@ -185,6 +200,12 @@ export function SchoolOperations({
   const [status, setStatus] = useState<
     "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed"
   >(filters.status ?? "all");
+  const [detail, setDetail] = useState<StudentDetailFilters>(() =>
+    pickStudentDetailFilters(filters),
+  );
+  // Compared as text so an equal set of filters never reloads the list.
+  const detailKey = JSON.stringify(detail);
+  const incomingDetailKey = JSON.stringify(pickStudentDetailFilters(filters));
   const [page, setPage] = useState(filters.page ?? 1);
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -249,7 +270,16 @@ export function SchoolOperations({
   ]);
 
   useEffect(() => {
+    setDetail((current) =>
+      JSON.stringify(current) === incomingDetailKey
+        ? current
+        : (JSON.parse(incomingDetailKey) as StudentDetailFilters),
+    );
+  }, [incomingDetailKey]);
+
+  useEffect(() => {
     onFiltersChange?.({
+      ...(JSON.parse(detailKey) as StudentDetailFilters),
       q: debouncedQuery || undefined,
       school,
       class: className,
@@ -270,6 +300,7 @@ export function SchoolOperations({
   }, [
     className,
     debouncedQuery,
+    detailKey,
     house,
     onFiltersChange,
     page,
@@ -345,6 +376,7 @@ export function SchoolOperations({
       status,
       page: String(page),
       pageSize: "25",
+      ...(JSON.parse(detailKey) as Record<string, string>),
     });
     setLoadingStudents(true);
     setError("");
@@ -358,9 +390,19 @@ export function SchoolOperations({
         if (!controller.signal.aborted) setLoadingStudents(false);
       });
     return () => controller.abort();
-  }, [activeSessionId, className, debouncedQuery, house, page, refreshKey, school, status]);
+  }, [
+    activeSessionId,
+    className,
+    debouncedQuery,
+    detailKey,
+    house,
+    page,
+    refreshKey,
+    school,
+    status,
+  ]);
 
-  useEffect(() => setPage(1), [activeSessionId, className, house, school, status]);
+  useEffect(() => setPage(1), [activeSessionId, className, detailKey, house, school, status]);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId),
@@ -416,6 +458,7 @@ export function SchoolOperations({
     setClassName("all");
     setHouse("all");
     setStatus("all");
+    setDetail({});
     setQuery("");
     setPage(1);
     try {
@@ -443,6 +486,9 @@ export function SchoolOperations({
       );
     }
     if (status !== "all") filterSummary.push(`Status: ${reportStatusLabel(status)}`);
+    filterSummary.push(
+      ...studentDetailFilterSummary(detail, overview?.filters ?? emptyDetailOptions),
+    );
     if (debouncedQuery) filterSummary.push(`Search: ${debouncedQuery}`);
     setStudentReport({
       title: "Student list",
@@ -456,6 +502,7 @@ export function SchoolOperations({
         className,
         house,
         status,
+        detail: detail as Record<string, string>,
       },
     });
   }
@@ -712,9 +759,16 @@ export function SchoolOperations({
                         </SelectContent>
                       </Select>
                     </div>
+                    <StudentDetailFilterBar
+                      onChange={setDetail}
+                      options={overview?.filters ?? emptyDetailOptions}
+                      value={detail}
+                    />
                     <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-muted-foreground">
-                        Print or download the full filtered list, not only this page.
+                        {loadingStudents
+                          ? "Print or download the full filtered list, not only this page."
+                          : `${students.pagination.total.toLocaleString()} ${students.pagination.total === 1 ? "student matches" : "students match"}. Print or download the full list, not only this page.`}
                       </p>
                       <Button
                         className="w-full sm:w-auto"
@@ -1216,6 +1270,7 @@ function StudentResults({
                   label="Current placement"
                   value={student.currentPlacement ?? "Not recorded"}
                 />
+                <Detail label="Child category" value={student.childCategoryName ?? "Not set"} />
               </div>
             </button>
             <div className="px-4 pb-4">
@@ -1258,6 +1313,11 @@ function StudentResults({
                 <td className="px-4 py-3.5 tabular-nums">{studentDate(student.dateOfBirth)}</td>
                 <td className="max-w-52 px-4 py-3.5">
                   <p className="truncate">{student.currentPlacement ?? "Not recorded"}</p>
+                  {student.childCategoryName ? (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {student.childCategoryName}
+                    </p>
+                  ) : null}
                 </td>
                 <td className="px-5 py-3.5 text-right">
                   <div className="flex justify-end gap-1">

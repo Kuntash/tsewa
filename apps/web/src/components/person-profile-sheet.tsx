@@ -2481,12 +2481,12 @@ function FamilyProfileSection({ onEdit, profile }: { onEdit: () => void; profile
                 <FamilyPersonCard
                   label="Mother"
                   name={family?.motherName ?? null}
-                  supportingValue={family?.motherOccupation ?? null}
+                  occupation={family?.motherOccupation ?? null}
                 />
                 <FamilyPersonCard
                   label="Father"
                   name={family?.fatherName ?? null}
-                  supportingValue={family?.fatherOccupation ?? null}
+                  occupation={family?.fatherOccupation ?? null}
                 />
               </div>
               {family?.parentsPhone || family?.parentsPermanentAddress ? (
@@ -2583,11 +2583,11 @@ function FamilyProfileSection({ onEdit, profile }: { onEdit: () => void; profile
 function FamilyPersonCard({
   label,
   name,
-  supportingValue,
+  occupation,
 }: {
   label: string;
   name: string | null;
-  supportingValue: string | null;
+  occupation: string | null;
 }) {
   return (
     <div className="rounded-2xl border bg-card p-4">
@@ -2595,14 +2595,14 @@ function FamilyPersonCard({
         <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           <HeartHandshake className="size-4" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {label}
           </p>
-          <p className="mt-1 text-sm font-semibold">{name || "Name not recorded"}</p>
-          {supportingValue ? (
-            <p className="mt-1 text-xs text-muted-foreground">{supportingValue}</p>
-          ) : null}
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <ProfileField label="Name" value={name} />
+            <ProfileField label="Occupation" value={occupation} />
+          </div>
         </div>
       </div>
     </div>
