@@ -2477,6 +2477,12 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
 
   const action = parsed.data.action;
   const keepsStudentEnrolled = action === "placement_changed" || action === "internal_transfer";
+  if (
+    !keepsStudentEnrolled &&
+    parsed.data.effectiveOn > latestEnrollmentEndDate(enrollment.sessionStartsOn)
+  ) {
+    return Response.json({ error: "Choose a date that is not in the future." }, { status: 400 });
+  }
   const targetSchoolId = keepsStudentEnrolled
     ? action === "placement_changed"
       ? enrollment.schoolId
@@ -3137,6 +3143,14 @@ function enrollmentEndReason(status: StudentEnrollmentRecord["status"]): string 
   if (status === "transferred") return "Transferred out";
   if (status === "completed") return "Completed school";
   return "Withdrawn";
+}
+
+// An ending takes effect as soon as it is saved, so it cannot be dated ahead.
+// The day is taken from the furthest-ahead time zone so today is never refused,
+// and a session that has not begun can still be ended on its first day.
+function latestEnrollmentEndDate(sessionStartsOn: string): string {
+  const today = new Date(Date.now() + 14 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return today > sessionStartsOn ? today : sessionStartsOn;
 }
 
 function isOpenEnrollment(status: StudentEnrollmentRecord["status"]): boolean {
@@ -10521,6 +10535,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
   const current = await runtime.ORM.select({
     id: person.id,
     kind: person.kind,
+    status: person.status,
     identifierKind: person.identifierKind,
     primaryIdentifier: person.primaryIdentifier,
     displayName: person.displayName,
@@ -10602,6 +10617,65 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
       return Response.json({ error: "Choose a valid child category." }, { status: 400 });
     }
   }
+  // Recording a withdrawal on an active person withdraws them, as the Withdraw
+  // action does, so the status and the withdrawal details cannot disagree.
+  const isActiveNonStaff = current.kind !== "staff" && current.status === "active";
+  const withdraws = isActiveNonStaff && Boolean(next.withdrawnOn);
+  if (isActiveNonStaff && !next.withdrawnOn && (next.withdrawalReason || next.withdrawalRemarks)) {
+    return Response.json({ error: "Enter the withdrawn date." }, { status: 400 });
+  }
+  let enrollmentToEnd: StudentEnrollmentRecord | null = null;
+  if (withdraws) {
+    if (!hasPermission(context, "school.enrollment.manage")) {
+      return Response.json(
+        { error: "You do not have permission to withdraw this person." },
+        { status: 403 },
+      );
+    }
+    if (!next.withdrawalReason) {
+      return Response.json({ error: "Choose a withdrawal reason." }, { status: 400 });
+    }
+    const latestEnrollment = await runtime.ORM.select({ id: studentEnrollment.id })
+      .from(studentEnrollment)
+      .innerJoin(
+        academicSession,
+        and(
+          eq(academicSession.id, studentEnrollment.academicSessionId),
+          eq(academicSession.organizationId, studentEnrollment.organizationId),
+        ),
+      )
+      .where(
+        and(
+          eq(studentEnrollment.organizationId, context.organizationId),
+          eq(studentEnrollment.personId, parsedId.data),
+        ),
+      )
+      .orderBy(desc(academicSession.startsOn))
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
+    const enrollment = latestEnrollment
+      ? await readStudentEnrollment(runtime.ORM, context.organizationId, latestEnrollment.id)
+      : null;
+    if (enrollment && isOpenEnrollment(enrollment.status)) {
+      const withdrawnOn = next.withdrawnOn ?? "";
+      if (withdrawnOn < enrollment.sessionStartsOn || withdrawnOn > enrollment.sessionEndsOn) {
+        return Response.json(
+          { error: `Choose a withdrawn date within the ${enrollment.sessionName} session.` },
+          { status: 400 },
+        );
+      }
+      enrollmentToEnd = enrollment;
+    }
+    if (
+      (next.withdrawnOn ?? "") > latestEnrollmentEndDate(enrollmentToEnd?.sessionStartsOn ?? "")
+    ) {
+      return Response.json(
+        { error: "Choose a withdrawn date that is not in the future." },
+        { status: 400 },
+      );
+    }
+  }
+
   const changedFields = (
     [
       ["primaryIdentifier", current.primaryIdentifier, next.primaryIdentifier],
@@ -10639,8 +10713,69 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     .filter(([, before, after]) => before !== after)
     .map(([field]) => field);
 
-  if (!changedFields.length) {
+  if (!changedFields.length && !withdraws) {
     return Response.json({ personId: parsedId.data, changedFields });
+  }
+
+  const withdrawalStatements: BatchItem<"sqlite">[] = [];
+  if (withdraws && !enrollmentToEnd) {
+    withdrawalStatements.push(
+      auditInsert(runtime.ORM, context, "person.withdrawn", "person", parsedId.data, {
+        effectiveOn: next.withdrawnOn,
+      }),
+    );
+  }
+  if (enrollmentToEnd) {
+    withdrawalStatements.push(
+      auditInsert(
+        runtime.ORM,
+        context,
+        "student.withdrawn",
+        "student_enrollment",
+        enrollmentToEnd.id,
+        {
+          personId: parsedId.data,
+          effectiveOn: next.withdrawnOn,
+          fromStatus: enrollmentToEnd.status,
+          toStatus: "withdrawn",
+        },
+      ),
+      runtime.ORM.update(studentEnrollment)
+        .set({
+          status: "withdrawn",
+          statusSource: "explicit",
+          endedOn: next.withdrawnOn,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(studentEnrollment.id, enrollmentToEnd.id),
+            eq(studentEnrollment.organizationId, context.organizationId),
+            inArray(studentEnrollment.status, ["recorded", "enrolled"]),
+          ),
+        ),
+      runtime.ORM.insert(studentEnrollmentChange).values({
+        id: crypto.randomUUID(),
+        organizationId: context.organizationId,
+        enrollmentId: enrollmentToEnd.id,
+        personId: parsedId.data,
+        academicSessionId: enrollmentToEnd.academicSessionId,
+        changeType: "withdrawn",
+        effectiveOn: next.withdrawnOn ?? "",
+        fromSchoolId: enrollmentToEnd.schoolId,
+        toSchoolId: enrollmentToEnd.schoolId,
+        fromAcademicClassId: enrollmentToEnd.academicClassId,
+        toAcademicClassId: enrollmentToEnd.academicClassId,
+        fromHouseId: enrollmentToEnd.houseId,
+        toHouseId: enrollmentToEnd.houseId,
+        fromStatus: enrollmentToEnd.status,
+        toStatus: "withdrawn",
+        fromRollNumber: enrollmentToEnd.rollNumber,
+        toRollNumber: enrollmentToEnd.rollNumber,
+        note: next.withdrawalReason,
+        createdByUserId: context.userId,
+      }),
+    );
   }
 
   try {
@@ -10665,6 +10800,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
           withdrawnOn: next.withdrawnOn,
           withdrawalReason: next.withdrawalReason,
           withdrawalRemarks: next.withdrawalRemarks,
+          ...(withdraws ? { status: "inactive" as const } : {}),
           updatedByUserId: context.userId,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
@@ -10675,6 +10811,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
         changedFields: changedFields.join(","),
         sourceSystem: current.sourceSystem,
       }),
+      ...withdrawalStatements,
     ]);
   } catch (error) {
     if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
@@ -10683,7 +10820,7 @@ async function updatePersonCoreDetails(request: Request, personId: string): Prom
     throw error;
   }
 
-  return Response.json({ personId: parsedId.data, changedFields });
+  return Response.json({ personId: parsedId.data, changedFields, withdrawn: withdraws });
 }
 
 async function updateAcademicRecord(

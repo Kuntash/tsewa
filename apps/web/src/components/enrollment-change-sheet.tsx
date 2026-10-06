@@ -413,7 +413,11 @@ export function EnrollmentChangeSheet({
                   </Label>
                   <Input
                     id="effective-on"
-                    max={data.enrollment.sessionEndsOn}
+                    max={
+                      action === "placement_changed" || action === "internal_transfer"
+                        ? data.enrollment.sessionEndsOn
+                        : latestEndDate(data.enrollment)
+                    }
                     min={data.enrollment.sessionStartsOn}
                     onChange={(event) => setEffectiveOn(event.target.value)}
                     required
@@ -655,11 +659,20 @@ function endActionLabel(action: Action): string {
   return "Transfer student out";
 }
 
-function dateWithinSession(enrollment: Enrollment): string {
+function localToday(): string {
   const now = new Date();
-  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 10);
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
+// An ending takes effect when it is saved, so it cannot be dated ahead.
+function latestEndDate(enrollment: Enrollment): string {
+  const today = localToday();
+  if (today < enrollment.sessionStartsOn) return enrollment.sessionStartsOn;
+  return today < enrollment.sessionEndsOn ? today : enrollment.sessionEndsOn;
+}
+
+function dateWithinSession(enrollment: Enrollment): string {
+  const today = localToday();
   if (today < enrollment.sessionStartsOn) return enrollment.sessionStartsOn;
   if (today > enrollment.sessionEndsOn) return enrollment.sessionEndsOn;
   return today;

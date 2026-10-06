@@ -1594,10 +1594,31 @@ function PersonCoreDetailsForm({
   const [withdrawalRemarks, setWithdrawalRemarks] = useState(profile.withdrawalRemarks ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false);
   const eventLabel = profile.kind === "staff" ? "Joining date" : "Admission date";
+  // A withdrawn date on an active person withdraws them, so it is confirmed first.
+  const withdraws = profile.kind !== "staff" && profile.status === "active" && Boolean(withdrawnOn);
+  const latestEnrollment = profile.schoolEnrollments[0];
+  const openEnrollment =
+    latestEnrollment?.status === "enrolled" || latestEnrollment?.status === "recorded"
+      ? latestEnrollment
+      : null;
 
-  async function saveDetails(event: FormEvent<HTMLFormElement>) {
+  function submitDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!withdraws) {
+      void saveDetails();
+      return;
+    }
+    if (!withdrawalReason.trim()) {
+      setError("Choose a withdrawal reason.");
+      return;
+    }
+    setError("");
+    setConfirmingWithdrawal(true);
+  }
+
+  async function saveDetails() {
     setSaving(true);
     setError("");
 
@@ -1637,7 +1658,18 @@ function PersonCoreDetailsForm({
   }
 
   return (
-    <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveDetails}>
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitDetails}>
+      <ConfirmDialog
+        confirmLabel="Mark inactive"
+        description={`${displayName || profile.displayName} will be marked inactive as withdrawn on ${formatDate(withdrawnOn)} (${withdrawalReason}).${openEnrollment ? ` Their ${openEnrollment.className} (${openEnrollment.academicSession}) enrolment will end on that date.` : ""}`}
+        onConfirm={() => {
+          setConfirmingWithdrawal(false);
+          void saveDetails();
+        }}
+        onOpenChange={setConfirmingWithdrawal}
+        open={confirmingWithdrawal}
+        title="Mark this person inactive?"
+      />
       <div className="border-b bg-[radial-gradient(circle_at_top_left,var(--color-accent),transparent_65%)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
           Editable record
@@ -1854,6 +1886,7 @@ function PersonCoreDetailsForm({
                   <FormField htmlFor="person-withdrawn-on" label="Withdrawn date">
                     <Input
                       id="person-withdrawn-on"
+                      max={profile.status === "active" ? localDateInput() : undefined}
                       onChange={(event) => setWithdrawnOn(event.target.value)}
                       type="date"
                       value={withdrawnOn}
@@ -1911,6 +1944,9 @@ function PersonCoreDetailsForm({
           <p className="rounded-xl bg-muted/50 px-4 py-3 text-xs leading-5 text-muted-foreground">
             Person type and active status are managed by admission, transfer, withdrawal, and
             completion actions.
+            {profile.kind !== "staff" && profile.status === "active"
+              ? " Entering a withdrawn date here also marks this person inactive."
+              : ""}
           </p>
         </div>
       </div>
