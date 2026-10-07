@@ -11,12 +11,12 @@ import {
   Phone,
   Search,
   ShieldCheck,
-  UserRoundCheck,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
+import { FilterBar } from "@/components/filter-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,9 @@ export type StaffFilters = {
   q?: string;
   status?: "all" | StaffStatus;
   department?: string;
+  designation?: string;
+  category?: string;
+  gender?: "all" | "female" | "male" | "other" | "unknown";
   page?: number;
 };
 
@@ -118,6 +121,11 @@ export function StaffOperations({
   const debouncedQuery = useDebouncedValue(query);
   const [status, setStatus] = useState<"all" | StaffStatus>(filters.status ?? "all");
   const [department, setDepartment] = useState(filters.department ?? "all");
+  const [designation, setDesignation] = useState(filters.designation ?? "all");
+  const [category, setCategory] = useState(filters.category ?? "all");
+  const [gender, setGender] = useState<NonNullable<StaffFilters["gender"]>>(
+    filters.gender ?? "all",
+  );
   const [page, setPage] = useState(filters.page ?? 1);
   const [data, setData] = useState<StaffResponse>(emptyState);
   const [loading, setLoading] = useState(true);
@@ -129,17 +137,31 @@ export function StaffOperations({
     setQuery(filters.q ?? "");
     setStatus(filters.status ?? "all");
     setDepartment(filters.department ?? "all");
+    setDesignation(filters.designation ?? "all");
+    setCategory(filters.category ?? "all");
+    setGender(filters.gender ?? "all");
     setPage(filters.page ?? 1);
-  }, [filters.department, filters.page, filters.q, filters.status]);
+  }, [
+    filters.category,
+    filters.department,
+    filters.designation,
+    filters.gender,
+    filters.page,
+    filters.q,
+    filters.status,
+  ]);
 
   useEffect(() => {
     onFiltersChange?.({
       q: debouncedQuery || undefined,
       status,
       department,
+      designation,
+      category,
+      gender,
       page,
     });
-  }, [debouncedQuery, department, onFiltersChange, page, status]);
+  }, [category, debouncedQuery, department, designation, gender, onFiltersChange, page, status]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -147,6 +169,9 @@ export function StaffOperations({
       q: debouncedQuery,
       status,
       department,
+      designation,
+      category,
+      gender,
       page: String(page),
       pageSize: "25",
     });
@@ -169,16 +194,13 @@ export function StaffOperations({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [debouncedQuery, department, page, refreshVersion, status]);
+  }, [category, debouncedQuery, department, designation, gender, page, refreshVersion, status]);
 
-  useEffect(() => setPage(1), [department, status]);
+  useEffect(() => setPage(1), [category, department, designation, gender, status]);
 
   const counts = useMemo(() => {
-    const next = { active: 0, inactive: 0, all: 0 };
-    for (const item of data.summary) {
-      next[item.status] = Number(item.total);
-      next.all += Number(item.total);
-    }
+    const next = { active: 0, inactive: 0 };
+    for (const item of data.summary) next[item.status] = Number(item.total);
     return next;
   }, [data.summary]);
 
@@ -221,16 +243,15 @@ export function StaffOperations({
               workspace.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Summary value={counts.all} label="Staff" icon={UsersRound} />
-            <Summary value={counts.active} label="Active" icon={UserRoundCheck} />
+          <div className="grid grid-cols-2 gap-2">
+            <Summary value={counts.active} label="Active staff" icon={UsersRound} />
             <Summary value={data.departments.length} label="Departments" icon={Building2} />
           </div>
         </div>
 
         <Card className="mt-7 overflow-hidden">
           <CardContent className="p-0">
-            <div className="grid gap-3 border-b bg-card p-4 lg:grid-cols-[minmax(260px,1fr)_190px_220px]">
+            <div className="border-b bg-card p-4">
               <div className="relative min-w-0">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -244,29 +265,73 @@ export function StaffOperations({
                   value={query}
                 />
               </div>
-              <Select onValueChange={(value) => setStatus(value as typeof status)} value={status}>
-                <SelectTrigger className="w-full rounded-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select onValueChange={setDepartment} value={department}>
-                <SelectTrigger className="w-full rounded-full">
-                  <SelectValue placeholder="All departments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All departments</SelectItem>
-                  {data.departments.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FilterBar
+                className="mt-3"
+                fields={[
+                  {
+                    type: "choice",
+                    key: "status",
+                    label: "Status",
+                    options: [
+                      { value: "active", label: "Active" },
+                      { value: "inactive", label: "Inactive" },
+                    ],
+                    pinned: true,
+                  },
+                  {
+                    type: "choice",
+                    key: "department",
+                    label: "Department",
+                    options: catalogChoices(data.departments),
+                    pinned: true,
+                  },
+                  {
+                    type: "choice",
+                    key: "designation",
+                    label: "Designation",
+                    options: catalogChoices(
+                      data.designations.filter(
+                        (item) =>
+                          department === "all" ||
+                          !item.departmentId ||
+                          item.departmentId === department,
+                      ),
+                    ),
+                    pinned: true,
+                  },
+                  {
+                    type: "choice",
+                    key: "category",
+                    label: "Category",
+                    options: catalogChoices(data.categories),
+                  },
+                  {
+                    type: "choice",
+                    key: "gender",
+                    label: "Gender",
+                    options: [
+                      { value: "female", label: "Female" },
+                      { value: "male", label: "Male" },
+                      { value: "other", label: "Other" },
+                      { value: "unknown", label: "Not set" },
+                    ],
+                  },
+                ]}
+                onChange={(next) => {
+                  setStatus((next.status ?? "all") as typeof status);
+                  setDepartment(next.department ?? "all");
+                  setDesignation(next.designation ?? "all");
+                  setCategory(next.category ?? "all");
+                  setGender((next.gender ?? "all") as typeof gender);
+                }}
+                value={{
+                  status: status === "all" ? undefined : status,
+                  department: department === "all" ? undefined : department,
+                  designation: designation === "all" ? undefined : designation,
+                  category: category === "all" ? undefined : category,
+                  gender: gender === "all" ? undefined : gender,
+                }}
+              />
             </div>
 
             {error ? (
@@ -896,6 +961,10 @@ function StatusBadge({ status }: { status: StaffStatus }) {
       {status === "active" ? "Active" : "Inactive"}
     </Badge>
   );
+}
+
+function catalogChoices(items: CatalogItem[]) {
+  return items.map((item) => ({ value: item.id, label: item.name }));
 }
 
 function nullable(value: FormDataEntryValue | null): string | null {

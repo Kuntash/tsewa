@@ -187,7 +187,8 @@
 }
 
 /* The paper layout of a profile only exists on paper. */
-.person-profile-paper {
+.person-profile-paper,
+.print-letterhead {
   display: none;
 }
 
@@ -259,6 +260,21 @@
     page: report-card;
   }
 
+  .print-letterhead {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+    margin-bottom: 5mm;
+    padding-bottom: 4mm;
+    border-bottom: 1.5pt solid #1f6b4f;
+    color: #17251e;
+  }
+
+  .scholarship-legacy-report .print-letterhead {
+    margin: 0 5mm;
+    padding-top: 2mm;
+  }
+
   .person-profile-print,
   .person-profile-print * {
     visibility: visible;
@@ -285,6 +301,18 @@
     gap: 8mm;
     padding-bottom: 3mm;
     border-bottom: 1.5pt solid #1f6b4f;
+  }
+
+  .ppp-brand {
+    display: flex;
+    align-items: center;
+    gap: 3.5mm;
+    min-width: 0;
+  }
+
+  .ppp-logo {
+    width: 13mm;
+    height: 13mm;
   }
 
   .ppp-eyebrow {

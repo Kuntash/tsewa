@@ -16,6 +16,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 
+import { FilterBar } from "@/components/filter-bar";
+import { PrintLetterhead } from "@/components/organization-brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -332,6 +334,7 @@ export function ScholarshipOperations({
         </div>
       </header>
       <div className="scholarship-report-print mx-auto max-w-[1500px] space-y-5 px-5 py-8 md:px-8">
+        <PrintLetterhead />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Metric icon={Users} label="Scholarship records" value={data.summary.scholarships} />
           <Metric icon={BookOpen} label="Active awards" value={data.summary.active} />
@@ -348,7 +351,7 @@ export function ScholarshipOperations({
           </p>
         ) : null}
         <Card className="scholarship-report-controls">
-          <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(260px,1fr)_220px_260px]">
+          <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -362,27 +365,39 @@ export function ScholarshipOperations({
                 value={query}
               />
             </div>
-            <SimpleSelect
-              label="Status"
-              onChange={(value) => {
-                setStatus(value);
-                setPage(1);
-              }}
-              options={[
-                { id: "all", name: "All statuses" },
-                { id: "active", name: "Active" },
-                { id: "closed", name: "Closed" },
+            <FilterBar
+              className="mt-3"
+              fields={[
+                {
+                  type: "choice",
+                  key: "status",
+                  label: "Status",
+                  options: [
+                    { value: "active", label: "Active" },
+                    { value: "closed", label: "Closed" },
+                  ],
+                  pinned: true,
+                },
+                {
+                  type: "choice",
+                  key: "course",
+                  label: "Course",
+                  options: (setup?.courses ?? []).map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                  })),
+                  pinned: true,
+                },
               ]}
-              value={status}
-            />
-            <SimpleSelect
-              label="Course"
-              onChange={(value) => {
-                setCourse(value);
+              onChange={(next) => {
+                setStatus(next.status ?? "all");
+                setCourse(next.course ?? "all");
                 setPage(1);
               }}
-              options={[{ id: "all", name: "All courses" }, ...(setup?.courses ?? [])]}
-              value={course}
+              value={{
+                status: status === "all" ? undefined : status,
+                course: course === "all" ? undefined : course,
+              }}
             />
           </CardContent>
         </Card>
@@ -1566,6 +1581,7 @@ function ScholarshipReports({
               </div>
             ) : data ? (
               <>
+                <PrintLetterhead />
                 <div className="border-b p-5">
                   <p className="text-lg font-semibold">{data.title}</p>
                   <p className="text-sm text-muted-foreground">

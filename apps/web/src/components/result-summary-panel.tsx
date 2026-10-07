@@ -2,6 +2,7 @@ import { Download, FileText, LoaderCircle, Printer, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { OrganizationLogo } from "@/components/organization-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -316,16 +317,19 @@ function ReportCardSheet({
             <article className="student-report-print report-card-print mx-auto min-h-[210mm] w-full max-w-[1000px] bg-white px-8 py-10 text-[#17251e] shadow-[0_18px_60px_rgba(24,47,36,0.16)] sm:px-14">
               <header className="border-b-2 border-[#24664d] pb-6">
                 <div className="flex items-start justify-between gap-6">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#24664d]">
-                      Tsewa school records
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-                      {data.organizationName}
-                    </h1>
-                    <p className="mt-1 text-sm text-[#55645c]">
-                      Academic report card · {data.session.name}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-4">
+                    <OrganizationLogo className="size-14" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#24664d]">
+                        School records
+                      </p>
+                      <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+                        {data.organizationName}
+                      </h1>
+                      <p className="mt-1 text-sm text-[#55645c]">
+                        Academic report card · {data.session.name}
+                      </p>
+                    </div>
                   </div>
                   <div className="rounded-lg bg-[#edf4f0] px-4 py-3 text-right">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-[#64726b]">

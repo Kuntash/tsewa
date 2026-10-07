@@ -26,16 +26,22 @@ import { toast } from "sonner";
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { AdmissionSheet } from "@/components/admission-sheet";
 import { EnrollmentChangeSheet } from "@/components/enrollment-change-sheet";
+import {
+  FilterBar,
+  type FilterField,
+  filterSummary,
+  type FilterValues,
+} from "@/components/filter-bar";
 import { HistoricalResults, type HistoricalResultsFilters } from "@/components/historical-results";
 import { type EditableSchool, SchoolEditorSheet } from "@/components/school-editor-sheet";
 import { SchoolAssignmentsSheet } from "@/components/school-assignments-sheet";
 import { SchoolMasterData } from "@/components/school-master-data";
 import {
   pickStudentDetailFilters,
-  StudentDetailFilterBar,
   type StudentDetailFilters,
+  studentDetailFilterFields,
   type StudentDetailOptions,
-  studentDetailFilterSummary,
+  studentStatusFilterField,
 } from "@/components/student-detail-filters";
 import { StudentReportSheet, type StudentReportRequest } from "@/components/student-report-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -67,8 +73,6 @@ type OverviewResponse = {
   canEdit: boolean;
   summary: {
     students: number;
-    activeStudents: number;
-    inactiveStudents: number;
     schools: number;
     classes: number;
     houses: number;
@@ -122,7 +126,6 @@ type SchoolRow = {
   affiliationNumber: string | null;
   isActive: boolean;
   students: number;
-  currentActiveStudents: number;
   classes: number;
   houses: number;
 };
@@ -136,20 +139,34 @@ type RosterRow = {
   classLevel: number | null;
   classSection: string | null;
   students: number;
-  currentActiveStudents: number;
   femaleStudents: number;
   maleStudents: number;
   houses: number;
 };
 
 type SchoolSection = "students" | "schools" | "rosters" | "setup" | "results";
+type EnrollmentFilter = "all" | "enrolled" | "transferred" | "withdrawn" | "completed";
+
+const ENROLLMENT_FILTER_OPTIONS = [
+  { value: "enrolled", label: "Enrolled" },
+  { value: "transferred", label: "Transferred" },
+  { value: "withdrawn", label: "Withdrawn" },
+  { value: "completed", label: "Completed" },
+];
+
+const countChoices = (options: CountOption[]) =>
+  options.map((option) => ({
+    value: option.id ?? option.name,
+    label: option.name,
+    count: option.count,
+  }));
 
 export type SchoolFilters = StudentDetailFilters & {
   q?: string;
   school?: string;
   class?: string;
   house?: string;
-  status?: "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed";
+  status?: EnrollmentFilter;
   section?: SchoolSection;
   page?: number;
   rosterQ?: string;
@@ -197,9 +214,7 @@ export function SchoolOperations({
   const [school, setSchool] = useState(filters.school ?? "all");
   const [className, setClassName] = useState(filters.class ?? "all");
   const [house, setHouse] = useState(filters.house ?? "all");
-  const [status, setStatus] = useState<
-    "all" | "recorded" | "enrolled" | "transferred" | "withdrawn" | "completed"
-  >(filters.status ?? "all");
+  const [status, setStatus] = useState<EnrollmentFilter>(filters.status ?? "all");
   const [detail, setDetail] = useState<StudentDetailFilters>(() =>
     pickStudentDetailFilters(filters),
   );
@@ -409,6 +424,51 @@ export function SchoolOperations({
     [activeSessionId, sessions],
   );
 
+  const studentFilterFields = useMemo<FilterField[]>(
+    () => [
+      {
+        type: "choice",
+        key: "school",
+        label: "School",
+        options: countChoices(overview?.filters.schools ?? []),
+        pinned: true,
+      },
+      {
+        type: "choice",
+        key: "class",
+        label: "Class",
+        options: countChoices(overview?.filters.classes ?? []),
+        pinned: true,
+      },
+      {
+        type: "choice",
+        key: "house",
+        label: "House",
+        options: countChoices(overview?.filters.houses ?? []),
+        pinned: true,
+      },
+      studentStatusFilterField,
+      { type: "choice", key: "status", label: "Enrolment", options: ENROLLMENT_FILTER_OPTIONS },
+      ...studentDetailFilterFields(overview?.filters ?? emptyDetailOptions),
+    ],
+    [overview],
+  );
+  const studentFilterValues: FilterValues = {
+    ...detail,
+    school: school === "all" ? undefined : school,
+    class: className === "all" ? undefined : className,
+    house: house === "all" ? undefined : house,
+    status: status === "all" ? undefined : status,
+  };
+
+  function changeStudentFilters(next: FilterValues) {
+    setSchool(next.school ?? "all");
+    setClassName(next.class ?? "all");
+    setHouse(next.house ?? "all");
+    setStatus((next.status ?? "all") as EnrollmentFilter);
+    setDetail(pickStudentDetailFilters(next as StudentDetailFilters));
+  }
+
   const changeRosterFilters = useCallback((next: { q: string; school: string }) => {
     setRosterQuery(next.q);
     setRosterSchool(next.school);
@@ -473,28 +533,16 @@ export function SchoolOperations({
   }
 
   function openStudentListReport() {
-    const filterSummary = [`Session: ${selectedSession?.name ?? "Selected session"}`];
-    if (school !== "all") {
-      filterSummary.push(
-        `School: ${optionLabel(overview?.filters.schools ?? [], school, "School not set")}`,
-      );
-    }
-    if (className !== "all") filterSummary.push(`Class: ${className}`);
-    if (house !== "all") {
-      filterSummary.push(
-        `House: ${optionLabel(overview?.filters.houses ?? [], house, "No house")}`,
-      );
-    }
-    if (status !== "all") filterSummary.push(`Status: ${reportStatusLabel(status)}`);
-    filterSummary.push(
-      ...studentDetailFilterSummary(detail, overview?.filters ?? emptyDetailOptions),
-    );
-    if (debouncedQuery) filterSummary.push(`Search: ${debouncedQuery}`);
+    const summary = [
+      `Session: ${selectedSession?.name ?? "Selected session"}`,
+      ...filterSummary(studentFilterFields, studentFilterValues),
+    ];
+    if (debouncedQuery) summary.push(`Search: ${debouncedQuery}`);
     setStudentReport({
       title: "Student list",
       description: "Students matching the filters selected in School operations.",
       fileName: `student-list-${selectedSession?.name ?? "session"}`,
-      filterSummary,
+      filterSummary: summary,
       parameters: {
         sessionId: activeSessionId,
         q: debouncedQuery,
@@ -720,49 +768,11 @@ export function SchoolOperations({
                         value={query}
                       />
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-                      <FilterSelect
-                        label="All schools"
-                        onChange={setSchool}
-                        options={overview?.filters.schools ?? []}
-                        value={school}
-                      />
-                      <FilterSelect
-                        label="All classes"
-                        onChange={setClassName}
-                        options={overview?.filters.classes ?? []}
-                        value={className}
-                      />
-                      <FilterSelect
-                        label="All houses"
-                        onChange={setHouse}
-                        options={overview?.filters.houses ?? []}
-                        value={house}
-                      />
-                      <Select
-                        onValueChange={(value) => setStatus(value as typeof status)}
-                        value={status}
-                      >
-                        <SelectTrigger
-                          aria-label="Enrolment status"
-                          className="w-full rounded-full"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All enrolments</SelectItem>
-                          <SelectItem value="recorded">Imported record</SelectItem>
-                          <SelectItem value="enrolled">Enrolled</SelectItem>
-                          <SelectItem value="transferred">Transferred</SelectItem>
-                          <SelectItem value="withdrawn">Withdrawn</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <StudentDetailFilterBar
-                      onChange={setDetail}
-                      options={overview?.filters ?? emptyDetailOptions}
-                      value={detail}
+                    <FilterBar
+                      className="mt-3"
+                      fields={studentFilterFields}
+                      onChange={changeStudentFilters}
+                      value={studentFilterValues}
                     />
                     <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-muted-foreground">
@@ -1015,9 +1025,6 @@ function SchoolsDirectory({
                   </td>
                   <td className="px-4 py-4 tabular-nums">
                     {Number(school.students).toLocaleString()}
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {Number(school.currentActiveStudents).toLocaleString()} active now
-                    </p>
                   </td>
                   <td className="px-4 py-4 tabular-nums">{school.classes}</td>
                   <td className="px-4 py-4 tabular-nums">{school.houses}</td>
@@ -1082,7 +1089,7 @@ function RosterDirectory({
   return (
     <div className="mt-7">
       <Card>
-        <CardContent className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_240px]">
+        <CardContent className="p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -1093,11 +1100,19 @@ function RosterDirectory({
               value={query}
             />
           </div>
-          <FilterSelect
-            label="All schools"
-            onChange={(value) => onFiltersChange({ q: query, school: value })}
-            options={schools}
-            value={school}
+          <FilterBar
+            className="mt-3"
+            fields={[
+              {
+                type: "choice",
+                key: "school",
+                label: "School",
+                options: countChoices(schools),
+                pinned: true,
+              },
+            ]}
+            onChange={(next) => onFiltersChange({ q: query, school: next.school ?? "all" })}
+            value={{ school: school === "all" ? undefined : school }}
           />
         </CardContent>
       </Card>
@@ -1121,8 +1136,7 @@ function RosterDirectory({
               <MiniMetric label="Female" value={roster.femaleStudents} />
               <MiniMetric label="Male" value={roster.maleStudents} />
             </div>
-            <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-              <span>{roster.currentActiveStudents} active</span>
+            <div className="mt-4 flex items-center justify-end border-t pt-3 text-xs text-muted-foreground">
               <div className="flex gap-1">
                 <Button onClick={() => onPrintRoster(roster)} size="sm" variant="ghost">
                   <Printer /> Print
@@ -1184,7 +1198,7 @@ function SummaryCards({
       icon: Users,
       label: "Students",
       value: overview?.summary.students ?? 0,
-      detail: `${(overview?.summary.activeStudents ?? 0).toLocaleString()} active`,
+      detail: "Active in this session",
     },
     {
       icon: Building2,
@@ -1380,34 +1394,6 @@ function Pagination({
   );
 }
 
-function FilterSelect({
-  label,
-  onChange,
-  options,
-  value,
-}: {
-  label: string;
-  onChange: (value: string) => void;
-  options: CountOption[];
-  value: string;
-}) {
-  return (
-    <Select onValueChange={onChange} value={value}>
-      <SelectTrigger aria-label={label} className="w-full rounded-full">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">{label}</SelectItem>
-        {options.map((option) => (
-          <SelectItem key={option.id ?? option.name} value={option.id ?? option.name}>
-            {option.name} · {Number(option.count).toLocaleString()}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
 function SideItem({
   active = false,
   icon: Icon,
@@ -1470,7 +1456,7 @@ function EnrollmentStatusBadge({ status }: { status: StudentRow["enrollmentStatu
 
 function enrollmentStatusLabel(status: StudentRow["enrollmentStatus"]): string {
   return {
-    recorded: "Imported",
+    recorded: "Enrolled",
     enrolled: "Enrolled",
     transferred: "Transferred",
     withdrawn: "Withdrawn",
@@ -1494,14 +1480,6 @@ function studentDate(value: string | null): string {
         month: "short",
         year: "numeric",
       }).format(date);
-}
-
-function optionLabel(options: CountOption[], value: string, fallback: string) {
-  return options.find((option) => option.id === value)?.name ?? fallback;
-}
-
-function reportStatusLabel(status: Exclude<StudentRow["enrollmentStatus"], "graduated">) {
-  return enrollmentStatusLabel(status);
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

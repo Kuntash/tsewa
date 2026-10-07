@@ -15,6 +15,7 @@ import { MarkEntrySheet } from "@/components/mark-entry-sheet";
 import { AcademicConfiguration } from "@/components/academic-configuration";
 import { ResultSummaryPanel } from "@/components/result-summary-panel";
 import { Badge } from "@/components/ui/badge";
+import { FilterBar } from "@/components/filter-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -279,44 +280,52 @@ export function HistoricalResults({
               />
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <ResultFilter
-              label="All schools"
-              options={overviewFilters?.schools ?? []}
-              value={school}
-              onChange={(v) => {
-                setSchool(v);
-                setPage(1);
-              }}
-            />
-            <ResultFilter
-              label="All classes"
-              options={overviewFilters?.classes ?? []}
-              value={className}
-              onChange={(v) => {
-                setClassName(v);
-                setPage(1);
-              }}
-            />
-            <ResultFilter
-              label="All subjects"
-              options={overviewFilters?.subjects ?? []}
-              value={subject}
-              onChange={(v) => {
-                setSubject(v);
-                setPage(1);
-              }}
-            />
-            <ResultFilter
-              label="All terms"
-              options={overviewFilters?.terms ?? []}
-              value={term}
-              onChange={(v) => {
-                setTerm(v);
-                setPage(1);
-              }}
-            />
-          </div>
+          <FilterBar
+            className="mt-3"
+            fields={[
+              {
+                type: "choice",
+                key: "school",
+                label: "School",
+                options: resultChoices(overviewFilters?.schools),
+                pinned: true,
+              },
+              {
+                type: "choice",
+                key: "class",
+                label: "Class",
+                options: resultChoices(overviewFilters?.classes),
+                pinned: true,
+              },
+              {
+                type: "choice",
+                key: "subject",
+                label: "Subject",
+                options: resultChoices(overviewFilters?.subjects),
+                pinned: true,
+              },
+              {
+                type: "choice",
+                key: "term",
+                label: "Term",
+                options: resultChoices(overviewFilters?.terms),
+                pinned: true,
+              },
+            ]}
+            onChange={(next) => {
+              setSchool(next.school ?? "all");
+              setClassName(next.class ?? "all");
+              setSubject(next.subject ?? "all");
+              setTerm(next.term ?? "all");
+              setPage(1);
+            }}
+            value={{
+              school: school === "all" ? undefined : school,
+              class: className === "all" ? undefined : className,
+              subject: subject === "all" ? undefined : subject,
+              term: term === "all" ? undefined : term,
+            }}
+          />
         </CardContent>
       </Card>
       {error ? (
@@ -543,32 +552,8 @@ function Metric({
     </Card>
   );
 }
-function ResultFilter({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: Option[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Select onValueChange={onChange} value={value}>
-      <SelectTrigger aria-label={label}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">{label}</SelectItem>
-        {options.map((option) => (
-          <SelectItem key={option.id} value={option.id}>
-            {option.name} ({option.count})
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
+function resultChoices(options: Option[] = []) {
+  return options.map((option) => ({ value: option.id, label: option.name, count: option.count }));
 }
 function Pagination({
   data,

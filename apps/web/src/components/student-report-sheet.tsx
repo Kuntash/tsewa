@@ -1,6 +1,7 @@
 import { ArrowLeft, Download, FileText, LoaderCircle, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { OrganizationLogo } from "@/components/organization-brand";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 
@@ -105,6 +106,14 @@ export function StudentReportSheet({
       timeStyle: "short",
     }).format(new Date(data.generatedAt));
   }, [data]);
+
+  // The status column only earns its place when the list holds students who have left.
+  const showStatus = Boolean(
+    data?.students.some(
+      (student) =>
+        student.enrollmentStatus !== "recorded" && student.enrollmentStatus !== "enrolled",
+    ),
+  );
 
   function downloadCsv() {
     if (!data || !request) return;
@@ -213,12 +222,10 @@ export function StudentReportSheet({
               <header className="student-report-header">
                 <div className="flex items-start justify-between gap-6 border-b-2 border-[#24664d] pb-5">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[#24664d] text-sm font-bold tracking-tight text-white">
-                      TS
-                    </div>
+                    <OrganizationLogo className="size-12" />
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#24664d]">
-                        Tsewa school records
+                        School records
                       </p>
                       <p className="mt-1 truncate text-lg font-semibold tracking-[-0.02em]">
                         {data.organizationName}
@@ -268,7 +275,7 @@ export function StudentReportSheet({
                       <th className="report-optional">House</th>
                       <th className="report-optional">Category</th>
                       <th>Roll no.</th>
-                      <th className="report-optional">Status</th>
+                      {showStatus ? <th className="report-optional">Status</th> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -287,9 +294,11 @@ export function StudentReportSheet({
                         <td className="report-optional">{student.houseName ?? "—"}</td>
                         <td className="report-optional">{student.childCategoryName ?? "—"}</td>
                         <td className="tabular-nums">{student.rollNumber ?? "—"}</td>
-                        <td className="report-optional">
-                          {enrollmentStatusLabel(student.enrollmentStatus)}
-                        </td>
+                        {showStatus ? (
+                          <td className="report-optional">
+                            {enrollmentStatusLabel(student.enrollmentStatus)}
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
@@ -337,7 +346,7 @@ function genderLabel(gender: ReportStudent["gender"]) {
 }
 
 function enrollmentStatusLabel(status: ReportStudent["enrollmentStatus"]) {
-  if (status === "recorded") return "Imported record";
+  if (status === "recorded") return "Enrolled";
   if (status === "graduated") return "Completed";
   return status.charAt(0).toUpperCase() + status.slice(1);
 }

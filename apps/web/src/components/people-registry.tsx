@@ -12,19 +12,13 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { FilterBar } from "@/components/filter-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
@@ -253,7 +247,7 @@ export function PeopleRegistry({
 
           <Card className="mt-7 overflow-hidden">
             <CardContent className="p-0">
-              <div className="grid gap-3 border-b bg-card p-4 md:grid-cols-[minmax(260px,1fr)_160px_160px]">
+              <div className="border-b bg-card p-4">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -267,27 +261,40 @@ export function PeopleRegistry({
                     value={query}
                   />
                 </div>
-                <Select onValueChange={(value) => setKind(value as typeof kind)} value={kind}>
-                  <SelectTrigger className="w-full rounded-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All people</SelectItem>
-                    <SelectItem value="child">Children</SelectItem>
-                    <SelectItem value="elderly">Elderly</SelectItem>
-                    <SelectItem value="staff">Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select onValueChange={(value) => setStatus(value as typeof status)} value={status}>
-                  <SelectTrigger className="w-full rounded-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FilterBar
+                  className="mt-3"
+                  fields={[
+                    {
+                      type: "choice",
+                      key: "kind",
+                      label: "Type",
+                      options: [
+                        { value: "child", label: "Children" },
+                        { value: "elderly", label: "Elderly" },
+                        { value: "staff", label: "Staff" },
+                      ],
+                      pinned: true,
+                    },
+                    {
+                      type: "choice",
+                      key: "status",
+                      label: "Status",
+                      options: [
+                        { value: "active", label: "Active" },
+                        { value: "inactive", label: "Inactive" },
+                      ],
+                      pinned: true,
+                    },
+                  ]}
+                  onChange={(next) => {
+                    setKind((next.kind ?? "all") as typeof kind);
+                    setStatus((next.status ?? "all") as typeof status);
+                  }}
+                  value={{
+                    kind: kind === "all" ? undefined : kind,
+                    status: status === "all" ? undefined : status,
+                  }}
+                />
               </div>
 
               {error ? (

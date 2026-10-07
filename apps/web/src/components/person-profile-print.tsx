@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { OrganizationLogo } from "@/components/organization-brand";
 import type { Profile } from "@/components/person-profile-sheet";
 
 // The paper version of a profile. It is laid out for A4 rather than reusing the
@@ -62,9 +63,12 @@ export function PersonProfilePrint({
   return (
     <article className="person-profile-paper">
       <header className="ppp-masthead">
-        <div>
-          <p className="ppp-eyebrow">{profileTitle(profile.kind)}</p>
-          <p className="ppp-organization">{profile.organizationName}</p>
+        <div className="ppp-brand">
+          <OrganizationLogo className="ppp-logo" />
+          <div>
+            <p className="ppp-eyebrow">{profileTitle(profile.kind)}</p>
+            <p className="ppp-organization">{profile.organizationName}</p>
+          </div>
         </div>
         <p className="ppp-printed">Printed {formatDate(new Date().toISOString())}</p>
       </header>

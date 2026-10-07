@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { PrintLetterhead } from "@/components/organization-brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -314,6 +315,7 @@ export function ReportsCentre({
           </>
         ) : (
           <section className="reports-print-area">
+            <PrintLetterhead />
             <div className="reports-no-print flex flex-col gap-5 border-b pb-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <Button

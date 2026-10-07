@@ -252,6 +252,9 @@ const staffQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
   status: z.enum(["all", "active", "inactive"]).default("all"),
   department: z.string().trim().max(80).default("all"),
+  designation: z.string().trim().max(80).default("all"),
+  category: z.string().trim().max(80).default("all"),
+  gender: z.enum(["all", "female", "male", "other", "unknown"]).default("all"),
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
 });
@@ -968,6 +971,12 @@ function chunkList<T>(items: T[], size = D1_SAFE_PARAMETERS): T[][] {
 
 function runBatch(database: Database, statements: BatchItem<"sqlite">[]) {
   return database.batch(statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+}
+
+// 1 for a student who is active and still enrolled, 0 otherwise. This is the one
+// definition of current strength, shared by the home dashboard and School.
+function activeStudentCase() {
+  return sql<number>`case when ${person.status} = 'active' and ${studentEnrollment.status} in ('recorded', 'enrolled') then 1 else 0 end`;
 }
 
 function classDisplayName() {
@@ -1944,9 +1953,7 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
   const [summaryRows, schools, classes, houses, categories, homes, nationalities, parentage] =
     await runtime.ORM.batch([
       runtime.ORM.select({
-        students: count(),
-        activeStudents: sql<number>`sum(case when ${person.status} = 'active' then 1 else 0 end)`,
-        inactiveStudents: sql<number>`sum(case when ${person.status} = 'inactive' then 1 else 0 end)`,
+        students: sql<number>`sum(${activeStudentCase()})`,
         schools: sql<number>`count(distinct ${studentEnrollment.schoolId})`,
         classes: sql<number>`count(distinct coalesce(${studentEnrollment.schoolId}, 'unmapped') || '|' || ${className})`,
         houses: sql<number>`count(distinct ${studentEnrollment.houseId})`,
@@ -2056,8 +2063,6 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
     canEdit: hasPermission(scope, "school.enrollment.manage"),
     summary: {
       students: Number(summary?.students ?? 0),
-      activeStudents: Number(summary?.activeStudents ?? 0),
-      inactiveStudents: Number(summary?.inactiveStudents ?? 0),
       schools: Number(summary?.schools ?? 0),
       classes: Number(summary?.classes ?? 0),
       houses: Number(summary?.houses ?? 0),
@@ -3444,6 +3449,8 @@ function buildSchoolStudentFilters(
   if (filters.status !== "all") {
     if (filters.status === "completed") {
       conditions.push(inArray(studentEnrollment.status, ["completed", "graduated"]));
+    } else if (filters.status === "enrolled" || filters.status === "recorded") {
+      conditions.push(inArray(studentEnrollment.status, ["recorded", "enrolled"]));
     } else {
       conditions.push(eq(studentEnrollment.status, filters.status));
     }
@@ -3704,11 +3711,7 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
   const runtime = getRuntimeEnv();
   const enrollmentCounts = runtime.ORM.select({
     schoolId: studentEnrollment.schoolId,
-    students: count(studentEnrollment.id).as("students"),
-    currentActiveStudents:
-      sql<number>`count(distinct case when ${person.status} = 'active' then ${studentEnrollment.personId} end)`.as(
-        "current_active_students",
-      ),
+    students: sql<number>`sum(${activeStudentCase()})`.as("students"),
   })
     .from(studentEnrollment)
     .innerJoin(
@@ -3762,7 +3765,6 @@ async function getSchoolOperationsSchools(request: Request): Promise<Response> {
     affiliationNumber: schoolMaster.affiliationNumber,
     isActive: schoolMaster.isActive,
     students: sql<number>`coalesce(${enrollmentCounts.students}, 0)`,
-    currentActiveStudents: sql<number>`coalesce(${enrollmentCounts.currentActiveStudents}, 0)`,
     classes: sql<number>`coalesce(${offeringCounts.classes}, 0)`,
     houses: sql<number>`coalesce(${houseCounts.houses}, 0)`,
   })
@@ -4661,10 +4663,9 @@ async function getSchoolOperationsRosters(request: Request): Promise<Response> {
     className: classNameExpression,
     classLevel: sql<number | null>`max(${academicClassMaster.level})`,
     classSection: sql<string | null>`max(${academicClassMaster.section})`,
-    students: sql<number>`count(distinct ${studentEnrollment.id})`,
-    currentActiveStudents: sql<number>`count(distinct case when ${person.status} = 'active' then ${studentEnrollment.personId} end)`,
-    femaleStudents: sql<number>`count(distinct case when ${person.gender} = 'female' then ${studentEnrollment.personId} end)`,
-    maleStudents: sql<number>`count(distinct case when ${person.gender} = 'male' then ${studentEnrollment.personId} end)`,
+    students: sql<number>`count(distinct case when ${activeStudentCase()} = 1 then ${studentEnrollment.personId} end)`,
+    femaleStudents: sql<number>`count(distinct case when ${activeStudentCase()} = 1 and ${person.gender} = 'female' then ${studentEnrollment.personId} end)`,
+    maleStudents: sql<number>`count(distinct case when ${activeStudentCase()} = 1 and ${person.gender} = 'male' then ${studentEnrollment.personId} end)`,
     houses: sql<number>`count(distinct ${studentEnrollment.houseId})`,
   })
     .from(schoolClassOffering)

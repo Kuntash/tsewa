@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 
+import { PrintLetterhead } from "@/components/organization-brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1270,6 +1271,7 @@ function SponsorshipReports({
               </div>
             ) : data ? (
               <>
+                <PrintLetterhead />
                 <div className="border-b p-5">
                   <p className="text-lg font-semibold">{data.title}</p>
                   <p className="text-sm text-muted-foreground">

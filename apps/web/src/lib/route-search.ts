@@ -40,7 +40,7 @@ export const schoolSearchSchema = z.object({
   school: stringParam(),
   class: stringParam(),
   house: stringParam(),
-  status: enumParam(["recorded", "enrolled", "transferred", "withdrawn", "completed"] as const),
+  status: enumParam(["enrolled", "transferred", "withdrawn", "completed"] as const),
   category: stringParam(100),
   gender: enumParam(["female", "male", "other", "unknown"] as const),
   personStatus: enumParam(["active", "inactive"] as const),
@@ -68,6 +68,9 @@ export const staffSearchSchema = z.object({
   q: stringParam(100),
   status: enumParam(["active", "inactive"] as const),
   department: stringParam(),
+  designation: stringParam(),
+  category: stringParam(),
+  gender: enumParam(["female", "male", "other", "unknown"] as const),
   page: pageParam,
 });
 

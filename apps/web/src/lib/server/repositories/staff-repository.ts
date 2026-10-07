@@ -13,6 +13,9 @@ export type StaffDirectoryFilters = {
   q: string;
   status: "all" | "active" | "inactive";
   department: string;
+  designation: string;
+  category: string;
+  gender: "all" | "female" | "male" | "other" | "unknown";
   page: number;
   pageSize: number;
 };
@@ -30,6 +33,17 @@ export async function findStaffDirectory(
   if (filters.status !== "all") conditions.push(eq(person.status, filters.status));
   if (filters.department !== "all") {
     conditions.push(eq(staffProfile.departmentId, filters.department));
+  }
+  if (filters.designation !== "all") {
+    conditions.push(eq(staffProfile.designationId, filters.designation));
+  }
+  if (filters.category !== "all") conditions.push(eq(staffProfile.categoryId, filters.category));
+  if (filters.gender !== "all") {
+    conditions.push(
+      filters.gender === "unknown"
+        ? sql`coalesce(${person.gender}, 'unknown') = 'unknown'`
+        : eq(person.gender, filters.gender),
+    );
   }
   if (filters.q) {
     const search = `%${escapeLikePattern(filters.q.toLowerCase())}%`;

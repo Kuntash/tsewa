@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { AccountSettings } from "@/components/account-settings";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BillingSettings } from "@/components/billing-settings";
+import { FilterBar } from "@/components/filter-bar";
 import { HealthOperations } from "@/components/health-operations";
 import type { HealthFilters } from "@/components/health-operations";
 import { PeopleRegistry } from "@/components/people-registry";
@@ -1337,8 +1338,8 @@ function Dashboard({
     },
     {
       key: "school" as const,
-      label: "Current students",
-      detail: state ? `in ${state.session.name}` : "in this session",
+      label: "Active students",
+      detail: state ? `total strength in ${state.session.name}` : "total strength this session",
       Icon: GraduationCap,
       view: "school" as const,
     },
@@ -2607,7 +2608,7 @@ function AuditSettings({ canRead, search }: { canRead: boolean; search: RoutedAp
       </Card>
 
       <Card className="mt-5 overflow-hidden">
-        <div className="grid gap-3 border-b bg-muted/20 p-4 md:grid-cols-[1fr_240px]">
+        <div className="border-b bg-muted/20 p-4">
           <div className="relative">
             <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -2618,22 +2619,23 @@ function AuditSettings({ canRead, search }: { canRead: boolean; search: RoutedAp
               value={query}
             />
           </div>
-          <Select
-            onValueChange={(value) => updateFilters({ action: value, page: 1 })}
-            value={action}
-          >
-            <SelectTrigger className="w-full rounded-full">
-              <SelectValue placeholder="All actions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All actions</SelectItem>
-              {state?.actions.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {formatAuditAction(item)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterBar
+            className="mt-3"
+            fields={[
+              {
+                type: "choice",
+                key: "action",
+                label: "Action",
+                options: (state?.actions ?? []).map((item) => ({
+                  value: item,
+                  label: formatAuditAction(item),
+                })),
+                pinned: true,
+              },
+            ]}
+            onChange={(next) => updateFilters({ action: next.action ?? "all", page: 1 })}
+            value={{ action: action === "all" ? undefined : action }}
+          />
         </div>
         {error ? (
           <div className="m-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">

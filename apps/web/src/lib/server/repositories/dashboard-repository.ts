@@ -70,9 +70,17 @@ export async function findDashboard(
         database
           .select({
             total: count(),
-            current: sql<number>`sum(case when ${studentEnrollment.status} in ('recorded', 'enrolled') then 1 else 0 end)`,
+            // Same definition as the Students figure in School: active and still enrolled.
+            current: sql<number>`sum(case when ${person.status} = 'active' and ${studentEnrollment.status} in ('recorded', 'enrolled') then 1 else 0 end)`,
           })
           .from(studentEnrollment)
+          .innerJoin(
+            person,
+            and(
+              eq(person.id, studentEnrollment.personId),
+              eq(person.organizationId, studentEnrollment.organizationId),
+            ),
+          )
           .where(
             and(
               eq(studentEnrollment.organizationId, organizationId),

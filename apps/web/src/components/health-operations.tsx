@@ -15,16 +15,10 @@ import { useEffect, useState } from "react";
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
+import { FilterBar } from "@/components/filter-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
@@ -167,6 +161,13 @@ const emptyHealth: HealthResponse = {
   visits: [],
   pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
 };
+
+const PATIENT_TYPE_OPTIONS = [
+  { value: "child", label: "Children" },
+  { value: "elderly", label: "Elderly" },
+  { value: "staff", label: "Staff" },
+  { value: "other", label: "Other" },
+];
 
 export type HealthFilters = {
   section?: "diagnosis" | "tb" | "advances";
@@ -326,33 +327,34 @@ export function HealthOperations({
 
             <Card className="mt-5">
               <CardContent className="p-5">
-                <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      aria-label="Search health history"
-                      className="pl-9"
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search patient, admission number, or diagnosis"
-                      value={query}
-                    />
-                  </div>
-                  <Select
-                    onValueChange={(value) => setKind(value as NonNullable<HealthFilters["kind"]>)}
-                    value={kind}
-                  >
-                    <SelectTrigger aria-label="Patient type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All patient types</SelectItem>
-                      <SelectItem value="child">Children</SelectItem>
-                      <SelectItem value="elderly">Elderly</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    aria-label="Search health history"
+                    className="pl-9"
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search patient, admission number, or diagnosis"
+                    value={query}
+                  />
                 </div>
+                <FilterBar
+                  className="mt-3"
+                  fields={[
+                    {
+                      type: "choice",
+                      key: "kind",
+                      label: "Patient type",
+                      options: PATIENT_TYPE_OPTIONS,
+                      pinned: true,
+                    },
+                  ]}
+                  onChange={(next) => {
+                    setKind((next.kind ?? "all") as NonNullable<HealthFilters["kind"]>);
+                  }}
+                  value={{
+                    kind: kind === "all" ? undefined : kind,
+                  }}
+                />
 
                 {error ? (
                   <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -594,46 +596,47 @@ function TbHistory({
 
       <Card className="mt-5">
         <CardContent className="p-5">
-          <div className="grid gap-3 md:grid-cols-[1fr_160px_210px]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Search TB history"
-                className="pl-9"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search patient, admission, TB card, test, or result"
-                value={query}
-              />
-            </div>
-            <Select
-              onValueChange={(value) => setKind(value as NonNullable<HealthFilters["kind"]>)}
-              value={kind}
-            >
-              <SelectTrigger aria-label="TB patient type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All patient types</SelectItem>
-                <SelectItem value="child">Children</SelectItem>
-                <SelectItem value="elderly">Elderly</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select onValueChange={setOutcome} value={outcome}>
-              <SelectTrigger aria-label="TB outcome">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All outcomes</SelectItem>
-                {data.outcomes.map((item) => (
-                  <SelectItem key={item.name} value={item.name}>
-                    {item.name} ({item.count})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search TB history"
+              className="pl-9"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search patient, admission, TB card, test, or result"
+              value={query}
+            />
           </div>
+          <FilterBar
+            className="mt-3"
+            fields={[
+              {
+                type: "choice",
+                key: "kind",
+                label: "Patient type",
+                options: PATIENT_TYPE_OPTIONS,
+                pinned: true,
+              },
+              {
+                type: "choice",
+                key: "outcome",
+                label: "Outcome",
+                options: data.outcomes.map((item) => ({
+                  value: item.name,
+                  label: item.name,
+                  count: item.count,
+                })),
+                pinned: true,
+              },
+            ]}
+            onChange={(next) => {
+              setKind((next.kind ?? "all") as NonNullable<HealthFilters["kind"]>);
+              setOutcome(next.outcome ?? "all");
+            }}
+            value={{
+              kind: kind === "all" ? undefined : kind,
+              outcome: outcome === "all" ? undefined : outcome,
+            }}
+          />
 
           {error ? (
             <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -886,43 +889,46 @@ function MedicalAdvances({
 
       <Card className="mt-5">
         <CardContent className="p-5">
-          <div className="grid gap-3 md:grid-cols-[1fr_160px_180px]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Search medical advances"
-                className="pl-9"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search sanction, patient, diagnosis, or medication"
-                value={query}
-              />
-            </div>
-            <Select
-              onValueChange={(value) => setKind(value as NonNullable<HealthFilters["kind"]>)}
-              value={kind}
-            >
-              <SelectTrigger aria-label="Advance patient type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All patient types</SelectItem>
-                <SelectItem value="child">Children</SelectItem>
-                <SelectItem value="elderly">Elderly</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select onValueChange={setSettlement} value={settlement}>
-              <SelectTrigger aria-label="Settlement status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All settlements</SelectItem>
-                <SelectItem value="settled">Settled</SelectItem>
-                <SelectItem value="unsettled">Not settled</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search medical advances"
+              className="pl-9"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search sanction, patient, diagnosis, or medication"
+              value={query}
+            />
           </div>
+          <FilterBar
+            className="mt-3"
+            fields={[
+              {
+                type: "choice",
+                key: "kind",
+                label: "Patient type",
+                options: PATIENT_TYPE_OPTIONS,
+                pinned: true,
+              },
+              {
+                type: "choice",
+                key: "settlement",
+                label: "Settlement",
+                options: [
+                  { value: "settled", label: "Settled" },
+                  { value: "unsettled", label: "Not settled" },
+                ],
+                pinned: true,
+              },
+            ]}
+            onChange={(next) => {
+              setKind((next.kind ?? "all") as NonNullable<HealthFilters["kind"]>);
+              setSettlement(next.settlement ?? "all");
+            }}
+            value={{
+              kind: kind === "all" ? undefined : kind,
+              settlement: settlement === "all" ? undefined : settlement,
+            }}
+          />
 
           {error ? (
             <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
