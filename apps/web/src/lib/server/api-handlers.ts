@@ -3678,13 +3678,8 @@ async function getSchoolOperationsStudentReport(request: Request): Promise<Respo
 
   const students = await schoolStudentQuery(runtime.ORM)
     .where(where)
-    .orderBy(
-      sql`${schoolMaster.name} collate nocase`,
-      sql`coalesce(${academicClassMaster.sortOrder}, 999)`,
-      sql`${classDisplayName()} collate nocase`,
-      sql`${person.displayName} collate nocase`,
-      person.primaryIdentifier,
-    )
+    // Same order as the on-screen table, so the paper reads like the page.
+    .orderBy(sql`${person.displayName} collate nocase`, person.primaryIdentifier)
     .limit(MAX_STUDENT_REPORT_ROWS);
 
   return Response.json({

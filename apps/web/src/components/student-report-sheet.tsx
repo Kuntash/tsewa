@@ -107,14 +107,6 @@ export function StudentReportSheet({
     }).format(new Date(data.generatedAt));
   }, [data]);
 
-  // The status column only earns its place when the list holds students who have left.
-  const showStatus = Boolean(
-    data?.students.some(
-      (student) =>
-        student.enrollmentStatus !== "recorded" && student.enrollmentStatus !== "enrolled",
-    ),
-  );
-
   function downloadCsv() {
     if (!data || !request) return;
     const headers = [
@@ -264,41 +256,32 @@ export function StudentReportSheet({
                 <table className="student-report-table w-full border-collapse text-left text-[10px]">
                   <thead>
                     <tr>
-                      <th className="w-8">No.</th>
-                      <th>Student</th>
                       <th>Admission no.</th>
-                      <th>Gender</th>
-                      {!request.hideSchoolAndClass ? (
-                        <th className="report-optional">School</th>
-                      ) : null}
+                      <th>Name</th>
                       {!request.hideSchoolAndClass ? <th>Class</th> : null}
-                      <th className="report-optional">House</th>
-                      <th className="report-optional">Category</th>
-                      <th>Roll no.</th>
-                      {showStatus ? <th className="report-optional">Status</th> : null}
+                      <th>Gender</th>
+                      <th>Date of birth</th>
+                      <th>Current placement</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.students.map((student, index) => (
                       <tr key={`${student.personId}-${index}`}>
-                        <td className="tabular-nums text-[#68766f]">{index + 1}</td>
-                        <td className="font-semibold">{student.displayName}</td>
                         <td className="tabular-nums">{student.primaryIdentifier}</td>
-                        <td>{genderLabel(student.gender)}</td>
-                        {!request.hideSchoolAndClass ? (
-                          <td className="report-optional">{student.schoolName ?? "Not set"}</td>
-                        ) : null}
+                        <td className="font-semibold">{student.displayName}</td>
                         {!request.hideSchoolAndClass ? (
                           <td>{student.classTitle ?? student.className}</td>
                         ) : null}
-                        <td className="report-optional">{student.houseName ?? "—"}</td>
-                        <td className="report-optional">{student.childCategoryName ?? "—"}</td>
-                        <td className="tabular-nums">{student.rollNumber ?? "—"}</td>
-                        {showStatus ? (
-                          <td className="report-optional">
-                            {enrollmentStatusLabel(student.enrollmentStatus)}
-                          </td>
-                        ) : null}
+                        <td>{genderLabel(student.gender)}</td>
+                        <td className="tabular-nums">{dateLabel(student.dateOfBirth)}</td>
+                        <td>
+                          {student.currentPlacement ?? "Not recorded"}
+                          {student.childCategoryName ? (
+                            <span className="block text-[9px] text-[#68766f]">
+                              {student.childCategoryName}
+                            </span>
+                          ) : null}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -340,8 +323,19 @@ function safeFileName(value: string) {
   );
 }
 
+// Dates and empty values read the same as in the on-screen student table.
+function dateLabel(value: string | null) {
+  if (!value) return "Not recorded";
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(
+        date,
+      );
+}
+
 function genderLabel(gender: ReportStudent["gender"]) {
-  if (!gender || gender === "unknown") return "Not set";
+  if (!gender || gender === "unknown") return "Not recorded";
   return gender.charAt(0).toUpperCase() + gender.slice(1);
 }
 
