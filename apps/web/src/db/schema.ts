@@ -438,6 +438,34 @@ export const person = sqliteTable(
   },
   (table) => [
     index("person_registry_name_idx").on(table.organizationId, table.displayName),
+    index("person_registry_sort_idx").on(
+      table.organizationId,
+      sql`lower(${table.displayName})`,
+      table.primaryIdentifier,
+      table.id,
+    ),
+    index("person_registry_kind_sort_idx").on(
+      table.organizationId,
+      table.kind,
+      sql`lower(${table.displayName})`,
+      table.primaryIdentifier,
+      table.id,
+    ),
+    index("person_registry_status_sort_idx").on(
+      table.organizationId,
+      table.status,
+      sql`lower(${table.displayName})`,
+      table.primaryIdentifier,
+      table.id,
+    ),
+    index("person_registry_kind_status_sort_idx").on(
+      table.organizationId,
+      table.kind,
+      table.status,
+      sql`lower(${table.displayName})`,
+      table.primaryIdentifier,
+      table.id,
+    ),
     index("person_registry_filter_idx").on(
       table.organizationId,
       table.kind,
@@ -1151,6 +1179,11 @@ export const studentEnrollment = sqliteTable(
       table.status,
     ),
     index("student_enrollment_offering_idx").on(table.organizationId, table.schoolClassOfferingId),
+    index("student_enrollment_session_person_idx").on(
+      table.organizationId,
+      table.academicSessionId,
+      table.personId,
+    ),
   ],
 );
 

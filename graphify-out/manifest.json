@@ -5,8 +5,8 @@
     "semantic_hash": "2d9043fb53c3a0843a5b6afd1882767e"
   },
   "apps/web/package.json": {
-    "mtime": 1791143569.4533005,
-    "ast_hash": "4c9b7913c7e33ca05f448f03f8a2a374",
+    "mtime": 1791767950.7061424,
+    "ast_hash": "cbfd36a092368c187b7e49250581765a",
     "semantic_hash": ""
   },
   "apps/web/src/components/account-settings.tsx": {
@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1791407509.4887087,
-    "ast_hash": "f221f543af9f202ae2e97bb9ddf3a7ad",
+    "mtime": 1791768059.0928178,
+    "ast_hash": "36d84669f7472de8ab69b616c54e37a7",
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1791261846.324387,
-    "ast_hash": "3182180f6436eb6bb31e14278c9b2eb3",
+    "mtime": 1791768059.0946543,
+    "ast_hash": "509e05bf2559be8cc3b0055b0fdd80a5",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/db/schema.ts": {
-    "mtime": 1791183117.3841221,
-    "ast_hash": "01b3e6928eaa2f352ba73f7e2636379a",
+    "mtime": 1791769887.0209544,
+    "ast_hash": "5dd7041697b487839e5a0201ae761a12",
     "semantic_hash": ""
   },
   "apps/web/src/lib/access-control.ts": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791408395.9583235,
-    "ast_hash": "f4e6e67378afc48a4a488d3a23415275",
+    "mtime": 1791769968.6039178,
+    "ast_hash": "327211940147de409fe5d9dd71977afd",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -890,8 +890,8 @@
     "semantic_hash": ""
   },
   "apps/web/vitest.config.ts": {
-    "mtime": 1786821426.2202668,
-    "ast_hash": "87ccba62dfdfa1ff70c36f817875e8d2",
+    "mtime": 1791768007.9141428,
+    "ast_hash": "92cd3956da06f3c7b26fee490138d1df",
     "semantic_hash": ""
   },
   "apps/web/migrations/0025_scholarship_operations.sql": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/people-repository.ts": {
-    "mtime": 1791137052.733315,
-    "ast_hash": "2cdd93510db0e07841690f2edf4c84a5",
+    "mtime": 1791768148.802148,
+    "ast_hash": "e80ccfdde2127fad53fac61577eb6b9e",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.dashboard.ts": {
@@ -1602,6 +1602,171 @@
   "docs/design/explore/students.html": {
     "mtime": 1791281216.659604,
     "ast_hash": "916a6825754c994fb97188939bbdb803",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/catalog.js": {
+    "mtime": 1791769843.2854102,
+    "ast_hash": "be3e1047751a176748701ed44c7f83be",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/content.js": {
+    "mtime": 1791769832.0838006,
+    "ast_hash": "ccd0444f1a5ba784a345aafc59a782cd",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/explorer.jsx": {
+    "mtime": 1791768363.8586354,
+    "ast_hash": "472b64f8585756df095b6d379fb172bd",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/prototype.jsx": {
+    "mtime": 1791769602.1019228,
+    "ast_hash": "baf010473f1c7bf5636ff7171eb0179d",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/screens.jsx": {
+    "mtime": 1791769965.9849296,
+    "ast_hash": "b52752dbf9cafa34ebb5528af4a5f904",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/vite.config.ts": {
+    "mtime": 1791767950.6295412,
+    "ast_hash": "4265720e47e23c21b5975bbbafc39100",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0038_people_search_performance.sql": {
+    "mtime": 1791767843.774273,
+    "ast_hash": "7721a2770b8685e83fba82893820bb67",
+    "semantic_hash": ""
+  },
+  "apps/web/migrations/0039_school_overview_performance.sql": {
+    "mtime": 1791769886.9777405,
+    "ast_hash": "6bef3432395e6a072e5302ed218947f1",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/server/people-enrollment.test.ts": {
+    "mtime": 1791769941.6822624,
+    "ast_hash": "0a40c2689b754f4207107df6d64fe1bd",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/index.html": {
+    "mtime": 1791767950.629952,
+    "ast_hash": "68d277e26a48cf5d61d8d05d4aa544ad",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/prototype.html": {
+    "mtime": 1791767950.6300998,
+    "ast_hash": "dc38303386b73fa37ca1b218718214ec",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/0b8332f4-af27-4a9f-b6f5-1de0a4fb1e71.webp": {
+    "mtime": 1791769345.4956949,
+    "ast_hash": "673d94ed8afbe994cd3e48c82abf1b92",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/1a7893ef-eb33-440b-9a75-33ec7992de0c.webp": {
+    "mtime": 1791769357.4136927,
+    "ast_hash": "6cf67c406f8884b86ee441d702f5ca81",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/1bacbbdb-bbab-4a48-a1c9-5c61c3bbad76.webp": {
+    "mtime": 1791769350.997692,
+    "ast_hash": "f2ad85d35dd4272440f445feb86a1521",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/350128d2-62fa-4a48-8307-47e41fe7fce7.webp": {
+    "mtime": 1791769340.844245,
+    "ast_hash": "f66153085dda34734655ba34679c30b3",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/3edce281-aea3-43f0-b3e6-48c2084ed055.webp": {
+    "mtime": 1791769348.6020725,
+    "ast_hash": "c28b0f4bdf81bdb6b54f67e58a9cb40d",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/3f22f978-d2ec-4cb0-af31-2a4a8f7a34af.webp": {
+    "mtime": 1791769347.56992,
+    "ast_hash": "c765d437331532f1af374af5e8af19a3",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/4aab7ca8-8730-4ee9-817e-60c7fe46a435.webp": {
+    "mtime": 1791769361.2297337,
+    "ast_hash": "af96a165afd8b5070f7e260a7372144c",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/5508ba42-4a5f-460c-a83a-9f10533b13f4.webp": {
+    "mtime": 1791769337.1515443,
+    "ast_hash": "fd0d320b2135460e95b9adb3986ab1e8",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/58036dc3-f82b-4bca-9f33-471d2e45e17e.webp": {
+    "mtime": 1791769358.4891832,
+    "ast_hash": "7abb2766e9cf039e87ecac5183a48c6d",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/58047c57-4992-4c27-9974-43c522a5aa42.webp": {
+    "mtime": 1791769352.2101016,
+    "ast_hash": "e8893e5d307f1d42b031cf2d409c5700",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/61b606e9-9053-4ed3-b0dc-0cfae9edb6e7.webp": {
+    "mtime": 1791769343.332843,
+    "ast_hash": "ce86be3a3762db76390f31374f1ed06b",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/7f5cbcf3-5e3c-44af-b904-541b6dcb0c47.webp": {
+    "mtime": 1791769338.4411829,
+    "ast_hash": "f67c8ca6e77c0ecf1f259a0f6a3f67cf",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/87f9d574-30e4-4053-80c3-4d4cc189ca69.webp": {
+    "mtime": 1791769339.6232255,
+    "ast_hash": "6980ca24f4190ece9dfa4e27a156dc6a",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/89d118cc-f223-4d5f-8bbe-ae4ec910d753.webp": {
+    "mtime": 1791769353.2415693,
+    "ast_hash": "cee1230e93f9d53fb0170bacc31559e9",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/8f0f13a3-a889-4208-af7e-82c40776c442.webp": {
+    "mtime": 1791769359.6221535,
+    "ast_hash": "1eedde323244e188c1b45bc592330b09",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/a8ae42f7-bbe4-42ed-8e62-a08fdfba764b.webp": {
+    "mtime": 1791769342.1975284,
+    "ast_hash": "4f89525359c7b185850371651c7ddae0",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/b4b535e2-bf49-4c74-9075-daa46c2d9456.webp": {
+    "mtime": 1791769346.5808988,
+    "ast_hash": "731a06152bc69f30193d1e29388b24a3",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/c5bd2a1a-eec1-4233-b4d3-17b0025b90f8.webp": {
+    "mtime": 1791769344.427059,
+    "ast_hash": "a0fd4b66c448e7aac2d2eaaca82898c3",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/d76ba56f-98c3-463f-9e1d-bbe4831ee47a.webp": {
+    "mtime": 1791769355.1015186,
+    "ast_hash": "adff5b1e40d93d28534e2d59e1a8f23b",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/e8b9794a-3c56-41ca-90ef-db8ca2f5db6f.webp": {
+    "mtime": 1791769349.8849068,
+    "ast_hash": "a708ae9034306e544461196eaea560f7",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/ece167ee-42e0-4fd7-902e-243efcf57a09.webp": {
+    "mtime": 1791769336.102075,
+    "ast_hash": "cbf1e3aa70d046885364053528d94ccf",
+    "semantic_hash": ""
+  },
+  "apps/web/design-explorer/public/references/feab3de9-e5a0-48cc-861b-4f0a87289fea.webp": {
+    "mtime": 1791769356.2465749,
+    "ast_hash": "885fd9b5e5a31a615555b6187c8d0de3",
     "semantic_hash": ""
   }
 }

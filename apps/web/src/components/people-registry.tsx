@@ -10,7 +10,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FilterBar } from "@/components/filter-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -32,6 +32,7 @@ type PersonRow = {
   identifierKind: "admission" | "staff";
   primaryIdentifier: string;
   displayName: string;
+  latestClassName: string | null;
   gender: "female" | "male" | "other" | "unknown" | null;
   dateOfBirth: string | null;
   admittedOrJoinedOn: string | null;
@@ -103,6 +104,7 @@ export function PeopleRegistry({
   const [error, setError] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const summaryLoaded = useRef(false);
 
   useEffect(() => {
     setQuery(filters.q ?? "");
@@ -117,12 +119,14 @@ export function PeopleRegistry({
 
   useEffect(() => {
     const controller = new AbortController();
+    const includeSummary = !summaryLoaded.current;
     const parameters = new URLSearchParams({
       q: debouncedQuery,
       kind,
       status,
       page: String(page),
       pageSize: "25",
+      includeSummary: String(includeSummary),
     });
 
     setLoading(true);
@@ -135,7 +139,15 @@ export function PeopleRegistry({
         }
         return response.json() as Promise<RegistryResponse>;
       })
-      .then(setData)
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        if (includeSummary) summaryLoaded.current = true;
+        setData((current) => ({
+          ...payload,
+          summary: includeSummary ? payload.summary : current.summary,
+          latestImport: includeSummary ? payload.latestImport : current.latestImport,
+        }));
+      })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
         setError(reason instanceof Error ? reason.message : "People could not be loaded.");
@@ -349,7 +361,10 @@ export function PeopleRegistry({
         onOpenChange={(open) => {
           if (!open) setSelectedPersonId(null);
         }}
-        onPersonUpdated={() => setRefreshVersion((current) => current + 1)}
+        onPersonUpdated={() => {
+          summaryLoaded.current = false;
+          setRefreshVersion((current) => current + 1);
+        }}
         personId={selectedPersonId}
       />
     </main>
@@ -407,6 +422,9 @@ function PeopleResults({
             <tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground">
               <th className="px-5 py-3 font-medium">{identifierLabel(kind)}</th>
               <th className="px-5 py-3 font-medium">Name</th>
+              {kind === "child" || kind === "all" ? (
+                <th className="px-5 py-3 font-medium">Latest class</th>
+              ) : null}
               <th className="px-5 py-3 font-medium">Type</th>
               <th className="px-5 py-3 font-medium">Gender</th>
               <th className="px-5 py-3 font-medium">Date of birth</th>
@@ -432,6 +450,11 @@ function PeopleResults({
                     {person.displayName}
                   </button>
                 </td>
+                {kind === "child" || kind === "all" ? (
+                  <td className="px-5 py-4 text-muted-foreground">
+                    {person.latestClassName || "—"}
+                  </td>
+                ) : null}
                 <td className="px-5 py-4">
                   <KindBadge kind={person.kind} />
                 </td>
@@ -482,6 +505,9 @@ function PeopleResults({
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <KindBadge kind={person.kind} />
+              {person.kind === "child" ? (
+                <span>Class: {person.latestClassName || "Not recorded"}</span>
+              ) : null}
               <span className="capitalize">{person.gender ?? "Unknown gender"}</span>
               <span>·</span>
               <span>{formatDate(person.dateOfBirth)}</span>

@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   GraduationCap,
+  Globe,
   History,
   LoaderCircle,
   LogOut,
@@ -8,6 +9,7 @@ import {
   PencilLine,
   RotateCcw,
   School,
+  Tags,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
@@ -29,6 +31,8 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 type Option = { id: string; name: string; schoolId?: string };
 type Action =
   | "placement_changed"
+  | "nationality_changed"
+  | "category_changed"
   | "internal_transfer"
   | "transferred_out"
   | "withdrawn"
@@ -51,6 +55,9 @@ type Enrollment = {
   rollNumber: string | null;
   status: string;
   canEdit: boolean;
+  canEditPerson: boolean;
+  nationality: string | null;
+  childCategoryId: string | null;
   canReopen?: boolean;
   personStatus?: "active" | "inactive";
   withdrawnOn?: string | null;
@@ -59,7 +66,16 @@ type Enrollment = {
 
 type Change = {
   id: string;
-  changeType: "admitted" | "placement_changed" | "transferred" | "withdrawn" | "completed";
+  changeType:
+    | "admitted"
+    | "placement_changed"
+    | "transferred"
+    | "withdrawn"
+    | "completed"
+    | "nationality_changed"
+    | "category_changed";
+  previousValue?: string | null;
+  nextValue?: string | null;
   effectiveOn: string;
   fromStatus: string | null;
   toStatus: string | null;
@@ -82,6 +98,7 @@ type EnrollmentResponse = {
     classes: Option[];
     houses: Option[];
     withdrawalReasons: string[];
+    childCategories: Option[];
   };
   changes: Change[];
 };
@@ -97,6 +114,18 @@ const actions: Array<{
     label: "Change class or house",
     description: "The student stays enrolled in the same school.",
     icon: PencilLine,
+  },
+  {
+    value: "nationality_changed",
+    label: "Change nationality",
+    description: "Update the student's nationality.",
+    icon: Globe,
+  },
+  {
+    value: "category_changed",
+    label: "Change child category",
+    description: "Update the student's child category.",
+    icon: Tags,
   },
   {
     value: "internal_transfer",
@@ -141,6 +170,8 @@ export function EnrollmentChangeSheet({
   const [academicClassId, setAcademicClassId] = useState("");
   const [houseId, setHouseId] = useState("none");
   const [rollNumber, setRollNumber] = useState("");
+  const [nationality, setNationality] = useState("");
+  const [childCategoryId, setChildCategoryId] = useState("none");
   const [effectiveOn, setEffectiveOn] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -171,6 +202,8 @@ export function EnrollmentChangeSheet({
         setAcademicClassId(payload.enrollment.academicClassId);
         setHouseId(payload.enrollment.houseId ?? "none");
         setRollNumber(payload.enrollment.rollNumber ?? "");
+        setNationality(payload.enrollment.nationality ?? "");
+        setChildCategoryId(payload.enrollment.childCategoryId ?? "none");
         setEffectiveOn(dateWithinSession(payload.enrollment));
         setNote("");
       })
@@ -186,6 +219,7 @@ export function EnrollmentChangeSheet({
 
   const selectedAction = actions.find((item) => item.value === action) ?? actions[0];
   const keepsStudentEnrolled = action === "placement_changed" || action === "internal_transfer";
+  const changesPersonDetails = action === "nationality_changed" || action === "category_changed";
   const classOptions = optionsForSchool(
     data?.options.classes ?? [],
     schoolId,
@@ -198,6 +232,15 @@ export function EnrollmentChangeSheet({
   );
   const confirmation = useMemo(() => {
     if (!data) return "";
+    if (action === "nationality_changed") {
+      return `${data.enrollment.displayName}'s nationality will be ${nationality.trim() || "not set"}.`;
+    }
+    if (action === "category_changed") {
+      const category = data.options.childCategories.find(
+        (item) => item.id === childCategoryId,
+      )?.name;
+      return `${data.enrollment.displayName}'s child category will be ${category ?? "not set"}.`;
+    }
     if (action === "placement_changed") {
       const className = data.options.classes.find((item) => item.id === academicClassId)?.name;
       const houseName = data.options.houses.find((item) => item.id === houseId)?.name;
@@ -208,7 +251,7 @@ export function EnrollmentChangeSheet({
       return `${data.enrollment.displayName} will move to ${schoolName ?? "the selected school"} and remain enrolled.`;
     }
     return `${data.enrollment.displayName}'s enrolment will end on ${effectiveOn ? formatDate(effectiveOn) : "the selected date"} and they will be marked inactive. Their records will remain available.`;
-  }, [academicClassId, action, data, effectiveOn, houseId, schoolId]);
+  }, [academicClassId, action, childCategoryId, data, effectiveOn, houseId, nationality, schoolId]);
 
   function chooseAction(value: Action) {
     setAction(value);
@@ -240,7 +283,7 @@ export function EnrollmentChangeSheet({
       return;
     }
     // Ending an enrolment marks the student inactive, so it is confirmed first.
-    if (keepsStudentEnrolled) void save();
+    if (keepsStudentEnrolled || changesPersonDetails) void save();
     else setConfirming("end");
   }
 
@@ -255,6 +298,13 @@ export function EnrollmentChangeSheet({
         body: JSON.stringify({
           action,
           effectiveOn,
+          nationality: action === "nationality_changed" ? nationality.trim() || null : undefined,
+          childCategoryId:
+            action === "category_changed"
+              ? childCategoryId === "none"
+                ? null
+                : childCategoryId
+              : undefined,
           schoolId: keepsStudentEnrolled ? schoolId : undefined,
           academicClassId: keepsStudentEnrolled ? academicClassId : undefined,
           houseId: keepsStudentEnrolled ? (houseId === "none" ? null : houseId) : undefined,
@@ -384,20 +434,28 @@ export function EnrollmentChangeSheet({
                 <div>
                   <Label>What changed?</Label>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {actions.map(({ description, icon: Icon, label, value }) => (
-                      <button
-                        className={`rounded-2xl border p-4 text-left transition-colors ${action === value ? "border-primary bg-primary/8" : "bg-card hover:border-primary/35"}`}
-                        key={value}
-                        onClick={() => chooseAction(value)}
-                        type="button"
-                      >
-                        <Icon className="size-4 text-primary" />
-                        <p className="mt-3 text-sm font-semibold">{label}</p>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          {description}
-                        </p>
-                      </button>
-                    ))}
+                    {actions
+                      .filter(
+                        (item) =>
+                          data.enrollment.canEditPerson ||
+                          (item.value !== "nationality_changed" &&
+                            item.value !== "category_changed"),
+                      )
+                      .map(({ description, icon: Icon, label, value }) => (
+                        <button
+                          className={`rounded-2xl border p-4 text-left transition-colors ${action === value ? "border-primary bg-primary/8" : "bg-card hover:border-primary/35"}`}
+                          key={value}
+                          aria-pressed={action === value}
+                          onClick={() => chooseAction(value)}
+                          type="button"
+                        >
+                          <Icon className="size-4 text-primary" />
+                          <p className="mt-3 text-sm font-semibold">{label}</p>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {description}
+                          </p>
+                        </button>
+                      ))}
                   </div>
                 </div>
 
@@ -407,7 +465,7 @@ export function EnrollmentChangeSheet({
                       ? "Withdrawn date"
                       : action === "completed"
                         ? "Completion date"
-                        : action === "placement_changed"
+                        : action === "placement_changed" || changesPersonDetails
                           ? "Date of change"
                           : "Transfer date"}
                   </Label>
@@ -466,6 +524,36 @@ export function EnrollmentChangeSheet({
                         value={rollNumber}
                       />
                     </div>
+                  </div>
+                ) : null}
+
+                {changesPersonDetails ? (
+                  <div className="space-y-4 rounded-2xl border bg-muted/25 p-4">
+                    {action === "nationality_changed" ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="student-nationality">Nationality</Label>
+                        <Input
+                          id="student-nationality"
+                          maxLength={100}
+                          onChange={(event) => setNationality(event.target.value)}
+                          placeholder="Enter nationality"
+                          value={nationality}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Current: {data.enrollment.nationality || "Not set"}
+                        </p>
+                      </div>
+                    ) : (
+                      <OptionField
+                        label="Child category"
+                        onChange={setChildCategoryId}
+                        options={[
+                          { id: "none", name: "No category" },
+                          ...data.options.childCategories,
+                        ]}
+                        value={childCategoryId}
+                      />
+                    )}
                   </div>
                 ) : null}
 
@@ -680,6 +768,8 @@ function dateWithinSession(enrollment: Enrollment): string {
 
 function changeLabel(type: Change["changeType"]): string {
   return {
+    nationality_changed: "Nationality changed",
+    category_changed: "Child category changed",
     admitted: "Admitted",
     placement_changed: "Class or house changed",
     transferred: "Transferred",
@@ -689,6 +779,8 @@ function changeLabel(type: Change["changeType"]): string {
 }
 
 function changeDescription(change: Change): string {
+  if (change.changeType === "nationality_changed" || change.changeType === "category_changed")
+    return `${change.previousValue || "Not set"} → ${change.nextValue || "Not set"}.`;
   if (change.changeType === "admitted")
     return `Started in ${change.toSchoolName ?? "the school"}, ${change.toClassName ?? "class not set"}.`;
   if (change.changeType === "placement_changed")

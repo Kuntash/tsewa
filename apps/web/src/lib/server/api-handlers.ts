@@ -246,6 +246,10 @@ const peopleQuerySchema = z.object({
   status: z.enum(["all", "active", "inactive"]).default("all"),
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   pageSize: z.coerce.number().int().min(10).max(100).default(25),
+  includeSummary: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
 });
 
 const staffQuerySchema = z.object({
@@ -402,6 +406,8 @@ const enrollmentChangeSchema = z
   .object({
     action: z.enum([
       "placement_changed",
+      "nationality_changed",
+      "category_changed",
       "internal_transfer",
       "transferred_out",
       "withdrawn",
@@ -412,9 +418,25 @@ const enrollmentChangeSchema = z
     academicClassId: z.uuid().optional(),
     houseId: z.uuid().nullable().optional(),
     rollNumber: z.string().trim().max(50).nullable().optional(),
+    nationality: z.string().trim().max(100).nullable().optional(),
+    childCategoryId: z.uuid().nullable().optional(),
     note: z.string().trim().max(500).optional(),
   })
   .superRefine((value, context) => {
+    if (value.action === "nationality_changed" && value.nationality === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "Enter nationality or clear it.",
+        path: ["nationality"],
+      });
+    }
+    if (value.action === "category_changed" && value.childCategoryId === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "Choose a child category.",
+        path: ["childCategoryId"],
+      });
+    }
     if ((value.action === "withdrawn" || value.action === "completed") && !value.note) {
       context.addIssue({
         code: "custom",
@@ -1933,12 +1955,9 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
     eq(studentEnrollment.academicSessionId, scope.session.id),
   );
   // Values a student detail takes in this session, with how many students have each.
-  const detailOptions = (value: SQL<string | null>, emptyLabel: string) =>
-    runtime.ORM.select({
-      id: sql<string>`coalesce(${value}, 'none')`.as("id"),
-      name: sql<string>`coalesce(${value}, ${emptyLabel})`.as("name"),
-      count: count(),
-    })
+  // The value is worked out once per student in the inner query, then counted.
+  const detailOptions = (value: SQL<string | null>, emptyLabel: string) => {
+    const details = runtime.ORM.select({ value: value.as("value") })
       .from(studentEnrollment)
       .innerJoin(
         person,
@@ -1948,8 +1967,18 @@ async function getSchoolOperationsOverview(request: Request): Promise<Response> 
         ),
       )
       .where(enrollmentScope)
-      .groupBy(sql`1`)
-      .orderBy(sql`${value} is null`, sql`name collate nocase`);
+      // A limit stops SQLite merging this into the outer query and repeating the lookup.
+      .limit(Number.MAX_SAFE_INTEGER)
+      .as("details");
+    return runtime.ORM.select({
+      id: sql<string>`coalesce(${details.value}, 'none')`.as("id"),
+      name: sql<string>`coalesce(${details.value}, ${emptyLabel})`.as("name"),
+      count: count(),
+    })
+      .from(details)
+      .groupBy(sql`${details.value}`)
+      .orderBy(sql`${details.value} is null`, sql`${details.value} collate nocase`);
+  };
   const [summaryRows, schools, classes, houses, categories, homes, nationalities, parentage] =
     await runtime.ORM.batch([
       runtime.ORM.select({
@@ -2380,105 +2409,142 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
   const fromHouse = alias(houseMaster, "from_house");
   const toHouse = alias(houseMaster, "to_house");
   const actor = alias(user, "actor");
-  const [schools, classes, houses, changes, withdrawalReasons] = await Promise.all([
-    runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
-      .from(schoolMaster)
-      .where(
-        and(eq(schoolMaster.organizationId, context.organizationId), eq(schoolMaster.isActive, 1)),
-      )
-      .orderBy(asc(sql`lower(${schoolMaster.name})`)),
-    runtime.ORM.select({
-      id: academicClassMaster.id,
-      name: sql<string>`CASE
+  const [schools, classes, houses, changes, withdrawalReasons, childCategories, detailChanges] =
+    await Promise.all([
+      runtime.ORM.select({ id: schoolMaster.id, name: schoolMaster.name })
+        .from(schoolMaster)
+        .where(
+          and(
+            eq(schoolMaster.organizationId, context.organizationId),
+            eq(schoolMaster.isActive, 1),
+          ),
+        )
+        .orderBy(asc(sql`lower(${schoolMaster.name})`)),
+      runtime.ORM.select({
+        id: academicClassMaster.id,
+        name: sql<string>`CASE
         WHEN lower(trim(coalesce(${academicClassMaster.section}, ''))) NOT IN ('', 'none', '0', 'n/a', 'null')
           AND lower(trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})))
             NOT LIKE '% ' || lower(trim(${academicClassMaster.section}))
         THEN trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name})) || ' ' || trim(${academicClassMaster.section})
         ELSE trim(coalesce(nullif(${academicClassMaster.title}, ''), ${academicClassMaster.name}))
       END`,
-      schoolId: schoolClassOffering.schoolId,
-    })
-      .from(schoolClassOffering)
-      .innerJoin(
-        academicClassMaster,
-        and(
-          eq(academicClassMaster.id, schoolClassOffering.academicClassId),
-          eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+        schoolId: schoolClassOffering.schoolId,
+      })
+        .from(schoolClassOffering)
+        .innerJoin(
+          academicClassMaster,
+          and(
+            eq(academicClassMaster.id, schoolClassOffering.academicClassId),
+            eq(academicClassMaster.organizationId, schoolClassOffering.organizationId),
+          ),
+        )
+        .where(
+          and(
+            eq(schoolClassOffering.organizationId, context.organizationId),
+            eq(schoolClassOffering.academicSessionId, enrollment.academicSessionId),
+            eq(schoolClassOffering.isActive, 1),
+            eq(academicClassMaster.isActive, 1),
+          ),
+        )
+        .orderBy(
+          asc(schoolClassOffering.schoolId),
+          asc(sql`coalesce(${academicClassMaster.sortOrder}, 999)`),
+          asc(sql`coalesce(${academicClassMaster.level}, 999)`),
+          asc(sql`lower(${academicClassMaster.name})`),
         ),
-      )
-      .where(
-        and(
-          eq(schoolClassOffering.organizationId, context.organizationId),
-          eq(schoolClassOffering.academicSessionId, enrollment.academicSessionId),
-          eq(schoolClassOffering.isActive, 1),
-          eq(academicClassMaster.isActive, 1),
+      runtime.ORM.select({
+        id: houseMaster.id,
+        name: houseMaster.name,
+        schoolId: schoolHouseMaster.schoolId,
+      })
+        .from(schoolHouseMaster)
+        .innerJoin(
+          houseMaster,
+          and(
+            eq(houseMaster.id, schoolHouseMaster.houseId),
+            eq(houseMaster.organizationId, schoolHouseMaster.organizationId),
+          ),
+        )
+        .where(
+          and(
+            eq(schoolHouseMaster.organizationId, context.organizationId),
+            eq(houseMaster.isActive, 1),
+          ),
+        )
+        .orderBy(asc(schoolHouseMaster.schoolId), asc(sql`lower(${houseMaster.name})`)),
+      runtime.ORM.select({
+        id: studentEnrollmentChange.id,
+        changeType: studentEnrollmentChange.changeType,
+        effectiveOn: studentEnrollmentChange.effectiveOn,
+        fromStatus: studentEnrollmentChange.fromStatus,
+        toStatus: studentEnrollmentChange.toStatus,
+        note: studentEnrollmentChange.note,
+        createdAt: studentEnrollmentChange.createdAt,
+        fromSchoolName: fromSchool.name,
+        toSchoolName: toSchool.name,
+        fromClassName: sql<
+          string | null
+        >`CASE WHEN ${fromClass.id} IS NULL THEN NULL ELSE trim(coalesce(nullif(${fromClass.title}, ''), ${fromClass.name})) || CASE WHEN trim(coalesce(${fromClass.section}, '')) = '' THEN '' ELSE ' ' || trim(${fromClass.section}) END END`,
+        toClassName: sql<
+          string | null
+        >`CASE WHEN ${toClass.id} IS NULL THEN NULL ELSE trim(coalesce(nullif(${toClass.title}, ''), ${toClass.name})) || CASE WHEN trim(coalesce(${toClass.section}, '')) = '' THEN '' ELSE ' ' || trim(${toClass.section}) END END`,
+        fromHouseName: fromHouse.name,
+        toHouseName: toHouse.name,
+        fromRollNumber: studentEnrollmentChange.fromRollNumber,
+        toRollNumber: studentEnrollmentChange.toRollNumber,
+        changedBy: actor.name,
+      })
+        .from(studentEnrollmentChange)
+        .leftJoin(fromSchool, eq(fromSchool.id, studentEnrollmentChange.fromSchoolId))
+        .leftJoin(toSchool, eq(toSchool.id, studentEnrollmentChange.toSchoolId))
+        .leftJoin(fromClass, eq(fromClass.id, studentEnrollmentChange.fromAcademicClassId))
+        .leftJoin(toClass, eq(toClass.id, studentEnrollmentChange.toAcademicClassId))
+        .leftJoin(fromHouse, eq(fromHouse.id, studentEnrollmentChange.fromHouseId))
+        .leftJoin(toHouse, eq(toHouse.id, studentEnrollmentChange.toHouseId))
+        .leftJoin(actor, eq(actor.id, studentEnrollmentChange.createdByUserId))
+        .where(
+          and(
+            eq(studentEnrollmentChange.organizationId, context.organizationId),
+            eq(studentEnrollmentChange.enrollmentId, enrollmentId),
+          ),
+        )
+        .orderBy(
+          desc(studentEnrollmentChange.effectiveOn),
+          desc(studentEnrollmentChange.createdAt),
         ),
-      )
-      .orderBy(
-        asc(schoolClassOffering.schoolId),
-        asc(sql`coalesce(${academicClassMaster.sortOrder}, 999)`),
-        asc(sql`coalesce(${academicClassMaster.level}, 999)`),
-        asc(sql`lower(${academicClassMaster.name})`),
-      ),
-    runtime.ORM.select({
-      id: houseMaster.id,
-      name: houseMaster.name,
-      schoolId: schoolHouseMaster.schoolId,
-    })
-      .from(schoolHouseMaster)
-      .innerJoin(
-        houseMaster,
-        and(
-          eq(houseMaster.id, schoolHouseMaster.houseId),
-          eq(houseMaster.organizationId, schoolHouseMaster.organizationId),
-        ),
-      )
-      .where(
-        and(
-          eq(schoolHouseMaster.organizationId, context.organizationId),
-          eq(houseMaster.isActive, 1),
-        ),
-      )
-      .orderBy(asc(schoolHouseMaster.schoolId), asc(sql`lower(${houseMaster.name})`)),
-    runtime.ORM.select({
-      id: studentEnrollmentChange.id,
-      changeType: studentEnrollmentChange.changeType,
-      effectiveOn: studentEnrollmentChange.effectiveOn,
-      fromStatus: studentEnrollmentChange.fromStatus,
-      toStatus: studentEnrollmentChange.toStatus,
-      note: studentEnrollmentChange.note,
-      createdAt: studentEnrollmentChange.createdAt,
-      fromSchoolName: fromSchool.name,
-      toSchoolName: toSchool.name,
-      fromClassName: sql<
-        string | null
-      >`CASE WHEN ${fromClass.id} IS NULL THEN NULL ELSE trim(coalesce(nullif(${fromClass.title}, ''), ${fromClass.name})) || CASE WHEN trim(coalesce(${fromClass.section}, '')) = '' THEN '' ELSE ' ' || trim(${fromClass.section}) END END`,
-      toClassName: sql<
-        string | null
-      >`CASE WHEN ${toClass.id} IS NULL THEN NULL ELSE trim(coalesce(nullif(${toClass.title}, ''), ${toClass.name})) || CASE WHEN trim(coalesce(${toClass.section}, '')) = '' THEN '' ELSE ' ' || trim(${toClass.section}) END END`,
-      fromHouseName: fromHouse.name,
-      toHouseName: toHouse.name,
-      fromRollNumber: studentEnrollmentChange.fromRollNumber,
-      toRollNumber: studentEnrollmentChange.toRollNumber,
-      changedBy: actor.name,
-    })
-      .from(studentEnrollmentChange)
-      .leftJoin(fromSchool, eq(fromSchool.id, studentEnrollmentChange.fromSchoolId))
-      .leftJoin(toSchool, eq(toSchool.id, studentEnrollmentChange.toSchoolId))
-      .leftJoin(fromClass, eq(fromClass.id, studentEnrollmentChange.fromAcademicClassId))
-      .leftJoin(toClass, eq(toClass.id, studentEnrollmentChange.toAcademicClassId))
-      .leftJoin(fromHouse, eq(fromHouse.id, studentEnrollmentChange.fromHouseId))
-      .leftJoin(toHouse, eq(toHouse.id, studentEnrollmentChange.toHouseId))
-      .leftJoin(actor, eq(actor.id, studentEnrollmentChange.createdByUserId))
-      .where(
-        and(
-          eq(studentEnrollmentChange.organizationId, context.organizationId),
-          eq(studentEnrollmentChange.enrollmentId, enrollmentId),
-        ),
-      )
-      .orderBy(desc(studentEnrollmentChange.effectiveOn), desc(studentEnrollmentChange.createdAt)),
-    readWithdrawalReasons(runtime.ORM, context.organizationId),
-  ]);
+      readWithdrawalReasons(runtime.ORM, context.organizationId),
+      runtime.ORM.select({ id: childCategory.id, name: childCategory.name })
+        .from(childCategory)
+        .where(
+          and(
+            eq(childCategory.organizationId, context.organizationId),
+            or(
+              eq(childCategory.isActive, 1),
+              eq(childCategory.id, enrollment.childCategoryId ?? "__none__"),
+            ),
+          ),
+        )
+        .orderBy(asc(sql`lower(${childCategory.name})`)),
+      runtime.ORM.select({
+        id: auditEvent.id,
+        action: auditEvent.action,
+        metadataJson: auditEvent.metadataJson,
+        createdAt: auditEvent.occurredAt,
+        changedBy: actor.name,
+      })
+        .from(auditEvent)
+        .leftJoin(actor, eq(actor.id, auditEvent.actorUserId))
+        .where(
+          and(
+            eq(auditEvent.organizationId, context.organizationId),
+            eq(auditEvent.entityType, "student_enrollment"),
+            eq(auditEvent.entityId, enrollmentId),
+            inArray(auditEvent.action, ["student.nationality_changed", "student.category_changed"]),
+          ),
+        )
+        .orderBy(desc(auditEvent.occurredAt)),
+    ]);
 
   const classOptions = [...classes];
   if (!classOptions.some((item) => item.id === enrollment.academicClassId)) {
@@ -2508,14 +2574,37 @@ async function getStudentEnrollment(request: Request, enrollmentId: string): Pro
         hasPermission(context, "school.enrollment.manage") && isOpenEnrollment(enrollment.status),
       canReopen:
         hasPermission(context, "school.enrollment.manage") && canReopenEnrollment(enrollment),
+      canEditPerson:
+        hasPermission(context, "school.enrollment.manage") &&
+        hasPermission(context, "people.update") &&
+        enrollment.personKind === "child",
     },
     options: {
       schools,
       classes: classOptions,
       houses: houseOptions,
       withdrawalReasons,
+      childCategories,
     },
-    changes,
+    changes: [
+      ...changes,
+      ...detailChanges.map((change) => {
+        const metadata = JSON.parse(change.metadataJson ?? "{}") as Record<string, string | null>;
+        return {
+          id: change.id,
+          changeType: change.action.replace("student.", ""),
+          effectiveOn: metadata.effectiveOn ?? change.createdAt.slice(0, 10),
+          previousValue: metadata.previousValue,
+          nextValue: metadata.nextValue,
+          note: metadata.note,
+          createdAt: change.createdAt,
+          changedBy: change.changedBy,
+        };
+      }),
+    ].sort(
+      (a, b) =>
+        b.effectiveOn.localeCompare(a.effectiveOn) || b.createdAt.localeCompare(a.createdAt),
+    ),
   });
 }
 
@@ -2547,6 +2636,68 @@ async function changeStudentEnrollment(request: Request, enrollmentId: string): 
   }
 
   const action = parsed.data.action;
+  if (action === "nationality_changed" || action === "category_changed") {
+    if (!hasPermission(context, "people.update")) return forbidden();
+    if (enrollment.personKind !== "child")
+      return Response.json({ error: "Choose a child record." }, { status: 400 });
+    if (parsed.data.effectiveOn > latestEnrollmentEndDate(enrollment.sessionStartsOn)) {
+      return Response.json({ error: "Choose a date that is not in the future." }, { status: 400 });
+    }
+    let nextCategoryName: string | null = null;
+    if (action === "category_changed" && parsed.data.childCategoryId) {
+      const category = await runtime.ORM.select({ name: childCategory.name })
+        .from(childCategory)
+        .where(
+          and(
+            eq(childCategory.organizationId, context.organizationId),
+            eq(childCategory.id, parsed.data.childCategoryId),
+            or(
+              eq(childCategory.isActive, 1),
+              eq(childCategory.id, enrollment.childCategoryId ?? "__none__"),
+            ),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+      if (!category)
+        return Response.json({ error: "Choose a valid child category." }, { status: 400 });
+      nextCategoryName = category.name;
+    }
+    const nationality = parsed.data.nationality?.trim() || null;
+    const categoryId = parsed.data.childCategoryId ?? null;
+    if (
+      action === "nationality_changed"
+        ? nationality === enrollment.nationality
+        : categoryId === enrollment.childCategoryId
+    ) {
+      return Response.json({ ok: true, status: enrollment.status });
+    }
+    await runtime.ORM.batch([
+      runtime.ORM.update(person)
+        .set({
+          ...(action === "nationality_changed" ? { nationality } : { childCategoryId: categoryId }),
+          updatedByUserId: context.userId,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(
+          and(
+            eq(person.id, enrollment.personId),
+            eq(person.organizationId, context.organizationId),
+          ),
+        ),
+      auditInsert(runtime.ORM, context, `student.${action}`, "student_enrollment", enrollmentId, {
+        personId: enrollment.personId,
+        effectiveOn: parsed.data.effectiveOn,
+        previousValue:
+          action === "nationality_changed" ? enrollment.nationality : enrollment.childCategoryName,
+        nextValue: action === "nationality_changed" ? nationality : nextCategoryName,
+        previousCategoryId: action === "category_changed" ? enrollment.childCategoryId : null,
+        nextCategoryId: action === "category_changed" ? categoryId : null,
+        note: parsed.data.note || null,
+      }),
+    ]);
+    return Response.json({ ok: true, status: enrollment.status });
+  }
   const keepsStudentEnrolled = action === "placement_changed" || action === "internal_transfer";
   if (
     !keepsStudentEnrolled &&
@@ -3233,6 +3384,10 @@ type StudentEnrollmentRecord = {
   personId: string;
   displayName: string;
   admissionNumber: string;
+  personKind: string;
+  nationality: string | null;
+  childCategoryId: string | null;
+  childCategoryName: string | null;
   academicSessionId: string;
   sessionName: string;
   sessionStartsOn: string;
@@ -3267,6 +3422,12 @@ async function readStudentEnrollment(
       personId: studentEnrollment.personId,
       displayName: person.displayName,
       admissionNumber: person.primaryIdentifier,
+      personKind: person.kind,
+      nationality: person.nationality,
+      childCategoryId: person.childCategoryId,
+      childCategoryName: sql<
+        string | null
+      >`(select cc.name from child_category cc where cc.id = ${person.childCategoryId} and cc.organization_id = ${person.organizationId})`,
       academicSessionId: studentEnrollment.academicSessionId,
       sessionName: academicSession.name,
       sessionStartsOn: academicSession.startsOn,
@@ -10226,6 +10387,7 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
     status: url.searchParams.get("status") ?? "all",
     page: url.searchParams.get("page") ?? "1",
     pageSize: url.searchParams.get("pageSize") ?? "25",
+    includeSummary: url.searchParams.get("includeSummary") ?? "true",
   });
   if (!parsed.success) {
     return Response.json({ error: "Check the people filters." }, { status: 400 });
