@@ -11728,16 +11728,18 @@ async function getPersonFile(request: Request, fileId: string): Promise<Response
     .then((rows) => rows[0] ?? null);
   if (!file) return Response.json({ error: "File not found" }, { status: 404 });
 
-  const object = await runtime.FILES.get(file.r2ObjectKey);
+  const object = await runtime.FILES.get(file.r2ObjectKey, { onlyIf: request.headers });
   if (!object) return Response.json({ error: "Stored file not found" }, { status: 404 });
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
+  headers.set("Cache-Control", "private, max-age=300");
+  headers.set("ETag", object.httpEtag);
+  // The browser already holds this file, so it is not sent again.
+  if (!("body" in object)) return new Response(null, { status: 304, headers });
   headers.set("Content-Type", file.contentType);
   headers.set("Content-Length", String(object.size));
   headers.set("Content-Disposition", inlineContentDisposition(file.fileName));
-  headers.set("Cache-Control", "private, max-age=300");
-  headers.set("ETag", object.httpEtag);
   headers.set("X-Content-Type-Options", "nosniff");
 
   return new Response(object.body, { headers });
@@ -12413,7 +12415,7 @@ async function handleInstallationLogo(request: Request): Promise<Response> {
   if (!current?.logoAssetKey) {
     return Response.json({ error: "Installation logo not found." }, { status: 404 });
   }
-  const object = await runtime.FILES.get(current.logoAssetKey);
+  const object = await runtime.FILES.get(current.logoAssetKey, { onlyIf: request.headers });
   if (!object) return Response.json({ error: "Stored logo not found." }, { status: 404 });
   return inlineR2Image(object, "public, max-age=3600, stale-while-revalidate=86400");
 }
@@ -12435,7 +12437,7 @@ async function handleOrganizationLogo(request: Request): Promise<Response> {
   if (request.method === "GET") {
     if (!current.logoAssetKey)
       return Response.json({ error: "Organization logo not found." }, { status: 404 });
-    const object = await runtime.FILES.get(current.logoAssetKey);
+    const object = await runtime.FILES.get(current.logoAssetKey, { onlyIf: request.headers });
     if (!object) return Response.json({ error: "Stored logo not found." }, { status: 404 });
     return inlineR2Image(object, "private, max-age=3600");
   }
@@ -12499,13 +12501,15 @@ async function handleOrganizationLogo(request: Request): Promise<Response> {
   return Response.json({ ok: true, logoUrl: `/api/organization/logo?v=${Date.now()}` });
 }
 
-function inlineR2Image(object: R2ObjectBody, cacheControl: string): Response {
+function inlineR2Image(object: R2Object | R2ObjectBody, cacheControl: string): Response {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
-  headers.set("Content-Length", String(object.size));
-  headers.set("Content-Disposition", "inline");
   headers.set("Cache-Control", cacheControl);
   headers.set("ETag", object.httpEtag);
+  // The browser already holds this image, so it is not sent again.
+  if (!("body" in object)) return new Response(null, { status: 304, headers });
+  headers.set("Content-Length", String(object.size));
+  headers.set("Content-Disposition", "inline");
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(object.body, { headers });
 }

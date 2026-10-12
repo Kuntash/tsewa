@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791769968.6039178,
-    "ast_hash": "327211940147de409fe5d9dd71977afd",
+    "mtime": 1791770178.5312238,
+    "ast_hash": "58e4d4a271fc7eb06c3688203936d763",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1605,8 +1605,8 @@
     "semantic_hash": ""
   },
   "apps/web/design-explorer/catalog.js": {
-    "mtime": 1791769843.2854102,
-    "ast_hash": "be3e1047751a176748701ed44c7f83be",
+    "mtime": 1791770021.9201148,
+    "ast_hash": "3baf133cb484c83beff70b9d4b0231b2",
     "semantic_hash": ""
   },
   "apps/web/design-explorer/content.js": {
@@ -1615,8 +1615,8 @@
     "semantic_hash": ""
   },
   "apps/web/design-explorer/explorer.jsx": {
-    "mtime": 1791768363.8586354,
-    "ast_hash": "472b64f8585756df095b6d379fb172bd",
+    "mtime": 1791770021.9218333,
+    "ast_hash": "c6a05191b448be357e2269d16fb87f39",
     "semantic_hash": ""
   },
   "apps/web/design-explorer/prototype.jsx": {
