@@ -15,7 +15,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1791770765.5569627,
+    "mtime": 1791771812.8010652,
     "ast_hash": "6a7e544d45bc86e682498e8ce09bf17d",
     "semantic_hash": ""
   },
@@ -90,7 +90,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/runtime-env.ts": {
-    "mtime": 1791770712.9558792,
+    "mtime": 1791771812.803352,
     "ast_hash": "3f5328ce55b91a52e75e423841f4943b",
     "semantic_hash": ""
   },
@@ -455,7 +455,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1791770712.9562736,
+    "mtime": 1791771812.800644,
     "ast_hash": "c0d9bb1846a766e2cbba54ceba434947",
     "semantic_hash": ""
   },
@@ -570,7 +570,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/db/schema.ts": {
-    "mtime": 1791769887.0209544,
+    "mtime": 1791771812.8029063,
     "ast_hash": "5dd7041697b487839e5a0201ae761a12",
     "semantic_hash": ""
   },
@@ -585,7 +585,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791770703.222882,
+    "mtime": 1791771812.80429,
     "ast_hash": "55bc6f625894be3fac35a0eaf5e3b5ff",
     "semantic_hash": ""
   },
@@ -890,7 +890,7 @@
     "semantic_hash": ""
   },
   "apps/web/vitest.config.ts": {
-    "mtime": 1791768007.9141428,
+    "mtime": 1791771812.8053327,
     "ast_hash": "92cd3956da06f3c7b26fee490138d1df",
     "semantic_hash": ""
   },
@@ -1035,7 +1035,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/people-repository.ts": {
-    "mtime": 1791770681.3876364,
+    "mtime": 1791771812.80499,
     "ast_hash": "1ebcad692950f10f6e9ff94b666d6a2d",
     "semantic_hash": ""
   },
@@ -1250,8 +1250,8 @@
     "semantic_hash": ""
   },
   "apps/web/pnpm-workspace.yaml": {
-    "mtime": 1787590726.4501112,
-    "ast_hash": "643dd716a2788ea36992c3d258c9ae3b",
+    "mtime": 1791772239.8554926,
+    "ast_hash": "d041128060d866e7a1be999e084ea385",
     "semantic_hash": ""
   },
   "docs/deployment-modes.md": {
@@ -1635,17 +1635,17 @@
     "semantic_hash": ""
   },
   "apps/web/migrations/0038_people_search_performance.sql": {
-    "mtime": 1791767843.774273,
+    "mtime": 1791771812.8000264,
     "ast_hash": "7721a2770b8685e83fba82893820bb67",
     "semantic_hash": ""
   },
   "apps/web/migrations/0039_school_overview_performance.sql": {
-    "mtime": 1791769886.9777405,
+    "mtime": 1791771812.8002608,
     "ast_hash": "6bef3432395e6a072e5302ed218947f1",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/people-enrollment.test.ts": {
-    "mtime": 1791770765.562104,
+    "mtime": 1791771812.804614,
     "ast_hash": "c874c2fddeaea6f86336d6f1dc31818b",
     "semantic_hash": ""
   },
@@ -1770,7 +1770,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/request-timing.ts": {
-    "mtime": 1791770739.8346334,
+    "mtime": 1791771812.8031385,
     "ast_hash": "a25d81222b179ef768d07f3feae5825f",
     "semantic_hash": ""
   }

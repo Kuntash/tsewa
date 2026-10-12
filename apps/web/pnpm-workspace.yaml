@@ -1,6 +1,13 @@
 packages:
   - "."
 
+# This folder is also deployed on its own (the Deploy to Cloudflare button), so it
+# needs the catalog entries its package.json refers to. Keep them in step with the
+# repository root.
+catalog:
+  dodopayments: 2.48.0
+  sonner: ^2.0.8
+
 allowBuilds:
   esbuild: true
   lightningcss: true
