@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 
 import { createDatabase } from "@/db/client";
 import { getDeploymentConfig } from "@/lib/deployment";
+import { timedDatabase } from "@/lib/request-timing";
 
 type SecretBindings = {
   BETTER_AUTH_SECRET?: string;
@@ -28,9 +29,11 @@ export function getRuntimeEnv() {
     );
   }
 
+  const database = timedDatabase(runtime.DB);
   return {
     ...runtime,
+    DB: database,
     deployment: getDeploymentConfig(runtime),
-    ORM: createDatabase(runtime.DB),
+    ORM: createDatabase(database),
   } as RuntimeEnv;
 }

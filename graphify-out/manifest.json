@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/people-registry.tsx": {
-    "mtime": 1791768059.0928178,
-    "ast_hash": "36d84669f7472de8ab69b616c54e37a7",
+    "mtime": 1791770765.5569627,
+    "ast_hash": "6a7e544d45bc86e682498e8ce09bf17d",
     "semantic_hash": ""
   },
   "apps/web/src/components/person-profile-sheet.tsx": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/runtime-env.ts": {
-    "mtime": 1791137052.7151217,
-    "ast_hash": "1a189ba2fedaf88c1b10c023fe186a67",
+    "mtime": 1791770712.9558792,
+    "ast_hash": "3f5328ce55b91a52e75e423841f4943b",
     "semantic_hash": ""
   },
   "apps/web/src/lib/utils.ts": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/components/enrollment-change-sheet.tsx": {
-    "mtime": 1791768059.0946543,
-    "ast_hash": "509e05bf2559be8cc3b0055b0fdd80a5",
+    "mtime": 1791770712.9562736,
+    "ast_hash": "c0d9bb1846a766e2cbba54ceba434947",
     "semantic_hash": ""
   },
   "docs/feature-parity.md": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/api-handlers.ts": {
-    "mtime": 1791770178.5312238,
-    "ast_hash": "58e4d4a271fc7eb06c3688203936d763",
+    "mtime": 1791770703.222882,
+    "ast_hash": "55bc6f625894be3fac35a0eaf5e3b5ff",
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/file-route.ts": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/repositories/people-repository.ts": {
-    "mtime": 1791768148.802148,
-    "ast_hash": "e80ccfdde2127fad53fac61577eb6b9e",
+    "mtime": 1791770681.3876364,
+    "ast_hash": "1ebcad692950f10f6e9ff94b666d6a2d",
     "semantic_hash": ""
   },
   "apps/web/src/routes/api.dashboard.ts": {
@@ -1645,8 +1645,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/lib/server/people-enrollment.test.ts": {
-    "mtime": 1791769941.6822624,
-    "ast_hash": "0a40c2689b754f4207107df6d64fe1bd",
+    "mtime": 1791770765.562104,
+    "ast_hash": "c874c2fddeaea6f86336d6f1dc31818b",
     "semantic_hash": ""
   },
   "apps/web/design-explorer/index.html": {
@@ -1767,6 +1767,11 @@
   "apps/web/design-explorer/public/references/feab3de9-e5a0-48cc-861b-4f0a87289fea.webp": {
     "mtime": 1791769356.2465749,
     "ast_hash": "885fd9b5e5a31a615555b6187c8d0de3",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/request-timing.ts": {
+    "mtime": 1791770739.8346334,
+    "ast_hash": "a25d81222b179ef768d07f3feae5825f",
     "semantic_hash": ""
   }
 }

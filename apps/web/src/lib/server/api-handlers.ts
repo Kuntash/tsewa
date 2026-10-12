@@ -107,6 +107,7 @@ import {
 import type { BillingInterval } from "@/lib/billing";
 import { createAuth } from "@/lib/auth";
 import { toEpochMilliseconds } from "@/lib/date-time";
+import { requestTiming } from "@/lib/request-timing";
 import { sendInvitationEmail } from "@/lib/invitation-email";
 import { sendEmailVerification, sendPasswordResetEmail } from "@/lib/auth-email";
 import { publicAppOrigin } from "@/lib/deployment";
@@ -250,6 +251,15 @@ const peopleQuerySchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
+  gender: z.enum(["female", "male", "other", "unknown"]).optional(),
+  location: z.string().trim().min(1).max(200).optional(),
+  nationality: z.string().trim().min(1).max(100).optional(),
+  category: z.uuid().optional(),
+  className: z.string().trim().min(1).max(200).optional(),
+  bornFrom: z.iso.date().optional(),
+  bornTo: z.iso.date().optional(),
+  joinedFrom: z.iso.date().optional(),
+  joinedTo: z.iso.date().optional(),
 });
 
 const staffQuerySchema = z.object({
@@ -1365,21 +1375,30 @@ export const apiDispatcher = {
   },
 };
 
+// Replaces record IDs so every call to the same route is logged under one name.
+function apiRouteName(pathname: string): string {
+  return pathname.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id");
+}
+
 export async function handleApiRequest({ request }: { request: Request }): Promise<Response> {
   const startedAt = performance.now();
-  const response = await apiDispatcher.fetch(request);
+  const timing = { databaseMs: 0, databaseCalls: 0 };
+  const response = await requestTiming.run(timing, () => apiDispatcher.fetch(request));
   const durationMs = performance.now() - startedAt;
-  if (durationMs >= 500) {
-    console.warn(
-      JSON.stringify({
-        event: "slow_api",
-        method: request.method,
-        path: new URL(request.url).pathname,
-        status: response.status,
-        durationMs: Number(durationMs.toFixed(1)),
-      }),
-    );
-  }
+  // One line per API call, grouped by route, so slow routes show up in Workers Logs.
+  console[durationMs >= 500 ? "warn" : "log"](
+    JSON.stringify({
+      event: durationMs >= 500 ? "slow_api" : "api_request",
+      method: request.method,
+      route: apiRouteName(new URL(request.url).pathname),
+      path: new URL(request.url).pathname,
+      status: response.status,
+      durationMs: Number(durationMs.toFixed(1)),
+      databaseMs: Number(timing.databaseMs.toFixed(1)),
+      databaseCalls: timing.databaseCalls,
+      colo: (request as Request & { cf?: { colo?: string } }).cf?.colo,
+    }),
+  );
   const headers = new Headers(response.headers);
   headers.set("Server-Timing", `app;dur=${durationMs.toFixed(1)}`);
   headers.set("X-Tsewa-Api-Ms", durationMs.toFixed(1));
@@ -10374,6 +10393,18 @@ async function getSchoolSessionScope(request: Request, sessionId: string) {
   return session ? { ...context, session } : null;
 }
 
+const PEOPLE_DETAIL_FILTERS = [
+  "gender",
+  "location",
+  "nationality",
+  "category",
+  "className",
+  "bornFrom",
+  "bornTo",
+  "joinedFrom",
+  "joinedTo",
+] as const;
+
 async function getPeopleRegistry(request: Request): Promise<Response> {
   if (request.method !== "GET") return methodNotAllowed("GET");
   const context = await getMembershipContext(request);
@@ -10388,6 +10419,9 @@ async function getPeopleRegistry(request: Request): Promise<Response> {
     page: url.searchParams.get("page") ?? "1",
     pageSize: url.searchParams.get("pageSize") ?? "25",
     includeSummary: url.searchParams.get("includeSummary") ?? "true",
+    ...Object.fromEntries(
+      PEOPLE_DETAIL_FILTERS.map((key) => [key, url.searchParams.get(key) || undefined]),
+    ),
   });
   if (!parsed.success) {
     return Response.json({ error: "Check the people filters." }, { status: 400 });

@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FilterBar } from "@/components/filter-bar";
+import type { FilterField, FilterValues } from "@/components/filter-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersonProfileSheet } from "@/components/person-profile-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,12 @@ type RegistryResponse = {
     createdAt: string;
     finishedAt: string | null;
   };
+  filterOptions: {
+    locations: string[];
+    nationalities: string[];
+    categories: Array<{ id: string; name: string }>;
+    classes: string[];
+  };
 };
 
 const emptyRegistry: RegistryResponse = {
@@ -76,7 +83,22 @@ const emptyRegistry: RegistryResponse = {
   pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
   summary: [],
   latestImport: null,
+  filterOptions: { locations: [], nationalities: [], categories: [], classes: [] },
 };
+
+// Filters beyond type and status. The last three only apply to children.
+const DETAIL_FILTER_KEYS = [
+  "gender",
+  "location",
+  "bornFrom",
+  "bornTo",
+  "joinedFrom",
+  "joinedTo",
+  "className",
+  "nationality",
+  "category",
+] as const;
+const CHILD_FILTER_KEYS = ["className", "nationality", "category"] as const;
 
 export type PeopleFilters = {
   q?: string;
@@ -99,6 +121,8 @@ export function PeopleRegistry({
   const [kind, setKind] = useState<"all" | PersonKind>(filters.kind ?? "all");
   const [status, setStatus] = useState<"all" | PersonStatus>(filters.status ?? "all");
   const [page, setPage] = useState(filters.page ?? 1);
+  const [details, setDetails] = useState<FilterValues>({});
+  const detailKey = JSON.stringify(details);
   const [data, setData] = useState<RegistryResponse>(emptyRegistry);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -128,6 +152,10 @@ export function PeopleRegistry({
       pageSize: "25",
       includeSummary: String(includeSummary),
     });
+    for (const [key, value] of Object.entries(JSON.parse(detailKey) as FilterValues)) {
+      const childOnly = (CHILD_FILTER_KEYS as readonly string[]).includes(key);
+      if (value && (kind === "child" || !childOnly)) parameters.set(key, value);
+    }
 
     setLoading(true);
     setError("");
@@ -145,6 +173,7 @@ export function PeopleRegistry({
         setData((current) => ({
           ...payload,
           summary: includeSummary ? payload.summary : current.summary,
+          filterOptions: includeSummary ? payload.filterOptions : current.filterOptions,
           latestImport: includeSummary ? payload.latestImport : current.latestImport,
         }));
       })
@@ -157,9 +186,90 @@ export function PeopleRegistry({
       });
 
     return () => controller.abort();
-  }, [debouncedQuery, kind, status, page, refreshVersion]);
+  }, [debouncedQuery, detailKey, kind, status, page, refreshVersion]);
 
   useEffect(() => setPage(1), [kind, status]);
+
+  const filterFields = useMemo<FilterField[]>(() => {
+    const choices = (values: string[]) => values.map((value) => ({ value, label: value }));
+    const options = data.filterOptions;
+    return [
+      {
+        type: "choice",
+        key: "kind",
+        label: "Type",
+        options: [
+          { value: "child", label: "Children" },
+          { value: "elderly", label: "Elderly" },
+          { value: "staff", label: "Staff" },
+        ],
+        pinned: true,
+      },
+      {
+        type: "choice",
+        key: "status",
+        label: "Status",
+        options: [
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+        ],
+        pinned: true,
+      },
+      ...(kind === "child"
+        ? ([
+            {
+              type: "choice",
+              key: "className",
+              label: "Latest class",
+              options: choices(options.classes),
+              pinned: true,
+            },
+            {
+              type: "choice",
+              key: "category",
+              label: "Child category",
+              options: options.categories.map((item) => ({ value: item.id, label: item.name })),
+            },
+            {
+              type: "choice",
+              key: "nationality",
+              label: "Nationality",
+              options: choices(options.nationalities),
+            },
+          ] satisfies FilterField[])
+        : []),
+      {
+        type: "choice",
+        key: "gender",
+        label: "Gender",
+        options: [
+          { value: "female", label: "Female" },
+          { value: "male", label: "Male" },
+        ],
+        pinned: true,
+      },
+      {
+        type: "choice",
+        key: "location",
+        label: "Campus / location",
+        options: choices(options.locations),
+      },
+      {
+        type: "date-range",
+        key: "born",
+        label: "Date of birth",
+        fromKey: "bornFrom",
+        toKey: "bornTo",
+      },
+      {
+        type: "date-range",
+        key: "joined",
+        label: kind === "staff" ? "Joined on" : "Admitted or joined on",
+        fromKey: "joinedFrom",
+        toKey: "joinedTo",
+      },
+    ];
+  }, [data.filterOptions, kind]);
 
   const counts = useMemo(() => {
     const next = { all: 0, child: 0, elderly: 0, staff: 0, active: 0, inactive: 0 };
@@ -275,34 +385,17 @@ export function PeopleRegistry({
                 </div>
                 <FilterBar
                   className="mt-3"
-                  fields={[
-                    {
-                      type: "choice",
-                      key: "kind",
-                      label: "Type",
-                      options: [
-                        { value: "child", label: "Children" },
-                        { value: "elderly", label: "Elderly" },
-                        { value: "staff", label: "Staff" },
-                      ],
-                      pinned: true,
-                    },
-                    {
-                      type: "choice",
-                      key: "status",
-                      label: "Status",
-                      options: [
-                        { value: "active", label: "Active" },
-                        { value: "inactive", label: "Inactive" },
-                      ],
-                      pinned: true,
-                    },
-                  ]}
+                  fields={filterFields}
                   onChange={(next) => {
                     setKind((next.kind ?? "all") as typeof kind);
                     setStatus((next.status ?? "all") as typeof status);
+                    setDetails(
+                      Object.fromEntries(DETAIL_FILTER_KEYS.map((key) => [key, next[key]])),
+                    );
+                    setPage(1);
                   }}
                   value={{
+                    ...details,
                     kind: kind === "all" ? undefined : kind,
                     status: status === "all" ? undefined : status,
                   }}
@@ -422,9 +515,7 @@ function PeopleResults({
             <tr className="border-b bg-muted/35 text-left text-xs text-muted-foreground">
               <th className="px-5 py-3 font-medium">{identifierLabel(kind)}</th>
               <th className="px-5 py-3 font-medium">Name</th>
-              {kind === "child" || kind === "all" ? (
-                <th className="px-5 py-3 font-medium">Latest class</th>
-              ) : null}
+              {kind === "child" ? <th className="px-5 py-3 font-medium">Latest class</th> : null}
               <th className="px-5 py-3 font-medium">Type</th>
               <th className="px-5 py-3 font-medium">Gender</th>
               <th className="px-5 py-3 font-medium">Date of birth</th>
@@ -450,7 +541,7 @@ function PeopleResults({
                     {person.displayName}
                   </button>
                 </td>
-                {kind === "child" || kind === "all" ? (
+                {kind === "child" ? (
                   <td className="px-5 py-4 text-muted-foreground">
                     {person.latestClassName || "—"}
                   </td>
@@ -505,9 +596,7 @@ function PeopleResults({
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <KindBadge kind={person.kind} />
-              {person.kind === "child" ? (
-                <span>Class: {person.latestClassName || "Not recorded"}</span>
-              ) : null}
+              {kind === "child" ? <span>Class: {person.latestClassName || "—"}</span> : null}
               <span className="capitalize">{person.gender ?? "Unknown gender"}</span>
               <span>·</span>
               <span>{formatDate(person.dateOfBirth)}</span>

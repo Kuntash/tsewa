@@ -294,6 +294,24 @@ describe("People registry", () => {
     const all = await findPeopleRegistry(database, "org", { ...filters, kind: "all" });
     expect(all.people.find((row) => row.kind === "staff")?.latestClassName).toBeNull();
   });
+  it("filters by latest class and details, and shows placeholder classes as no class", async () => {
+    const byClass = await findPeopleRegistry(database, "org", { ...filters, className: "VIII A" });
+    expect(byClass.people.map((row) => row.primaryIdentifier)).toEqual(["A001"]);
+    expect(byClass.filterOptions.classes).toEqual(expect.arrayContaining(["VIII A", "Class 9 B"]));
+    expect(byClass.filterOptions.nationalities).toEqual(["Tibetan"]);
+    const byNationality = await findPeopleRegistry(database, "org", {
+      ...filters,
+      nationality: "Tibetan",
+    });
+    expect(byNationality.pagination.total).toBe(1);
+    sqlite.exec(
+      "UPDATE person_academic_record SET class_name = 'NoClass', class_title = 'NoClass', class_section = 'None'",
+    );
+    const placeholder = await findPeopleRegistry(database, "org", { ...filters, q: "tashi" });
+    expect(
+      placeholder.people.find((row) => row.primaryIdentifier === "A002")?.latestClassName,
+    ).toBeNull();
+  });
   it("treats LIKE wildcards literally and preserves empty results and pagination totals", async () => {
     const result = await findPeopleRegistry(database, "org", { ...filters, q: "%_\\" });
     expect(result.people).toEqual([]);

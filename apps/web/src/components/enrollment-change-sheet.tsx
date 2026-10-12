@@ -220,6 +220,7 @@ export function EnrollmentChangeSheet({
   const selectedAction = actions.find((item) => item.value === action) ?? actions[0];
   const keepsStudentEnrolled = action === "placement_changed" || action === "internal_transfer";
   const changesPersonDetails = action === "nationality_changed" || action === "category_changed";
+  const endsEnrollment = !keepsStudentEnrolled && !changesPersonDetails;
   const classOptions = optionsForSchool(
     data?.options.classes ?? [],
     schoolId,
@@ -528,7 +529,7 @@ export function EnrollmentChangeSheet({
                 ) : null}
 
                 {changesPersonDetails ? (
-                  <div className="space-y-4 rounded-2xl border bg-muted/25 p-4">
+                  <div>
                     {action === "nationality_changed" ? (
                       <div className="space-y-2">
                         <Label htmlFor="student-nationality">Nationality</Label>
@@ -618,10 +619,10 @@ export function EnrollmentChangeSheet({
                   <Button
                     disabled={submitting || (keepsStudentEnrolled && !academicClassId)}
                     type="submit"
-                    variant={keepsStudentEnrolled ? "default" : "destructive"}
+                    variant={endsEnrollment ? "destructive" : "default"}
                   >
                     {submitting ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />}
-                    {keepsStudentEnrolled ? "Save change" : endActionLabel(action)}
+                    {endsEnrollment ? endActionLabel(action) : "Save change"}
                   </Button>
                 </div>
               </form>
